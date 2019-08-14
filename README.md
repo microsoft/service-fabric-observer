@@ -677,30 +677,24 @@ file, NodeObserver.config.json
   "networkWarningFirewallRules": 2500 
 } 
 ```
-**target**: always "node"...  
-**pollInterval**: Time, in seconds, between data collections while the
-observer is running for the allotted duration.  
-**memoryMaximumLimitMB**: Maximum service process private working set,
+**target**: always "node"...    
+**cpuErrorLimitPct**: Maximum CPU percentage that should generate an
+Error (SFX and local log)\
+**cpuWarningLimitPct**: Minimum CPU percentage that should generate a
+Warning (SFX and local log)\
+**memoryErrorLimitMB**: Maximum service process private working set,
 in Megabytes, that should generate an Error (SFX and local log) \[Note:
 this shouldn't have to be supplied in bytes...\]\
-**memoryMinimumLimitMB**: Minimum service process private working set,
+**memoryWarningLimitMB**: Minimum service process private working set,
 in Megabytes, that should generate an Warning (SFX and local log)
 \[Note: this shouldn't have to be supplied in bytes...\]\
-**cpuMaximumLimitPct**: Maximum CPU percentage that should generate an
-Error (SFX and local log)\
-**cpuMinimumLimitPct**: Minimum CPU percentage that should generate a
-Warning (SFX and local log)\
-**diskSpaceMaximumLimitPct**: Maximum percentage of storage disk space
-in use that should generate an Error (SFX and local log)\
-**diskSpaceMinimumLimitPct**: Minimum percentage of storage disk space
-in use that should generate an Warning (SFX and local log)\
-**networkMaxActivePorts:** Maximum number of established ports in use by
+**networkErrorActivePorts:** Maximum number of established ports in use by
 all processes on node that will generate a Fabric Error.\
-**networkMinActivePorts:** Minimum number of established TCP ports in use by
+**networkWarningActivePorts:** Minimum number of established TCP ports in use by
 all processes on node that will generate a Fabric Warning.\
-**networkMaxEphemeralPorts:** Maximum number of established ephemeral TCP ports in use by
+**networkErrorEphemeralPorts:** Maximum number of established ephemeral TCP ports in use by
 app process that will generate a Fabric Error.\
-**networkMinEperneralPorts:** Minimum number of established ephemeral TCP ports in use by
+**networkWarningEphemeralPorts:** Minimum number of established ephemeral TCP ports in use by
 all processes on node that will generate a Fabric warning.\
 
 **Output**:\
