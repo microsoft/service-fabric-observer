@@ -221,33 +221,36 @@ An Observer must support the following properties and behaviors:
     services
 
 Each Observer can create a Warning if some metric exceeds a supplied
-threshold (we do not generate Fabric Health Errors as this will block
+threshold. **Note: we do not generate Fabric Health Errors by default as this will block
 runtime upgrades, etc -- and further, this breaks the guarantee that
 FabricObserver will have no side effects on Service Fabric's systemic
-behavior...). A Health report lives for a calculated duration: the
+behavior... Generating Health Errors is YOUR decision and it's fine to do it as long as you understand what it means...**. 
+A Health report lives for a calculated duration: the
 current date time -- last run date time +
-ObserverManager.ExecutionFrequency \[+ observer runtime (for example,
+ObserverManager.ObserverExecutionLoopSleepSeconds \[+ observer runtime (for example,
 FabricSystemObserver runs for 60 seconds, AppObserver runs
 for 60 seconds)\]. This ensures that the Fabric Health report remains
 active until the next time the related observer runs, which will either
 clear the warning by sending an OK health report or sends another
-warning/error report to fabric that lives for the calculated TTL. For
-example, AppObserver calculates TTL as such:  
+warning/error report to fabric that lives for the calculated TTL. Each observer can call ObserverBase's SetTimeToLiveWarning function,
+optionally providing a known number that represents some timeout or running time the observer self-manages...
 
 ```C#
-// Set TTL...
-if (LastRunDateTime == DateTime.MinValue) // First run...  
-{  
-	this.timeToLiveWarning = this.\_timeToLiveWarning +
-	this.operationTimeout +
-	TimeSpan.FromSeconds(ObserverManager.ExecutionFrequency);  
-}  
-else  
-{  
-	this.timeToLiveWarning = DateTime.Now.Subtract(LastRunDateTime) +
-	this.operationTimeout +
-	TimeSpan.FromSeconds(ObserverManager.ExecutionFrequency);
-}  
+public TimeSpan SetTimeToLiveWarning(int runDuration = 0)
+{
+    // Set TTL...
+    if (this.LastRunDateTime == DateTime.MinValue) // First run...
+    {
+	return TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds)
+			 .Add(TimeSpan.FromMinutes(TTLAddMinutes));
+    }
+    else
+    {
+	return DateTime.Now.Subtract(this.LastRunDateTime)
+	       	.Add(TimeSpan.FromSeconds(runDuration))
+	       	.Add(TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds));
+    }
+} 
 ```
 
 Let's look at the simple design of an Observer:
@@ -270,13 +273,12 @@ namespace FabricObserver
 		 
 		 internal override async Task ObserveAsync(CancellationToken token)
 	 	 {
-			 // Do stuff then call ReportAsync...
+			 // Observe then call ReportAsync...
 		 }
 		
 		 internal override async Task ReportAsync(CancellationToken token)
 		 {
-			 // Process data, report Warning or Error or OK states to Fabric, log
-			 // to local file in case of Error or Warning, as well
+			 // Prepare observational data to send to ObserverBase's ProcessDataReportHealth function...
 		 }
 	 }	
  }
@@ -317,7 +319,7 @@ folder (AppObserver.config.json):
 [
   {
     "target": "fabric:/BadApp",
-    "cpuErrorLimitPct": 40,
+    "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
@@ -333,50 +335,50 @@ folder (AppObserver.config.json):
   },
   {
     "target": "fabric:/CpuStress",
-    "cpuErrorLimitPct": 40,
+    "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
     "diskIOWarningReadsPerSecMS": 45,
     "diskIOWarningWritesPerSecMS": 45,
     "dumpProcessOnError": true,
-    "memoryErrorLimitMB": 15000,
+    "memoryErrorLimitMB": 0,
     "memoryWarningLimitMB": 12000,
-    "networkErrorActivePorts": 1000,
+    "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 500,
+    "networkErrorEphemeralPorts": 0,
     "networkWarningEphemeralPorts": 400
   },
   {
     "target": "fabric:/FabricObserver",
-    "cpuErrorLimitPct": 40,
+    "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
     "diskIOWarningReadsPerSecMS": 45,
     "diskIOWarningWritesPerSecMS": 45,
     "dumpProcessOnError": true,
-    "memoryErrorLimitMB": 500,
+    "memoryErrorLimitMB": 0,
     "memoryWarningLimitMB": 100,
-    "networkErrorActivePorts": 1000,
+    "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 500,
+    "networkErrorEphemeralPorts": 0,
     "networkWarningEphemeralPorts": 400
   },
   {
     "target": "fabric:/FabricObserverWebApi",
-    "cpuErrorLimitPct": 40,
+    "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
     "diskIOWarningReadsPerSecMS": 45,
     "diskIOWarningWritesPerSecMS": 45,
     "dumpProcessOnError": true,
-    "memoryErrorLimitMB": 15000,
+    "memoryErrorLimitMB": 0,
     "memoryWarningLimitMB": 12000,
-    "networkErrorActivePorts": 1000,
+    "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 500,
+    "networkErrorEphemeralPorts": 0,
     "networkWarningEphemeralPorts": 400
   }
 ]
@@ -663,13 +665,13 @@ file, NodeObserver.config.json
 ```javascript
 { 
   "target": "node", 
-  "cpuErrorLimitPct": 90, 
+  "cpuErrorLimitPct": 0, 
   "cpuWarningLimitPct": 80, 
-  "memoryErrorLimitMB": 31500, 
+  "memoryErrorLimitMB": 0, 
   "memoryWarningLimitMB": 28000, 
-  "networkErrorActivePorts": 60000, 
-  "networkErrorEphemeralPorts": 24000, 
-  "networkErrorFirewallRules": 5000, 
+  "networkErrorActivePorts": 0, 
+  "networkErrorEphemeralPorts": 0, 
+  "networkErrorFirewallRules": 0, 
   "networkWarningActivePorts": 45000, 
   "networkWarningEphemeralPorts": 20000, 
   "networkWarningFirewallRules": 2500 
@@ -844,8 +846,6 @@ For Warning and Errors, we will utilize Fabric Health store and reporting mechan
 important information in SFX. This release also includes a telemtry provider interface and
 ships with an AppInsights implementation. So, you can stream events to AppInsigths in addition
 to file logging and SFX health reporting.
-
-
 
 
 # Contributing
