@@ -478,8 +478,8 @@ Drive Type: Fixed \
   Free Total: 98 GB \
   % Used    : 22% \
   Avg. Disk sec/Read: 0 ms \
-  Avg. Disk sec/Write: 1.36 ms
-
+  Avg. Disk sec/Write: 1.36 ms \
+  Avg. Disk Queue Length: 0.017 
 
 Drive Name: D:\  
 Drive Type: Fixed  
@@ -492,6 +492,7 @@ Drive Type: Fixed
   % Used    : 47%  
   Avg. Disk sec/Read: 0 ms  
   Avg. Disk sec/Write: 0.014 ms  
+  Avg. Disk Queue Length: 0   
 
 
 **This observer also optionally outputs a CSV file containing all resource usage
