@@ -468,7 +468,7 @@ example:
 
 Disk Info:
 
-Drive Name: C:\\
+Drive Name: C:\  
 Drive Type: Fixed \
   Volume Label   : Windows \
   Filesystem     : NTFS \
