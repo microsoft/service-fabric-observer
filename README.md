@@ -386,37 +386,37 @@ folder (AppObserver.config.json):
 
 **target**: App URI to observe (or "system" for node-level resource
 monitoring...)\
-**memoryMaximumLimitMB**: Maximum service process private working set,
+**memoryErrorLimitMB**: Maximum service process private working set,
 in Megabytes, that should generate a Fabric Error (SFX and local log) \[Note:
 this shouldn't have to be supplied in bytes...\]\
-**memoryMinimumLimitMB**: Minimum service process private working set,
+**memoryWarningLimitMB**: Minimum service process private working set,
 in Megabytes, that should generate a Fabric Warning (SFX and local log)
 \[Note: this shouldn't have to be supplied in bytes...\]\
-**cpuMaximumLimitPct**: Maximum CPU percentage that should generate a
+**cpuErrorLimitPct**: Maximum CPU percentage that should generate a
 Fabric Error \
-**cpuMinimumLimitPct**: Minimum CPU percentage that should generate a
+**cpuWarningLimitPct**: Minimum CPU percentage that should generate a
 Fabric Warning \
-**diskIOMaxReadsPerSecMS:** Maximum number of milliseconds for average
+**diskIOErrorReadsPerSecMS:** Maximum number of milliseconds for average
 sec/Read IO on system logical disk that will generate a Fabric
 Error.\
+**diskIOWarningReadsPerSecMS**: Minimum number of milliseconds for average
+sec/Read IO on system logical disk that will generate a Fabric warning.\
+**diskIOErrorWritesPerSecMS:** Maximum number of milliseconds for average
+sec/Write IO on system logical disk that will generate a Fabric
+Error.\
+**diskIOWarningWritesPerSecMS**: Minimum number of milliseconds for average
+sec/Write IO on system logical disk that will generate a Fabric
+Warning.\
 **dumpProcessOnError**: Instructs whether or not FabricObserver should  
 dump your service process when service health is detected to be in an 
 Error (critical) state...  
-**diskIOMinReadsPerSecMS**: Minimum number of milliseconds for average
-sec/Read IO on system logical disk that will generate a Fabric warning.\
-**diskIOMaxWritesPerSecMS:** Maximum number of milliseconds for average
-sec/Write IO on system logical disk that will generate a Fabric
-Error.\
-**diskIOMinWritesPerSecMS**: Minimum number of milliseconds for average
-sec/Write IO on system logical disk that will generate a Fabric
-Warning.\
-**networkMaxActivePorts:** Maximum number of established TCP ports in use by
+**networkErrorActivePorts:** Maximum number of established TCP ports in use by
 app process that will generate a Fabric Error.\
-**networkMinActivePorts:** Minimum number of established TCP ports in use by
+**networkWarningActivePorts:** Minimum number of established TCP ports in use by
 app process that will generate a Fabric Warning.\
-**networkMaxEphemeralPorts:** Maximum number of ephemeral TCP ports (within a dynamic port range) in use by
+**networkErrorEphemeralPorts:** Maximum number of ephemeral TCP ports (within a dynamic port range) in use by
 app process that will generate a Fabric Error.\
-**networkMinEphemeralPorts:** Minimum number of established TCP ports (within a dynamic port range) in use by
+**networkWarningEphemeralPorts:** Minimum number of established TCP ports (within a dynamic port range) in use by
 app process that will generate a Fabric Warning.\
 **Output**: Log text(Error/Warning), Service Fabric Application Health Report
 (Error/Warning/ok)
