@@ -47,7 +47,7 @@ namespace FabricObserverTests
         private readonly StatelessServiceContext context 
                  = new StatelessServiceContext(new NodeContext("Node0", new NodeId(0, 1), 0, "NodeType1", "TEST.MACHINE"),
                                                codePackageContext,
-                                               "WatchdogService.WatchdogServiceType",
+                                               "FabricObserver.FabricObserverType",
                                                serviceName,
                                                null,
                                                Guid.NewGuid(),
