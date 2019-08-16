@@ -1,0 +1,32 @@
+﻿[
+  {
+    "target": "fabric:/CpuStress",
+    "cpuErrorLimitPct": 40,
+    "cpuWarningLimitPct": 30,
+    "diskIOErrorReadsPerSecMS": 0,
+    "diskIOErrorWritesPerSecMS": 0,
+    "diskIOWarningReadsPerSecMS": 45,
+    "diskIOWarningWritesPerSecMS": 45,
+    "dumpProcessOnError": true,
+    "memoryErrorLimitMB": 15000,
+    "memoryWarningLimitMB": 12000,
+    "networkErrorActivePorts": 1000,
+    "networkWarningActivePorts": 500,
+    "pollIntervalSeconds": 1
+  },
+  {
+    "target": "fabric:/FabricObserver",
+    "cpuErrorLimitPct": 40,
+    "cpuWarningLimitPct": 30,
+    "diskIOErrorReadsPerSecMS": 0,
+    "diskIOErrorWritesPerSecMS": 0,
+    "diskIOWarningReadsPerSecMS": 45,
+    "diskIOWarningWritesPerSecMS": 45,
+    "dumpProcessOnError": true,
+    "memoryErrorLimitMB": 15000,
+    "memoryWarningLimitMB": 12000,
+    "networkErrorActivePorts": 1000,
+    "networkWarningActivePorts": 500,
+    "pollIntervalSeconds": 1
+  }
+]

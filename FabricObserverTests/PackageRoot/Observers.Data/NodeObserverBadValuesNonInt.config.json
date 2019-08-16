@@ -1,0 +1,11 @@
+{
+  "target": "node",
+  "cpuErrorLimitPct": 95.42,
+  "cpuWarningLimitPct": 85.01,
+  "memoryErrorLimitMB": "15000F",
+  "memoryWarningLimitMB": -10000,
+  "networkErrorActivePorts": "60000UL",
+  "networkWarningActivePorts": 45000,
+  "networkErrorFirewallRules": 5000,
+  "networkWarningFirewallRules": 2500.2500
+}
