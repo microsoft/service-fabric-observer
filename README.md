@@ -12,9 +12,7 @@ In Warning and Error states, an observer signals status (reports) via a Service 
 
 Finally, FO logs to disk, logs to long-running resource usage data in CSV files, and signals SF Health Reports under Warning and Error conditions. All of these are configurable across on/off and verbosity (in the case of file logging). For external users, it will be trivial to hook up output to some diagnostics/log analytics service.
 
-FO does not mitigate, by design, yet...
-
-Currently, FabricObserver is implemented as a .NET Desktop Application, which means it is Windows-only. There is a ToDo to convert to .NET Core 2.2. This should be relatively painless. It's going to happen...
+Currently, FabricObserver is implemented as a .NET Desktop Application, which means it is Windows-only. There is a ToDo to convert to .NET Core 2.2.x. This should be relatively easy to do, but we are focusing on Windows in the first release as most of our customers run Service Fabric on Windows VMs...
 
 FabricObserver needs to be generic enough to be useful across scenarios and not bound to a specific
 set of workloads.  Our goal is to continue to build this out in a general-purpose way, targeting all
@@ -26,9 +24,9 @@ the long term.
 In this iteration of the project, we have designed Observers that can be configured by users to
 monitor the machine-level side effects of an App (defined as a
 collection of Service Fabric services). The user-controlled,
-App-focused functionality is primarily encapsulated in the
-**AppObserver**, which observes, records and reports real-time CPU,
-Memory, Disk IO, and active port count as defined by the user in a Data
+App-focused functionality is primarily encapsulated in 
+**AppObserver**, which observes, records and reports on real-time CPU,
+Memory, Disk, active and ephemeral TCP port counts as defined by the user in a Data
 configuration file (JSON, App array objects). Likewise, there are the easily-configurable, App-focused **NetworkObserver** and  **DiskObserver**. You can learn a lot more about the set of existing observers further down this relatively long readme...\
 \
 For the most part, **we focus on both the state of the system surrounding a Service Fabric app and the specific side effects of 
@@ -233,7 +231,7 @@ for 60 seconds)\]. This ensures that the Fabric Health report remains
 active until the next time the related observer runs, which will either
 clear the warning by sending an OK health report or sends another
 warning/error report to fabric that lives for the calculated TTL. Each observer can call ObserverBase's SetTimeToLiveWarning function,
-optionally providing a known number that represents some timeout or running time the observer self-manages...
+optionally providing a known number that represents some timeout or running time, in seconds (int), the observer self-manages...
 
 ```C#
 public TimeSpan SetTimeToLiveWarning(int runDuration = 0)
@@ -309,9 +307,12 @@ observer will alert when user-supplied thresholds are reached.
 **Input**: JSON config file supplied by user, stored in
 PackageRoot/Observers.Data folder. This data contains JSON arrays
 objects which constitute Service Fabric Apps (identified by service
-URI's). Users supply Min/Max thresholds for CPU use, Memory use and Disk
-space. Memory values are supplied as (long) number of bytes... CPU and
-Disk Space values are provided as percentages (integers)...
+URI's). Users supply Error/Warning thresholds for CPU use, Memory use and Disk
+IO, ports. Memory values are supplied as number of megabytes... CPU and
+Disk Space values are provided as percentages (integers: so, 80 = 80%...)... 
+**Please note that you can supply 0 for any of these setting. It just means that the threshold
+will be ignored. We recommend you do this for all Error thresholds until you become more 
+comfortable with the behavior of your services and the machine-level side effects produced by them**.
 
 Example JSON config file located in **PackageRoot\\Observers.Data**
 folder (AppObserver.config.json):
@@ -323,14 +324,14 @@ folder (AppObserver.config.json):
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 45,
-    "diskIOWarningWritesPerSecMS": 45,
-    "dumpProcessOnError": true,
-    "memoryErrorLimitMB": 15000,
-    "memoryWarningLimitMB": 12000,
-    "networkErrorActivePorts": 1000,
+    "diskIOWarningReadsPerSecMS": 0,
+    "diskIOWarningWritesPerSecMS": 0,
+    "dumpProcessOnError": false,
+    "memoryErrorLimitMB": 0,
+    "memoryWarningLimitMB": 1024,
+    "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 500,
+    "networkErrorEphemeralPorts": 0,
     "networkWarningEphemeralPorts": 400
   },
   {
@@ -339,11 +340,11 @@ folder (AppObserver.config.json):
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 45,
-    "diskIOWarningWritesPerSecMS": 45,
-    "dumpProcessOnError": true,
+    "diskIOWarningReadsPerSecMS": 0,
+    "diskIOWarningWritesPerSecMS": 0,
+    "dumpProcessOnError": false,
     "memoryErrorLimitMB": 0,
-    "memoryWarningLimitMB": 12000,
+    "memoryWarningLimitMB": 1024,
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
@@ -355,11 +356,11 @@ folder (AppObserver.config.json):
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 45,
-    "diskIOWarningWritesPerSecMS": 45,
-    "dumpProcessOnError": true,
+    "diskIOWarningReadsPerSecMS": 0,
+    "diskIOWarningWritesPerSecMS": 0,
+    "dumpProcessOnError": false,
     "memoryErrorLimitMB": 0,
-    "memoryWarningLimitMB": 100,
+    "memoryWarningLimitMB": 250,
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
@@ -371,11 +372,11 @@ folder (AppObserver.config.json):
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 45,
-    "diskIOWarningWritesPerSecMS": 45,
-    "dumpProcessOnError": true,
+    "diskIOWarningReadsPerSecMS": 0,
+    "diskIOWarningWritesPerSecMS": 0,
+    "dumpProcessOnError": false,
     "memoryErrorLimitMB": 0,
-    "memoryWarningLimitMB": 12000,
+    "memoryWarningLimitMB": 1024,
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
@@ -557,8 +558,7 @@ is logged per iteration.
 **NetworkObserver**
 
 Observer that checks networking conditions across outbound and
-inbound connection state, Firewalls (monitors for leaks), Ports
-(exhaustion), etc\...
+inbound connection state.
 
 **Input**: NetworkObserver.config.json in PackageRoot\\Observers.Data.
 Users should supply hostname/port pairs (if they only allow
@@ -567,9 +567,7 @@ want us to test the endpoints they care about...). If this list is not
 provided, the observer will run through a default list of well-known,
 reliable internal Internet endpoints: google.com, facebook.com,
 azure.microsoft.com. The implementation allows for either an ICMP or
-TCP-based test. Is this overkill? If not, then we can add another
-property to the json object, "protocol", that the user can supply. We
-default to TCP today...
+TCP-based test.
 
 Each endpoint test result is stored in a simple data type
 (ConnectionState) that lives for either the lifetime of the run or until
@@ -578,23 +576,13 @@ reachable, SFX will be cleared with an OK health state report and the
 ConnectionState object will be removed from the containing
 List\<ConnectionState\>. Only Warning data is persisted across
 iterations.
-```C#
-internal class ConnectionState
-{
-	internal string HostName { get; set; }
-	internal bool Connected { get; set; }
-	internal HealthState Health { get; set; }
-}
-```
-**Output**: Log text(Info/Error/Warning), Service Fabric Health Report
-(Error/Warning)  
 
 Example NetworkObserver.config.json configuration:  
 
 ```javascript
 [
   {
-      "appTarget": "fabric:/CpuStress",
+      "appTarget": "fabric:/MyApp",
       "endpoints": [
         {
           "hostname": "google.com",
@@ -611,7 +599,7 @@ Example NetworkObserver.config.json configuration:
      ]
   },
   {
-      "appTarget": "fabric:/FabricObserver",
+      "appTarget": "fabric:/MyApp2",
       "endpoints": [
         {
           "hostname": "google.com",
@@ -630,78 +618,65 @@ Example NetworkObserver.config.json configuration:
 ]
 ```
 
+**Output**: Log text(Info/Error/Warning), Service Fabric Health Report
+(Error/Warning)  
+
 This observer runs 4 checks per supplied hostname with a 3 second delay
 between tests. This is done to help ensure we don't report transient
 network failures which will result in Fabric Health warnings that live
-until the observer runs again.
+until the observer runs again...
 
 **Output:**  
-Application Health Report (Error/Warning/Ok) and logging.
+Application Health Report (Error/Warning/Ok) and logging/telemetry.
 
-Network observer logs and monitors port use (Active). Log will simply
-contain output like this per non-warning (Ok) cycle (in Release build,
-which is necessarily less noisy than Debug...):
-
-2018-12-19
-15:54:23.9806\|INFO\|FabricObserver.Utilities.Logger\|fabric:/FabricObserverImpl\|Starting
-Observer: NetworkObserver\
-2018-12-19
-15:54:24.0495\|INFO\|FabricObserver.Utilities.Logger\|NetworkObserver\|Current
-number of **ports in use: 74**\
-2018-12-19
-15:54:24.6448\|INFO\|FabricObserver.Utilities.Logger\|fabric:/FabricObserverImpl\|Completed
-Observer: NetworkObserver\
-\
-NetworkObserver keeps track of and records Firewall rules count for use
-in Firewall leak detection. (NOTE: This should probably be put inside
-NodeObserver...) 
 
 **NodeObserver**
-This observer records CPU (%CPU time), Disk (% space used), Memory
-(private working set in MBs), and Port use count (int) of a Fabric node.
-It will warn on min/max thresholds supplied in a Json configuration
-file, NodeObserver.config.json  
+ This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports.
+ Thresholds for Erorr and Warning signals are user-supplied in Setting.xml.
 
 **Input**:
-```javascript
-{ 
-  "target": "node", 
-  "cpuErrorLimitPct": 0, 
-  "cpuWarningLimitPct": 80, 
-  "memoryErrorLimitMB": 0, 
-  "memoryWarningLimitMB": 28000, 
-  "networkErrorActivePorts": 0, 
-  "networkErrorEphemeralPorts": 0, 
-  "networkErrorFirewallRules": 0, 
-  "networkWarningActivePorts": 45000, 
-  "networkWarningEphemeralPorts": 20000, 
-  "networkWarningFirewallRules": 2500 
-} 
-```
-**target**: always "node"...    
-**cpuErrorLimitPct**: Maximum CPU percentage that should generate an
+```xml
+ <Section Name="NodeObserverConfiguration">
+    <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="CpuErrorLimitPct" Value="0" />
+    <Parameter Name="CpuWarningLimitPct" Value="80" />
+    <Parameter Name="MemoryErrorLimitMB" Value="0" />
+    <Parameter Name="MemoryWarningLimitMB" Value ="28000" />
+    <Parameter Name="NetworkErrorActivePorts" Value="0" />
+    <Parameter Name="NetworkWarningActivePorts" Value="45000" />
+    <Parameter Name="NetworkErrorFirewallRules" Value="0" />
+    <Parameter Name="NetworkWarningFirewallRules" Value="2500" />
+    <Parameter Name="NetworkErrorEphemeralPorts" Value="0" />
+    <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
+  </Section>
+```  
+**CpuErrorLimitPct**: Maximum CPU percentage that should generate an
 Error (SFX and local log)\
-**cpuWarningLimitPct**: Minimum CPU percentage that should generate a
+**CpuWarningLimitPct**: Minimum CPU percentage that should generate a
 Warning (SFX and local log)\
-**memoryErrorLimitMB**: Maximum service process private working set,
+**MemoryErrorLimitMB**: Maximum service process private working set,
 in Megabytes, that should generate an Error (SFX and local log) \[Note:
 this shouldn't have to be supplied in bytes...\]\
-**memoryWarningLimitMB**: Minimum service process private working set,
+**MemoryWarningLimitMB**: Minimum service process private working set,
 in Megabytes, that should generate an Warning (SFX and local log)
 \[Note: this shouldn't have to be supplied in bytes...\]\
-**networkErrorActivePorts:** Maximum number of established ports in use by
+**NetworkErrorFirewallRules**: Number of established Firewall Rules that will generate a Health Warning  
+**NetworkWarningFirewallRules**:  Number of established Firewall Rules that will generate a Health Error  
+**NetworkErrorActivePorts:** Maximum number of established ports in use by
 all processes on node that will generate a Fabric Error.\
-**networkWarningActivePorts:** Minimum number of established TCP ports in use by
+**NetworkWarningActivePorts:** Minimum number of established TCP ports in use by
 all processes on node that will generate a Fabric Warning.\
-**networkErrorEphemeralPorts:** Maximum number of established ephemeral TCP ports in use by
+**NetworkErrorEphemeralPorts:** Maximum number of established ephemeral TCP ports in use by
 app process that will generate a Fabric Error.\
-**networkWarningEphemeralPorts:** Minimum number of established ephemeral TCP ports in use by
+**NetworkWarningEphemeralPorts:** Minimum number of established ephemeral TCP ports in use by
 all processes on node that will generate a Fabric warning.\
 
 **Output**:\
 SFX Warnings when min/max thresholds are reached. CSV file,
 CpuMemDiskPorts\_\[nodeName\].csv, containing long-running data (across
 all run iterations of the observer).
+
 
 **OSObserver**\
 This observer records basic OS properties for use during mitigations,
