@@ -21,14 +21,14 @@ will return JSON string:
 
 {"date":"08-16-2019 21:07:11.6257","healthState":"Ok","message":""} 
 
-when current state of the local node is healthy. In the case when it is not healthy, you will see healthState:Warning/Error with a message: that contains specific details of the Warning or Error state...
-
-When the healthState is Error or Warning, then the message field will contain the details, including an FOxxx error code.
+when current state of the local node is healthy. In the case when it is not healthy, you will see healthState:Warning/Error with the message field containing the details, including an FOxxx error code.
 
 This API also supports html output for "pretty" printing on a web page. For example, 
 
 http://localhost:5000/api/observermanager
 
-will display a bunch of very useful information about the specfied node (in this case _SFRole0). It also has a menu of nodes that will take you around the cluster to see what's going on on each node across OS and SF properties...
+will display a bunch of very useful information about the node. 
+
+If you decide to expose this api over the Internet on a secure channel (SSL), and provide an FQDN setting in Settings.xml, then new features will become available like a node menu where you can navigate around the cluster to view node states. Also, you will be able to query for observer data on any node by supplying a node name on the API URI.
 
 
