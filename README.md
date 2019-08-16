@@ -1,9 +1,3 @@
----
-services: service-fabric
-platforms: .NET, windows
-author: ctorre, abhaym
----
-
 [![Build Status](https://msazure.visualstudio.com/One/_apis/build/status/cdptriggers/azure/compute/master/service-fabric-observer?branchName=Release)](https://msazure.visualstudio.com/One/_build/latest?definitionId=89044&branchName=Release)
 
 ***INTRODUCTION***
