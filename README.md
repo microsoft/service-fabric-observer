@@ -447,19 +447,26 @@ This observer monitors, records and analyzes storage disk information.
 Depending upon configuration settings, it signals disk health status
 warnings (or OK state) for all logical disks it detects.
 
-After DiskObserver logs basic information, it performs 60 seconds of
-Disk measurements on all logical disks. This ensures we don't warn on
-transient disk states. The data values collected are averaged and then
-used in ReportAsync to determine if a Warning shot should be sent to
-SFX, based on user-supplied threshold setting for Space (we internally
-warn on IO, but we can enable this as a user setting, too...).
-Currently, the data collected are disk space usage (percent of disk
-space used). % Disk Read Time, % Disk Write Time. This can grow as
-needed by customers... More to do here, but this fine for V1 since it
-covers space and basic IOPs. Note that currently we Warn when Disk Read
-Time or Disk Write Time exceeds, on average, 25% over the course of
-sampling. This is the typical behavior of monitors. We can change this
-based on real world data...
+After DiskObserver logs basic disk information, it performs 5 seconds of
+measurements on all logical disks across space usage and IO. The data collected are averaged and then
+used in ReportAsync to determine if a Warning shot should be fired based on user-supplied threshold 
+settings housed in Settings.xml.
+
+```xml
+  <Section Name="DiskObserverConfiguration">
+    <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="DiskSpaceWarningThreshold" Value="80" />
+    <Parameter Name="DiskSpaceErrorThreshold" Value="" />
+    <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="5" />
+    <!-- These may or may not be useful to you. Depends on your IO-bound workload... -->
+    <Parameter Name="IOReadsErrorThreshold" Value="" />
+    <Parameter Name="IOReadsWarningThreshold" Value="" />
+    <Parameter Name="IOWritesErrorThreshold" Value="" />
+    <Parameter Name="IOWritesWarningThreshold" Value="" />	  
+  </Section>
+```
 
 **Output**: 
 
@@ -650,7 +657,7 @@ Application Health Report (Error/Warning/Ok) and logging/telemetry.
     <Parameter Name="NetworkErrorEphemeralPorts" Value="0" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
   </Section>
-```  
+```
 **CpuErrorLimitPct**: Maximum CPU percentage that should generate an
 Error (SFX and local log)\
 **CpuWarningLimitPct**: Minimum CPU percentage that should generate a
