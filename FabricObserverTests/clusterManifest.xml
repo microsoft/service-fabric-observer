@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ClusterManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="DevCluster" Version="0" Description="This is a generated file. Do not modify." xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <NodeTypes>
+    <NodeType Name="NodeType0">
+      <Endpoints>
+        <ClientConnectionEndpoint Port="19000" />
+        <LeaseDriverEndpoint Port="19001" />
+        <ClusterConnectionEndpoint Port="19002" />
+        <HttpGatewayEndpoint Port="19080" Protocol="http" />
+        <HttpApplicationGatewayEndpoint Port="19081" Protocol="http" />
+        <ServiceConnectionEndpoint Port="19006" />
+        <ApplicationEndpoints StartPort="30001" EndPort="31000" />
+      </Endpoints>
+      <PlacementProperties>
+        <Property Name="NodeTypeName" Value="NodeType0" />
+      </PlacementProperties>
+    </NodeType>
+  </NodeTypes>
+  <Infrastructure>
+    <WindowsServer IsScaleMin="true">
+      <NodeList>
+        <Node NodeName="_Node_0" IPAddressOrFQDN="CZBook.redmond.corp.microsoft.com" IsSeedNode="true" NodeTypeRef="NodeType0" FaultDomain="fd:/0" UpgradeDomain="0" />
+      </NodeList>
+    </WindowsServer>
+  </Infrastructure>
+  <FabricSettings>
+    <Section Name="ApplicationGateway/Http">
+      <Parameter Name="IsEnabled" Value="true" />
+    </Section>
+    <Section Name="ClusterManager">
+      <Parameter Name="MinReplicaSetSize" Value="1" />
+      <Parameter Name="TargetReplicaSetSize" Value="1" />
+      <Parameter Name="UpgradeStatusPollInterval" Value="5" />
+      <Parameter Name="UpgradeHealthCheckInterval" Value="5" />
+      <Parameter Name="FabricUpgradeHealthCheckInterval" Value="5" />
+    </Section>
+    <Section Name="Diagnostics">
+      <Parameter Name="ProducerInstances" Value="ServiceFabricEtlFile,ServiceFabricPerfCtrFolder" />
+      <Parameter Name="MaxDiskQuotaInMB" Value="10240" />
+      <Parameter Name="EnableCircularTraceSession" Value="true" />
+    </Section>
+    <Section Name="DnsService">
+      <Parameter Name="InstanceCount" Value="-1" />
+      <Parameter Name="IsEnabled" Value="True" />
+      <Parameter Name="AllowMultipleListeners" Value="true" />
+      <Parameter Name="EnablePartitionedQuery" Value="true" />
+    </Section>
+    <Section Name="EventStoreService">
+      <Parameter Name="MinReplicaSetSize" Value="1" />
+      <Parameter Name="TargetReplicaSetSize" Value="1" />
+    </Section>
+    <Section Name="FabricClient">
+      <Parameter Name="HealthReportSendInterval" Value="0" />
+    </Section>
+    <Section Name="Failover">
+      <Parameter Name="NodeUpRetryInterval" Value="1" />
+      <Parameter Name="SendToFMTimeout" Value="1" />
+    </Section>
+    <Section Name="FailoverManager">
+      <Parameter Name="ExpectedClusterSize" Value="1" />
+      <Parameter Name="IsSingletonReplicaMoveAllowedDuringUpgrade" Value="false" />
+      <Parameter Name="MinReplicaSetSize" Value="1" />
+      <Parameter Name="TargetReplicaSetSize" Value="1" />
+      <Parameter Name="ClusterStableWaitDuration" Value="0" />
+      <Parameter Name="PeriodicStateScanInterval" Value="1" />
+      <Parameter Name="ReconfigurationTimeLimit" Value="20" />
+      <Parameter Name="BuildReplicaTimeLimit" Value="20" />
+      <Parameter Name="CreateInstanceTimeLimit" Value="20" />
+      <Parameter Name="PlacementTimeLimit" Value="20" />
+      <Parameter Name="ServiceLocationBroadcastInterval" Value="1" />
+      <Parameter Name="ServiceLookupTableEmptyBroadcastInterval" Value="1" />
+      <Parameter Name="MinRebuildRetryInterval" Value="1" />
+      <Parameter Name="MaxRebuildRetryInterval" Value="1" />
+    </Section>
+    <Section Name="Federation">
+      <Parameter Name="NodeIdGeneratorVersion" Value="V4" />
+      <Parameter Name="ProcessAssertExitTimeout" Value="86400" />
+      <Parameter Name="UnresponsiveDuration" Value="0" />
+      <Parameter Name="DiskProbeUnresponsiveDuration" Value="0" />
+      <Parameter Name="MemoryProbeUnresponsiveDuration" Value="0" />
+      <Parameter Name="NetworkProbeUnresponsiveDuration" Value="0" />
+    </Section>
+    <Section Name="Hosting">
+      <Parameter Name="CacheCleanupScanInterval" Value="300" />
+      <Parameter Name="DeactivationGraceInterval" Value="2" />
+      <Parameter Name="DeactivationScanInterval" Value="600" />
+      <Parameter Name="DeploymentRetryBackoffInterval" Value="1" />
+      <Parameter Name="EnableProcessDebugging" Value="true" />
+      <Parameter Name="EndpointProviderEnabled" Value="true" />
+      <Parameter Name="RunAsPolicyEnabled" Value="true" />
+      <Parameter Name="ServiceTypeRegistrationTimeout" Value="20" />
+    </Section>
+    <Section Name="HttpGateway">
+      <Parameter Name="IsEnabled" Value="true" />
+    </Section>
+    <Section Name="ImageStoreService">
+      <Parameter Name="MinReplicaSetSize" Value="1" />
+      <Parameter Name="TargetReplicaSetSize" Value="1" />
+    </Section>
+    <Section Name="Management">
+      <Parameter Name="DisableChecksumValidation" Value="true" />
+      <Parameter Name="EnableDeploymentAtDataRoot" Value="true" />
+      <Parameter Name="ImageCachingEnabled" Value="false" />
+      <Parameter Name="ImageStoreConnectionString" Value="file:C:\SfDevCluster\Data\ImageStoreShare" />
+    </Section>
+    <Section Name="NamingService">
+      <Parameter Name="MinReplicaSetSize" Value="1" />
+      <Parameter Name="TargetReplicaSetSize" Value="1" />
+      <Parameter Name="PartitionCount" Value="1" />
+    </Section>
+    <Section Name="PlacementAndLoadBalancing">
+      <Parameter Name="MinLoadBalancingInterval" Value="300" />
+      <Parameter Name="QuorumBasedReplicaDistributionPerFaultDomains" Value="true" />
+      <Parameter Name="TraceCRMReasons" Value="false" />
+    </Section>
+    <Section Name="ReconfigurationAgent">
+      <Parameter Name="IsDeactivationInfoEnabled" Value="true" />
+      <Parameter Name="LocalHealthReportingTimerInterval" Value="5" />
+      <Parameter Name="MinimumIntervalBetweenRAPMessageRetry" Value="0.5" />
+      <Parameter Name="RAPMessageRetryInterval" Value="0.5" />
+      <Parameter Name="RAUpgradeProgressCheckInterval" Value="3" />
+      <Parameter Name="ServiceApiHealthDuration" Value="20" />
+      <Parameter Name="ServiceReconfigurationApiHealthDuration" Value="20" />
+    </Section>
+    <Section Name="Security">
+      <Parameter Name="ClusterCredentialType" Value="None" />
+      <Parameter Name="ServerAuthCredentialType" Value="None" />
+    </Section>
+    <Section Name="ServiceFabricEtlFile">
+      <Parameter Name="DataDeletionAgeInDays" Value="3" />
+      <Parameter Name="EtlReadIntervalInMinutes" Value="5" />
+      <Parameter Name="IsEnabled" Value="true" />
+      <Parameter Name="ProducerType" Value="EtlFileProducer" />
+    </Section>
+    <Section Name="ServiceFabricPerfCtrFolder">
+      <Parameter Name="DataDeletionAgeInDays" Value="3" />
+      <Parameter Name="FolderType" Value="ServiceFabricPerformanceCounters" />
+      <Parameter Name="IsEnabled" Value="true" />
+      <Parameter Name="ProducerType" Value="FolderProducer" />
+    </Section>
+    <Section Name="Setup">
+      <Parameter Name="FabricDataRoot" Value="C:\SfDevCluster\Data" />
+      <Parameter Name="FabricLogRoot" Value="C:\SFDevCluster\Log" />
+      <Parameter Name="SkipFirewallConfiguration" Value="true" />
+    </Section>
+    <Section Name="Trace/Etw">
+      <Parameter Name="Level" Value="4" />
+    </Section>
+    <Section Name="TransactionalReplicator">
+      <Parameter Name="CheckpointThresholdInMB" Value="64" />
+    </Section>
+  </FabricSettings>
+</ClusterManifest>
