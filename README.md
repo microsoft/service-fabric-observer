@@ -2,24 +2,17 @@
 
 ***INTRODUCTION***
 
-FabricObserver (FO) is a user-configurable stateless Service Fabric service that monitors both user services and internal fabric services for potential problems related to resource usage, networking, and certificates/security. It employs a simple-to-understand Observer development model, enabling the creation of new observers very quickly with little cognitive complexity... 
+FabricObserver (FO) is a user-configurable stateless Service Fabric service that monitors both user services and internal fabric services for potential problems related to resource usage across Disk, CPU, Memory, Networking. It employs a simple-to-understand Observer development model, enabling the creation of new observers very quickly with little cognitive complexity... 
 
-FO is implemented using Service Fabric’s external/public API surface only. It does not ship with SF. It is independent of the SF runtime engineering schedule…
+FO is implemented using Service Fabric’s public API surface only. It does not ship with SF. It is independent of the SF runtime engineering schedule…
 
 FO is composed of Observer objects (instance classes) that are designed to observe, record, and report on several machine-level environmental conditions inside a VM, so at the OS node level of a Service Fabric cluster. 
 
 In Warning and Error states, an observer signals status (reports) via a Service Fabric Health Report (e.g., extended, high CPU and Memory usage, extended Disk IO, limited Disk space, Networking issues (latency, unavailability, unusually high or low network IO). Since an observer doesn't know what's good and what's bad by simply observing some resource state (in some cases, like disk space monitoring and fabric system service monitoring, there are predefined maxima/minima), a user must provide Warning and Error thresholds that ring the alarm bells. These settings are supplied and packaged in Service Fabric configuration files (both XML and JSON are supported).
 
-Finally, FO logs to disk, logs to long-running resource usage data in CSV files, and signals SF Health Reports under Warning and Error conditions. All of these are configurable across on/off and verbosity (in the case of file logging). For external users, it will be trivial to hook up output to some diagnostics/log analytics service.
+Finally, FO logs to disk, optionally logs to long-running resource usage data in CSV files, and signals SF Health Reports under Warning and Error conditions. It ships with an AppInsights teletmetry implementation and you can use whatever provider you want. All of these are configurable across feature enablement and verbosity (in the case of file logging). 
 
 Currently, FabricObserver is implemented as a .NET Desktop Application, which means it is Windows-only. There is a ToDo to convert to .NET Core 2.2.x. This should be relatively easy to do, but we are focusing on Windows in the first release as most of our customers run Service Fabric on Windows VMs...
-
-FabricObserver needs to be generic enough to be useful across scenarios and not bound to a specific
-set of workloads.  Our goal is to continue to build this out in a general-purpose way, targeting all
-users (not just internal SF customers). To begin, we have designed and
-implemented a handful of Observers that we will employ in production 
-in the near term to better understand what we need to build for
-the long term.
 
 In this iteration of the project, we have designed Observers that can be configured by users to
 monitor the machine-level side effects of an App (defined as a
@@ -36,9 +29,8 @@ process across Apps and Fabric system services), Memory (per process
 across Apps and Fabric system services as well as system-wide), Networking (general health and
 monitoring of availability of user-specified, per-app endpoints), basic OS
 properties (install date, health status, list of hot fixes, hardware configuration,
-etc.), and Service Fabric infrastructure information and state. The design is decidely simplistic and easy to understand/implement. C# and .NET make this very easy to do. Since the product is OSS, anybody can author scenario-specific
-observers themselves very quickly (or extend currently implemented ones) to meet
-their monitoring and reporting needs. The idea is that an Observer observes user-specified conditions, reports, and logs. Observers do not mitigate. That should be done in a different service that works in concert, but is not coupled to FabricObserver. Basic microservice design thinking...
+etc., ephemeral port range and real-time status), and Service Fabric infrastructure information and state. The design is decidely simplistic and easy to understand/implement. C# and .NET make this very easy to do. Since the product is OSS, anybody can author scenario-specific observers themselves very quickly (or extend currently implemented ones) to meet
+their monitoring and reporting needs. The idea is that an Observer observes user-specified conditions, reports, and logs/streams. Observers do not mitigate. 
 
 ***GOAL***
 
@@ -49,163 +41,115 @@ Empower cloud developers to understand and learn from inevitable failure conditi
 
 As stated, the goal of this project, in line with the team's Supportability initiative, is to help
 enable Service Fabric customers to self-mitigate issues versus creating
-ICM incidents, by default. With knowledge comes power. For Phase 1, the scope is improving a developer's knowledge about the actual health state of the environment in which her services are running. As we
-move to Phase 2 we will include Policy-driven Action that is owned by
+ICM incidents, by default. With knowledge comes power. For this initial release, the scope is improving a developer's knowledge about the actual health state of the environment in which her services are running. As we
+move to the next phase we will include Policy-driven Action that is owned by
 the user (not by SF). This will reside in a FabricHealer service.
-
-Simply put, \*Phase 1 is about collection, recording, and alerting of the
-right metrics\*, where "right" is defined by data from real-world incidents. We
-will then be armed with the requisite health data to begin
-exploring safe auto-mitigation strategies.
 
 ***DEFINITIONS AND ACRONYMS***
 
 **Observer** -- conceptually equivalent to "Watchdog", however, we want
 to make it even more explicit that the nature of these objects is
 non-reactive, meaning they do not mitigate, they observe, record, and
-report.
+report. Plus, Observer is a much cooler name than Watchdog ;-)
 
 ***DESIGN***
 
 **FabricObserver** is a lightweight *Stateless Service Fabric service*
 which is designed to be highly decoupled from the underlying Fabric
-system services it observes. We do not rely on interaction with Service
-Fabric subsystems beyond what we can access through a internal API, like
-all Service Fabric Service implementations in the internal domain\... This
+system services it observes. We do not rely on interaction with internal-only Service
+Fabric subsystems beyond what we can access through a public API, like
+all Service Fabric Service implementations in the public domain\... This
 is a design decision to limit runtime dependencies and enable agile
 delivery of bug fixes and new features for Observers (and in time,
 Healers or Mitigators). We do not need to align with the delivery plans
 for the underlying system. There is no need for FabricObserver to
 maintain replicated internal state, so we don't need to implement Fabric
-Observer as a Stateful Service Fabric service today.
+Observer as a Stateful Service Fabric service today. There is no need for FabricObserver to run
+with elevated privileges. It is runs as Network Service. FabricObserver does not need or use much Working Set, 
+RAM, or Disk space (depending on configuration - CSV files can add up if you choose to store long running data locally.).
+FabricObserver does not listen on any ports. The only way to access information generated by FO is use the node-local (default
+impl) FabricObserverWebApi service, which is not accessible from the Internet, by default (you can choose to change that), but is
+readily available from the node. So, your service can easily query FO observer states by making a REST call to a localhost URI (port 5000 by default. Configurable...), which will return a JSON blob describing health state for said observer. You can read more about
+this in the FabricObserverWebApi ReadMe.
 
-**ObserverManager** serves as the entry point for all machine local
-Observers. Its RunObservers method calls Start on all the Observers in a
-loop, which runs through them sequentially. After each iteration through
-all observers, it logs FabricObserver's health state (Warning or Error,
-always logging to local disk Error conditions, and signaling to SFX via
-Health Reporting as Warnings. Ok state is not recorded...). When an
-observer reports a warning, the ObserverManager will wait 30 seconds and
-then run that observer again (retry). If it is still in a warning state
-after the retry, the loop continues through to the next observer (and
-the retry information is logged...). The reason for the delayed retry is
-to clear any transient health issues from the FabricHealth queue sooner
-than waiting for the next "natural" time the offending observer
-runs...
+**ObserverManager** serves as the entry point for creating and managing all Observers. 
+Its RunObservers method calls ObserveAsync on all the Observer instances in a
+sequential loop with a configurable sleep between cycles.
 
-The iteration interval defaults to 300 seconds (5 minutes): after
-running all observers, it sleeps for the allotted time. This setting is
-user-configurable in Settings. ObserverManager manages lifetime of
+The iteration interval defaults to 0 seconds (no sleep). The sleep setting is
+user-configurable in Settings.xml. ObserverManager manages the lifetime of
 observers and will dispose of them in addition to stopping their
-execution when shutdown or task cancellation is requested. 
+execution when shutdown or task cancellation is requested. You can stop an observer
+by calling ObserverManager's StopObservers() function.
 
 
 **Abstract class ObserverBase**  
 
-> This is the abstract base class for all Observers. It provides several
-> concrete method and property implementations that are widely used by
-> deriving types. It explicitly implements one of the members of
-> IObserver (RunInterval), while requiring derived types to implement
-> the rest of IObserver's members.  
+This is the abstract base class for all Observers. It provides several concrete method and property implementations 
+that are widely used by deriving types, not the least of which is ProcessResourceDataReportHealth(), which is called from all
+observers' ReportAsync function.
 
 ***Design*** 
 
 IObserver and IObserverBase interfaces (implemented/abstracted by ObserverBase, which is
 implemented by all Observers)  
 ```C#
-internal interface IObserver : IDisposable
-{
-        DateTime LastRunDateTime { get; set; } 
-        TimeSpan RunInterval { get; set; }
-        bool IsEnabled { get; set; }
-        bool HasActiveFabricErrorOrWarning { get; set; }
-        bool IsUnhealthy { get; set; }
-        Task ObserveAsync(CancellationToken token);
-        Task ReportAsync(CancellationToken token);
-}
     
-internal interface IObserverBase<T,TU> : IObserver
+public interface IObserver : IDisposable
 {
-        string ObserverName { get; set; }
-        string NodeName { get; set; }
-        ObserverHealthReporter HealthReporter { get; }
-        // StatefulServiceContext or StatelessServiceContext...
-        T FabricServiceContext { get; }
-        Logger Logger { get; set; }
-        DataLogger DataLogger { get; set; }
-        void EmitLogEvent(string observerName, string description, LogEventLevel level);
-        TimeSpan GetObserverRunInterval(string configSectionName, string configParamName, TimeSpan? defaultTo = null);
-        string GetSettingParameterValue(string sectionName, string parameterName, string defaultValue = null);
-        // Whatever key-value/named-pair data structure suits your fancy, default is IDictionary...
-        TU GetConfigSettingSectionParameters(string sectionName);
+	DateTime LastRunDateTime { get; set; }
+	TimeSpan RunInterval { get; set; }
+	bool IsEnabled { get; set; }
+	bool HasActiveFabricErrorOrWarning { get; set; }
+	bool IsUnhealthy { get; set; }
+	Task ObserveAsync(CancellationToken token);
+	Task ReportAsync(CancellationToken token);
+}
+
+public interface IObserverBase<TServiceContext> : IObserver
+{
+	string ObserverName { get; set; }
+	string NodeName { get; set; }
+	ObserverHealthReporter HealthReporter { get; }
+	// StatefulServiceContext or StatelessServiceContext...
+	TServiceContext FabricServiceContext { get; }
+	Logger ObserverLogger { get; set; }
+	DataTableFileLogger CsvFileLogger { get; set; }
+	void WriteToLogWithLevel(string observerName, string description, LogLevel level);
+	TimeSpan GetObserverRunInterval(string configSectionName, string configParamName, TimeSpan? defaultTo = null);
+	string GetSettingParameterValue(string sectionName, string parameterName, string defaultValue = null);
+	IDictionary<string, string> GetConfigSettingSectionParameters(string sectionName);
 }
     
 
-internal abstract class ObserverBase: IObserverBase<StatelessServiceContext, 
-                                                    IDictionary<string, string>>  
+public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
 {
-	internal string ObserverName { get; set; }
-        internal string NodeName { get; set; }
-        internal ObserverHealthReporter HealthReporter { get; }
-        internal StatelessServiceContext FabricServiceContext { get; }
-        internal abstract DateTime LastRunDateTime { get; set; }
-        internal bool IsEnabled { get; set; } 
-        internal bool IsUnhealthy { get; set; }
-        internal Logger Logger { get; set; }
-        internal DataLogger DataLogger { get; set; }
-
-        // Each derived Observer can set this to maintain health status (Warning state true/false) across iterations.
-        // This information is used by ObserverManager. 
-        internal bool HasActiveFabricErrorOrWarning { get; set; } = false;
-        internal TimeSpan RunInterval { get; set; } = TimeSpan.FromMinutes(10);
-        internal List<string> Settings { get; }
-        internal abstract Task ObserveAsync(CancellationToken token);
-        internal abstract Task ReportAsync(CancellationToken token);
-	protected FabricClient FabricClientInstance { get; }
-	internal IDictionary<string, string> GetConfigSettingSectionParameters(string sectionName) { ... }
-	internal TimeSpan GetObserverRunInterval(string configSectionName,
-                                                 string configParamName,
-                                                 TimeSpan? defaultTo = null) { ... }
-	// Windows only process dumping...
-        internal bool DumpServiceProcess(int processId, DumpType dumpType = DumpType.Full) { ... }
-	
-	// Dispose pattern, made virtual so Observers aren't required to implement if they don't need to...
-	protected virtual void Dispose(bool disposing) { ... }
-	internal virtual void Dispose() { ... }
-	
+	...
 }
 ```
 
-An ObserverBase derived type, as are all Observers, must implement:
+An ObserverBase-derived type must implement:
 
--   A internal ctor of shape: \[Some\]Observer() **:
+-   An internal ctor of shape: \[Some\]Observer() **:
     base(\[ObserverName\])** { }
 
--   A internal Task ObserveAsync(CancellationToken token) method
+-   A Task ObserveAsync(CancellationToken token) method
 
--   A internal Task ReportAsync(CancellationToken token) method
+-   A Task ReportAsync(CancellationToken token) method
 
 ***The Observer***
 
 An **Observer** is a C\# object that is instantiated inside a Stateless
 Service Fabric Service process. An Observer is designed to monitor
-specific machine level environmental conditions (thus the notion of a
-"machine local" monitoring mechanism), the metrics of which are stored
-in in-memory data structures, \[statistics...\] .... that people (app
-developers and SF team devs on ICM duty) can use to make informed
-mitigation decisions. It will also support an extensibility model which
-will be kept very simple to encourage usage. The project has 4 stages of
-design and development. We are already executing on Phase 1, which
-includes research and x-org collaboration planning...
+specific machine level resource conditions, SF App properties, SF service properties, SF config and runtime properties.
+For resource usage, the metrics are stored in in-memory data structures for use in reporting.
 
 An Observer must support the following properties and behaviors:
 
 -   Easily extensible monitoring "framework": developers should be able
     to readily add new types of data collectors to an observer...
 
--   Ability to observe both Machine and App health (the latter is a bit
-    tricky, but with xPing, for example, at least we could attain some
-    useful insights at the App level...).
+-   Ability to observe Machine, SF System Services, and user service health 
 
 -   Observers must be low cost and highly effective: Process of
     observation does not add significant resource pressure to nodes
@@ -215,8 +159,6 @@ An Observer must support the following properties and behaviors:
     results that are immediately useful to users such that they can make
     informed mitigation decisions, should they choose to do so.
 
--   Data is stored in formats readily consumable by data analysis
-    services
 
 Each Observer can create a Warning if some metric exceeds a supplied
 threshold. **Note: we do not generate Fabric Health Errors by default as this will block
@@ -263,20 +205,20 @@ using FabricObserver.Utilities;
 
 namespace FabricObserver
 {
-	class SomeObserver : ObserverBase
+	pubic class SomeObserver : ObserverBase
 	{
-		 internal SomeObserver() : base(ObserverConstants.SomeObserverName) { }
+		 public SomeObserver() : base(ObserverConstants.SomeObserverName) { }
 		
-		 internal override DateTime LastRunDateTime { get; set; } = DateTime.MinValue;
+		 public override DateTime LastRunDateTime { get; set; } = DateTime.MinValue;
 		 
-		 internal override async Task ObserveAsync(CancellationToken token)
+		 public override async Task ObserveAsync(CancellationToken token)
 	 	 {
 			 // Observe then call ReportAsync...
 		 }
 		
-		 internal override async Task ReportAsync(CancellationToken token)
+		 public override async Task ReportAsync(CancellationToken token)
 		 {
-			 // Prepare observational data to send to ObserverBase's ProcessDataReportHealth function...
+			 // Prepare observational data to send to ObserverBase's ProcessResourceDataReportHealth function...
 		 }
 	 }	
  }
@@ -319,7 +261,7 @@ folder (AppObserver.config.json):
 ```javascript
 [
   {
-    "target": "fabric:/BadApp",
+    "target": "fabric:/MyApp",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
@@ -335,7 +277,7 @@ folder (AppObserver.config.json):
     "networkWarningEphemeralPorts": 400
   },
   {
-    "target": "fabric:/CpuStress",
+    "target": "fabric:/MyApp2",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
