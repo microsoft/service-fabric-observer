@@ -1,0 +1,216 @@
+pool:
+  name: Hosted Windows 2019 with VS2019
+  demands:
+  - msbuild
+  - visualstudio
+  - vstest
+
+#Your build pipeline references an undefined variable named ‘Parameters.testAssemblyVer2’. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
+
+steps:
+- task: NuGetToolInstaller@1
+  displayName: 'Use NuGet 5.2.x'
+  inputs:
+    versionSpec: 5.2.x
+
+- task: NuGetCommand@2
+  displayName: 'NuGet restore (.NET Desktop)'
+  inputs:
+    restoreSolution: FabricObserver.sln
+
+- task: VSBuild@1
+  displayName: 'Build - RESTORE ONLY (ObsWeb)'
+  inputs:
+    solution: FabricObserver.sln
+    msbuildArgs: '/t:Restore'
+    platform: x64
+    configuration: Release
+    msbuildArchitecture: x64
+
+- task: VSBuild@1
+  displayName: 'Build FabricObserver.sln'
+  inputs:
+    solution: FabricObserver.sln
+    platform: x64
+    configuration: Release
+    msbuildArchitecture: x64
+
+- task: VSTest@2
+  displayName: 'VsTest - FabricObserver Unit Tests'
+  inputs:
+    testAssemblyVer2: '$(Parameters.testAssemblyVer2)'
+    vsTestVersion: 16.0
+    runTestsInIsolation: false
+    publishRunAttachments: false
+    rerunFailedTests: true
+  continueOnError: true
+
+- task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@1
+  displayName: 'ESRP External FO CodeSigning'
+  inputs:
+    ConnectedServiceName: FabricObserver
+    FolderPath: FabricObserver/bin/x64/Release
+    Pattern: FabricObserver.exe
+    signConfigType: inlineSignParams
+    inlineOperation: |
+     [
+             {
+                 "KeyCode" : "CP-230012",
+                 "OperationCode" : "SigntoolSign",
+                 "Parameters" : {
+                     "OpusName" : "Microsoft",
+                     "OpusInfo" : "http://www.microsoft.com",
+                     "FileDigest" : "/fd \"SHA256\"",
+                     "PageHash" : "/NPH",
+                     "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                 },
+                 "ToolName" : "sign",
+                 "ToolVersion" : "1.0"
+             },
+             {
+                 "KeyCode" : "CP-230012",
+                 "OperationCode" : "SigntoolVerify",
+                 "Parameters" : {},
+                 "ToolName" : "sign",
+                 "ToolVersion" : "1.0"
+             }
+         ]
+    MaxRetryAttempts: 3
+    CleanupTempStorage: false
+
+- task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@1
+  displayName: 'SRP 3rd Party OSS CodeSigning - NLog'
+  inputs:
+    ConnectedServiceName: FabricObserver
+    FolderPath: FabricObserver/bin/x64/Release
+    Pattern: NLog.dll
+    signConfigType: inlineSignParams
+    inlineOperation: |
+     [
+             {
+                 "KeyCode" : "CP-231522",
+                 "OperationCode" : "SigntoolSign",
+                 "Parameters" : {
+                     "OpusName" : "Microsoft",
+                     "OpusInfo" : "http://www.microsoft.com",
+                     "Append" : "/as",
+                     "FileDigest" : "/fd \"SHA256\"",
+                     "PageHash" : "/NPH",
+                     "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                 },
+                 "ToolName" : "sign",
+                 "ToolVersion" : "1.0"
+             },
+             {
+                 "KeyCode" : "CP-231522",
+                 "OperationCode" : "SigntoolVerify",
+                 "Parameters" : {},
+                 "ToolName" : "sign",
+                 "ToolVersion" : "1.0"
+             }
+      ]
+    MaxRetryAttempts: 3
+    CleanupTempStorage: false
+
+- task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@1
+  displayName: 'ESRP External FOWebAPI CodeSigning'
+  inputs:
+    ConnectedServiceName: FabricObserver
+    FolderPath: 'FabricObserverWeb\bin\Release\netcoreapp2.2\win7-x64'
+    Pattern: '*ObserverWeb.exe, *ObserverWeb.dll'
+    signConfigType: inlineSignParams
+    inlineOperation: |
+     [
+             {
+                 "KeyCode" : "CP-230012",
+                 "OperationCode" : "SigntoolSign",
+                 "Parameters" : {
+                     "OpusName" : "Microsoft",
+                     "OpusInfo" : "http://www.microsoft.com",
+                     "FileDigest" : "/fd \"SHA256\"",
+                     "PageHash" : "/NPH",
+                     "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                 },
+                 "ToolName" : "sign",
+                 "ToolVersion" : "1.0"
+             },
+             {
+                 "KeyCode" : "CP-230012",
+                 "OperationCode" : "SigntoolVerify",
+                 "Parameters" : {},
+                 "ToolName" : "sign",
+                 "ToolVersion" : "1.0"
+             }
+         ]
+    MaxRetryAttempts: 3
+    CleanupTempStorage: false
+
+- task: VSBuild@1
+  displayName: 'Build FO sfpkg'
+  inputs:
+    solution: FabricObserverApp/FabricObserverApp.sfproj
+    msbuildArgs: '/t:Package'
+    platform: x64
+    configuration: Release
+
+- powershell: |
+   # Write your PowerShell commands here.
+   
+   Compress-Archive -U -Path "*"  -DestinationPath SignedFO.zip
+   Rename-Item SignedFO.zip  SignedFO.sfpkg
+  errorActionPreference: continue
+  workingDirectory: '$(Build.SourcesDirectory)/FabricObserverApp/pkg/Release'
+  displayName: 'PowerShell Script FO zip -> sfpkg'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: SignedFO sfpkg'
+  inputs:
+    PathtoPublish: '$(Build.SourcesDirectory)/FabricObserverApp/pkg/Release/SignedFO.sfpkg'
+    ArtifactName: SignedFO
+
+- task: VSBuild@1
+  displayName: 'Build FOW sfpkg'
+  inputs:
+    solution: FabricObserverWebApp/FabricObserverWebApi.sfproj
+    msbuildArgs: '/t:Package'
+    platform: x64
+    configuration: Release
+
+- powershell: |
+   # Write your PowerShell commands here.
+   
+   Compress-Archive -U -Path "*"  -DestinationPath SignedFOW.zip
+   Rename-Item SignedFOW.zip  SignedFOW.sfpkg
+  errorActionPreference: continue
+  workingDirectory: '$(Build.SourcesDirectory)/FabricObserverWebApp/pkg/Release'
+  displayName: 'PowerShell Script FOW zip -> sfpkg'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: SignedFOW sfpkg'
+  inputs:
+    PathtoPublish: '$(Build.SourcesDirectory)/FabricObserverWebApp/pkg/Release/SignedFOW.sfpkg'
+    ArtifactName: SignedFOW
+
+- task: DownloadBuildArtifacts@0
+  displayName: 'Download Build Artifacts - FO'
+  inputs:
+    artifactName: SignedFO
+
+- task: DownloadBuildArtifacts@0
+  displayName: 'Download Build Artifacts - FOW'
+  inputs:
+    artifactName: SignedFOW
+
+- task: GitHubRelease@0
+  displayName: 'GitHub release (create)'
+  inputs:
+    gitHubConnection: GithubFabricObserverPrivate
+    tagSource: manual
+    tag: '$(build.buildNumber)'
+    title: FabricObserver
+    releaseNotesSource: input
+    releaseNotes: 'Fabric Observer V1'
+    assets: |
+     $(Build.SourcesDirectory)/FabricObserverApp/pkg/Release/*.sfpkg
+     $(Build.SourcesDirectory)/FabricObserverWebApp/pkg/Release/*.sfpkg
+  continueOnError: true
