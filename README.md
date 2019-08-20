@@ -1,4 +1,4 @@
-**INTRODUCTION***
+**INTRODUCTION**
 
 FabricObserver (FO) is a user-configurable stateless Service Fabric service that monitors both user services and internal fabric services for potential problems related to resource usage across Disk, CPU, Memory, Networking. It employs a simple-to-understand Observer development model, enabling the creation of new observers very quickly with little cognitive complexity.
 
