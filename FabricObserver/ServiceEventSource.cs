@@ -7,11 +7,12 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
+using Microsoft.ServiceFabric.TelemetryLib;
 
 namespace FabricObserver
 {
-    [EventSource(Name = "Microsoft-FabricObserver-FabricObserver")]
-    internal sealed class ServiceEventSource : EventSource
+    [EventSource(Name = "Service-Fabric-FabricObserver", Guid = "373f2a64-4823-518a-32d1-78e36f922c24")]
+    internal sealed class ServiceEventSource : EventSource, ITelemetryEventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
@@ -152,6 +153,50 @@ namespace FabricObserver
         public void ServiceRequestStop(string requestTypeName, string exception = "")
         {
             WriteEvent(ServiceRequestStopEventId, requestTypeName, exception);
+        }
+
+        private const int VerboseMessageEventId = 7;
+        [Event(VerboseMessageEventId, Level = EventLevel.Verbose, Message = "{0}")]
+        public void VerboseMessage(string message)
+        {
+            if (this.IsEnabled())
+            {
+                this.WriteEvent(VerboseMessageEventId, message);
+            }
+        }
+
+        [NonEvent]
+        public void VerboseMessage(string message, params object[] args)
+        {
+            string finalMessage = string.Format(message, args);
+            this.VerboseMessage(finalMessage);
+        }
+
+        private const int FabricObserverTelemetryEventId = 8;
+        [Event(FabricObserverTelemetryEventId, Level = EventLevel.Verbose,
+               Message = "TelemetryEvent : FabricObserver running on clusterId = {0}, " +
+                         "tentantId = {1}, clusterType = {2}, " +
+                         "nodeName = {3}, applicationVersion = {4}, " +
+                         "fabricObserverRunState = {5}")]
+        public void FabricObserverRuntimeClusterEvent(string clusterId, 
+                                                      string tenantId, 
+                                                      string clusterType, 
+                                                      string nodeName, 
+                                                      string applicationVersion,
+                                                      string foConfigInfo,
+                                                      string foHealthInfo)
+        {
+            if (this.IsEnabled())
+            {
+                this.WriteEvent(FabricObserverTelemetryEventId,
+                                clusterId,
+                                tenantId,
+                                clusterType,
+                                nodeName,
+                                applicationVersion,
+                                foConfigInfo,
+                                foHealthInfo);
+            }
         }
         #endregion
 

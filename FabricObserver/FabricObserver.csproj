@@ -125,9 +125,6 @@
     <Reference Include="Microsoft.ServiceFabric.Internal.Strings, Version=6.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=AMD64">
       <HintPath>..\packages\Microsoft.ServiceFabric.6.5.658\lib\net472\Microsoft.ServiceFabric.Internal.Strings.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.ServiceFabric.Preview, Version=6.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=AMD64">
-      <HintPath>..\packages\Microsoft.ServiceFabric.6.5.658\lib\net472\Microsoft.ServiceFabric.Preview.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.ServiceFabric.ReliableCollection.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.ServiceFabric.Data.Extensions.3.4.658\lib\net472\Microsoft.ServiceFabric.ReliableCollection.Interop.dll</HintPath>
     </Reference>
@@ -301,6 +298,12 @@
     <Analyzer Include="..\packages\Microsoft.CodeQuality.Analyzers.2.9.4\analyzers\dotnet\cs\Microsoft.CodeQuality.CSharp.Analyzers.dll" />
     <Analyzer Include="..\packages\Microsoft.NetFramework.Analyzers.2.9.4\analyzers\dotnet\cs\Microsoft.NetFramework.Analyzers.dll" />
     <Analyzer Include="..\packages\Microsoft.NetFramework.Analyzers.2.9.4\analyzers\dotnet\cs\Microsoft.NetFramework.CSharp.Analyzers.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj">
+      <Project>{7bc6991f-c840-413e-b1cd-4025947cf5fa}</Project>
+      <Name>TelemetryLib</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
