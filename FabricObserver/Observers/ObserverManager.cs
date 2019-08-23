@@ -17,6 +17,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.ServiceFabric.TelemetryLib;
 
 namespace FabricObserver
 {
@@ -36,6 +37,7 @@ namespace FabricObserver
         private string Fqdn { get; set; }
         private Logger Logger { get; set; }
         private DataTableFileLogger DataLogger { get; set; }
+        private TelemetryEvents telemetryEvents;
         internal List<ObserverBase> Observers;
         public string ApplicationName { get; set; }
         public bool IsObserverRunning { get; set; } = false;
@@ -75,7 +77,6 @@ namespace FabricObserver
             }
         }
 
-
         public ObserverManager(StatelessServiceContext context,
                                CancellationToken token)
         {
@@ -88,9 +89,14 @@ namespace FabricObserver
             Logger = new Logger("ObserverManager");
             HealthReporter = new ObserverHealthReporter(Logger);
             SetPropertiesFromConfigurationParameters();
-            
+            this.telemetryEvents = new TelemetryEvents(FabricClientInstance, ServiceEventSource.Current);
+
             // Populate the Observer list for the sequential run loop...
             this.Observers = GetObservers();
+
+            // FO Diagnostic Telemetry
+            this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext?.NodeContext.NodeName,
+                                                                   GetFabricObserverInternalConfiguration(), "HealthState.Initialized");
         }
 
         // For unit testing...
@@ -222,7 +228,8 @@ namespace FabricObserver
                 new NetworkObserver()
             });
 
-            return observers;
+            // Only return a list with enabled observer instances...
+            return observers.Where(obs => obs.IsEnabled)?.ToList();
         }
 
         private void SetPropertiesFromConfigurationParameters()
@@ -365,6 +372,28 @@ namespace FabricObserver
             }
         }
 
+        /// <summary>
+        /// This function gets FabricObserver's internal configuration for telemetry for Charles and company...
+        /// No PII. As you can see, this is generic information.
+        /// </summary>
+        private string GetFabricObserverInternalConfiguration()
+        {
+            int enabledObserverCount = this.Observers.Where(obs => obs.IsEnabled).Count();
+            string observerList = "{ ";
+            string ret = "";
+
+            foreach (var obs in this.Observers)
+            {
+                observerList += $"{obs.ObserverName} ";
+            }
+
+            observerList += "}";
+
+            ret = string.Format("EnabledObserverCount: {0}, EnabledObservers: {1}", enabledObserverCount, observerList);
+
+            return ret;
+        }
+
         private void SignalAbortToRunningObserver()
         {
             Logger.LogInfo("Signalling task cancellation to currently running Observer...");
@@ -389,8 +418,8 @@ namespace FabricObserver
                         return false;
                     }
 
-                    // Is the observer enabled? Is it healthy?
-                    if (!observer.IsEnabled || observer.IsUnhealthy)
+                    // Is it healthy?
+                    if (observer.IsUnhealthy)
                     {
                         continue;
                     }
@@ -409,9 +438,16 @@ namespace FabricObserver
                     // TODO: Be less restrictive, but do fix the broken observer if/when this happens...
                     if (!isCompleted)
                     {
-                        Logger.LogError(observer.ObserverName + $" has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
-                                                                $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it...");
+                        string observerHealthWarning = observer.ObserverName + $" has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
+                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it...";
+
+                        Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
+
+                        // FO Diagnostic Telemetry
+                        this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,
+                                                                               "",
+                                                                               observerHealthWarning);
 
                         continue;
                     }
@@ -467,7 +503,13 @@ namespace FabricObserver
                 }
                 catch (Exception e)
                 {
-                    Logger.LogError($"Unhandled Exception from {observer.ObserverName} rethrown from ObserverManager: {e.ToString()}");
+                    var message = $"Unhandled Exception from {observer.ObserverName} rethrown from ObserverManager: {e.ToString()}";
+                    Logger.LogError(message);
+
+                    // FO Diagnostic Telemetry
+                    this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,
+                                                                           "",
+                                                                           message);
 
                     throw;
                 }

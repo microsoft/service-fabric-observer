@@ -999,7 +999,7 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
-                MemWarnUsageThresholdMB = 40 // This will definitely cause Warning alerts...
+                MemWarnUsageThresholdMB = 20 // This will definitely cause Warning alerts...
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
