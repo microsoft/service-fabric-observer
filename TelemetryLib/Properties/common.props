@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Generic Properties -->
+  <PropertyGroup>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn></NoWarn>
+    <ApplicationRoot>$(SrcRoot)\PatchOrchestrationApplication</ApplicationRoot>
+    <OutputPath>$(ProjectDir)bin\$(Configuration)</OutputPath>
+    <OUTPUTROOT>$(SrcRoot)\..\out</OUTPUTROOT>
+    <CommonRoot>$(ApplicationRoot)\Common</CommonRoot>
+    <PackageRoot>$(SrcRoot)\..\packages</PackageRoot>
+    <NodeAgentSFUtilityRoot>$(ApplicationRoot)\NodeAgentSFUtility\src</NodeAgentSFUtilityRoot>
+    <CoordinatorServiceRoot>$(ApplicationRoot)\CoordinatorService\src</CoordinatorServiceRoot>
+    <NodeAgentServiceRoot>$(ApplicationRoot)\NodeAgentService\src</NodeAgentServiceRoot>
+    <TelemetryLibRoot>$(ApplicationRoot)\TelemetryLib\src</TelemetryLibRoot>
+	<VersionRoot>$(ApplicationRoot)\..\..\.config\.inc</VersionRoot>
+    <AddCorrelationIds>false</AddCorrelationIds>
+	<!-- This version is used in
+      1. Assembly info
+      2. File info
+      3. Not yet in Telemetry of windows -->
+    <VersionPrefix>1.4.0</VersionPrefix>
+    <Company>Microsoft</Company>
+    <!--GenerateAssemblyInfo>false</GenerateAssemblyInfo-->
+  </PropertyGroup>
+
+  <!-- Cls Compliant -->
+  <PropertyGroup>
+    <AssemblyClsCompliant>true</AssemblyClsCompliant>
+  </PropertyGroup>
+
+  <!-- Enable delay signing with Key.snk -->
+  <PropertyGroup Condition="'$(DelaySign)' == 'true'">
+    <SignAssembly>true</SignAssembly>
+    <DelaySign>true</DelaySign>
+    <AssemblyOriginatorKeyFile>$(SrcRoot)/properties/Key.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <!-- debug and release switches -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+
+</Project>

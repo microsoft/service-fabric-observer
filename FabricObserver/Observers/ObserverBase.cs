@@ -406,7 +406,7 @@ namespace FabricObserver
             var thresholdName = "Minimum";
             var unit = "";
             bool warningOrError = false;
-            string repPartitionId = null, repOrInstanceId = null, name = null, id = null;
+            string repPartitionId = null, repOrInstanceId = null, name = null, id = null, procName = null;
             T threshold = thresholdWarning;
             var healthState = HealthState.Ok;
             Uri appName = null;
@@ -424,6 +424,7 @@ namespace FabricObserver
             {
                 repPartitionId = $"Partition: {replicaOrInstance.Partitionid}";
                 repOrInstanceId = $"Replica: {replicaOrInstance.ReplicaOrInstanceId}";
+                procName = Process.GetProcessById((int)replicaOrInstance.ReplicaHostProcessId)?.ProcessName;
             }
 
             // Create a unique node id which may be used in the case of warnings or OK clears...
@@ -464,13 +465,12 @@ namespace FabricObserver
 
                 // This is primarily useful for AppObserver, but makes sense to be 
                 // part of the base class for future use, like for FSO...
-                if (replicaOrInstance != null && dumpOnError)
+                if (replicaOrInstance != null && procName != null && dumpOnError)
                 {
                     try
                     {
                         int procId = (int)replicaOrInstance.ReplicaHostProcessId;
-                        string procName = Process.GetProcessById(procId)?.ProcessName;
-
+                        
                         if (procName != null &&
                             !serviceDumpCountDictionary.ContainsKey(procName))
                         {
@@ -551,7 +551,7 @@ namespace FabricObserver
 
                 if (name != null)
                 {
-                    healthMessage.Append($"{name}({repPartitionId}, {repOrInstanceId}): ");
+                    healthMessage.Append($"{name} (Service Process: {procName}, {repPartitionId}, {repOrInstanceId}): ");
                 }
 
                 healthMessage.Append($"{propertyName} is at or above the specified {thresholdName} limit ({threshold}{unit})");

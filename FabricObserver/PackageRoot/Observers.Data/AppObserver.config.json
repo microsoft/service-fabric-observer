@@ -1,6 +1,6 @@
 ﻿[
   {
-    "target": "fabric:/BadApp",
+    "target": "fabric:/CpuStress",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
@@ -16,9 +16,9 @@
     "networkWarningEphemeralPorts": 400
   },
   {
-    "target": "fabric:/CpuStress",
+    "target": "fabric:/DataAggregation",
     "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 30,
+    "cpuWarningLimitPct": 10,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
     "diskIOWarningReadsPerSecMS": 0,
