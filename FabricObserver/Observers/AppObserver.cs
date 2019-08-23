@@ -25,7 +25,7 @@ namespace FabricObserver
     public class AppObserver : ObserverBase
     {
         private readonly string dataPackagePath;
-        private readonly List<ApplicationInfo> targetList = new List<ApplicationInfo>();
+        private List<ApplicationInfo> targetList = new List<ApplicationInfo>();
 
         // Health Report data containers - For use in analysis to determine health state...
         // These lists are cleared after each healthy iteration.
@@ -176,17 +176,6 @@ namespace FabricObserver
 
                 ObserverLogger.LogInfo($"Will observe resource consumption by {application.Target} " +
                                        $"on Node {NodeName}.");
-
-                // If the target is not present in CPU list, then it isn't going to be in any of the other lists...
-                if (!this.allAppCpuData.Any(target => target.Name == application.Target))
-                {
-                    this.allAppCpuData.Add(new FabricResourceUsageData<int>(application.Target));
-                    this.allAppDiskReadsData.Add(new FabricResourceUsageData<float>(application.Target));
-                    this.allAppDiskWritesData.Add(new FabricResourceUsageData<float>(application.Target));
-                    this.allAppMemData.Add(new FabricResourceUsageData<long>(application.Target));
-                    this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(application.Target));
-                    this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(application.Target));
-                }
             }
 
             return true;
@@ -194,15 +183,20 @@ namespace FabricObserver
 
         private async Task MonitorAppAsync(ApplicationInfo application)
         {
-            await SetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.Target)).ConfigureAwait(true);
+            var repOrInstList = await GetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.Target)).ConfigureAwait(true);
+
+            if (repOrInstList.Count == 0)
+            {
+                return;
+            }
 
             Process currentProcess = null;
 
-            foreach (var replicaOrInstance in this.replicaOrInstanceList)
+            foreach (var repOrInst in repOrInstList)
             {
                 Token.ThrowIfCancellationRequested();
 
-                int processid = (int)replicaOrInstance.ReplicaHostProcessId;
+                int processid = (int)repOrInst.ReplicaHostProcessId;
                 var cpuUsage = new CpuUsage();
 
                 try
@@ -217,6 +211,21 @@ namespace FabricObserver
                         continue;
                     }
 
+                    var procName = currentProcess.ProcessName;
+
+                    // Add new resource data structures for each app service process...
+                    var id = $"{application.Target.Replace("fabric:/", "")}:{procName}";
+
+                    if (!this.allAppCpuData.Any(list => list.Name == id))
+                    {
+                        this.allAppCpuData.Add(new FabricResourceUsageData<int>(id));
+                        this.allAppDiskReadsData.Add(new FabricResourceUsageData<float>(id));
+                        this.allAppDiskWritesData.Add(new FabricResourceUsageData<float>(id));
+                        this.allAppMemData.Add(new FabricResourceUsageData<long>(id));
+                        this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(id));
+                        this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(id));
+                    }
+
                     // CPU (all cores)...
                     int i = Environment.ProcessorCount + 10;
 
@@ -228,20 +237,20 @@ namespace FabricObserver
 
                         if (cpu >= 0)
                         {
-                            this.allAppCpuData.FirstOrDefault(x => x.Name == application.Target).Data.Add(cpu);
+                            this.allAppCpuData.FirstOrDefault(x => x.Name == id).Data.Add(cpu);
                         }
 
                         // Memory (private working set)...
                         var mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(currentProcess.ProcessName);
-                        this.allAppMemData.FirstOrDefault(x => x.Name == application.Target).Data.Add((long)mem);
+                        this.allAppMemData.FirstOrDefault(x => x.Name == id).Data.Add((long)mem);
 
                         // Disk/Network/Etc... IO (per-process bytes read/write per sec)
-                        this.allAppDiskReadsData.FirstOrDefault(x => x.Name == application.Target)
+                        this.allAppDiskReadsData.FirstOrDefault(x => x.Name == id)
                             .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(currentProcess.ProcessName,
                                                                               "Process",
                                                                               "IO Read Bytes/sec") / 1000);
 
-                        this.allAppDiskWritesData.FirstOrDefault(x => x.Name == application.Target)
+                        this.allAppDiskWritesData.FirstOrDefault(x => x.Name == id)
                             .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(currentProcess.ProcessName,
                                                                               "Process",
                                                                               "IO Write Bytes/sec") / 1000);
@@ -251,10 +260,10 @@ namespace FabricObserver
                     }
 
                     // Total and Ephemeral ports....
-                    this.allAppTotalActivePortsData.FirstOrDefault(x => x.Name == application.Target)
+                    this.allAppTotalActivePortsData.FirstOrDefault(x => x.Name == id)
                         .Data.Add(NetworkUsage.GetActivePortCount(currentProcess.Id));
 
-                    this.allAppEphemeralPortsData.FirstOrDefault(x => x.Name == application.Target)
+                    this.allAppEphemeralPortsData.FirstOrDefault(x => x.Name == id)
                         .Data.Add(NetworkUsage.GetActiveEphemeralPortCount(currentProcess.Id));
                 }
                 catch (Exception e)
@@ -286,16 +295,22 @@ namespace FabricObserver
             }
         }
 
-        public async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter)
+        public async Task<List<ReplicaMonitoringInfo>> GetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter)
         {
             var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter).ConfigureAwait(true);
+
+            List<ReplicaMonitoringInfo> currentReplicaInfoList = new List<ReplicaMonitoringInfo>();
 
             foreach (var deployedApp in deployedApps)
             {
                 var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName).ConfigureAwait(true);
-                
+                currentReplicaInfoList.AddRange(replicasOrInstances);
+
+                // This is for reporting...
                 this.replicaOrInstanceList.AddRange(replicasOrInstances);
             }
+
+            return currentReplicaInfoList;
         }
 
         public async Task<List<ReplicaMonitoringInfo>> GetDeployedPrimaryReplicaAsync(Uri appName)
@@ -305,16 +320,16 @@ namespace FabricObserver
 
             foreach (var deployedReplica in deployedReplicaList)
             {
-                if (deployedReplica is DeployedStatefulServiceReplica statefuleReplica)
+                if (deployedReplica is DeployedStatefulServiceReplica statefulReplica)
                 {
-                    if (statefuleReplica.ReplicaRole == ReplicaRole.Primary)
+                    if (statefulReplica.ReplicaRole == ReplicaRole.Primary)
                     {
                         var replicaInfo = new ReplicaMonitoringInfo()
                         {
                             ApplicationName = appName,
-                            ReplicaHostProcessId = statefuleReplica.HostProcessId,
-                            ReplicaOrInstanceId = statefuleReplica.ReplicaId,
-                            Partitionid = statefuleReplica.Partitionid
+                            ReplicaHostProcessId = statefulReplica.HostProcessId,
+                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                            Partitionid = statefulReplica.Partitionid  
                         };
 
                         replicaMonitoringList.Add(replicaInfo);
@@ -354,19 +369,29 @@ namespace FabricObserver
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    // Log (csv) CPU/Mem/DiskIO per app...
-                    if (CsvFileLogger.EnableCsvLogging || IsTelemetryEnabled)
-                    {
-                        LogAllAppResourceDataToCsv(app.Target);
-                    }
-
                     // Process data for reporting...
                     foreach (var replicaOrInstance in this.replicaOrInstanceList.Where(x => x.ApplicationName.OriginalString == app.Target))
                     {
                         Token.ThrowIfCancellationRequested();
 
+                        Process p = Process.GetProcessById((int)replicaOrInstance.ReplicaHostProcessId);
+
+                        // If the process is no longer running, then don't report on it...
+                        if (p == null)
+                        {
+                            continue;
+                        }
+
+                        var id = $"{app.Target.Replace("fabric:/", "")}:{p.ProcessName}";
+
+                        // Log (csv) CPU/Mem/DiskIO per app...
+                        if (CsvFileLogger.EnableCsvLogging || IsTelemetryEnabled)
+                        {
+                            LogAllAppResourceDataToCsv(id);
+                        }
+
                         // CPU
-                        ProcessResourceDataReportHealth(this.allAppCpuData.Where(x => x.Name == app.Target).FirstOrDefault(),
+                        ProcessResourceDataReportHealth(this.allAppCpuData.Where(x => x.Name == id).FirstOrDefault(),
                                                         "CPU Time",
                                                         app.CpuErrorLimitPct,
                                                         app.CpuWarningLimitPct,
@@ -376,7 +401,7 @@ namespace FabricObserver
                                                         replicaOrInstance,
                                                         app.DumpProcessOnError);
                         // Memory
-                        ProcessResourceDataReportHealth(this.allAppMemData.Where(x => x.Name == app.Target).FirstOrDefault(),
+                        ProcessResourceDataReportHealth(this.allAppMemData.Where(x => x.Name == id).FirstOrDefault(),
                                                         "Memory (Private working set)",
                                                         app.MemoryErrorLimitMB,
                                                         app.MemoryWarningLimitMB,                                                  
@@ -386,7 +411,7 @@ namespace FabricObserver
                                                         replicaOrInstance,
                                                         app.DumpProcessOnError);
                         // DiskIO
-                        ProcessResourceDataReportHealth(this.allAppDiskReadsData.Where(x => x.Name == app.Target).FirstOrDefault(),
+                        ProcessResourceDataReportHealth(this.allAppDiskReadsData.Where(x => x.Name == id).FirstOrDefault(),
                                                         "IO Read Bytes/sec",
                                                         app.DiskIOErrorReadsPerSecMS,
                                                         app.DiskIOWarningReadsPerSecMS,
@@ -395,7 +420,7 @@ namespace FabricObserver
                                                         app.Target,
                                                         replicaOrInstance);
 
-                        ProcessResourceDataReportHealth(this.allAppDiskWritesData.Where(x => x.Name == app.Target).FirstOrDefault(),
+                        ProcessResourceDataReportHealth(this.allAppDiskWritesData.Where(x => x.Name == id).FirstOrDefault(),
                                                         "IO Write Bytes/sec",
                                                         app.DiskIOErrorWritesPerSecMS,
                                                         app.DiskIOWarningWritesPerSecMS,
@@ -405,7 +430,7 @@ namespace FabricObserver
                                                         replicaOrInstance);
 
                         // Ports 
-                        ProcessResourceDataReportHealth(this.allAppTotalActivePortsData.Where(x => x.Name == app.Target).FirstOrDefault(),
+                        ProcessResourceDataReportHealth(this.allAppTotalActivePortsData.Where(x => x.Name == id).FirstOrDefault(),
                                                         "Total Active Ports",
                                                         app.NetworkErrorActivePorts,
                                                         app.NetworkWarningActivePorts,
@@ -415,7 +440,7 @@ namespace FabricObserver
                                                         replicaOrInstance);
 
                         // Ports 
-                        ProcessResourceDataReportHealth(this.allAppTotalActivePortsData.Where(x => x.Name == app.Target).FirstOrDefault(),
+                        ProcessResourceDataReportHealth(this.allAppTotalActivePortsData.Where(x => x.Name == id).FirstOrDefault(),
                                                         "Ephemeral Ports",
                                                         app.NetworkErrorEphemeralPorts,
                                                         app.NetworkWarningEphemeralPorts,
@@ -446,7 +471,7 @@ namespace FabricObserver
                 return;
             }
 
-            var fileName = appName.Replace("fabric:/", "") +
+            var fileName = appName.Replace(":", "") +
                            NodeName;
 
             // CPU Time
