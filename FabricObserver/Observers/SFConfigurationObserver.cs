@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using FabricObserver.Utilities;
+using FabricObserver.Model;
 using Microsoft.Win32;
 using System;
 using System.ComponentModel;
@@ -12,10 +13,13 @@ using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Collections.Generic;
+using System.Fabric;
 
 namespace FabricObserver
 {
@@ -103,7 +107,7 @@ namespace FabricObserver
 
             ApplicationList appList = null;
             var sb = new StringBuilder();
-            string clusterManifestXml = null, appManifestXml = null;
+            string clusterManifestXml;
 
             if (IsTestRun)
             {
@@ -117,161 +121,151 @@ namespace FabricObserver
 
             token.ThrowIfCancellationRequested();
 
-            // Safe XML pattern - *Do not use LoadXml*...
-            var xdoc = new XmlDocument { XmlResolver = null };
-            var sreader = new StringReader(clusterManifestXml);
-            var reader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
-            xdoc.Load(reader);
+            XmlReader xreader = null;
+            StringReader sreader = null;
+            string ret = null;
 
-            // Cluster Information...
-            var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
-            nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
-
-            // Failover Manager...
-            var FMparameterNodes = xdoc.SelectNodes("//sf:Section[@Name='FailoverManager']//sf:Parameter", nsmgr);
-            sb.AppendLine("\nCluster Information:\n");
-
-            foreach (XmlNode node in FMparameterNodes)
+            try
             {
-                token.ThrowIfCancellationRequested();
+                // Safe XML pattern - *Do not use LoadXml*...
+                var xdoc = new XmlDocument { XmlResolver = null };
+                sreader = new StringReader(clusterManifestXml);
+                xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                xdoc.Load(xreader);
 
-                sb.AppendLine(node.Attributes.Item(0).Value + ": " + node.Attributes.Item(1).Value);
-            }
+                // Cluster Information...
+                var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
+                nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
 
-            token.ThrowIfCancellationRequested();
+                // Failover Manager...
+                var FMparameterNodes = xdoc.SelectNodes("//sf:Section[@Name='FailoverManager']//sf:Parameter", nsmgr);
+                sb.AppendLine("\nCluster Information:\n");
 
-            // Node Information...
-            sb.AppendLine($"\nNode Info:\n");
-            sb.AppendLine($"Node Name: {NodeName}");
-            sb.AppendLine($"Node Id: {FabricServiceContext.NodeContext.NodeId}");
-            sb.AppendLine($"Node Instance Id: {FabricServiceContext.NodeContext.NodeInstanceId}");
-            sb.AppendLine($"Node Type: {FabricServiceContext.NodeContext.NodeType}");
-            Tuple<int, int> portRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
-            if (portRange.Item1 > -1)
-            {
-                sb.AppendLine($"Application Port Range: {portRange.Item1} - {portRange.Item2}");
-            }
-            var infraNode = xdoc.SelectSingleNode("//sf:Node", nsmgr);
-            if (infraNode != null)
-            {
-                sb.AppendLine("Is Seed Node: " + infraNode.Attributes["IsSeedNode"]?.Value);
-                sb.AppendLine("Fault Domain: " + infraNode.Attributes["FaultDomain"]?.Value);
-                sb.AppendLine("Upgrade Domain: " + infraNode.Attributes["UpgradeDomain"]?.Value);
-            }
-
-            token.ThrowIfCancellationRequested();
-
-            if (!string.IsNullOrEmpty(this.SFNodeLastBootTime))
-            {
-                sb.AppendLine("Last Rebooted: " + this.SFNodeLastBootTime);
-            }
-
-            // Stop here for unit testing...
-            if (IsTestRun)
-            {
-                string ret = sb.ToString();
-                sb.Clear();
-                return ret;
-            }
-
-            // Application Info...
-            sb.AppendLine("\nDeployed Apps:\n");
-            foreach (var app in appList)
-            {
-                token.ThrowIfCancellationRequested();
-
-                var appName = app.ApplicationName;
-                var appType = app.ApplicationTypeName;
-                var appVersion = app.ApplicationTypeVersion;
-                var healthState = app.HealthState.ToString();
-                var status = app.ApplicationStatus.ToString();
-                appManifestXml = await FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(appType, appVersion).ConfigureAwait(true);
-                token.ThrowIfCancellationRequested();
-                ServicePackageActivationMode? processModel = null;
-                string serviceName = "";
-                sreader = new StringReader(appManifestXml);
-                reader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
-                xdoc.Load(reader);
-
-                var node = xdoc.SelectSingleNode("//sf:Service", nsmgr);
-                if (node != null)
+                foreach (XmlNode node in FMparameterNodes)
                 {
-                    processModel = (ServicePackageActivationMode)Enum.Parse(typeof(ServicePackageActivationMode),
-                                                                            node.Attributes["ServicePackageActivationMode"]?.Value);
-                    serviceName = node.Attributes["Name"]?.Value;
+                    token.ThrowIfCancellationRequested();
+
+                    sb.AppendLine(node.Attributes.Item(0).Value + ": " + node.Attributes.Item(1).Value);
                 }
 
-                sb.AppendLine("Application Name: " + appName.OriginalString);
-                sb.AppendLine("Type: " + appType);
-                sb.AppendLine("Version: " + appVersion);
-                sb.AppendLine("Health state: " + healthState);
-                sb.AppendLine("Status: " + status);
-                sb.AppendLine("ProcessModel: " + processModel.ToString());
+                token.ThrowIfCancellationRequested();
 
-                // App's Service(s)...
-                sb.AppendLine("\n\tServices:");
+                // Node Information...
+                sb.AppendLine($"\nNode Info:\n");
+                sb.AppendLine($"Node Name: {NodeName}");
+                sb.AppendLine($"Node Id: {FabricServiceContext.NodeContext.NodeId}");
+                sb.AppendLine($"Node Instance Id: {FabricServiceContext.NodeContext.NodeInstanceId}");
+                sb.AppendLine($"Node Type: {FabricServiceContext.NodeContext.NodeType}");
+                Tuple<int, int> portRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
 
-                var serviceDescription = await FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(new Uri(appName.OriginalString + "/" + serviceName)).ConfigureAwait(true);
-                var kind = serviceDescription.Kind.ToString();
-                var type = serviceDescription.ServiceTypeName;
-                var metrics = serviceDescription.Metrics;
-
-                // Get established port count per service...
-                int procId = -1;
-                int ports = -1, ephemeralPorts = -1;
-
-                try
+                if (portRange.Item1 > -1)
                 {
-                    if (serviceName != "")
+                    sb.AppendLine($"Application Port Range: {portRange.Item1} - {portRange.Item2}");
+                }
+
+                var infraNode = xdoc.SelectSingleNode("//sf:Node", nsmgr);
+
+                if (infraNode != null)
+                {
+                    sb.AppendLine("Is Seed Node: " + infraNode.Attributes["IsSeedNode"]?.Value);
+                    sb.AppendLine("Fault Domain: " + infraNode.Attributes["FaultDomain"]?.Value);
+                    sb.AppendLine("Upgrade Domain: " + infraNode.Attributes["UpgradeDomain"]?.Value);
+                }
+
+                token.ThrowIfCancellationRequested();
+
+                if (!string.IsNullOrEmpty(this.SFNodeLastBootTime))
+                {
+                    sb.AppendLine("Last Rebooted: " + this.SFNodeLastBootTime);
+                }
+
+                // Stop here for unit testing...
+                if (IsTestRun)
+                {
+                    ret = sb.ToString();
+                    sb.Clear();
+
+                    return ret;
+                }
+
+                // Application Info...
+                sb.AppendLine("\nDeployed Apps:\n");
+                foreach (var app in appList)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    var appName = app.ApplicationName;
+                    var appType = app.ApplicationTypeName;
+                    var appVersion = app.ApplicationTypeVersion;
+                    var healthState = app.HealthState.ToString();
+                    var status = app.ApplicationStatus.ToString();
+
+                    sb.AppendLine("Application Name: " + appName.OriginalString);
+                    sb.AppendLine("Type: " + appType);
+                    sb.AppendLine("Version: " + appVersion);
+                    sb.AppendLine("Health state: " + healthState);
+                    sb.AppendLine("Status: " + status);
+
+                    // App's Service(s)...
+                    sb.AppendLine("\n\tServices:");
+                    var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
+                    var replicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName).ConfigureAwait(true);
+
+                    foreach (var service in serviceList)
                     {
-                        var processes = Process.GetProcessesByName(serviceName);
+                        var kind = service.ServiceKind;
+                        var type = service.ServiceTypeName;
+                        var serviceName = service.ServiceName;
+                        var serviceDescription = await FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
+                        var processModel = serviceDescription.ServicePackageActivationMode.ToString();
 
-                        if (processes?.Length > 0)
+                        foreach (var rep in replicaList)
                         {
-                            foreach (var process in processes)
+                            if (service.ServiceName == rep.ServiceName)
                             {
-                                token.ThrowIfCancellationRequested();
+                                // Get established port count per service...
+                                int procId = (int)rep.HostProcessId;
+                                int ports = -1, ephemeralPorts = -1;
 
-                                procId = process.Id;
-                                
-                                // Stop after one process (TODO: handle multiple instances of the same service running on the same node... Is this common?)
+                                if (procId > -1)
+                                {
+                                    ports = NetworkUsage.GetActivePortCount(procId);
+                                    ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
+                                }
+
+                                sb.AppendLine("\tService Name: " + serviceName.OriginalString);
+                                sb.AppendLine("\tTypeName: " + type);
+                                sb.AppendLine("\tKind: " + kind);
+                                sb.AppendLine("\tProcessModel: " + processModel);
+
+                                if (ports > -1)
+                                {
+                                    sb.AppendLine("\tActive Ports: " + ports);
+                                }
+
+                                if (ephemeralPorts > -1)
+                                {
+                                    sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
+                                }
+
+                                sb.AppendLine();
+
                                 break;
                             }
                         }
                     }
                 }
-                catch (ArgumentException) { }
-                catch (InvalidOperationException) { }
-                catch (Win32Exception) { }
 
-                if (procId > -1)
-                {
-                    ports = NetworkUsage.GetActivePortCount(procId);
-                    ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
-                }
-
-                sb.AppendLine("\tProcess Name: " + serviceName);
-                sb.AppendLine("\tTypeName: " + type);
-                sb.AppendLine("\tKind: " + kind);
-
-                if (ports > -1)
-                {
-                    sb.AppendLine("\tActive Ports: " + ports);
-                }
-
-                if (ephemeralPorts > -1)
-                {
-                    sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
-                }
-
-                sb.AppendLine();
+                ret = sb.ToString();
+                sb.Clear();
+            }
+            finally
+            {
+                sreader.Dispose();
+                xreader.Dispose();
             }
 
-            string s = sb.ToString();
-            sb.Clear();
-            reader?.Dispose();
-
-            return s;
+            return ret;
         }
 
         public override async Task ReportAsync(CancellationToken token)
