@@ -221,37 +221,39 @@ namespace FabricObserver
 
                         foreach (var rep in replicaList)
                         {
-                            if (service.ServiceName == rep.ServiceName)
+                            if (service.ServiceName != rep.ServiceName)
                             {
-                                // Get established port count per service...
-                                int procId = (int)rep.HostProcessId;
-                                int ports = -1, ephemeralPorts = -1;
-
-                                if (procId > -1)
-                                {
-                                    ports = NetworkUsage.GetActivePortCount(procId);
-                                    ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
-                                }
-
-                                sb.AppendLine("\tService Name: " + serviceName.OriginalString);
-                                sb.AppendLine("\tTypeName: " + type);
-                                sb.AppendLine("\tKind: " + kind);
-                                sb.AppendLine("\tProcessModel: " + processModel);
-
-                                if (ports > -1)
-                                {
-                                    sb.AppendLine("\tActive Ports: " + ports);
-                                }
-
-                                if (ephemeralPorts > -1)
-                                {
-                                    sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
-                                }
-
-                                sb.AppendLine();
-
-                                break;
+                                continue;
                             }
+
+                            // Get established port count per service...
+                            int procId = (int)rep.HostProcessId;
+                            int ports = -1, ephemeralPorts = -1;
+
+                            if (procId > -1)
+                            {
+                                ports = NetworkUsage.GetActivePortCount(procId);
+                                ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
+                            }
+
+                            sb.AppendLine("\tService Name: " + serviceName.OriginalString);
+                            sb.AppendLine("\tTypeName: " + type);
+                            sb.AppendLine("\tKind: " + kind);
+                            sb.AppendLine("\tProcessModel: " + processModel);
+
+                            if (ports > -1)
+                            {
+                                sb.AppendLine("\tActive Ports: " + ports);
+                            }
+
+                            if (ephemeralPorts > -1)
+                            {
+                                sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
+                            }
+
+                            sb.AppendLine();
+
+                            break; 
                         }
                     }
                 }
