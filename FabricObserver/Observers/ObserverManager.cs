@@ -46,7 +46,7 @@ namespace FabricObserver
         public static StatelessServiceContext FabricServiceContext { get; set; }
         public static IObserverTelemetryProvider TelemetryClient { get; set; }
         public static bool TelemetryEnabled { get; set; } = false;
-
+        public static bool FabricObserverTelemetryEnabled { get; set; } = true;
         public static bool EtwEnabled { get; set; } = false;
 
         public static string EtwProviderName
@@ -95,8 +95,11 @@ namespace FabricObserver
             this.Observers = GetObservers();
 
             // FO Diagnostic Telemetry
-            this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext?.NodeContext.NodeName,
-                                                                   GetFabricObserverInternalConfiguration(), "HealthState.Initialized");
+            if (FabricObserverTelemetryEnabled)
+            {
+                this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext?.NodeContext.NodeName,
+                                                                       GetFabricObserverInternalConfiguration(), "HealthState.Initialized");
+            }
         }
 
         // For unit testing...
@@ -306,6 +309,12 @@ namespace FabricObserver
                     TelemetryClient = new AppInsightsTelemetry(key);
                 }
             }
+
+            // FabricObserver runtime telemetry (AppInsights)
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
+            {
+                FabricObserverTelemetryEnabled = foTelemEnabled;
+            }
         }
 
         public void StartObservers()
@@ -445,9 +454,12 @@ namespace FabricObserver
                         observer.IsUnhealthy = true;
 
                         // FO Diagnostic Telemetry
-                        this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,
-                                                                               "",
-                                                                               observerHealthWarning);
+                        if (FabricObserverTelemetryEnabled)
+                        {
+                            this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,
+                                                                                   null,
+                                                                                   observerHealthWarning);
+                        }
 
                         continue;
                     }
@@ -507,9 +519,12 @@ namespace FabricObserver
                     Logger.LogError(message);
 
                     // FO Diagnostic Telemetry
-                    this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,
-                                                                           "",
-                                                                           message);
+                    if (FabricObserverTelemetryEnabled)
+                    {
+                        this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,
+                                                                               null,
+                                                                               message);
+                    }
 
                     throw;
                 }
