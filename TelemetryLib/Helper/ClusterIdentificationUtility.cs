@@ -129,20 +129,6 @@ namespace Microsoft.ServiceFabric.TelemetryLib.Helper
             return this.GetParamValueFromSection("Diagnostics", "ClusterId");
         }
 
-        public bool IsTelemetryDisabled()
-        {
-            return false;
-            /*
-            string telemetryEnabled = this.GetParamValueFromSection("Diagnostics", "EnableTelemetry");
-
-            if (telemetryEnabled != null)
-            {
-                return telemetryEnabled.Equals("false", StringComparison.CurrentCultureIgnoreCase);
-            }
-
-            return false;*/
-        }
-
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
 

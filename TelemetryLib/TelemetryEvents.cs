@@ -41,7 +41,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
 
             try
             {
-                if (clusterIdentificationUtility.IsTelemetryDisabled() || string.IsNullOrEmpty(this.telemetryClient.InstrumentationKey))
+                if (!this.telemetryClient.IsEnabled() || string.IsNullOrEmpty(this.telemetryClient.InstrumentationKey))
                 {
                     this.eventSource.VerboseMessage("Skipping sending telemetry as Telemetry is disabled for this cluster");
 
