@@ -19,6 +19,7 @@ package_sources:
     feeds:
       'Toolset': 'https://msazure.pkgs.visualstudio.com/_packaging/Toolset/nuget/v3/index.json'
       'Official': 'https://api.nuget.org/v3/index.json'
+      'PipelineBuildSupplement': 'https://msazure.pkgs.visualstudio.com/_packaging/PipelineBuildSupplement/nuget/v3/index.json'
       
 restore:
   commands:
