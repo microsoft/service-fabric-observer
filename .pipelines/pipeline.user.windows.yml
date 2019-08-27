@@ -18,16 +18,16 @@ build:
   commands:
     - !!buildcommand
       name: 'Build FO'
-      command: '..\build\scripts\build.cmd'
+      command: 'build\scripts\build.cmd'
       fail_on_stderr: false
       artifacts:
-        - from: '..\FabricObserver\x64\bin\Release'
+        - from: 'FabricObserver\x64\bin\Release'
           to: 'FO'
           include:
             - '**/*'
           signing_options:
             sign_inline: true
-        - from: '..\FabricObserver\x64\bin\Release'
+        - from: 'FabricObserver\x64\bin\Release'
           to: 'SignedFO'
           include:
             - 'FabricObserver.exe'
@@ -36,7 +36,7 @@ test:
   commands:
     - !!testcommand
       name: 'VsTest FabricObserver Unit Tests'
-      command: '..\build\scripts\test.cmd'
+      command: 'build\scripts\test.cmd'
       fail_on_stderr: false
       logs:
         - to: 'FO-test-logs'
@@ -44,7 +44,7 @@ test:
             - '**/*.trx'
             - '**/*.coverage'
       testresults:
-        - from: '..\FabricObserverTests\bin\Release\TestResults'
+        - from: 'FabricObserverTests\bin\Release\TestResults'
           title: 'FabricObserver Unit Tests Results'
           type: 'vstest'
           include:
