@@ -13,12 +13,6 @@ version:
   minor: 0
   name: 'Service-Fabric-Observer'
   system: 'patch'
-  
-restore:
-  commands:
-    - !!defaultcommand
-      name: 'Nuget Restore'
-      command: 'build\scripts\restore.cmd'
 
 build:
   commands:
