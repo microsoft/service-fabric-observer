@@ -13,6 +13,19 @@ version:
   minor: 0
   name: 'Service-Fabric-Observer'
   system: 'patch'
+  
+package_sources:
+  nuget:
+    feeds:
+      'Toolset': 'https://msazure.pkgs.visualstudio.com/_packaging/Toolset/nuget/v3/index.json'
+      'NugetMirror': 'https://msazure.pkgs.visualstudio.com/_packaging/NugetMirror/nuget/v3/index.json'
+      'Official': 'https://msazure.pkgs.visualstudio.com/_packaging/Official/nuget/v3/index.json'
+      
+restore:
+  commands:
+    - !!defaultcommand
+      name: 'Nuget Restore'
+      command: 'build\scripts\restore.cmd'
 
 build:
   commands:
