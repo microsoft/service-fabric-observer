@@ -8,6 +8,12 @@ environment:
     image: 'cdpxwin.azurecr.io/global/vse2017u7/vse2017u7-external-winltsc2016-20190731:latest'
     source_mode: 'link'
 
+version:
+  major: 1
+  minor: 0
+  name: 'Service-Fabric-Observer'
+  system: 'patch'
+  
 restore:
   commands:
     - !!defaultcommand
