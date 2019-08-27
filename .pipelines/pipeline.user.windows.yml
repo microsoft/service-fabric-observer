@@ -44,6 +44,12 @@ build:
           to: 'SignedFO'
           include:
             - 'FabricObserver.exe'
+           
+static_analysis_options:                          
+  binskim_options:  
+    disable_tool_scan: true
+  fxcop_options:  
+    disable_tool_scan: true
 
 test:
   commands:
