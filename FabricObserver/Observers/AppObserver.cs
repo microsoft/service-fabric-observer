@@ -41,7 +41,7 @@ namespace FabricObserver
 
         public AppObserver() : base(ObserverConstants.AppObserverName)
         {
-            this.dataPackagePath = ConfigSettings.ObserversDataConfigPath;
+            this.dataPackagePath = ConfigSettings.ObserversDataPackagePath;
             this.allAppCpuData = new List<FabricResourceUsageData<int>>();
             this.allAppDiskReadsData = new List<FabricResourceUsageData<float>>();
             this.allAppDiskWritesData = new List<FabricResourceUsageData<float>>();
