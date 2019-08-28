@@ -34,16 +34,16 @@ build:
       command: 'build\scripts\build.cmd'
       fail_on_stderr: false
       artifacts:
-        - from: 'FabricObserver\x64\bin\Release'
-          to: 'FO'
+      - from: 'FabricObserver\x64\bin\Release'
+        to: 'FO'
+        include:
+        - '**/*'
+        signing_options:
+          profile: 'external_distribution'
+          - from: 'FabricObserver\x64\bin\Release'
+          to: 'SignedFO'
           include:
-            - '**/*'
-          signing_options:
-            profile: 'external_distribution'
-            - from: 'FabricObserver\x64\bin\Release'
-            to: 'SignedFO'
-            include:
-            - 'FabricObserver.exe'
+          - 'FabricObserver.exe'
           signing_options:
             profile: '135020002'
             - from: 'FabricObserver\x64\bin\Release'
