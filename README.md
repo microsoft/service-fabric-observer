@@ -1,10 +1,10 @@
 **INTRODUCTION**
 
-FabricObserver (FO) is a user-configurable stateless Service Fabric (SF) service that monitors both user services and internal fabric services for potential problems related to resource usage across Disk, CPU, Memory, Networking. It employs a simple Observer development model, enabling the quick creation of new observers.
+FabricObserver (FO) is a complete, working example of a fully functioning, easily-configurable stateless Service Fabric (SF) service that monitors both user services and internal fabric services for potential problems related to resource usage across Disk, CPU, Memory, Networking. It employs a simple .NET development model, enabling the quick creation of new observers (implement a few functions from an abstract base class...). You can deploy the sfpkg directly from Releases and get benefits from this service without doing anything. However, you will definitely want to take advantage of configuration to better support your specific workloads and app deployments. The point is that you can use FabricObserver immediately without doing anything but deploying it. As Service Fabric developers, you can extend FabricObserver very easily and make it work specifically for your needs. These aren't just watchdogs. They are observers.
 
 FO is implemented using Service Fabric’s public API surface only. It does not ship with SF. It is independent of the SF runtime engineering schedule.
 
-FO is composed of Observer objects (instance classes) that are designed to observe, record, and report on several machine-level environmental conditions inside a VM, at the OS node level of a Service Fabric cluster.
+FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows VM (node) of a Service Fabric cluster. An observer, by design, does not communicate over the Internet. In fact, FabricObserver does not listen on any ports. It is an isolated, node-only, service.
 
 In Warning and Error states, an observer will signal status (reports) via a Service Fabric Health Report (e.g., extended, high CPU and Memory usage, extended Disk IO, limited Disk space, Networking issues (latency, unavailability, unusually high or low network IO). Since an observer doesn't know what's good or what's bad by simply observing some resource state (in some cases, like disk space monitoring and fabric system service monitoring, there are predefined maxima/minima), a user must provide Warning and Error thresholds that ring the alarm bells. These settings are supplied and packaged in Service Fabric configuration files (both XML and JSON are supported).
 
@@ -16,7 +16,7 @@ Currently, FabricObserver is implemented as a full framework .NET Desktop Applic
 
 In this iteration of the project, we have designed Observers that can be configured by users to monitor the machine-level side effects of an App (defined as a collection of Service Fabric services). The user-controlled,
 App-focused functionality is primarily encapsulated in  **AppObserver**, which observes, records and reports on real-time CPU, Memory, Disk, active and ephemeral TCP port counts as defined by the user in a Data
-configuration file (JSON, App array objects). Likewise, there are the configurable, App-focused **NetworkObserver** and  **DiskObserver**.
+configuration file (JSON, App array objects). Likewise, there is the configurable, App-focused **NetworkObserver**.
 
 <!--- You can learn a lot more about the set of existing observers further down this relatively long readme...\ -->
 \
