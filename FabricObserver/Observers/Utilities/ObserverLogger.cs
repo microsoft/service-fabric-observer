@@ -22,27 +22,25 @@ namespace FabricObserver.Utilities
         private string loggerName = null;
         private const int retries = 5;
         private static int Retries => retries;
-        private static readonly bool EtwEnabled = ObserverManager.EtwEnabled;
-        private static readonly string EtwProviderName = ObserverManager.EtwProviderName;
-       
+
         internal string Foldername { get; }
         internal string Filename { get; }
         
         public bool EnableVerboseLogging { get; set; } = false;
         public string LogFolderBasePath { get; set; } = null;
         public string FilePath { get; set; } = null;
-        public static readonly EventSource EtwLogger;
+        public static EventSource EtwLogger { get; private set; }
      
         static Logger()
         {
-            if (!EtwEnabled || string.IsNullOrEmpty(EtwProviderName))
+            if (!ObserverManager.EtwEnabled || string.IsNullOrEmpty(ObserverManager.EtwProviderName))
             {
                 return;
             }
 
             if (EtwLogger == null)
             {
-                EtwLogger = new EventSource(EtwProviderName);
+                EtwLogger = new EventSource(ObserverManager.EtwProviderName);
             }
         }
 
@@ -51,6 +49,12 @@ namespace FabricObserver.Utilities
             Foldername = observerName;
             Filename = observerName + ".log";
             this.loggerName = observerName;
+
+            // The static type may have been disposed, so recreate it if that's the case...
+            if (ObserverManager.EtwEnabled && !string.IsNullOrEmpty(ObserverManager.EtwProviderName) && EtwLogger == null)
+            {
+                EtwLogger = new EventSource(ObserverManager.EtwProviderName);
+            }
 
             InitializeLoggers();
         }
@@ -194,6 +198,7 @@ namespace FabricObserver.Utilities
         public void Dispose()
         {
             ((IDisposable)EtwLogger)?.Dispose();
+            EtwLogger = null;
         }
     }
 }
