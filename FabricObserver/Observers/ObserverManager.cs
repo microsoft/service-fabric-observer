@@ -47,31 +47,33 @@ namespace FabricObserver
         public static IObserverTelemetryProvider TelemetryClient { get; set; }
         public static bool TelemetryEnabled { get; set; } = false;
         public static bool FabricObserverTelemetryEnabled { get; set; } = true;
-        public static bool EtwEnabled { get; set; } = false;
+        public static bool EtwEnabled
+        {
+            get
+            {
+                if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out bool etwEnabled))
+                {
+                    return etwEnabled;
+                }
+
+                return false;
+            }
+        }
 
         public static string EtwProviderName
         {
             get
             {
-                try
+                if (EtwEnabled)
                 {
-                    if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out bool etwEnabled))
+                    string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
+                    if (!string.IsNullOrEmpty(key))
                     {
-                        EtwEnabled = etwEnabled;
+                        return key;
                     }
 
-                    if (EtwEnabled)
-                    {
-                        string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
-                        if (!string.IsNullOrEmpty(key))
-                        {
-                            return key;
-                        }
-
-                        return null;
-                    }
+                    return null;
                 }
-                catch { }
 
                 return null;
             }
