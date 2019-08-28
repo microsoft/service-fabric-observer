@@ -4,7 +4,7 @@ FabricObserver (FO) is a complete, working sample of a fully functioning, easily
 
 FO is implemented using Service Fabric’s public API surface only. It does not ship with SF. It is independent of the SF runtime engineering schedule.
 
-FO is composed of Observer objects (instance classes) that are designed to observe, record, and report on several machine-level environmental conditions inside a VM, at the OS node level of a Service Fabric cluster.
+FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows VM (node) of a Service Fabric cluster. An observer, by design, does not communicate over the Internet. In fact, FabricObserver does not listen on any ports. It is an isolated, node-only, service.
 
 In Warning and Error states, an observer will signal status (reports) via a Service Fabric Health Report (e.g., extended, high CPU and Memory usage, extended Disk IO, limited Disk space, Networking issues (latency, unavailability, unusually high or low network IO). Since an observer doesn't know what's good or what's bad by simply observing some resource state (in some cases, like disk space monitoring and fabric system service monitoring, there are predefined maxima/minima), a user must provide Warning and Error thresholds that ring the alarm bells. These settings are supplied and packaged in Service Fabric configuration files (both XML and JSON are supported).
 
