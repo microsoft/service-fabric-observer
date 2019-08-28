@@ -41,7 +41,7 @@ namespace FabricObserver
 
         public AppObserver() : base(ObserverConstants.AppObserverName)
         {
-            this.dataPackagePath = FabricServiceContext.CodePackageActivationContext.GetDataPackageObject("Observers.Data")?.Path;
+            this.dataPackagePath = ConfigSettings.ObserversDataConfigPath;
             this.allAppCpuData = new List<FabricResourceUsageData<int>>();
             this.allAppDiskReadsData = new List<FabricResourceUsageData<float>>();
             this.allAppDiskWritesData = new List<FabricResourceUsageData<float>>();
@@ -115,7 +115,7 @@ namespace FabricObserver
                 return true;
             }
 
-            ConfigSettings.Initialize(FabricRuntime.GetActivationContext().GetConfigurationPackageObject(ConfigSettings.ConfigPackageName).Settings, ConfigSettings.AppObserverConfiguration, "AppObserverDataFileName");
+            ConfigSettings.Initialize(FabricRuntime.GetActivationContext().GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings, ObserverConstants.AppObserverConfiguration, "AppObserverDataFileName");
             var appObserverDataFileName = Path.Combine(this.dataPackagePath, ConfigSettings.AppObserverDataFileName);
 
             if (!File.Exists(appObserverDataFileName))

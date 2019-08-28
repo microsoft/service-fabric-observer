@@ -95,6 +95,8 @@ namespace FabricObserver
             this.Observers = GetObservers();
 
             // FO Diagnostic Telemetry
+            // You can disable this functionality in PackageRoot/Config/Settings.xml by setting EnableFabricObserverDiagnosticTelemetry
+            // to False...
             if (FabricObserverTelemetryEnabled)
             {
                 this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext?.NodeContext.NodeName,
@@ -311,6 +313,8 @@ namespace FabricObserver
             }
 
             // FabricObserver runtime telemetry (AppInsights)
+            // You can disable this functionality in PackageRoot/Config/Settings.xml by setting EnableFabricObserverDiagnosticTelemetry
+            // to False...
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
             {
                 FabricObserverTelemetryEnabled = foTelemEnabled;
@@ -519,6 +523,8 @@ namespace FabricObserver
                     Logger.LogError(message);
 
                     // FO Diagnostic Telemetry
+                    // You can disable this functionality in PackageRoot/Config/Settings.xml by setting EnableFabricObserverDiagnosticTelemetry
+                    // to False...
                     if (FabricObserverTelemetryEnabled)
                     {
                         this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,

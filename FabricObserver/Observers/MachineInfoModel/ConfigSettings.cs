@@ -3,26 +3,28 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricObserver.Utilities;
 using System.Fabric;
 using System.Fabric.Description;
 
 namespace FabricObserver.Model
 {
     public static class ConfigSettings
-    {
-        // Default Fabric config name...
-        public const string ConfigPackageName = "Config";
-        
-        // AppObserver
-        public const string AppObserverConfiguration = "AppObserverConfiguration";
-  
-        // NetworkObserver
-        public const string NetworkObserverConfiguration = "NetworkObserverConfiguration";
-        
-
+    {   
         public static string ConfigPackagePath
         {
-            get { return FabricRuntime.GetActivationContext().GetConfigurationPackageObject(ConfigPackageName).Path; }
+            get
+            {
+                return FabricRuntime.GetActivationContext().GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Path;
+            }
+        }
+
+        public static string ObserversDataConfigPath
+        {
+            get
+            {
+                return FabricRuntime.GetActivationContext().GetConfigurationPackageObject(ObserverConstants.ObserverDataPackageName)?.Path;
+            }
         }
 
         public static string AppObserverDataFileName { get; set; } = null;
@@ -34,21 +36,17 @@ namespace FabricObserver.Model
         {
             ConfigSettings.configurationSettings = configurationSettings;
 
-            if (configurationSectionName == AppObserverConfiguration)
+            if (configurationSectionName == ObserverConstants.AppObserverConfiguration)
             {
-                AppObserverDataFileName = new ConfigurationSetting<string>(
-                                            configurationSettings,
-                                            configurationSectionName,
-                                            dataFileName,
-                                            "").Value;
+                AppObserverDataFileName = new ConfigurationSetting<string>(configurationSettings,
+                                                                           configurationSectionName,
+                                                                           dataFileName, "").Value;
             }
-            else if (configurationSectionName == NetworkObserverConfiguration)
+            else if (configurationSectionName == ObserverConstants.NetworkObserverConfiguration)
             {
-                NetworkObserverDataFileName = new ConfigurationSetting<string>(
-                                                configurationSettings,
-                                                configurationSectionName,
-                                                dataFileName,
-                                                "").Value;
+                NetworkObserverDataFileName = new ConfigurationSetting<string>(configurationSettings,
+                                                                               configurationSectionName,
+                                                                               dataFileName, "").Value;
             }
         }
 
@@ -59,21 +57,17 @@ namespace FabricObserver.Model
             configurationSettings = newConfigurationSettings;
 
             // Fabric Client settings
-            if (configurationSectionName == AppObserverConfiguration)
+            if (configurationSectionName == ObserverConstants.AppObserverConfiguration)
             {
-                AppObserverDataFileName = new ConfigurationSetting<string>(
-                                            configurationSettings,
-                                            configurationSectionName,
-                                            dataFileName,
-                                            "").Value;
+                AppObserverDataFileName = new ConfigurationSetting<string>(configurationSettings,
+                                                                           configurationSectionName,
+                                                                           dataFileName, "").Value;
             }
-            else if (configurationSectionName == NetworkObserverConfiguration)
+            else if (configurationSectionName == ObserverConstants.NetworkObserverConfiguration)
             {
-                NetworkObserverDataFileName = new ConfigurationSetting<string>(
-                                                configurationSettings,
-                                                configurationSectionName,
-                                                dataFileName,
-                                                "").Value;
+                NetworkObserverDataFileName = new ConfigurationSetting<string>(configurationSettings,
+                                                                               configurationSectionName,
+                                                                               dataFileName, "").Value;
             }
         }
 

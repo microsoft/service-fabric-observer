@@ -138,6 +138,10 @@ namespace FabricObserver.Utilities
         internal const string EnableEventSourceProvider = "EnableEventSourceProvider";
         internal const string EventSourceProviderName = "EventSourceProviderName";
         internal const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
+        public const string ConfigPackageName = "Config";
+        public const string ObserversDataPackageName = "Observers.Data";
+        public const string AppObserverConfiguration = "AppObserverConfiguration";
+        public const string NetworkObserverConfiguration = "NetworkObserverConfiguration";
         #endregion
     }
 }
