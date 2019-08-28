@@ -79,7 +79,7 @@ namespace FabricObserverTests
         [TestMethod]
         public void OSObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -98,7 +98,7 @@ namespace FabricObserverTests
         [TestMethod]
         public void DiskObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -117,7 +117,7 @@ namespace FabricObserverTests
         [TestMethod]
         public void AppObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -136,7 +136,7 @@ namespace FabricObserverTests
         [TestMethod]
         public void FabricSystemObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -155,7 +155,7 @@ namespace FabricObserverTests
         [TestMethod]
         public void NetworkObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -177,7 +177,7 @@ namespace FabricObserverTests
         [TestMethod]
         public void NodeObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -196,7 +196,7 @@ namespace FabricObserverTests
         [TestMethod]
         public void SFConfigurationObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -217,7 +217,7 @@ namespace FabricObserverTests
         public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
             var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
