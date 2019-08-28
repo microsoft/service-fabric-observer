@@ -47,16 +47,16 @@ namespace FabricObserverTests
         public string TempDirectory { get; private set; }
         public string WorkDirectory { get; private set; }
 
-        // Stub events... These are never used. Ignore the Warnings(CS0067).
-        public event EventHandler<PackageAddedEventArgs<CodePackage>> CodePackageAddedEvent;
-        public event EventHandler<PackageModifiedEventArgs<CodePackage>> CodePackageModifiedEvent;
-        public event EventHandler<PackageRemovedEventArgs<CodePackage>> CodePackageRemovedEvent;
-        public event EventHandler<PackageAddedEventArgs<ConfigurationPackage>> ConfigurationPackageAddedEvent;
-        public event EventHandler<PackageModifiedEventArgs<ConfigurationPackage>> ConfigurationPackageModifiedEvent;
-        public event EventHandler<PackageRemovedEventArgs<ConfigurationPackage>> ConfigurationPackageRemovedEvent;
-        public event EventHandler<PackageAddedEventArgs<DataPackage>> DataPackageAddedEvent;
-        public event EventHandler<PackageModifiedEventArgs<DataPackage>> DataPackageModifiedEvent;
-        public event EventHandler<PackageRemovedEventArgs<DataPackage>> DataPackageRemovedEvent;
+        // Interface required events... These are never used. Ignore the Warnings(CS0067).
+        public event EventHandler<PackageAddedEventArgs<CodePackage>> CodePackageAddedEvent = null;
+        public event EventHandler<PackageModifiedEventArgs<CodePackage>> CodePackageModifiedEvent = null;
+        public event EventHandler<PackageRemovedEventArgs<CodePackage>> CodePackageRemovedEvent = null;
+        public event EventHandler<PackageAddedEventArgs<ConfigurationPackage>> ConfigurationPackageAddedEvent = null;
+        public event EventHandler<PackageModifiedEventArgs<ConfigurationPackage>> ConfigurationPackageModifiedEvent = null;
+        public event EventHandler<PackageRemovedEventArgs<ConfigurationPackage>> ConfigurationPackageRemovedEvent = null;
+        public event EventHandler<PackageAddedEventArgs<DataPackage>> DataPackageAddedEvent = null;
+        public event EventHandler<PackageModifiedEventArgs<DataPackage>> DataPackageModifiedEvent = null;
+        public event EventHandler<PackageRemovedEventArgs<DataPackage>> DataPackageRemovedEvent = null;
 
         public ApplicationPrincipalsDescription GetApplicationPrincipals()
         {

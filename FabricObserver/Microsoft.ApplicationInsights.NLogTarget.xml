@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<doc xml:lang="en">
+    <assembly>
+        <name>Microsoft.ApplicationInsights.NLogTarget</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget">
+            <summary>
+            NLog Target that routes all logging output to the Application Insights logging framework.
+            The messages will be uploaded to the Application Insights cloud service.
+            </summary>
+        </member>
+        <member name="M:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget.#ctor">
+            <summary>
+            Initializers a new instance of ApplicationInsightsTarget type.
+            </summary>
+        </member>
+        <member name="P:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget.InstrumentationKey">
+            <summary>
+            Gets or sets the Application Insights instrumentationKey for your application. 
+            </summary>
+        </member>
+        <member name="P:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget.ContextProperties">
+            <summary>
+            Gets the array of custom attributes to be passed into the logevent context.
+            </summary>
+        </member>
+        <member name="P:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget.TelemetryClient">
+            <summary>
+            Gets the logging controller we will be using.
+            </summary>
+        </member>
+        <member name="M:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget.InitializeTarget">
+            <summary>
+            Initializes the Target and perform instrumentationKey validation.
+            </summary>
+            <exception cref="T:NLog.NLogConfigurationException">Will throw when <see cref="P:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget.InstrumentationKey"/> is not set.</exception>
+        </member>
+        <member name="M:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget.Write(NLog.LogEventInfo)">
+            <summary>
+            Send the log message to Application Insights.
+            </summary>
+            <exception cref="T:System.ArgumentNullException">If <paramref name="logEvent"/> is null.</exception>
+        </member>
+        <member name="M:Microsoft.ApplicationInsights.NLogTarget.ApplicationInsightsTarget.FlushAsync(NLog.Common.AsyncContinuation)">
+            <summary>
+            Flush any pending log messages.
+            </summary>
+            <param name="asyncContinuation">The asynchronous continuation.</param>
+        </member>
+        <member name="T:Microsoft.ApplicationInsights.NLogTarget.TargetPropertyWithContext">
+            <summary>
+            NLog Target Context Property that allows capture of context information for all logevents (Ex. Layout=${threadid}).
+            </summary>
+        </member>
+        <member name="M:Microsoft.ApplicationInsights.NLogTarget.TargetPropertyWithContext.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.ApplicationInsights.NLogTarget.TargetPropertyWithContext" /> class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.ApplicationInsights.NLogTarget.TargetPropertyWithContext.#ctor(System.String,NLog.Layouts.Layout)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.ApplicationInsights.NLogTarget.TargetPropertyWithContext" /> class.
+            </summary>
+            <param name="name">The name of the attribute.</param>
+            <param name="layout">The layout of the attribute's value.</param>
+        </member>
+        <member name="P:Microsoft.ApplicationInsights.NLogTarget.TargetPropertyWithContext.Name">
+            <summary>
+            Gets or sets the name of the attribute.
+            </summary>
+            <docgen category='Property Options' order='10' />
+        </member>
+        <member name="P:Microsoft.ApplicationInsights.NLogTarget.TargetPropertyWithContext.Layout">
+            <summary>
+            Gets or sets the layout that will be rendered as the attribute's value.
+            </summary>
+            <docgen category='Property Options' order='10' />
+        </member>
+    </members>
+</doc>
