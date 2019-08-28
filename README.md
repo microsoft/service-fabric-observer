@@ -16,7 +16,7 @@ Currently, FabricObserver is implemented as a full framework .NET Desktop Applic
 
 In this iteration of the project, we have designed Observers that can be configured by users to monitor the machine-level side effects of an App (defined as a collection of Service Fabric services). The user-controlled,
 App-focused functionality is primarily encapsulated in  **AppObserver**, which observes, records and reports on real-time CPU, Memory, Disk, active and ephemeral TCP port counts as defined by the user in a Data
-configuration file (JSON, App array objects). Likewise, there are the configurable, App-focused **NetworkObserver** and  **DiskObserver**.
+configuration file (JSON, App array objects). Likewise, there is the configurable, App-focused **NetworkObserver**.
 
 <!--- You can learn a lot more about the set of existing observers further down this relatively long readme...\ -->
 \
