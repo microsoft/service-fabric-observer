@@ -51,11 +51,12 @@ build:
           include:
             - 'NLog.dll'
            
-static_analysis_options:                          
-  files_to_scan:     
-      - from: 'FabricObserverWeb\bin\Release\netcoreapp2.2\win7-x64\'
-        exclude:                         
-          - 'FabricObserverWeb.dll'
+static_analysis_options:
+  binskim_options: 
+      files_to_scan:     
+        - from: 'FabricObserverWeb\bin\Release\netcoreapp2.2\win7-x64\'
+            exclude:                         
+              - 'FabricObserverWeb.dll'
   fxcop_options:  
     disable_tool_scan: true
 
