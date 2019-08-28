@@ -1,35 +1,35 @@
 [
   {
-    "appTarget": "fabric:/BadApp",
+    "appTarget": "fabric:/MyApp",
     "endpoints": [
       {
-        "hostname": "www.facebook.com",
+        "hostname": "google.com",
         "port": 443
       },
       {
-        "hostname": "www.google.com",
+        "hostname": "facebook.com",
         "port": 443
       },
       {
-        "hostname": "www.microsoft.com",
-        "port": 443
+        "hostname": "westusserver001.database.windows.net",
+        "port": 1433
       }
     ]
   },
   {
-    "appTarget": "fabric:/FabricObserver",
+    "appTarget": "fabric:/MyApp2",
     "endpoints": [
       {
-        "hostname": "www.facebook.com",
+        "hostname": "google.com",
         "port": 443
       },
       {
-        "hostname": "www.google.com",
+        "hostname": "microsoft.com",
         "port": 443
       },
       {
-        "hostname": "www.microsoft.com",
-        "port": 443
+        "hostname": "eastusserver007.database.windows.net",
+        "port": 1433
       }
     ]
   }
