@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using FabricObserver.Utilities;
-using System.Fabric;
 using System.Fabric.Description;
 
 namespace FabricObserver.Model
