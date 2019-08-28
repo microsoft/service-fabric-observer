@@ -277,7 +277,7 @@ namespace FabricObserver.Utilities.Telemetry
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects).
+                    this.logger?.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.

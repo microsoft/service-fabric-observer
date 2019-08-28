@@ -183,7 +183,7 @@ namespace FabricObserver.Utilities
         public WindowsPerfCounters()
         {
             InitializePerfCounters();
-            Logger = new Logger("ObserverManager");
+            Logger = new Logger("Utilities");
         }
 
         public bool InitializePerfCounters()
@@ -493,6 +493,11 @@ namespace FabricObserver.Utilities
                     {
                         this.memProcessPrivateWorkingSetCounter.Dispose();
                         this.memProcessPrivateWorkingSetCounter = null;
+                    }
+
+                    if (this.Logger != null)
+                    {
+                        this.Logger.Dispose();
                     }
                 }
 

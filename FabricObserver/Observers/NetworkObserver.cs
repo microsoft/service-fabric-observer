@@ -59,7 +59,7 @@ namespace FabricObserver
 
         public NetworkObserver() : base(ObserverConstants.NetworkObserverName)
         {
-            this.dataPackagePath = FabricServiceContext.CodePackageActivationContext.GetDataPackageObject("Observers.Data")?.Path;
+            this.dataPackagePath = ConfigSettings.ObserversDataPackagePath;
         }
 
         public override async Task ObserveAsync(CancellationToken token)
