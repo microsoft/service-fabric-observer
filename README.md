@@ -45,7 +45,8 @@ As stated, the goal of this project, is to help enable Service Fabric customers 
 **Observer** -- conceptually equivalent to "Watchdog", however, we want
 to make it even more explicit that the nature of these objects is
 non-reactive, meaning they do not mitigate, they observe, record, and
-report. Plus, Observer is a much cooler name than Watchdog ;-)
+report. Plus, Observer is a much cooler name than Watchdog ;-) To learn more about Observers and their configuration, please
+see the [observers readme](./Documentation/Observers.md).
 
 
 ***Design***
