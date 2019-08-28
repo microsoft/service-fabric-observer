@@ -299,7 +299,7 @@ namespace FabricObserver
         {
             var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter).ConfigureAwait(true);
 
-            List<ReplicaMonitoringInfo> currentReplicaInfoList = new List<ReplicaMonitoringInfo>();
+            var currentReplicaInfoList = new List<ReplicaMonitoringInfo>();
 
             foreach (var deployedApp in deployedApps)
             {

@@ -7,8 +7,6 @@ using FabricObserver;
 using System.IO;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using System.Linq;
-using System.Collections.Generic;
 
 /*
  
@@ -18,7 +16,7 @@ using System.Collections.Generic;
  ***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***
  
  Make sure that your observers can run as Network Service (e.g., FabricClientRole.User). 
- There is seldom a real need to run Fabric Observer as an Admin or System user. Currently, the only potential reason
+ There is seldom a real need to run FabricObserver as an Admin or System user. Currently, the only potential reason
  would be due to mitigation/healing actions, which are not currently implemented. As a rule, do not run with system level privileges unless you provably have to...
 
 */
@@ -62,29 +60,20 @@ namespace FabricObserverTests
 
         private bool IsLocalSFRuntimePresent()
         {
-            List<Process> ps = null;
             try
             {
-               ps = Process.GetProcesses()
-                               .Where(proc => proc.ProcessName == "Fabric" ||
-                                              proc.ProcessName == "FabricGateway" ||
-                                              proc.ProcessName == "FabricApplicationGateway" ||
-                                              proc.ProcessName == "FabricHost" ||
-                                              proc.ProcessName == "FabricDCA")?.ToList();
-
-                if (ps?.Count == 0)
+                var ps = Process.GetProcessesByName("Fabric");
+                if (ps?.Length == 0)
                 {
                     return false;
                 }
+
+                return true;
             }
             catch (InvalidOperationException)
             {
                 return false;
             }
-
-            ps?.Clear();
-
-            return true;
         }
 
         [TestMethod]
