@@ -1,19 +1,16 @@
-**Currently Implemented Observers**  
+*Currently Implemented Observers*  
 
 ***AppObserver***  
 ***DiskObserver***  
 ***FabricSystemObserver***  
 ***NetworkObserver***  
 ***NodeObserver***  
-***OSObserver***  
-***SFConfigurationObserver***  
+***OSObserver*** (Not configurable)  
+***SFConfigurationObserver***  (Not configurable)  
 
 Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not).
 
 You can see examples of specific observer output by calling a REST endpoint a la: 
-
-Observer Logs -> http://winlrc-ctorre-10.westus2.cloudapp.azure.com:8080/api/ObserverLog/DiskObserver/_SFRole0_0
-ObserverManager Log -> http://winlrc-ctorre-10.westus2.cloudapp.azure.com:8080/api/ObserverManager
 
 **AppObserver**  
 Observer that monitors CPU usage, Memory use, and Disk space
