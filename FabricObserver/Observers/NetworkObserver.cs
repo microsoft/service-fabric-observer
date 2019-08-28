@@ -111,9 +111,9 @@ namespace FabricObserver
                 return true;
             } 
 
-            var settings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ConfigSettings.ConfigPackageName)?.Settings;
+            var settings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings;
 
-            ConfigSettings.Initialize(settings, ConfigSettings.NetworkObserverConfiguration, "NetworkObserverDataFileName");
+            ConfigSettings.Initialize(settings, ObserverConstants.NetworkObserverConfiguration, "NetworkObserverDataFileName");
 
             var NetworkObserverDataFileName = Path.Combine(this.dataPackagePath, ConfigSettings.NetworkObserverDataFileName);
 

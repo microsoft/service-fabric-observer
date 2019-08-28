@@ -20,7 +20,9 @@ namespace Microsoft.ServiceFabric.TelemetryLib.Helper
     }
 
     /// <summary>
-    /// Helper class to facilitate PII-safe identification of customer SF cluster
+    /// Helper class to facilitate PII-safe identification of customer SF cluster for use in FabricObserver health telemetry.
+    /// You can disable this functionality in PackageRoot/Config/Settings.xml by setting EnableFabricObserverDiagnosticTelemetry
+    /// to False...
     /// </summary>
     public class ClusterIdentificationUtility: IDisposable
     {
@@ -150,9 +152,6 @@ namespace Microsoft.ServiceFabric.TelemetryLib.Helper
                         this.xreader = null;
                     }
                 }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
 
                 disposedValue = true;
             }
