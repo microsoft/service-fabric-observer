@@ -219,7 +219,8 @@ namespace FabricObserver.Controllers
             return html;
         }
 
-        // GET: api/ObserverLog/DiskObserver/html
+        // GET: api/ObserverLog/DiskObserver/html returns html output...
+        // GET: api/ObserverLog/DiskObserver returns json output...
         [HttpGet("{name}/{format?}", Name = "GetObserverLogFormatted")]
         public ActionResult Get(string name, string format = "json")
         {
@@ -377,9 +378,8 @@ namespace FabricObserver.Controllers
 
         // This only makes sense if you enable communication between nodes and/or over the Internet
         // over a secure channel... By default, this API service is node-local (node-only) with no comms outside of VM...
-        // GET: api/ObserverLog/DiskObserver/_SFRole_0/json
+        // GET: api/ObserverLog/DiskObserver/_SFRole_0
         // GET: api/ObserverLog/DiskObserver/_SFRole_0/html
-        // Without supplied format, defaults to json...
         [HttpGet("{observername}/{nodename}/{format?}", Name = "GetObserverLogNode")]
         public ContentResult Get(string observername, string nodename, string format = "json")
         {
@@ -391,7 +391,9 @@ namespace FabricObserver.Controllers
                 {
                     var addr = node[0].IpAddressOrFQDN;
 
-                    // Only use this API over SSL, but not in LRC...
+                    // By default this service is node-local, http, port 5000...
+                    // If you modify the service to support Internet communication over a 
+                    // secure channel, then change this code to force https.
                     if (!addr.Contains("http://"))
                     {
                         addr = "http://" + addr;
@@ -399,6 +401,8 @@ namespace FabricObserver.Controllers
 
                     string fqdn = "?fqdn=" + Request.Host;
 
+                    // If you modify the service to support Internet communication over a 
+                    // secure channel, then change this code to reflect the correct port...
                     var req = WebRequest.Create(addr + $":5000/api/ObserverLog/{observername}/{format}{fqdn}");
                     req.Credentials = CredentialCache.DefaultCredentials;
                     var response = (HttpWebResponse)req.GetResponse();

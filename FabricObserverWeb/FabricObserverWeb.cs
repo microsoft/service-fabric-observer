@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
+//using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
@@ -56,7 +56,7 @@ namespace FabricObserver
                                     .UseContentRoot(Directory.GetCurrentDirectory())
                                     .UseStartup<Startup>()
                                     .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
-                                    .UseUrls("http://localhost:5000")
+                                    .UseUrls("http://localhost:5000") // localhost only, by default...
                                     .Build();
                     }))
             };
