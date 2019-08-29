@@ -77,27 +77,27 @@ namespace FabricObserver
         {
             if (this.allCpuDataPrivTime == null)
             {
-                this.allCpuDataPrivTime = new FabricResourceUsageData<float>("SysCpuTimePct");
+                this.allCpuDataPrivTime = new FabricResourceUsageData<float>("Total CPU Time", "SysCpuTimePct");
             }
 
             if (this.allMemDataCommittedBytes == null)
             {
-                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>("SysMemoryCommittedMb");
+                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>("Total Committed Memory", "SysMemoryCommittedMb");
             }
 
             if (this.firewallData == null)
             {
-                this.firewallData = new FabricResourceUsageData<int>("ActiveFirewallRules");
+                this.firewallData = new FabricResourceUsageData<int>("Active Firewall Rules", "ActiveFirewallRules");
             }
 
             if (this.activePortsData == null)
             {
-                this.activePortsData = new FabricResourceUsageData<int>("AllPortsInUse");
+                this.activePortsData = new FabricResourceUsageData<int>("All Active Ports", "AllPortsInUse");
             }
 
             if (this.ephemeralPortsData == null)
             {
-                this.ephemeralPortsData = new FabricResourceUsageData<int>("EphemeralPortsInUse");
+                this.ephemeralPortsData = new FabricResourceUsageData<int>("Ephemeral Active Ports", "EphemeralPortsInUse");
             }
         }
 
@@ -308,7 +308,6 @@ namespace FabricObserver
                 if (this.allCpuDataPrivTime.AverageDataValue > 0)
                 {
                     ProcessResourceDataReportHealth(this.allCpuDataPrivTime,
-                                                    "Total CPU Time",
                                                     CpuErrorUsageThresholdPct,
                                                     CpuWarningUsageThresholdPct,
                                                     timeToLiveWarning);
@@ -318,7 +317,6 @@ namespace FabricObserver
                 if (this.allMemDataCommittedBytes.AverageDataValue > 0)
                 {
                     ProcessResourceDataReportHealth(this.allMemDataCommittedBytes,
-                                                    "Total Committed Memory",
                                                     MemErrorUsageThresholdMB,
                                                     MemWarningUsageThresholdMB,
                                                     timeToLiveWarning);
@@ -326,19 +324,16 @@ namespace FabricObserver
 
                 // Firewall rules
                 ProcessResourceDataReportHealth(this.firewallData,
-                                                "Active Firewall Rules",
                                                 FirewallRulesErrorThreshold,
                                                 FirewallRulesWarningThreshold,
                                                 timeToLiveWarning);
                 // Ports
                 ProcessResourceDataReportHealth(this.activePortsData,
-                                                "All Active Ports",
                                                 ActivePortsErrorThreshold,
                                                 ActivePortsWarningThreshold,
                                                 timeToLiveWarning);
 
                 ProcessResourceDataReportHealth(this.ephemeralPortsData,
-                                                "Ephemeral Active Ports",
                                                 EphemeralPortsErrorThreshold,
                                                 EphemeralPortsWarningThreshold,
                                                 timeToLiveWarning);
