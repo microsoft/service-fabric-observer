@@ -389,7 +389,6 @@ namespace FabricObserver
         }
 
         public void ProcessResourceDataReportHealth<T>(FabricResourceUsageData<T> data,
-                                                       string propertyName,
                                                        T thresholdError,
                                                        T thresholdWarning,
                                                        TimeSpan healthReportTtl,
@@ -398,27 +397,19 @@ namespace FabricObserver
                                                        ReplicaMonitoringInfo replicaOrInstance = null,
                                                        bool dumpOnError = false)
         {
-            if (data == null || propertyName == null)
+            if (data == null)
             {
                 throw new ArgumentException("Supply all required parameters with non-null value...");
             }
 
             var thresholdName = "Minimum";
-            var unit = "";
             bool warningOrError = false;
             string repPartitionId = null, repOrInstanceId = null, name = null, id = null, procName = null;
             T threshold = thresholdWarning;
             var healthState = HealthState.Ok;
             Uri appName = null;
 
-            if (propertyName.ToLower().Contains("cpu") || propertyName.ToLower().Contains("disk space"))
-            {
-                unit = "%";
-            }
-            else if (propertyName.ToLower().Contains("memory"))
-            {
-                unit = "MB";
-            }
+            
 
             if (replicaOrInstance != null)
             {
@@ -432,13 +423,13 @@ namespace FabricObserver
             {
                 appName = new Uri(app);
                 name = app.Replace("fabric:/", "");
-                id = name + "_" + propertyName.Replace(" ", "");
+                id = name + "_" + data.Property.Replace(" ", "");
             }
 
             // Telemetry...
             if (IsTelemetryEnabled)
             {
-                _ = ObserverTelemetryClient?.ReportMetricAsync($"{NodeName}-{app}-{data.Name}-{propertyName}", data.AverageDataValue, Token);
+                _ = ObserverTelemetryClient?.ReportMetricAsync($"{NodeName}-{app}-{data.Id}-{data.Property}", data.AverageDataValue, Token);
             }
 
             // ETW...
@@ -448,10 +439,12 @@ namespace FabricObserver
                                         new
                                         {
                                             Level = 0, // Info
-                                            Node = $"{NodeName}",
+                                            Node = NodeName,
                                             Observer = $" {ObserverName}",
-                                            Property = $"{propertyName}",
-                                            Value = $"{Math.Round(data.AverageDataValue)}{unit}"
+                                            Property = data.Property,
+                                            Id = data.Id,
+                                            Value = $"{Math.Round(data.AverageDataValue)}",
+                                            Unit = data.Units
                                         });
             }
 
@@ -514,35 +507,35 @@ namespace FabricObserver
             {
                 string errorWarningKind = null;
 
-                if (propertyName.Contains("CPU"))
+                if (data.Property.Contains("CPU"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorCpuTime : ErrorWarningCode.WarningCpuTime;
                 }
-                else if (propertyName.Contains("Disk Space"))
+                else if (data.Property.Contains("Disk Space"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpace : ErrorWarningCode.WarningDiskSpace;
                 }
-                else if (propertyName.Contains("Memory"))
+                else if (data.Property.Contains("Memory"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryCommitted : ErrorWarningCode.WarningMemoryCommitted;
                 }
-                else if (propertyName.Contains("Read"))
+                else if (data.Property.Contains("Read"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskIoReads : ErrorWarningCode.WarningDiskIoReads;
                 }
-                else if (propertyName.Contains("Write"))
+                else if (data.Property.Contains("Write"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskIoWrites : ErrorWarningCode.WarningDiskIoWrites;
                 }
-                else if (propertyName.Contains("Queue"))
+                else if (data.Property.Contains("Queue"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskAverageQueueLength : ErrorWarningCode.WarningDiskAverageQueueLength;
                 }
-                else if (propertyName.Contains("Firewall"))
+                else if (data.Property.Contains("Firewall"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyFirewallRules : ErrorWarningCode.WarningTooManyFirewallRules;
                 }
-                else if (propertyName.Contains("Ports"))
+                else if (data.Property.Contains("Ports"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyActivePorts : ErrorWarningCode.WarningTooManyActivePorts;
                 }
@@ -554,8 +547,8 @@ namespace FabricObserver
                     healthMessage.Append($"{name} (Service Process: {procName}, {repPartitionId}, {repOrInstanceId}): ");
                 }
 
-                healthMessage.Append($"{propertyName} is at or above the specified {thresholdName} limit ({threshold}{unit})");
-                healthMessage.AppendLine($" - Average {propertyName}: {Math.Round(data.AverageDataValue)}{unit}");
+                healthMessage.Append($"{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
+                healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
 
                 // Set internal fabric health states...
                 data.ActiveErrorOrWarning = true;
@@ -586,7 +579,7 @@ namespace FabricObserver
                                                                    FabricServiceContext.ServiceName.OriginalString,
                                                                    "FabricObserver",
                                                                    ObserverName,
-                                                                   $"{NodeName}/{errorWarningKind}/{propertyName}/{Math.Round(data.AverageDataValue)}{unit}",
+                                                                   $"{NodeName}/{errorWarningKind}/{data.Property}/{Math.Round(data.AverageDataValue)}",
                                                                    healthState,
                                                                    Token);
                 }
@@ -598,11 +591,13 @@ namespace FabricObserver
                                             new
                                             {
                                                 Level = (healthState == HealthState.Warning) ? 1 : 2,
-                                                Node = $"{NodeName}",
-                                                Observer = $"{ObserverName}",
-                                                HealthEventErrorCode = $"{errorWarningKind}",
-                                                Property = $"{propertyName}",
-                                                Value = $"{Math.Round(data.AverageDataValue)}{unit}"
+                                                Node = NodeName,
+                                                Observer = ObserverName,
+                                                HealthEventErrorCode = errorWarningKind,
+                                                Property = data.Property,
+                                                Id = data.Id,
+                                                Value = $"{Math.Round(data.AverageDataValue)}",
+                                                Unit = data.Units
                                             });
                 }
 
@@ -617,7 +612,7 @@ namespace FabricObserver
                     {
                         AppName = appName,
                         EmitLogEvent = true,
-                        HealthMessage = $"{data.Name}: {propertyName} is now within normal/expected range.",
+                        HealthMessage = $"{data.Id}: {data.Property} is now within normal/expected range.",
                         HealthReportTimeToLive = default(TimeSpan),
                         ReportType = healthReportType,
                         State = HealthState.Ok,
