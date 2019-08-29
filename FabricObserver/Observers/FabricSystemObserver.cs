@@ -88,16 +88,16 @@ namespace FabricObserver
                 this.allMemData = new List<FabricResourceUsageData<long>>
                 { 
                     // Mem data...
-                    new FabricResourceUsageData<long>("Fabric"),
-                    new FabricResourceUsageData<long>("FabricApplicationGateway"),
-                    new FabricResourceUsageData<long>("FabricCAS"),
-                    new FabricResourceUsageData<long>("FabricDCA"),
-                    new FabricResourceUsageData<long>("FabricDnsService"),
-                    new FabricResourceUsageData<long>("FabricGateway"),
-                    new FabricResourceUsageData<long>("FabricHost"),
-                    new FabricResourceUsageData<long>("FabricIS"),
-                    new FabricResourceUsageData<long>("FabricRM"),
-                    new FabricResourceUsageData<long>("FabricUS")
+                    new FabricResourceUsageData<long>("Memory", "Fabric"),
+                    new FabricResourceUsageData<long>("Memory", "FabricApplicationGateway"),
+                    new FabricResourceUsageData<long>("Memory", "FabricCAS"),
+                    new FabricResourceUsageData<long>("Memory", "FabricDCA"),
+                    new FabricResourceUsageData<long>("Memory", "FabricDnsService"),
+                    new FabricResourceUsageData<long>("Memory", "FabricGateway"),
+                    new FabricResourceUsageData<long>("Memory", "FabricHost"),
+                    new FabricResourceUsageData<long>("Memory", "FabricIS"),
+                    new FabricResourceUsageData<long>("Memory", "FabricRM"),
+                    new FabricResourceUsageData<long>("Memory", "FabricUS")
                 };
             }
 
@@ -106,16 +106,16 @@ namespace FabricObserver
                 this.allCpuData = new List<FabricResourceUsageData<int>>
                 { 
                     // Cpu data...
-                    new FabricResourceUsageData<int>("Fabric"),
-                    new FabricResourceUsageData<int>("FabricApplicationGateway"),
-                    new FabricResourceUsageData<int>("FabricCAS"),
-                    new FabricResourceUsageData<int>("FabricDCA"),
-                    new FabricResourceUsageData<int>("FabricDnsService"),
-                    new FabricResourceUsageData<int>("FabricGateway"),
-                    new FabricResourceUsageData<int>("FabricHost"),
-                    new FabricResourceUsageData<int>("FabricIS"),
-                    new FabricResourceUsageData<int>("FabricRM"),
-                    new FabricResourceUsageData<int>("FabricUS")
+                    new FabricResourceUsageData<int>("CPU", "Fabric"),
+                    new FabricResourceUsageData<int>("CPU", "FabricApplicationGateway"),
+                    new FabricResourceUsageData<int>("CPU", "FabricCAS"),
+                    new FabricResourceUsageData<int>("CPU", "FabricDCA"),
+                    new FabricResourceUsageData<int>("CPU", "FabricDnsService"),
+                    new FabricResourceUsageData<int>("CPU", "FabricGateway"),
+                    new FabricResourceUsageData<int>("CPU", "FabricHost"),
+                    new FabricResourceUsageData<int>("CPU", "FabricIS"),
+                    new FabricResourceUsageData<int>("CPU", "FabricRM"),
+                    new FabricResourceUsageData<int>("CPU", "FabricUS")
                 };
             }
 
@@ -124,16 +124,16 @@ namespace FabricObserver
                 this.allAppDiskReadsData = new List<FabricResourceUsageData<float>>
                 { 
                     // Disk IO Reads data...
-                    new FabricResourceUsageData<float>("Fabric"),
-                    new FabricResourceUsageData<float>("FabricApplicationGateway"),
-                    new FabricResourceUsageData<float>("FabricCAS"),
-                    new FabricResourceUsageData<float>("FabricDCA"),
-                    new FabricResourceUsageData<float>("FabricDnsService"),
-                    new FabricResourceUsageData<float>("FabricGateway"),
-                    new FabricResourceUsageData<float>("FabricHost"),
-                    new FabricResourceUsageData<float>("FabricIS"),
-                    new FabricResourceUsageData<float>("FabricRM"),
-                    new FabricResourceUsageData<float>("FabricUS")
+                    new FabricResourceUsageData<float>("Disk IO Reads", "Fabric"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricApplicationGateway"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricCAS"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricDCA"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricDnsService"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricGateway"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricHost"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricIS"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricRM"),
+                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricUS")
                 };
             }
 
@@ -142,16 +142,16 @@ namespace FabricObserver
                 this.allAppDiskWritesData = new List<FabricResourceUsageData<float>>
                 { 
                     // Disk IO Writes data...
-                    new FabricResourceUsageData<float>("Fabric"),
-                    new FabricResourceUsageData<float>("FabricApplicationGateway"),
-                    new FabricResourceUsageData<float>("FabricCAS"),
-                    new FabricResourceUsageData<float>("FabricDCA"),
-                    new FabricResourceUsageData<float>("FabricDnsService"),
-                    new FabricResourceUsageData<float>("FabricGateway"),
-                    new FabricResourceUsageData<float>("FabricHost"),
-                    new FabricResourceUsageData<float>("FabricIS"),
-                    new FabricResourceUsageData<float>("FabricRM"),
-                    new FabricResourceUsageData<float>("FabricUS")
+                    new FabricResourceUsageData<float>("Disk IO Writes", "Fabric"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricApplicationGateway"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricCAS"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricDCA"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricDnsService"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricGateway"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricHost"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricIS"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricRM"),
+                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricUS")
                 };
             }
 
@@ -367,21 +367,21 @@ namespace FabricObserver
                         {
                             int cpu = (int)this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
 
-                            this.allCpuData.FirstOrDefault(x => x.Name == procName).Data.Add(cpu);
+                            this.allCpuData.FirstOrDefault(x => x.Id == procName).Data.Add(cpu);
 
                             // Disk IO (per-process disk reads/writes per sec)
-                            this.allAppDiskReadsData.FirstOrDefault(x => x.Name == procName)
+                            this.allAppDiskReadsData.FirstOrDefault(x => x.Id == procName)
                                  .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(process.ProcessName,
                                                                                    "Process",
                                                                                    "IO Read Operations/sec"));
 
-                            this.allAppDiskWritesData.FirstOrDefault(x => x.Name == procName)
+                            this.allAppDiskWritesData.FirstOrDefault(x => x.Id == procName)
                                  .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(process.ProcessName,
                                                                                    "Process",
                                                                                    "IO Write Operations/sec"));
                             // Memory - Private WS for proc...
                             var workingset = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(process.ProcessName);
-                            this.allMemData.FirstOrDefault(x => x.Name == procName).Data.Add((long)workingset);
+                            this.allMemData.FirstOrDefault(x => x.Id == procName).Data.Add((long)workingset);
 
                             --procCount;
                             Thread.Sleep(250);
@@ -519,40 +519,24 @@ namespace FabricObserver
             TotalActiveEphemeralPortCount = 0;
 
             // CPU
-            if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
-            {
-                ProcessResourceDataList(this.allCpuData, 
-                                        "CPU", 
-                                        CpuErrorUsageThresholdPct, 
-                                        CpuWarnUsageThresholdPct);
-            }
+            ProcessResourceDataList(this.allCpuData, 
+                                    CpuErrorUsageThresholdPct, 
+                                    CpuWarnUsageThresholdPct);
 
             // Memory
-            if (MemErrorUsageThresholdMB > 0 || MemWarnUsageThresholdMB > 0)
-            {
-                ProcessResourceDataList(this.allMemData, 
-                                        "Memory", 
-                                        MemErrorUsageThresholdMB, 
-                                        MemWarnUsageThresholdMB);
-            }
+            ProcessResourceDataList(this.allMemData, 
+                                    MemErrorUsageThresholdMB, 
+                                    MemWarnUsageThresholdMB);
 
             // Disk IO - Reads
-            if (DiskErrorIOReadsThresholdMS > 0 || DiskWarnIOReadsThresholdMS > 0)
-            {
-                ProcessResourceDataList(this.allAppDiskReadsData, 
-                                        "Disk IO Reads", 
-                                        DiskErrorIOReadsThresholdMS, 
-                                        DiskWarnIOReadsThresholdMS);
-            }
+            ProcessResourceDataList(this.allAppDiskReadsData, 
+                                    DiskErrorIOReadsThresholdMS, 
+                                    DiskWarnIOReadsThresholdMS);
 
             // Disk IO - Writes
-            if (DiskErrorIOWritesThresholdMS > 0 || DiskWarnIOWritesThresholdMS > 0)
-            {
-                ProcessResourceDataList(this.allAppDiskWritesData, 
-                                        "Disk IO Writes", 
-                                        DiskErrorIOWritesThresholdMS, 
-                                        DiskWarnIOWritesThresholdMS);
-            }
+            ProcessResourceDataList(this.allAppDiskWritesData, 
+                                    DiskErrorIOWritesThresholdMS, 
+                                    DiskWarnIOWritesThresholdMS);
 
             // Windows Event Log
             if (this.monitorWinEventLog)
@@ -628,7 +612,6 @@ namespace FabricObserver
         }
 
         private void ProcessResourceDataList<T>(List<FabricResourceUsageData<T>> data,
-                                                string propertyName,
                                                 T thresholdError,
                                                 T thresholdWarning)
         {
@@ -641,11 +624,12 @@ namespace FabricObserver
                     continue;
                 }
 
+                var propertyName = data.First().Property;
                 if (CsvFileLogger.EnableCsvLogging || IsTelemetryEnabled)
                 {
                     var fileName = "FabricSystemServices_" + NodeName;
 
-                    
+
                     // Log average data value to long-running store (CSV)...
                     string dataLogMonitorType = propertyName;
 
@@ -669,12 +653,11 @@ namespace FabricObserver
                         resourceProp = propertyName;
                     }
 
-                    CsvFileLogger.LogData(fileName, dataItem.Name, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
-                    CsvFileLogger.LogData(fileName, dataItem.Name, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
+                    CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
+                    CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
                 }
 
                 ProcessResourceDataReportHealth(dataItem,
-                                                propertyName,
                                                 thresholdError,
                                                 thresholdWarning,
                                                 SetTimeToLiveWarning(this.runtime.Seconds));  
