@@ -493,13 +493,7 @@ namespace FabricObserver.Utilities
                     {
                         this.memProcessPrivateWorkingSetCounter.Dispose();
                         this.memProcessPrivateWorkingSetCounter = null;
-                    }
-
-                    if (this.Logger != null)
-                    {
-                        this.Logger.Dispose();
-                    }
-                }
+                    }                }
 
                 this.disposedValue = true;
             }

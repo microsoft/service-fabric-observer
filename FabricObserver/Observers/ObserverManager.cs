@@ -609,7 +609,6 @@ namespace FabricObserver
                     Logger.Flush();
                     DataTableFileLogger.Flush();
                     Logger.ShutDown();
-                    this.Logger?.Dispose();
                     DataTableFileLogger.ShutDown();
 
                     this.hasDisposed = true;
