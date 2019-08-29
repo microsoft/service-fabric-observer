@@ -15,7 +15,7 @@ using System.Threading;
 
 namespace FabricObserver.Utilities
 {
-    public sealed class Logger : IObserverLogger<ILogger>, IDisposable
+    public sealed class Logger : IObserverLogger<ILogger>
     {
         // Text file logger for observers - info/warn/error...
         private ILogger logger { get; set; }
@@ -33,12 +33,8 @@ namespace FabricObserver.Utilities
      
         static Logger()
         {
-            if (!ObserverManager.EtwEnabled || string.IsNullOrEmpty(ObserverManager.EtwProviderName))
-            {
-                return;
-            }
-
-            if (EtwLogger == null)
+            // The static type may have been disposed, so recreate it if that's the case...
+            if (ObserverManager.EtwEnabled && !string.IsNullOrEmpty(ObserverManager.EtwProviderName) && EtwLogger == null)
             {
                 EtwLogger = new EventSource(ObserverManager.EtwProviderName);
             }
@@ -49,12 +45,6 @@ namespace FabricObserver.Utilities
             Foldername = observerName;
             Filename = observerName + ".log";
             this.loggerName = observerName;
-
-            // The static type may have been disposed, so recreate it if that's the case...
-            if (ObserverManager.EtwEnabled && !string.IsNullOrEmpty(ObserverManager.EtwProviderName) && EtwLogger == null)
-            {
-                EtwLogger = new EventSource(ObserverManager.EtwProviderName);
-            }
 
             InitializeLoggers();
         }
@@ -193,12 +183,6 @@ namespace FabricObserver.Utilities
         public static void Flush()
         {
             LogManager.Flush();
-        }
-
-        public void Dispose()
-        {
-            ((IDisposable)EtwLogger)?.Dispose();
-            EtwLogger = null;
         }
     }
 }

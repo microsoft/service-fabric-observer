@@ -70,30 +70,48 @@ namespace FabricObserver.Utilities
             return tuples;
         }
 
-        internal long GetAvailabeDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
+        internal double GetAvailabeDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             var driveInfo = new DriveInfo(driveLetter);
             long available = (long)driveInfo.AvailableFreeSpace;
+            return ConvertToSizeUnits(available, sizeUnit);
+        }
 
+        internal double GetUsedDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
+        {
+            var driveInfo = new DriveInfo(driveLetter);
+            long used = (long)driveInfo.TotalSize - driveInfo.AvailableFreeSpace;
+            return ConvertToSizeUnits(used, sizeUnit);
+        }
+
+        internal double GetTotalDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
+        {
+            var driveInfo = new DriveInfo(driveLetter);
+            long total = (long)driveInfo.TotalSize;
+            return ConvertToSizeUnits(total, sizeUnit);
+        }
+
+        private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)
+        {
             switch (sizeUnit)
             {
                 case SizeUnit.Bytes:
-                    return available;
+                    return amount;
 
                 case SizeUnit.Kilobytes:
-                    return available / 1024;
+                    return amount / 1024;
 
                 case SizeUnit.Megabytes:
-                    return available / 1024 / 1024;
+                    return amount / 1024 / 1024;
 
                 case SizeUnit.Gigabytes:
-                    return available / 1024 / 1024 / 1024;
+                    return amount / 1024 / 1024 / 1024;
 
                 case SizeUnit.Terabytes:
-                    return available / 1024 / 1024 / 1024 / 1024;
+                    return amount / 1024 / 1024 / 1024 / 1024;
 
                 default:
-                    return available;
+                    return amount;
             }
         }
 

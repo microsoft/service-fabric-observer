@@ -216,14 +216,14 @@ namespace FabricObserver
                     // Add new resource data structures for each app service process...
                     var id = $"{application.Target.Replace("fabric:/", "")}:{procName}";
 
-                    if (!this.allAppCpuData.Any(list => list.Name == id))
+                    if (!this.allAppCpuData.Any(list => list.Id == id))
                     {
-                        this.allAppCpuData.Add(new FabricResourceUsageData<int>(id));
-                        this.allAppDiskReadsData.Add(new FabricResourceUsageData<float>(id));
-                        this.allAppDiskWritesData.Add(new FabricResourceUsageData<float>(id));
-                        this.allAppMemData.Add(new FabricResourceUsageData<long>(id));
-                        this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(id));
-                        this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(id));
+                        this.allAppCpuData.Add(new FabricResourceUsageData<int>("CPU Time", id));
+                        this.allAppDiskReadsData.Add(new FabricResourceUsageData<float>("IO Read Bytes/sec", id));
+                        this.allAppDiskWritesData.Add(new FabricResourceUsageData<float>("IO Write Bytes/sec", id));
+                        this.allAppMemData.Add(new FabricResourceUsageData<long>("Memory (Private working set)", id));
+                        this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>("Total Active Ports", id));
+                        this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>("Ephemeral Ports", id));
                     }
 
                     // CPU (all cores)...
@@ -237,20 +237,20 @@ namespace FabricObserver
 
                         if (cpu >= 0)
                         {
-                            this.allAppCpuData.FirstOrDefault(x => x.Name == id).Data.Add(cpu);
+                            this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
                         }
 
                         // Memory (private working set)...
                         var mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(currentProcess.ProcessName);
-                        this.allAppMemData.FirstOrDefault(x => x.Name == id).Data.Add((long)mem);
+                        this.allAppMemData.FirstOrDefault(x => x.Id == id).Data.Add((long)mem);
 
                         // Disk/Network/Etc... IO (per-process bytes read/write per sec)
-                        this.allAppDiskReadsData.FirstOrDefault(x => x.Name == id)
+                        this.allAppDiskReadsData.FirstOrDefault(x => x.Id == id)
                             .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(currentProcess.ProcessName,
                                                                               "Process",
                                                                               "IO Read Bytes/sec") / 1000);
 
-                        this.allAppDiskWritesData.FirstOrDefault(x => x.Name == id)
+                        this.allAppDiskWritesData.FirstOrDefault(x => x.Id == id)
                             .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(currentProcess.ProcessName,
                                                                               "Process",
                                                                               "IO Write Bytes/sec") / 1000);
@@ -260,10 +260,10 @@ namespace FabricObserver
                     }
 
                     // Total and Ephemeral ports....
-                    this.allAppTotalActivePortsData.FirstOrDefault(x => x.Name == id)
+                    this.allAppTotalActivePortsData.FirstOrDefault(x => x.Id == id)
                         .Data.Add(NetworkUsage.GetActivePortCount(currentProcess.Id));
 
-                    this.allAppEphemeralPortsData.FirstOrDefault(x => x.Name == id)
+                    this.allAppEphemeralPortsData.FirstOrDefault(x => x.Id == id)
                         .Data.Add(NetworkUsage.GetActiveEphemeralPortCount(currentProcess.Id));
                 }
                 catch (Exception e)
@@ -391,8 +391,7 @@ namespace FabricObserver
                         }
 
                         // CPU
-                        ProcessResourceDataReportHealth(this.allAppCpuData.Where(x => x.Name == id).FirstOrDefault(),
-                                                        "CPU Time",
+                        ProcessResourceDataReportHealth(this.allAppCpuData.Where(x => x.Id == id).FirstOrDefault(),
                                                         app.CpuErrorLimitPct,
                                                         app.CpuWarningLimitPct,
                                                         timeToLiveWarning,
@@ -401,8 +400,8 @@ namespace FabricObserver
                                                         replicaOrInstance,
                                                         app.DumpProcessOnError);
                         // Memory
-                        ProcessResourceDataReportHealth(this.allAppMemData.Where(x => x.Name == id).FirstOrDefault(),
-                                                        "Memory (Private working set)",
+                        ProcessResourceDataReportHealth(this.allAppMemData.Where(x => x.Id == id).FirstOrDefault(),
+                                                        
                                                         app.MemoryErrorLimitMB,
                                                         app.MemoryWarningLimitMB,                                                  
                                                         timeToLiveWarning,
@@ -411,8 +410,7 @@ namespace FabricObserver
                                                         replicaOrInstance,
                                                         app.DumpProcessOnError);
                         // DiskIO
-                        ProcessResourceDataReportHealth(this.allAppDiskReadsData.Where(x => x.Name == id).FirstOrDefault(),
-                                                        "IO Read Bytes/sec",
+                        ProcessResourceDataReportHealth(this.allAppDiskReadsData.Where(x => x.Id == id).FirstOrDefault(),
                                                         app.DiskIOErrorReadsPerSecMS,
                                                         app.DiskIOWarningReadsPerSecMS,
                                                         timeToLiveWarning,
@@ -420,8 +418,7 @@ namespace FabricObserver
                                                         app.Target,
                                                         replicaOrInstance);
 
-                        ProcessResourceDataReportHealth(this.allAppDiskWritesData.Where(x => x.Name == id).FirstOrDefault(),
-                                                        "IO Write Bytes/sec",
+                        ProcessResourceDataReportHealth(this.allAppDiskWritesData.Where(x => x.Id == id).FirstOrDefault(),
                                                         app.DiskIOErrorWritesPerSecMS,
                                                         app.DiskIOWarningWritesPerSecMS,
                                                         timeToLiveWarning,
@@ -430,8 +427,7 @@ namespace FabricObserver
                                                         replicaOrInstance);
 
                         // Ports 
-                        ProcessResourceDataReportHealth(this.allAppTotalActivePortsData.Where(x => x.Name == id).FirstOrDefault(),
-                                                        "Total Active Ports",
+                        ProcessResourceDataReportHealth(this.allAppTotalActivePortsData.Where(x => x.Id == id).FirstOrDefault(),
                                                         app.NetworkErrorActivePorts,
                                                         app.NetworkWarningActivePorts,
                                                         timeToLiveWarning,
@@ -440,8 +436,7 @@ namespace FabricObserver
                                                         replicaOrInstance);
 
                         // Ports 
-                        ProcessResourceDataReportHealth(this.allAppTotalActivePortsData.Where(x => x.Name == id).FirstOrDefault(),
-                                                        "Ephemeral Ports",
+                        ProcessResourceDataReportHealth(this.allAppEphemeralPortsData.Where(x => x.Id == id).FirstOrDefault(),
                                                         app.NetworkErrorEphemeralPorts,
                                                         app.NetworkWarningEphemeralPorts,
                                                         timeToLiveWarning,
@@ -479,52 +474,52 @@ namespace FabricObserver
                                   appName,
                                   "% CPU Time",
                                   "Average",
-                                  Math.Round(this.allAppCpuData.Where(x => x.Name == appName)
+                                  Math.Round(this.allAppCpuData.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
             CsvFileLogger.LogData(fileName,
                                   appName,
                                   "% CPU Time",
                                   "Peak",
-                                  Math.Round(Convert.ToDouble(this.allAppCpuData.Where(x => x.Name == appName)
+                                  Math.Round(Convert.ToDouble(this.allAppCpuData.Where(x => x.Id == appName)
                                                                      .FirstOrDefault().MaxDataValue)));
             // Memory
             CsvFileLogger.LogData(fileName,
                                   appName,
                                   "Memory (Working set) MB",
                                   "Average",
-                                  Math.Round(this.allAppMemData.Where(x => x.Name == appName)
+                                  Math.Round(this.allAppMemData.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
             CsvFileLogger.LogData(fileName,
                                   appName,
                                   "Memory (Working set) MB",
                                   "Peak",
-                                  Math.Round(Convert.ToDouble(this.allAppMemData.Where(x => x.Name == appName)
+                                  Math.Round(Convert.ToDouble(this.allAppMemData.Where(x => x.Id == appName)
                                                                      .FirstOrDefault().MaxDataValue)));
             // IO Read Bytes/s
             CsvFileLogger.LogData(fileName,
                                   appName,
                                   "IO Read Bytes/sec",
                                   "Average",
-                                  Math.Round(this.allAppDiskReadsData.Where(x => x.Name == appName)
+                                  Math.Round(this.allAppDiskReadsData.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
             CsvFileLogger.LogData(fileName,
                                   appName,
                                   "IO Read Bytes/sec",
                                   "Peak",
-                                  Math.Round(Convert.ToDouble(this.allAppDiskReadsData.Where(x => x.Name == appName)
+                                  Math.Round(Convert.ToDouble(this.allAppDiskReadsData.Where(x => x.Id == appName)
                                                                      .FirstOrDefault().MaxDataValue)));
             // IO Write Bytes/s
             CsvFileLogger.LogData(fileName,
                                   appName,
                                   "IO Write Bytes/sec",
                                   "Average",
-                                  Math.Round(this.allAppDiskWritesData.Where(x => x.Name == appName)
+                                  Math.Round(this.allAppDiskWritesData.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
             CsvFileLogger.LogData(fileName,
                                   appName,
                                   "IO Write Bytes/sec",
                                   "Peak",
-                                  Math.Round(Convert.ToDouble(this.allAppDiskWritesData.Where(x => x.Name == appName)
+                                  Math.Round(Convert.ToDouble(this.allAppDiskWritesData.Where(x => x.Id == appName)
                                                                     .FirstOrDefault().MaxDataValue)));
 
             // Network
@@ -532,7 +527,7 @@ namespace FabricObserver
                                    appName,
                                    "Active Ports",
                                    "Total",
-                                   Math.Round(Convert.ToDouble(this.allAppTotalActivePortsData.Where(x => x.Name == appName)
+                                   Math.Round(Convert.ToDouble(this.allAppTotalActivePortsData.Where(x => x.Id == appName)
                                                                    .FirstOrDefault().MaxDataValue)));
             DataTableFileLogger.Flush();
         }
