@@ -11,9 +11,44 @@ namespace FabricObserver.Utilities
 {
     public class FabricResourceUsageData<T>
     {
+        public FabricResourceUsageData(
+            string property,
+            string id)
+        {
+            if (string.IsNullOrEmpty(property))
+            {
+                throw new ArgumentException($"Must provide a non-empty {property}...");
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentException($"Must provide a non-empty {id}...");
+            }
+
+            Data = new List<T>();
+            Property = property;
+            Id = id;
+
+            if (property.ToLower().Contains("cpu") || property.ToLower().Contains("disk space"))
+            {
+                Units = "%";
+            }
+            else if (property.ToLower().Contains("memory"))
+            {
+                Units = "MB";
+            }
+        }
+
+        public string Property { get; }
+
+        public string Id { get; }
+
+        public string Units { get; }
+
+        public List<T> Data { get; }
+
         private bool isInWarningState = false;
-        public List<T> Data { get; private set; }
-        public string Name { get; set; }
+
         /// <summary>
         /// Maintains count of warnings per observer instance across iterations for the lifetime of the Observer.
         /// </summary>
@@ -84,18 +119,6 @@ namespace FabricObserver.Utilities
                     LifetimeWarningCount++;
                 }
             }
-        }
-
-
-        public FabricResourceUsageData(string name)
-        {
-            if (string.IsNullOrEmpty(name))
-            {
-                throw new ArgumentException("Must provide a non-empty name...");
-            }
-
-            Data = new List<T>();
-            Name = name;
         }
 
         public bool IsUnhealthy<TU>(TU threshold)
