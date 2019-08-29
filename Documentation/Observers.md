@@ -5,12 +5,17 @@
 ***FabricSystemObserver***  
 ***NetworkObserver***  
 ***NodeObserver***  
-***OSObserver*** (Not configurable)  
-***SFConfigurationObserver***  (Not configurable)  
+***OSObserver*** (Not configurable beyond Enable/Disable)  
+***SFConfigurationObserver***  (Not configurable beyond Enable/Disable)  
 
-Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not).
+Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide an ApplicationInsights key, then you will also see the output in your log analytics queries. Each observer has configuration settings in PackageRoot/Config/Settings.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds), which are more verbose and do not lend themselves very well to the Settings.xml to schema, in json files located in PackageRoot/Observers.Data folder.  
 
-You can see examples of specific observer output by calling a REST endpoint a la: 
+**A note on Error thresholds**  
+A Service Fabric Error Health Event is a critical event. You should be thoughtful about when to emit Errors versus Warnings as Errors
+will block service upgrades and other Fabric runtime operations from taking place. The default configuration settings for all configurable observers do not have error thresholds set to prevent blocking runtime operations like upgrade. Only set error thresholds when you are comfortable with the blocking nature of these critical health events. There is nothing wrong with setting error thresholds, but please be thoughtful and spend some time understanding when to emit health errors versus warnings, depending upon your scenario. This is just a note of caution, not a proclamation to never emit Error events. It's very reasonable to emit an Error health event when some threshold is reached that can lead to critical failure in your service. In fact, it's the right thing to do. Again, just be cautious and judicious in how you rely on Errors.  
+
+**Fabric Observers - What they do and how to configure them**  
+  
 
 **AppObserver**  
 Observer that monitors CPU usage, Memory use, and Disk space
@@ -97,6 +102,7 @@ folder (AppObserver.config.json):
   }
 ]
 ```
+Settings descriptions:  
 
 **target**: App URI to observe (or "system" for node-level resource
 monitoring...)\
@@ -139,7 +145,7 @@ This observer also outputs CSV files for each app containing all
 resource usage data across iterations for use in analysis. Included are
 Average and Peak measurements.
 
-This observer runs for 60 seconds by default (this is user
+This observer runs for 30 seconds by default (this is user
 configurable in Settings.xml). The thresholds are user-supplied-only and
 bound to specific service instances (processes) as dictated by the user,
 as explained above. Like FabricSystemObserver, all data is stored in
@@ -155,7 +161,8 @@ in health determination.
 This observer also monitors the FabricObserver service itself for
 CPU/Mem/Disk.
 
-**DiskObserver**
+
+**DiskObserver**  
 This observer monitors, records and analyzes storage disk information.
 Depending upon configuration settings, it signals disk health status
 warnings (or OK state) for all logical disks it detects.
@@ -215,10 +222,10 @@ Drive Type: Fixed
   Avg. Disk sec/Write: 0.014 ms  
   Avg. Disk Queue Length: 0   
 
-<!--- How do you enable this optional output to a CSV file? --->
 **This observer also optionally outputs a CSV file containing all resource usage
 data across iterations for use in analysis. Included are Average and
-Peak measurements.**
+Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean setting.**
+
 
 **FabricSystemObserver**  
 This observer monitors Fabric system services for 1 minute per global
@@ -230,15 +237,14 @@ FileStoreService.
 **Output**: Log text(Error/Warning), Service Fabric Health Report
 (Error/Warning)
 
-<!--- Is this consistent among all observers? If so we can probably just include this statement once. --->
-This observer also outputs a CSV file containing all resource usage
-data for each Fabric service across iterations for use in analysis.
-Included are Average and Peak measurements.
+**This observer also optionally outputs a CSV file containing all resource usage
+data across iterations for use in analysis. Included are Average and
+Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean setting.**
 
 This observer runs for either a specified configuration setting of time
-or default of 60 seconds. Each fabric system process is monitored for
+or default of 30 seconds. Each fabric system process is monitored for
 CPU and memory usage, with related values stored in instances of
-FabricResourceUsageData: 
+FabricResourceUsageData object: 
 ```C#
 using System;
 using System.Collections.Generic;
@@ -276,10 +282,12 @@ resource constraints (we want to limit our impact on the system as core
 design goal). The number of active ports in use by each fabric service
 is logged per iteration.
 
+
 **NetworkObserver**
 
-Observer that checks networking conditions across outbound and
-inbound connection state.
+This observer that checks networking conditions across outbound and
+inbound connection state, testing user-supplied endpoints (host/port pairs) or
+testing 3 widely available endpoints to gauge Internet connectivity state by default.
 
 **Input**: NetworkObserver.config.json in PackageRoot\\Observers.Data.
 Users should supply hostname/port pairs (if they only allow
@@ -345,15 +353,12 @@ Example NetworkObserver.config.json configuration:
 This observer runs 4 checks per supplied hostname with a 3 second delay
 between tests. This is done to help ensure we don't report transient
 network failures which will result in Fabric Health warnings that live
-until the observer runs again...
-
-**Output:**  
-Application Health Report (Error/Warning/Ok) and logging/telemetry.
+until the observer runs again...  
 
 
 **NodeObserver**
- This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports.
- Thresholds for Erorr and Warning signals are user-supplied in Setting.xml.
+ This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports).
+ Thresholds for Erorr and Warning signals are user-supplied in PackageRoot/Config/Settings.xml.
 
 **Input**:
 ```xml
@@ -371,7 +376,9 @@ Application Health Report (Error/Warning/Ok) and logging/telemetry.
     <Parameter Name="NetworkErrorEphemeralPorts" Value="0" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
   </Section>
-```
+```  
+Settings descriptions:  
+
 **CpuErrorLimitPct**: Maximum CPU percentage that should generate an
 Error (SFX and local log)\
 **CpuWarningLimitPct**: Minimum CPU percentage that should generate a
@@ -401,22 +408,20 @@ all run iterations of the observer).
 
 **OSObserver**\
 This observer records basic OS properties for use during mitigations,
-RCAs. It will only run occasionally given the metrics are generally
-static.\
+RCAs. It submits an Infinite OK SF Health Report that is visible in SFX at the node level. 
+\
 \
 **Input**: This observer does not take input.\
 **Output**: Log text(Error/Warning), Service Fabric Health Report
-(Error/Warning)
+(Ok/Error/Warning)
 
-The output of OSObserver is stored in the local log file,
-fabric\_observers.log. The only Fabric health report generated by this observer 
+The output of OSObserver is stored in the local log file. The only Fabric health reports generated by this observer 
 is an Error when OS Status is not "OK" (which means something is wrong at the OS level and
-this means trouble...). As stated above, only OS status, last boot time,
-and patches/hotfixes are reported (logged) during each run iteration. 
+this means trouble...) and long-lived Ok Health Report that contains the information it collected.  
 
 Example output: 
 
-Last updated on 8/5/2019 17:26:18 UTC
+Last updated on 8/29/2019 17:26:18 UTC
 
 OS Info:  
   
@@ -446,3 +451,11 @@ KB4498947  5/19/2019
 KB4054590  4/9/2019  
 KB4132216  4/9/2019  
 KB4485447  4/9/2019  
+
+
+**SFConfigurationObserver**  
+
+This observer doesn't monitor or report health status. 
+It provides information about the currently installed Service Fabric runtime environment.
+The output (a local file) is used by the FabricObserver API service, rendered as HTML (e.g., http://localhost:5000/api/ObserverManager). You can learn more about API service [here](/FabricObserverWeb/ReadMe.md).
+
