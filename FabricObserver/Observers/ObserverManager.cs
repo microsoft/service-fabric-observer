@@ -51,14 +51,7 @@ namespace FabricObserver
         {
             get
             {
-                try
-                {
-                    return bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) ? etwEnabled : false;
-                }
-                catch (NullReferenceException) // This will always be the case for unit tests...
-                {
-                    return false;
-                }
+               return bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) ? etwEnabled : false;
             }
             set
             {
@@ -73,6 +66,7 @@ namespace FabricObserver
                 if (EtwEnabled)
                 {
                     string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
+
                     if (!string.IsNullOrEmpty(key))
                     {
                         return key;
@@ -130,7 +124,7 @@ namespace FabricObserver
         {
             try
             {
-                var configSettings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+                var configSettings = FabricServiceContext.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
 
                 if (configSettings == null)
                 {
@@ -154,7 +148,7 @@ namespace FabricObserver
                 return parameter.Value;
             }
             catch (FabricElementNotFoundException) { }
-
+            catch (NullReferenceException) { }
             return null;
         }
 

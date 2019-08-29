@@ -246,10 +246,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
         {
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.FabricServiceContext = this.context;
+           
             var stopWatch = new Stopwatch();
 
             var obs = new AppObserver
@@ -294,10 +295,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void Successful_DiskObserver_Run_Cancellation_Via_ObserverManager()
         {
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.FabricServiceContext = this.context;
+            
             var stopWatch = new Stopwatch();
 
             var obs = new DiskObserver
@@ -341,10 +343,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void Successful_FabricSystemObserver_Run_Cancellation_Via_ObserverManager()
         {
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.FabricServiceContext = this.context;
+            
             var stopWatch = new Stopwatch();
 
             var obs = new FabricSystemObserver
@@ -388,10 +391,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void Successful_NetworkObserver_Run_Cancellation_Via_ObserverManager()
         {
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.FabricServiceContext = this.context;
+            
             var stopWatch = new Stopwatch();
 
             var obs = new NetworkObserver
@@ -435,10 +439,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void Successful_NodeObserver_Run_Cancellation_Via_ObserverManager()
         {
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.FabricServiceContext = this.context;
+           
             var stopWatch = new Stopwatch();
 
             var obs = new NodeObserver
@@ -482,10 +487,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void Successful_OSObserver_Run_Cancellation_Via_ObserverManager()
         {
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.FabricServiceContext = this.context;
+            
             var stopWatch = new Stopwatch();
 
             var obs = new OSObserver
@@ -529,10 +535,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void Successful_SFConfigurationObserver_Run_Cancellation_Via_ObserverManager()
         {
+            ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.FabricServiceContext = this.context;
+            
             var stopWatch = new Stopwatch();
 
             var obs = new SFConfigurationObserver
