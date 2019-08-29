@@ -10,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
-using System.Fabric.Description;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -34,6 +33,7 @@ namespace FabricObserver
         private CancellationToken token;
         private CancellationTokenSource cts;
         private bool hasDisposed = false;
+        private static bool etwEnabled = false;
         private string Fqdn { get; set; }
         private Logger Logger { get; set; }
         private DataTableFileLogger DataLogger { get; set; }
@@ -51,12 +51,18 @@ namespace FabricObserver
         {
             get
             {
-                if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out bool etwEnabled))
+                try
                 {
-                    return etwEnabled;
+                    return bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) ? etwEnabled : false;
                 }
-
-                return false;
+                catch (NullReferenceException) // This will always be the case for unit tests...
+                {
+                    return false;
+                }
+            }
+            set
+            {
+                etwEnabled = value;
             }
         }
 
@@ -124,21 +130,21 @@ namespace FabricObserver
         {
             try
             {
-                var configSettings = FabricRuntime.GetActivationContext().GetConfigurationPackageObject("Config").Settings;
+                var configSettings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
 
                 if (configSettings == null)
                 {
                     return null;
                 }
 
-                ConfigurationSection section = configSettings.Sections[ObserverConstants.ObserverManagerConfigurationSectionName];
+                var section = configSettings.Sections[ObserverConstants.ObserverManagerConfigurationSectionName];
 
                 if (section == null)
                 {
                     return null;
                 }
 
-                ConfigurationProperty parameter = section.Parameters[parameterName];
+                var parameter = section.Parameters[parameterName];
 
                 if (parameter == null)
                 {
