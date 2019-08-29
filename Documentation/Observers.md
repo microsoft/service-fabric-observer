@@ -1,4 +1,4 @@
-*Currently Implemented Observers*  
+**Currently Implemented Observers**  
 
 ***AppObserver***  
 ***DiskObserver***  
