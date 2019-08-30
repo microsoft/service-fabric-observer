@@ -18,7 +18,8 @@ namespace FabricObserver
 {
     // This observer monitors logical disk behavior and signals Service Fabric Warning or Error events based on user-supplied thresholds
     // in Settings.xml...
-    // The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
+    // The output (a local file) is used by the API service and the HTML frontend (http://localhost:5000/api/ObserverManager).
+    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class DiskObserver : ObserverBase
     {
         // Data storage containers for post run analysis...

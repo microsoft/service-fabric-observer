@@ -23,6 +23,7 @@ namespace FabricObserver
     // This observer monitors all Fabric system service processes across various resource usage metrics. 
     // It will signal Warnings or Errors based on settings supplied in Settings.xml.
     // The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
+    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class FabricSystemObserver : ObserverBase
     {
         private readonly List<string> processWatchList = new List<string> { "Fabric",
