@@ -254,7 +254,7 @@ namespace FabricObserver.Utilities
 {
     internal class FabricResourceUsageData<T>
     {
-        public List<T> Data { get; private set; }
+        public List<T> Data { get; }
         public string Name { get; set; }
         public T MaxDataValue { get; }
         public double AverageDataValue { get; }
@@ -262,7 +262,7 @@ namespace FabricObserver.Utilities
         public int LifetimeWarningCount { get; set; } = 0;
         public bool IsUnhealthy<U>(U threshold){ ... }
         public double StandardDeviation { get; }
-	public FabricResourceUsageData(string name){ ... }
+	public FabricResourceUsageData(string property, string id){ ... }
     }
 }
 ```
@@ -285,9 +285,7 @@ is logged per iteration.
 
 **NetworkObserver**
 
-This observer that checks networking conditions across outbound and
-inbound connection state, testing user-supplied endpoints (host/port pairs) or
-testing 3 widely available endpoints to gauge Internet connectivity state by default.
+This observer checks outbound connection state for user-supplied endpoints (hostname/port pairs).
 
 **Input**: NetworkObserver.config.json in PackageRoot\\Observers.Data.
 Users should supply hostname/port pairs (if they only allow
@@ -295,8 +293,8 @@ communication with an allowed list of endpoints, for example, or just
 want us to test the endpoints they care about...). If this list is not
 provided, the observer will run through a default list of well-known,
 reliable internal Internet endpoints: google.com, facebook.com,
-azure.microsoft.com. The implementation allows for either an ICMP or
-TCP-based test.
+azure.microsoft.com, but report on them... The point of this observer is to test YOUR endpoints... 
+The implementation allows for either an ICMP or TCP-based test.
 
 Each endpoint test result is stored in a simple data type
 (ConnectionState) that lives for either the lifetime of the run or until
