@@ -10,6 +10,7 @@ Please be sure to follow the usual process for submitting PRs:
 
  - Fork the repo
  - Create an Issue describing your intended contribution.
+ - Run FabricObserverTests unit tests before you make a PR on your dev machine with a running SF dev cluster.
  - Create a pull request into correct branch (see branching information below).
  - Make sure your PR title is descriptive
  - Include a link back to an open issue in the PR description
