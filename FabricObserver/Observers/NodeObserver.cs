@@ -3,12 +3,9 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricObserver.Model;
 using FabricObserver.Utilities;
 using System;
-using System.Fabric;
 using System.Fabric.Health;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,6 +13,7 @@ namespace FabricObserver
 {
     // This observer monitors VM level resource usage across CPU and Memory, and reports port and firewall rule counts.
     // Thresholds for Erorr and Warning signals are user-supplied in NodeObserver.config.json.
+    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class NodeObserver : ObserverBase
     {
         private FabricResourceUsageData<float> allCpuDataPrivTime = null;

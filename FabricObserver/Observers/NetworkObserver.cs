@@ -22,6 +22,7 @@ namespace FabricObserver
     // networkobserver.json.config. This includes testing the connection state of supplied endpoint/port pairs,
     // and measuring network traffic (bytes/sec, up/down)...
     // The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
+    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class NetworkObserver : ObserverBase
     {
         private List<NetworkObserverConfig> userEndpoints = new List<NetworkObserverConfig>();
