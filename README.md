@@ -8,29 +8,19 @@ In Warning and Error states, an observer will signal status (reports) via a Serv
 
 FO ships with an AppInsights telemetry implementation, but you can use whatever provider you want as long you implement the [IObserverTelemetryProvider interface](/FabricObserver/Observers/Interfaces/IObserverTelemetryProvider.cs). 
 
-In this iteration of the project, we have designed Observers that can be configured by users to monitor the machine-level side effects of an App (defined as a collection of Service Fabric services). The user-controlled, App-focused functionality is primarily encapsulated in  **AppObserver**, which observes, records and reports on real-time CPU, Memory, Disk, active and ephemeral TCP port counts as defined by the user in a Data configuration file (JSON, App array objects). Likewise, there is the configurable, App-focused **NetworkObserver**.
+In this iteration of the project, we have designed Observers that can be configured by users to monitor the machine-level side effects of an App (defined as a collection of Service Fabric services). The user-controlled, App-focused functionality is primarily encapsulated in  **AppObserver**, which observes, records and reports on real-time CPU, Memory, Disk, active and ephemeral TCP port counts as defined by the user in a Data configuration file (JSON, App array objects). Likewise, there is the configurable, App-focused **NetworkObserver**.  
 
-\
 For the most part, **we focus on both the state of the system surrounding a Service Fabric app and the specific side effects of 
 the app's behavior**. Most observers focus on machine level states: Disk (local storage disk health/availability, space usage, IO), CPU (per process across Apps and Fabric system services), Memory (per process across Apps and Fabric system services as well as system-wide), Networking (general health and monitoring of availability of user-specified, per-app endpoints), basic OS properties (install date, health status, list of hot fixes, hardware configuration, etc., ephemeral port range and real-time status), and Service Fabric infrastructure information and state. The design is decidedly simplistic and easy to understand/implement. C# and .NET make this very easy to do. 
 
-***GOAL***
-
 **The uber goal here is to greatly reduce the complexity of host OS, Service Fabric infrastructure, and Service Fabric app health monitoring**. For SF app developers, it's as easy as supplying some simple configuration files (JSON and XML).
-Empower cloud developers to understand and learn from inevitable failure conditions by not adding more cognitive complexity to their lives - reliably ***enabling self-mitigation through service health knowledge before correctable problems turn into outages***.
+Empower cloud developers to understand and learn from inevitable failure conditions by not adding more cognitive complexity to their lives - reliably ***enabling self-mitigation through service health knowledge before correctable problems turn into outages***.  
 
-***SCOPE***
+**Observer Configurations** 
+To learn more about Observers and their configuration, please see the [observers readme](./Documentation/Observers.md).  
 
-Showing how to effectively monitor the health of both the environment in which Service Fabric services are running and that of the services themselves. 
-
-***DEFINITIONS***
-
-**Observer** -- conceptually equivalent to "Watchdog", however, we want to make it even more explicit that the nature of these objects is non-reactive, meaning they do not mitigate, they observe, record, and report. Plus, Observer is a much cooler name than Watchdog ;-) To learn more about Observers and their configuration, please see the [observers readme](./Documentation/Observers.md).
-
-
-***Design***
-For more information about the design of FabricObserver, please check out the [design readme](./Documentation/Design.md).
-
+***FabicObserver Design***
+For more information about the design of FabricObserver, please check out the [design readme](./Documentation/Design.md).  
 
 **Conclusion**
 
