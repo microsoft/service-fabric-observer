@@ -17,8 +17,9 @@ using System.Threading.Tasks;
 namespace FabricObserver
 {
     // This observer monitors OS health state and provides static and dynamic OS level information.
-    // This observer is not configurable.
-    // The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
+    // This observer is not configurable. It will signal infinte TTL Ok Health Reports that will show up
+    // under node details in SFX.
+    // The output (a local file) is used by the API service and returns HTML output (http://localhost:5000/api/ObserverManager).
     public class OSObserver : ObserverBase
     {
         private string osReport;
