@@ -15,11 +15,14 @@ the app's behavior**. Most observers focus on machine level states: Disk (local 
 
 **The uber goal here is to greatly reduce the complexity of host OS, Service Fabric infrastructure, and Service Fabric app health monitoring**. For SF app developers, it's as easy as supplying some simple configuration files (JSON and XML).
 Empower cloud developers to understand and learn from inevitable failure conditions by not adding more cognitive complexity to their lives - reliably ***enabling self-mitigation through service health knowledge before correctable problems turn into outages***.  
+
+To learn about **Building FO**, please see the [Build readme](Build.md).  
+    
+To learn more about **Observers and their configuration**, please see the [Observers readme](./Documentation/Observers.md).  
   
-To learn more about Observers and their configuration, please see the [observers readme](./Documentation/Observers.md).  
+For more information about **the design of FabricObserver**, please see the [Design readme](./Documentation/Design.md).  
   
-For more information about the design of FabricObserver, please check out the [design readme](./Documentation/Design.md).  
-  
+
 **Conclusion**
 
 Observers are designed to be low impact, long-lived objects that perform specific observational and related reporting activities across iteration intervals defined in configuration settings for each observer type. As their name clearly suggests, they do not mitigate in this first version. They observe, record, and report. For Warning and Errors, we will utilize Service Fabric Health store and reporting mechanisms to surface important information in SFX. This release also includes a telemtry provider interface and ships with an AppInsights implementation. So, you can stream events to AppInsights by simply enabling the feature in Settings.xml and providing your AppInsights key.  
@@ -32,13 +35,9 @@ Just observe it.
 
 # Contributing
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.microsoft.com.
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit https://cla.microsoft.com.
 
-When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.  
+When you submit a pull request, a CLA-bot will automatically determine whether you need to provide a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions provided by the bot. You will only need to do this once across all repos using our CLA.  
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development process information.
 
