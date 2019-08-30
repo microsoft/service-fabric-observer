@@ -11,9 +11,7 @@ namespace FabricObserver.Utilities
 {
     public class FabricResourceUsageData<T>
     {
-        public FabricResourceUsageData(
-            string property,
-            string id)
+        public FabricResourceUsageData(string property, string id)
         {
             if (string.IsNullOrEmpty(property))
             {
