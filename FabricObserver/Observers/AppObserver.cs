@@ -22,6 +22,7 @@ namespace FabricObserver
     // This observer monitors the behavior of user SF service processes
     // and signals Warning and Error based on user-supplied resource thresholds
     // in AppObserver.config.json
+    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class AppObserver : ObserverBase
     {
         private readonly string dataPackagePath;

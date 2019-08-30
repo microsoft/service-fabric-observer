@@ -4,22 +4,15 @@
 // ------------------------------------------------------------
 
 using FabricObserver.Utilities;
-using FabricObserver.Model;
 using Microsoft.Win32;
 using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using System.Collections.Generic;
-using System.Fabric;
 
 namespace FabricObserver
 {
