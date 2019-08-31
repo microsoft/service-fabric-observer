@@ -16,7 +16,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.ServiceFabric.TelemetryLib;
 
 namespace FabricObserver
 {
@@ -37,7 +36,6 @@ namespace FabricObserver
         private string Fqdn { get; set; }
         private Logger Logger { get; set; }
         private DataTableFileLogger DataLogger { get; set; }
-        private TelemetryEvents telemetryEvents;
         internal List<ObserverBase> Observers;
         public string ApplicationName { get; set; }
         public bool IsObserverRunning { get; set; } = false;
@@ -91,19 +89,9 @@ namespace FabricObserver
             Logger = new Logger("ObserverManager");
             HealthReporter = new ObserverHealthReporter(Logger);
             SetPropertiesFromConfigurationParameters();
-            this.telemetryEvents = new TelemetryEvents(FabricClientInstance, ServiceEventSource.Current);
 
             // Populate the Observer list for the sequential run loop...
             this.Observers = GetObservers();
-
-            // FO Diagnostic Telemetry
-            // You can disable this functionality in PackageRoot/Config/Settings.xml by setting EnableFabricObserverDiagnosticTelemetry
-            // to False...
-            if (FabricObserverTelemetryEnabled)
-            {
-                this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext?.NodeContext.NodeName,
-                                                                       GetFabricObserverInternalConfiguration(), "HealthState.Initialized");
-            }
         }
 
         // For unit testing...
@@ -459,14 +447,6 @@ namespace FabricObserver
                         Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
 
-                        // FO Diagnostic Telemetry
-                        if (FabricObserverTelemetryEnabled)
-                        {
-                            this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,
-                                                                                   null,
-                                                                                   observerHealthWarning);
-                        }
-
                         continue;
                     }
 
@@ -523,16 +503,6 @@ namespace FabricObserver
                 {
                     var message = $"Unhandled Exception from {observer.ObserverName} rethrown from ObserverManager: {e.ToString()}";
                     Logger.LogError(message);
-
-                    // FO Diagnostic Telemetry
-                    // You can disable this functionality in PackageRoot/Config/Settings.xml by setting EnableFabricObserverDiagnosticTelemetry
-                    // to False...
-                    if (FabricObserverTelemetryEnabled)
-                    {
-                        this.telemetryEvents.FabricObserverRuntimeClusterEvent(FabricServiceContext.NodeContext.NodeName,
-                                                                               null,
-                                                                               message);
-                    }
 
                     throw;
                 }

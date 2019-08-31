@@ -7,12 +7,11 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
-using Microsoft.ServiceFabric.TelemetryLib;
 
 namespace FabricObserver
 {
     [EventSource(Name = "Service-Fabric-FabricObserver", Guid = "373f2a64-4823-518a-32d1-78e36f922c24")]
-    internal sealed class ServiceEventSource : EventSource, ITelemetryEventSource
+    internal sealed class ServiceEventSource : EventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
@@ -165,39 +164,6 @@ namespace FabricObserver
             }
         }
 
-        [NonEvent]
-        public void VerboseMessage(string message, params object[] args)
-        {
-            string finalMessage = string.Format(message, args);
-            this.VerboseMessage(finalMessage);
-        }
-
-        private const int FabricObserverTelemetryEventId = 8;
-        [Event(FabricObserverTelemetryEventId, Level = EventLevel.Verbose,
-               Message = "TelemetryEvent : FabricObserver running on clusterId = {0}, " +
-                         "tentantId = {1}, clusterType = {2}, " +
-                         "nodeName = {3}, applicationVersion = {4}, " +
-                         "fabricObserverRunState = {5}")]
-        public void FabricObserverRuntimeClusterEvent(string clusterId, 
-                                                      string tenantId, 
-                                                      string clusterType, 
-                                                      string nodeName, 
-                                                      string applicationVersion,
-                                                      string foConfigInfo,
-                                                      string foHealthInfo)
-        {
-            if (this.IsEnabled())
-            {
-                this.WriteEvent(FabricObserverTelemetryEventId,
-                                clusterId,
-                                tenantId,
-                                clusterType,
-                                nodeName,
-                                applicationVersion,
-                                foConfigInfo,
-                                foHealthInfo);
-            }
-        }
         #endregion
 
         #region Private methods

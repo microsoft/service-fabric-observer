@@ -65,8 +65,8 @@ namespace FabricObserver
             if (configSettings != null) 
             {
                 string windrive = Environment.SystemDirectory.Substring(0, 3);
-                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverTelemetry", "ObserverLogBaseFolderPath");
-                logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverTelemetry", "ObserverManagerLogFileName");
+                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
+                logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverManagerLogFileName");
                 observerLogFilePath = Path.Combine(logFolder, logFileName);
             }
 
@@ -143,11 +143,11 @@ namespace FabricObserver
                     if (Request.QueryString.HasValue && Request.Query.ContainsKey("fqdn"))
                     {
                         host = Request.Query["fqdn"];
-                    }
 
-                    foreach (var node in ordered)
-                    {
-                        nodeLinks += "| <a href='" + Request.Scheme + "://" + host  + "/api/ObserverManager/" + node.NodeName + "'>" + node.NodeName + "</a> | ";
+                        foreach (var node in ordered)
+                        {
+                            nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverManager/" + node.NodeName + "'>" + node.NodeName + "</a> | ";
+                        }
                     }
 
                     sb = new StringBuilder();
@@ -193,6 +193,7 @@ namespace FabricObserver
                     sb.AppendLine("</html>");
                     html = sb.ToString();
                     sb.Clear();
+
                     break;
                 }
                 catch (IOException e)
@@ -226,7 +227,7 @@ namespace FabricObserver
                     }
 
                     string fqdn = "?fqdn=" + Request.Host;
-                    var req = WebRequest.Create(addr + ":8080/api/ObserverManager" + fqdn);
+                    var req = WebRequest.Create(addr + ":5000/api/ObserverManager" + fqdn);
                     req.Credentials = CredentialCache.DefaultCredentials;
                     var response = (HttpWebResponse)req.GetResponse();
                     Stream dataStream = response.GetResponseStream();
