@@ -58,8 +58,8 @@ namespace FabricObserver.Controllers
 
             if (configSettings != null)
             {
-                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverTelemetry", "ObserverLogBaseFolderPath");
-                logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverTelemetry", "ObserverManagerLogFileName");
+                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
+                logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverManagerLogFileName");
                 observerLogFilePath = Path.Combine(logFolder, logFileName);
             }
 
@@ -117,20 +117,20 @@ namespace FabricObserver.Controllers
 
                     var host = Request.Host.Value;
 
+                    string nodeLinks = "";
                     // Request originating from ObserverWeb node hyperlinks...
                     if (Request.QueryString.HasValue && Request.Query.ContainsKey("fqdn"))
                     {
                         host = Request.Query["fqdn"];
-                    }
 
-                    // Node links...
-                    string nodeLinks = "";
-                    var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
-                    var ordered = nodeList.OrderBy(node => node.NodeName);
+                        // Node links...
+                        var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
+                        var ordered = nodeList.OrderBy(node => node.NodeName);
 
-                    foreach (var node in ordered)
-                    {
-                        nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverLog/" + name + "/" + node.NodeName + "/html'>" + node.NodeName + "</a> | ";
+                        foreach (var node in ordered)
+                        {
+                            nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverLog/" + name + "/" + node.NodeName + "/html'>" + node.NodeName + "</a> | ";
+                        }
                     }
 
                     sb = new StringBuilder();
@@ -244,12 +244,14 @@ namespace FabricObserver.Controllers
 
                 if (configSettings != null)
                 {
-                    logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverTelemetry", "ObserverLogBaseFolderPath");
+                    logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
+
                     if (!Directory.Exists(logFolder))
                     {
                         throw new ArgumentException($"Specified log folder, {logFolder}, does not exist");
                     }
-                    logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverTelemetry", "ObserverManagerLogFileName");
+
+                    logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverManagerLogFileName");
                     observerLogFilePath = Path.Combine(logFolder, logFileName);
                 }
             }
