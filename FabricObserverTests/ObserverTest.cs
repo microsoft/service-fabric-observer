@@ -953,6 +953,11 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -989,6 +994,11 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -1025,6 +1035,11 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -1060,6 +1075,11 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = context;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
