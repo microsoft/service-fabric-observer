@@ -116,7 +116,7 @@ namespace FabricObserver
                 return true;
             }
 
-            ConfigSettings.Initialize(FabricRuntime.GetActivationContext().GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings, ObserverConstants.AppObserverConfiguration, "AppObserverDataFileName");
+            ConfigSettings.Initialize(FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings, ObserverConstants.AppObserverConfiguration, "AppObserverDataFileName");
             var appObserverDataFileName = Path.Combine(this.dataPackagePath, ConfigSettings.AppObserverDataFileName);
 
             if (!File.Exists(appObserverDataFileName))
@@ -304,7 +304,36 @@ namespace FabricObserver
 
             foreach (var deployedApp in deployedApps)
             {
+                var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(applicationNameFilter).ConfigureAwait(true);
+
+                try
+                {
+                    // ServiceExcludes...?
+                    if (this.targetList.Any(app => app.Target == deployedApp.ApplicationName.OriginalString
+                                                   && !string.IsNullOrEmpty(app.ServiceExcludeList)
+                                                   && serviceList.Any(service => app.ServiceExcludeList.Split(',')
+                                                                       .Any(s => service.ServiceName.OriginalString.Contains(s)))))
+                    {
+                        continue;
+                    }
+
+                    // ServiceIncludes...?
+                    if (this.targetList.Any(app => app.Target == deployedApp.ApplicationName.OriginalString
+                                                   && !string.IsNullOrEmpty(app.ServiceIncludeList)
+                                                   && !serviceList.Any(service => app.ServiceIncludeList.Split(',')
+                                                                        .Any(s => service.ServiceName.OriginalString.Contains(s)))))
+                    {
+                        continue;
+                    }
+                }
+                catch (ArgumentNullException ae)
+                {
+                    /* log failure, default to monitoring all app services... */
+                    this.ObserverLogger.LogInfo($"Handled failure in service exclude/include detection:\n{ae.ToString()}");
+                }
+
                 var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName).ConfigureAwait(true);
+
                 currentReplicaInfoList.AddRange(replicasOrInstances);
 
                 // This is for reporting...
