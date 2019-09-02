@@ -38,6 +38,7 @@ folder (AppObserver.config.json):
 [
   {
     "target": "fabric:/MyApp",
+    "serviceExcludeList" : "MyService13,MyService17",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
@@ -54,6 +55,7 @@ folder (AppObserver.config.json):
   },
   {
     "target": "fabric:/MyApp2",
+    "serviceIncludeList" : "MyService3",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
@@ -102,10 +104,14 @@ folder (AppObserver.config.json):
   }
 ]
 ```
-Settings descriptions:  
+Settings descriptions: 
+
+Note that all of these are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values.
 
 **target**: App URI to observe (or "system" for node-level resource
 monitoring...)\
+**serviceExcludeList**: A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense)  
+**serviceIncludeList**: A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  
 **memoryErrorLimitMB**: Maximum service process private working set,
 in Megabytes, that should generate a Fabric Error (SFX and local log) \[Note:
 this shouldn't have to be supplied in bytes...\]\
@@ -137,16 +143,14 @@ app process that will generate a Fabric Warning.\
 **networkErrorEphemeralPorts:** Maximum number of ephemeral TCP ports (within a dynamic port range) in use by
 app process that will generate a Fabric Error.\
 **networkWarningEphemeralPorts:** Minimum number of established TCP ports (within a dynamic port range) in use by
-app process that will generate a Fabric Warning.\
+app process that will generate a Fabric Warning.\  
+
 **Output**: Log text(Error/Warning), Service Fabric Application Health Report
-(Error/Warning/ok)
+(Error/Warning/ok), telemetry data.
 
-This observer also outputs CSV files for each app containing all
-resource usage data across iterations for use in analysis. Included are
-Average and Peak measurements.
-
-This observer runs for 30 seconds by default (this is user
-configurable in Settings.xml). The thresholds are user-supplied-only and
+AppObserver also optionally outputs CSV files for each app containing all resource usage data across iterations for use in analysis. Included are Average and Peak measurements. You can turn this on/off in Settings.xml, where there are comments explaining the feature further.  
+  
+AppObserver error/warning thresholds are user-supplied-only and
 bound to specific service instances (processes) as dictated by the user,
 as explained above. Like FabricSystemObserver, all data is stored in
 in-memory data structures for the lifetime of the run (for example, 60
@@ -158,8 +162,8 @@ the in-memory data structures to limit impact on the system over time.
 So, each iteration of this observer accumulates *temporary* data for use
 in health determination.
 
-This observer also monitors the FabricObserver service itself for
-CPU/Mem/Disk.
+This observer also monitors the FabricObserver service itself across
+CPU/Mem/Disk.  
 
 
 **DiskObserver**  
