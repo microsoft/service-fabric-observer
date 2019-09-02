@@ -96,14 +96,10 @@
   </Section>
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <!-- TODO - Just need to call the GetRunInterval function in ObserveAsync... -->
-    <Parameter Name="RunInterval" Value="1.00:00:00" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
   </Section>
   <Section Name="SFConfigurationObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <!-- TODO - Just need to call the GetRunInterval function in ObserveAsync... -->
-    <Parameter Name="RunInterval" Value="1.00:00:00" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
   </Section>
 </Settings>
