@@ -108,8 +108,8 @@ Settings descriptions:
 
 Note that all of these are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values.
 
-**target**: App URI to observe (or "system" for node-level resource
-monitoring...)\
+**target**: App URI string to observe. Required.
+\
 **serviceExcludeList**: A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense)  
 **serviceIncludeList**: A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  
 **memoryErrorLimitMB**: Maximum service process private working set,
@@ -150,18 +150,9 @@ app process that will generate a Fabric Warning.\
 
 AppObserver also optionally outputs CSV files for each app containing all resource usage data across iterations for use in analysis. Included are Average and Peak measurements. You can turn this on/off in Settings.xml, where there are comments explaining the feature further.  
   
-AppObserver error/warning thresholds are user-supplied-only and
-bound to specific service instances (processes) as dictated by the user,
-as explained above. Like FabricSystemObserver, all data is stored in
-in-memory data structures for the lifetime of the run (for example, 60
-seconds at 5 second intervals). Like all observers, the last thing this
-observer does is call its *ReportAsync*, which will then determine the
-health state based on accumulated data across resources, send a Warning
-if necessary (clear an existing warning if necessary), then clean out
-the in-memory data structures to limit impact on the system over time.
-So, each iteration of this observer accumulates *temporary* data for use
-in health determination.
-
+AppObserver error/warning thresholds are user-supplied-only and bound to specific service instances (processes) as dictated by the user,
+as explained above. Like FabricSystemObserver, all data is stored in in-memory data structures for the lifetime of the run (for example, 60 seconds at 5 second intervals). Like all observers, the last thing this observer does is call its *ReportAsync*, which will then determine the health state based on accumulated data across resources, send a Warning if necessary (clear an existing warning if necessary), then clean out the in-memory data structures to limit impact on the system over time. So, each iteration of this observer accumulates *temporary* data for use in health determination.
+  
 This observer also monitors the FabricObserver service itself across
 CPU/Mem/Disk.  
 
