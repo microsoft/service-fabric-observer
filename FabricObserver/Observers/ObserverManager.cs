@@ -44,7 +44,6 @@ namespace FabricObserver
         public static StatelessServiceContext FabricServiceContext { get; set; }
         public static IObserverTelemetryProvider TelemetryClient { get; set; }
         public static bool TelemetryEnabled { get; set; } = false;
-        public static bool FabricObserverTelemetryEnabled { get; set; } = true;
         public static bool EtwEnabled
         {
             get
@@ -300,14 +299,6 @@ namespace FabricObserver
                 {
                     TelemetryClient = new AppInsightsTelemetry(key);
                 }
-            }
-
-            // FabricObserver runtime telemetry (AppInsights)
-            // You can disable this functionality in PackageRoot/Config/Settings.xml by setting EnableFabricObserverDiagnosticTelemetry
-            // to False...
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
-            {
-                FabricObserverTelemetryEnabled = foTelemEnabled;
             }
         }
 
