@@ -304,7 +304,7 @@ namespace FabricObserver
 
             foreach (var deployedApp in deployedApps)
             {
-                var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(applicationNameFilter).ConfigureAwait(true);
+                var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(deployedApp.ApplicationName).ConfigureAwait(true);
 
                 try
                 {
