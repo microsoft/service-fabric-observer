@@ -226,7 +226,14 @@ Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean set
 This observer monitors Fabric system services for 1 minute per global
 observer iteration e.g., Fabric, FabricApplicationGateway, FabricCAS,
 FabricDCA, FabricDnsService, FabricGateway, FabricHost,
-FileStoreService.
+FileStoreService.  
+
+**NOTE:**
+Only enable FabricSystemObserver ***after*** you get a sense of what impact your services have on the SF runtime... 
+This is very important because there is no "one threshold fits all" across warning/error thresholds for any of the SF system services. 
+That is, we (the SF team) do not have a fixed set of guaranteed problematic warning thresholds for SF infrastructure services. Your code can cause Fabric.exe to eat a lot of CPU, for example, but this is not a Fabric.exe bug. 
+ 
+Again, it is best to ***not*** Enable this observer until you have done some experimentation with monitoring how your service code impacts Service Fabric system services. Otherwise, you may end up generating noise and creating support tickets when there is in fact nothing wrong with SF, but that your service code is just stressing SF services (e.g., Fabric.exe). This is of course useful to know, but FabricSystemObserver can't tell you that your code is the problem and we do not want you to create a support ticket because FSO warned you about something SF engineers can't fix for you...  
 
 **Input**: Settings.xml in PackageRoot\\Observers.Config\
 **Output**: Log text(Error/Warning), Service Fabric Health Report
