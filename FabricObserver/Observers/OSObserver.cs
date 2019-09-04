@@ -25,6 +25,8 @@ namespace FabricObserver
         private string osReport;
         private string osStatus;
 
+        public static int PercentTotalMemoryInUseOnVM { get; private set; } = -1;
+
         public string TestManifestPath { get; set; }
 
         /// <summary>
@@ -59,6 +61,8 @@ namespace FabricObserver
                 foreach (var prop in results)
                 {
                     token.ThrowIfCancellationRequested();
+                    long visibleTotal = -1;
+                    long freePhysical = -1;
 
                     foreach (var p in prop.Properties)
                     {
@@ -89,11 +93,31 @@ namespace FabricObserver
 
                         if (n.ToLower().Contains("memory"))
                         {
+                            // For output...
                             int i = int.Parse(v) / 1024 / 1024;
                             v = i.ToString() + " GB";
+
+                            // For use by any other observer that needs to know percent of RAM in use on node...
+                            if (n.ToLower().Contains("totalvisible"))
+                            {
+                                visibleTotal = i;
+                            }
+
+                            if (n.ToLower().Contains("freephysical"))
+                            {
+                                freePhysical = i;
+                            }
                         }
 
                         sb.AppendLine($"{n}: {v}");
+                    }
+
+                    // Calculate percent RAM available...
+                    if (visibleTotal > -1 && freePhysical > -1)
+                    {
+                        double usedPct = ((double)(visibleTotal - freePhysical)) / visibleTotal;
+                        PercentTotalMemoryInUseOnVM = (int)(usedPct * 100);
+                        sb.AppendLine($"Percent RAM in use: {PercentTotalMemoryInUseOnVM}%");
                     }
                 }
 
