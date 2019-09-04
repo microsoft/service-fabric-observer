@@ -27,7 +27,6 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Noise...", Scope = "member", Target = "~P:FabricObserver.ObserverManager.EtwProviderName")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1200:Using directives should be placed correctly", Justification = "Noise...")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~M:FabricObserver.DiskObserver.ReportAsync(System.Threading.CancellationToken)~System.Threading.Tasks.Task")]
-
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~F:FabricObserver.Utilities.ObserverConstants.ConfigPackageName")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~F:FabricObserver.Utilities.ObserverConstants.ContainerObserverName")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~M:FabricObserver.AppObserver.ReportAsync(System.Threading.CancellationToken)~System.Threading.Tasks.Task")]
@@ -481,4 +480,3 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1633:File should have header", Justification = "Noise...", Scope = "namespace", Target = "~N:FabricObserver.Model")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1633:File should have header", Justification = "Noise...", Scope = "namespace", Target = "~N:FabricObserver.Utilities")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1618:Generic type parameters should be documented", Justification = "Noise...", Scope = "member", Target = "~M:FabricObserver.Utilities.Telemetry.AppInsightsTelemetry.ReportMetricAsync``1(System.String,``0,System.Threading.CancellationToken)~System.Threading.Tasks.Task{System.Boolean}")]
-
