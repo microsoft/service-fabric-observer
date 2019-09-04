@@ -32,13 +32,15 @@ namespace FabricObserver.Utilities
             this.Property = property;
             this.Id = id;
 
-            if (property.ToLower().Contains("cpu") || property.ToLower().Contains("disk space"))
-            {
-                this.Units = "%";
-            }
-            else if (property.ToLower().Contains("memory"))
+            if (property.ToLower().Contains("memory"))
             {
                 this.Units = "MB";
+            }
+
+            if (property.ToLower().Contains("cpu") || property.ToLower().Contains("disk space")
+                || property.ToLower().Contains("percent"))
+            {
+                this.Units = "%";
             }
         }
 
