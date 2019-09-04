@@ -3,14 +3,13 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
-//using FabricObserver.Tests;
+using Microsoft.ServiceFabric.Services.Communication.Runtime;
+using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricObserver
 {
@@ -21,7 +20,12 @@ namespace FabricObserver
     {
         private ObserverManager observerManager = null;
 
-        public FabricObserver(StatelessServiceContext context) : base(context)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FabricObserver"/> class.
+        /// </summary>
+        /// <param name="context"></param>
+        public FabricObserver(StatelessServiceContext context)
+            : base(context)
         {
         }
 
@@ -40,11 +44,12 @@ namespace FabricObserver
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            observerManager = new ObserverManager(Context, cancellationToken);
+            this.observerManager = new ObserverManager(this.Context, cancellationToken);
 
             await Task.Factory.StartNew(() => this.observerManager.StartObservers()).ConfigureAwait(true);
         }
 
+        /// <inheritdoc/>
         protected override Task OnCloseAsync(CancellationToken cancellationToken)
         {
             if (this.observerManager != null)

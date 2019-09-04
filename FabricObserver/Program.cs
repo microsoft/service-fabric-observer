@@ -3,10 +3,10 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using Microsoft.ServiceFabric.Services.Runtime;
 using System;
 using System.Diagnostics;
 using System.Threading;
+using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricObserver
 {
@@ -23,9 +23,9 @@ namespace FabricObserver
                 // Registering a service maps a service type name to a .NET type.
                 // When Service Fabric creates an instance of this service type,
                 // an instance of the class is created in this host process.
-
-                ServiceRuntime.RegisterServiceAsync("FabricObserverType",
-                                                    context => new FabricObserver(context)).GetAwaiter().GetResult();
+                ServiceRuntime.RegisterServiceAsync(
+                    "FabricObserverType",
+                    context => new FabricObserver(context)).GetAwaiter().GetResult();
 
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(FabricObserver).Name);
 

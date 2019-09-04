@@ -3,17 +3,18 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System.Fabric.Description;
-using System.Runtime.InteropServices;
-using System.Security;
-
 namespace FabricObserver
 {
+    using System.Fabric.Description;
+    using System.Runtime.InteropServices;
+    using System.Security;
+
     public static class Utilities
     {
-        internal static string GetConfigurationSetting(ConfigurationSettings configurationSettings, 
-                                                       string configurationSectionName,
-                                                       string parameterName)
+        internal static string GetConfigurationSetting(
+            ConfigurationSettings configurationSettings,
+            string configurationSectionName,
+            string parameterName)
         {
             if (string.IsNullOrEmpty(parameterName) || configurationSettings == null)
             {
@@ -54,6 +55,7 @@ namespace FabricObserver
 
             char[] charArray = new char[secureString.Length];
             var ptr = Marshal.SecureStringToGlobalAllocUnicode(secureString);
+
             try
             {
                 Marshal.Copy(ptr, charArray, 0, secureString.Length);

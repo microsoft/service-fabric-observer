@@ -12,11 +12,27 @@ namespace FabricObserver.Interfaces
     public interface IObserver : IDisposable
     {
         DateTime LastRunDateTime { get; set; }
+
         TimeSpan RunInterval { get; set; }
+
         bool IsEnabled { get; set; }
+
         bool HasActiveFabricErrorOrWarning { get; set; }
+
         bool IsUnhealthy { get; set; }
+
+        /// <summary>
+        /// The function where observers observe...
+        /// </summary>
+        /// <param name="token">Cancellation token used to stop observers...</param>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         Task ObserveAsync(CancellationToken token);
+
+        /// <summary>
+        /// The function where observes report...
+        /// </summary>
+        /// <param name="token">Cancellation token used to stop observers...</param>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         Task ReportAsync(CancellationToken token);
     }
 }

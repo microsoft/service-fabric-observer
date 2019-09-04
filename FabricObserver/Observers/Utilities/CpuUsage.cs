@@ -11,8 +11,10 @@ namespace FabricObserver.Utilities
     // .NET Standard Process-based impl (cross-platform)
     internal class CpuUsage
     {
-        private DateTime prevTime = DateTime.MinValue, currTime = DateTime.MinValue;
-        private TimeSpan prevTotalProcessorTime, currTotalProcessorTime;
+        private DateTime prevTime = DateTime.MinValue;
+        private DateTime currTime = DateTime.MinValue;
+        private TimeSpan prevTotalProcessorTime;
+        private TimeSpan currTotalProcessorTime;
 
         public int GetCpuUsageProcess(Process p)
         {
@@ -21,19 +23,19 @@ namespace FabricObserver.Utilities
                 return 0;
             }
 
-            if (prevTime == DateTime.MinValue)
+            if (this.prevTime == DateTime.MinValue)
             {
-                prevTime = DateTime.Now;
-                prevTotalProcessorTime = p.TotalProcessorTime;
+                this.prevTime = DateTime.Now;
+                this.prevTotalProcessorTime = p.TotalProcessorTime;
             }
             else
             {
-                currTime = DateTime.Now;
-                currTotalProcessorTime = p.TotalProcessorTime;
-                var currentUsage = (currTotalProcessorTime.TotalMilliseconds - prevTotalProcessorTime.TotalMilliseconds) / currTime.Subtract(prevTime).TotalMilliseconds;
+                this.currTime = DateTime.Now;
+                this.currTotalProcessorTime = p.TotalProcessorTime;
+                var currentUsage = (this.currTotalProcessorTime.TotalMilliseconds - this.prevTotalProcessorTime.TotalMilliseconds) / this.currTime.Subtract(this.prevTime).TotalMilliseconds;
                 double cpuUsuage = currentUsage / Environment.ProcessorCount;
-                prevTime = currTime;
-                prevTotalProcessorTime = currTotalProcessorTime;
+                this.prevTime = this.currTime;
+                this.prevTotalProcessorTime = this.currTotalProcessorTime;
                 return (int)(cpuUsuage * 100);
             }
 

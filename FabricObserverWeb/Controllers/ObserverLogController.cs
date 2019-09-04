@@ -1,27 +1,27 @@
-﻿using System;
-using System.Fabric;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Globalization;
-
-namespace FabricObserver.Controllers
+﻿namespace FabricObserver.Controllers
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Fabric;
+    using System.Globalization;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Text;
+    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Mvc;
+
     [Route("api/ObserverLog")]
     [Produces("application/json", "application/html")]
     [ApiController]
     public class ObserverLogController : Controller
     {
         private const int MaxRetries = 3;
-        StringBuilder sb = null;
-        private readonly StatelessServiceContext ServiceContext = null;
-        private FabricClient fabricClient;
+        private readonly FabricClient fabricClient;
+        private readonly StatelessServiceContext serviceContext = null;
+        private StringBuilder sb = null;
 
-        string script = @"
+        private string script = @"
                 <script type='text/javascript'>
                 function toggle(e) {
                     var container = document.getElementById(e);
@@ -40,18 +40,23 @@ namespace FabricObserver.Controllers
                 }
                 </script>";
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverLogController"/> class.
+        /// </summary>
+        /// <param name="serviceContext">service context...</param>
+        /// <param name="fabricClient">FabricClient instance...</param>
         public ObserverLogController(StatelessServiceContext serviceContext, FabricClient fabricClient)
         {
-            this.ServiceContext = serviceContext;
+            this.serviceContext = serviceContext;
             this.fabricClient = fabricClient;
         }
 
         private string GetHtml(string name)
         {
-            string html = "";
+            string html = string.Empty;
             string observerLogFilePath = null;
-            var nodeName = ServiceContext.NodeContext.NodeName;
-            var configSettings = this.ServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+            var nodeName = this.serviceContext.NodeContext.NodeName;
+            var configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
 
             string logFolder, logFileName;
             string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
@@ -63,7 +68,7 @@ namespace FabricObserver.Controllers
                 observerLogFilePath = Path.Combine(logFolder, logFileName);
             }
 
-            // Implicit retry loop. Will run only once if no exceptions arise. 
+            // Implicit retry loop. Will run only once if no exceptions arise.
             // Can only run at most MaxRetries times.
             for (int i = 0; i < MaxRetries; i++)
             {
@@ -78,9 +83,8 @@ namespace FabricObserver.Controllers
                     var nodeObserverLogPath = observerLogFilePath.Replace("ObserverManager", "NodeObserver");
 
                     // Observer logs...
-                    if (System.IO.File.Exists(appObserverLogPath) 
+                    if (System.IO.File.Exists(appObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(appObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
-                        
                     {
                         appObserverLogText = System.IO.File.ReadAllText(appObserverLogPath, Encoding.UTF8).Replace("\n", "<br/>");
                     }
@@ -115,13 +119,14 @@ namespace FabricObserver.Controllers
                         osObserverLogText = System.IO.File.ReadAllText(osObserverLogPath, Encoding.UTF8).Trim();
                     }
 
-                    var host = Request.Host.Value;
+                    var host = this.Request.Host.Value;
 
-                    string nodeLinks = "";
+                    string nodeLinks = string.Empty;
+
                     // Request originating from ObserverWeb node hyperlinks...
-                    if (Request.QueryString.HasValue && Request.Query.ContainsKey("fqdn"))
+                    if (this.Request.QueryString.HasValue && this.Request.Query.ContainsKey("fqdn"))
                     {
-                        host = Request.Query["fqdn"];
+                        host = this.Request.Query["fqdn"];
 
                         // Node links...
                         var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
@@ -129,16 +134,16 @@ namespace FabricObserver.Controllers
 
                         foreach (var node in ordered)
                         {
-                            nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverLog/" + name + "/" + node.NodeName + "/html'>" + node.NodeName + "</a> | ";
+                            nodeLinks += "| <a href='" + this.Request.Scheme + "://" + host + "/api/ObserverLog/" + name + "/" + node.NodeName + "/html'>" + node.NodeName + "</a> | ";
                         }
                     }
 
-                    sb = new StringBuilder();
+                    this.sb = new StringBuilder();
 
-                    sb.AppendLine("<html>\n\t<head>");
-                    sb.AppendLine("\n\t\t<title>FabricObserver Observer Report: Errors and Warnings</title>");
-                    sb.AppendLine("\n\t\t" + script);
-                    sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
+                    this.sb.AppendLine("<html>\n\t<head>");
+                    this.sb.AppendLine("\n\t\t<title>FabricObserver Observer Report: Errors and Warnings</title>");
+                    this.sb.AppendLine("\n\t\t" + this.script);
+                    this.sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
                                    "\t\t\t.container {\n" +
                                    "\t\t\t\tfont-family: Consolas; font-size: 14px; background-color: lightblue; padding: 5px; border: 1px solid grey; " +
                                    "width: 98%;\n" +
@@ -152,59 +157,65 @@ namespace FabricObserver.Controllers
                                    "\t\t\t}\n" +
                                    "\t\t\t a:link { text-decoration: none; }" +
                                    "\n\t\t</style>");
-                    sb.AppendLine("\n\t</head>");
-                    sb.AppendLine("\n\t<body>");
-                    sb.AppendLine("\n\t\t\t <br/>");
-                    sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\"><br/><strong>Errors and Warnings for " + name + " on " + nodeName + "</strong><br/><br/>" + nodeLinks);
+                    this.sb.AppendLine("\n\t</head>");
+                    this.sb.AppendLine("\n\t<body>");
+                    this.sb.AppendLine("\n\t\t\t <br/>");
+                    this.sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\"><br/><strong>Errors and Warnings for " + name + " on " + nodeName + "</strong><br/><br/>" + nodeLinks);
 
                     switch (name.ToLower())
                     {
                         case "appobserver":
                             if (!string.IsNullOrEmpty(appObserverLogText))
                             {
-                                sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + appObserverLogText + "<br/><br/>");
+                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + appObserverLogText + "<br/><br/>");
                             }
+
                             break;
                         case "diskobserver":
                             if (!string.IsNullOrEmpty(diskObserverLogText))
                             {
-                                sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + diskObserverLogText + "<br/><br/>");
+                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + diskObserverLogText + "<br/><br/>");
                             }
+
                             break;
                         case "fabricsystemobserver":
                             if (!string.IsNullOrEmpty(fabricSystemObserverLogText))
                             {
-                                sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + fabricSystemObserverLogText + "<br/><br/>");
+                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + fabricSystemObserverLogText + "<br/><br/>");
                             }
+
                             break;
                         case "networkobserver":
                             if (!string.IsNullOrEmpty(networkObserverLogText))
                             {
-                                sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + networkObserverLogText + "<br/><br/>");
+                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + networkObserverLogText + "<br/><br/>");
                             }
+
                             break;
                         case "nodeobserver":
                             if (!string.IsNullOrEmpty(nodeObserverLogText))
                             {
-                                sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + nodeObserverLogText + "<br/><br/>");
+                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + nodeObserverLogText + "<br/><br/>");
                             }
+
                             break;
                         case "osobserver":
                             if (!string.IsNullOrEmpty(osObserverLogText))
                             {
-                                sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + osObserverLogText + "<br/><br/>");
+                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + osObserverLogText + "<br/><br/>");
                             }
+
                             break;
                         default:
-                            sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist...");
+                            this.sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist...");
                             break;
                     }
 
-                    sb.AppendLine("\n\t\t\t</div>");
-                    sb.AppendLine("\n\t</body>");
-                    sb.AppendLine("</html>");
-                    html = sb.ToString();
-                    sb.Clear();
+                    this.sb.AppendLine("\n\t\t\t</div>");
+                    this.sb.AppendLine("\n\t</body>");
+                    this.sb.AppendLine("</html>");
+                    html = this.sb.ToString();
+                    this.sb.Clear();
                     break;
                 }
                 catch (IOException ie)
@@ -226,20 +237,24 @@ namespace FabricObserver.Controllers
         {
             if (format.ToLower() == "html")
             {
-                return Content(this.GetHtml(name), "text/html");
+                return this.Content(this.GetHtml(name), "text/html");
             }
 
-            JsonResult ret = Json(new ObserverLogEntry { Date = DateTime.UtcNow.ToString("MM-dd-yyyy HH:mm:ss.ffff",
-                                                         CultureInfo.InvariantCulture),
-                                                         HealthState = "Ok",
-                                                         Message = "" });
+            JsonResult ret = this.Json(new ObserverLogEntry
+            {
+                Date = DateTime.UtcNow.ToString(
+                "MM-dd-yyyy HH:mm:ss.ffff",
+                CultureInfo.InvariantCulture),
+                HealthState = "Ok",
+                Message = string.Empty,
+            });
 
             string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
             string observerLogFilePath = null;
 
             try
             {
-                var configSettings = this.ServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+                var configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
                 string logFolder, logFileName;
 
                 if (configSettings != null)
@@ -257,11 +272,11 @@ namespace FabricObserver.Controllers
             }
             catch (Exception e)
             {
-                ret = Json(e.ToString());
+                ret = this.Json(e.ToString());
                 return ret;
             }
 
-            // Implicit retry loop. Will run only once if no exceptions arise. 
+            // Implicit retry loop. Will run only once if no exceptions arise.
             // Can only run at most MaxRetries times.
             for (int i = 0; i < MaxRetries; i++)
             {
@@ -319,57 +334,65 @@ namespace FabricObserver.Controllers
                             {
                                 var reportItems = GetObserverErrWarnLogEntryListFromLogText(appObserverLogText);
 
-                                ret = Json(reportItems);
+                                ret = this.Json(reportItems);
                             }
+
                             break;
                         case "diskobserver":
                             if (!string.IsNullOrEmpty(diskObserverLogText))
                             {
                                 var reportItems = GetObserverErrWarnLogEntryListFromLogText(diskObserverLogText);
 
-                                ret = Json(reportItems);
+                                ret = this.Json(reportItems);
                             }
+
                             break;
                         case "fabricsystemobserver":
                             if (!string.IsNullOrEmpty(fabricSystemObserverLogText))
                             {
                                 var reportItems = GetObserverErrWarnLogEntryListFromLogText(fabricSystemObserverLogText);
 
-                                ret = Json(reportItems);
+                                ret = this.Json(reportItems);
                             }
+
                             break;
                         case "networkobserver":
                             if (!string.IsNullOrEmpty(networkObserverLogText))
                             {
                                 var reportItems = GetObserverErrWarnLogEntryListFromLogText(networkObserverLogText);
 
-                                ret = Json(reportItems);
+                                ret = this.Json(reportItems);
                             }
+
                             break;
                         case "nodeobserver":
                             if (!string.IsNullOrEmpty(nodeObserverLogText))
                             {
                                 var reportItems = GetObserverErrWarnLogEntryListFromLogText(nodeObserverLogText);
 
-                                ret = Json(reportItems);
+                                ret = this.Json(reportItems);
                             }
+
                             break;
                         case "osobserver":
                             if (!string.IsNullOrEmpty(osObserverLogText))
                             {
                                 var reportItems = GetObserverErrWarnLogEntryListFromLogText(osObserverLogText);
 
-                                ret = Json(reportItems);
+                                ret = this.Json(reportItems);
                             }
+
                             break;
                         default:
-                            ret = Json("Specified Observer, " + name + ", does not exist...");
+                            ret = this.Json("Specified Observer, " + name + ", does not exist...");
                             break;
                     }
 
                     break;
                 }
-                catch (IOException) {}
+                catch (IOException)
+                {
+                }
 
                 // If we get here, let's wait a second before the next iteration...
                 Task.Delay(1000).Wait();
@@ -394,16 +417,16 @@ namespace FabricObserver.Controllers
                     var addr = node[0].IpAddressOrFQDN;
 
                     // By default this service is node-local, http, port 5000...
-                    // If you modify the service to support Internet communication over a 
+                    // If you modify the service to support Internet communication over a
                     // secure channel, then change this code to force https.
                     if (!addr.Contains("http://"))
                     {
                         addr = "http://" + addr;
                     }
 
-                    string fqdn = "?fqdn=" + Request.Host;
+                    string fqdn = "?fqdn=" + this.Request.Host;
 
-                    // If you modify the service to support Internet communication over a 
+                    // If you modify the service to support Internet communication over a
                     // secure channel, then change this code to reflect the correct port...
                     var req = WebRequest.Create(addr + $":5000/api/ObserverLog/{observername}/{format}{fqdn}");
                     req.Credentials = CredentialCache.DefaultCredentials;
@@ -420,22 +443,28 @@ namespace FabricObserver.Controllers
                     dataStream.Close();
                     response.Close();
 
-                    return Content(ret, format.ToLower() == "html" ? "text/html" : "text/json");
+                    return this.Content(ret, format.ToLower() == "html" ? "text/html" : "text/json");
                 }
                 else
                 {
-                    return Content("no node found with that name...");
+                    return this.Content("no node found with that name...");
                 }
             }
-            catch (ArgumentException ae) { return Content($"Error processing request: {ae.Message}"); }
-            catch (IOException ioe) { return Content($"Error processing request: {ioe.Message}"); }            
+            catch (ArgumentException ae)
+            {
+                return this.Content($"Error processing request: {ae.Message}");
+            }
+            catch (IOException ioe)
+            {
+                return this.Content($"Error processing request: {ioe.Message}");
+            }
         }
 
         private static List<ObserverLogEntry> GetObserverErrWarnLogEntryListFromLogText(string observerLogText)
         {
             var reportItems = new List<ObserverLogEntry>();
             var logArray = observerLogText.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-              
+
             foreach (var item in logArray)
             {
                 if (!item.Contains("--"))
@@ -449,7 +478,7 @@ namespace FabricObserver.Controllers
                 {
                     Date = arr[0],
                     HealthState = arr[1],
-                    Message = arr[2].Trim('\n')
+                    Message = arr[2].Trim('\n'),
                 };
 
                 reportItems.Add(logReport);
@@ -462,7 +491,9 @@ namespace FabricObserver.Controllers
     public class ObserverLogEntry
     {
         public string Date { get; set; }
+
         public string HealthState { get; set; }
+
         public string Message { get; set; }
     }
 }

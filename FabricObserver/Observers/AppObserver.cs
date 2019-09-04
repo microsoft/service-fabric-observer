@@ -3,8 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricObserver.Model;
-using FabricObserver.Utilities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,6 +14,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Model;
+using FabricObserver.Utilities;
 
 namespace FabricObserver
 {
@@ -40,7 +40,11 @@ namespace FabricObserver
         private WindowsPerfCounters perfCounters = null;
         private DiskUsage diskUsage = null;
 
-        public AppObserver() : base(ObserverConstants.AppObserverName)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AppObserver"/> class.
+        /// </summary>
+        public AppObserver()
+            : base(ObserverConstants.AppObserverName)
         {
             this.dataPackagePath = ConfigSettings.ObserversDataPackagePath;
             this.allAppCpuData = new List<FabricResourceUsageData<int>>();
@@ -51,19 +55,22 @@ namespace FabricObserver
             this.allAppEphemeralPortsData = new List<FabricResourceUsageData<int>>();
         }
 
+        /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
-            bool initialized = Initialize();
-            Token = token;
+            bool initialized = this.Initialize();
+            this.Token = token;
 
             if (!initialized || token.IsCancellationRequested)
             {
-                Token.ThrowIfCancellationRequested();
+                this.Token.ThrowIfCancellationRequested();
 
-                HealthReporter.ReportFabricObserverServiceHealth(FabricServiceContext.ServiceName.OriginalString,
-                                                                 ObserverName,
-                                                                 HealthState.Warning,
-                                                                 "This observer was unable to initialize correctly due to missing configuration info...");
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Warning,
+                    "This observer was unable to initialize correctly due to missing configuration info...");
+
                 return;
             }
 
@@ -74,17 +81,17 @@ namespace FabricObserver
 
                 foreach (var app in this.targetList)
                 {
-                    Token.ThrowIfCancellationRequested();
+                    this.Token.ThrowIfCancellationRequested();
 
-                    await MonitorAppAsync(app).ConfigureAwait(true);
+                    await this.MonitorAppAsync(app).ConfigureAwait(true);
                 }
 
-                await ReportAsync(token).ConfigureAwait(true);
-                LastRunDateTime = DateTime.Now;
+                await this.ReportAsync(token).ConfigureAwait(true);
+                this.LastRunDateTime = DateTime.Now;
             }
             finally
             {
-                //Clean up...
+                // Clean up...
                 this.diskUsage?.Dispose();
                 this.diskUsage = null;
                 this.perfCounters?.Dispose();
@@ -92,7 +99,7 @@ namespace FabricObserver
             }
         }
 
-        // Initialize() runs each time ObserveAsync is run to ensure 
+        // Initialize() runs each time ObserveAsync is run to ensure
         // that any new app targets and config changes will
         // be up to date across observer loop iterations...
         private bool Initialize()
@@ -103,28 +110,29 @@ namespace FabricObserver
             }
 
             // Is this a unit test run?
-            if (IsTestRun)
+            if (this.IsTestRun)
             {
                 this.replicaOrInstanceList.Add(new ReplicaMonitoringInfo
                 {
                     ApplicationName = new Uri("fabric:/TestApp"),
                     Partitionid = Guid.NewGuid(),
                     ReplicaHostProcessId = 0,
-                    ReplicaOrInstanceId = default(long)
+                    ReplicaOrInstanceId = default(long),
                 });
 
                 return true;
             }
 
-            ConfigSettings.Initialize(FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings, ObserverConstants.AppObserverConfiguration, "AppObserverDataFileName");
+            ConfigSettings.Initialize(this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings, ObserverConstants.AppObserverConfiguration, "AppObserverDataFileName");
             var appObserverDataFileName = Path.Combine(this.dataPackagePath, ConfigSettings.AppObserverDataFileName);
 
             if (!File.Exists(appObserverDataFileName))
             {
-                WriteToLogWithLevel(ObserverName,
-                                    $"Will not observe resource consumption as no configuration parameters have been supplied... " +
-                                    $"| {NodeName}",
-                                    LogLevel.Information);
+                this.WriteToLogWithLevel(
+                    this.ObserverName,
+                    $"Will not observe resource consumption as no configuration parameters have been supplied... | {this.NodeName}",
+                    LogLevel.Information);
+
                 return false;
             }
 
@@ -148,10 +156,10 @@ namespace FabricObserver
             // Are any of the config-supplied apps deployed?...
             if (this.targetList.Count == 0)
             {
-                WriteToLogWithLevel(ObserverName,
-                                    $"Will not observe resource consumption as no configuration parameters have been supplied... " +
-                                    $"| {NodeName}",
-                                    LogLevel.Information);
+                this.WriteToLogWithLevel(
+                    this.ObserverName,
+                    $"Will not observe resource consumption as no configuration parameters have been supplied... | {this.NodeName}",
+                    LogLevel.Information);
 
                 return false;
             }
@@ -162,21 +170,23 @@ namespace FabricObserver
             {
                 if (string.IsNullOrWhiteSpace(application.Target))
                 {
-                    HealthReporter.ReportFabricObserverServiceHealth(FabricServiceContext.ServiceName.ToString(),
-                                                                     ObserverName,
-                                                                     HealthState.Warning,
-                                                                     $"Initialize() | {application.Target}: Required setting, target, is not set...");
+                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                        this.FabricServiceContext.ServiceName.ToString(),
+                        this.ObserverName,
+                        HealthState.Warning,
+                        $"Initialize() | {application.Target}: Required setting, target, is not set...");
                     settingsFail++;
                     continue;
                 }
 
-                if (settingsFail == this.targetList.Count) // No required settings supplied for deployed application(s)...
+                // No required settings supplied for deployed application(s)...
+                if (settingsFail == this.targetList.Count)
                 {
                     return false;
                 }
 
-                ObserverLogger.LogInfo($"Will observe resource consumption by {application.Target} " +
-                                       $"on Node {NodeName}.");
+                this.ObserverLogger.LogInfo($"Will observe resource consumption by {application.Target} " +
+                                       $"on Node {this.NodeName}.");
             }
 
             return true;
@@ -184,7 +194,7 @@ namespace FabricObserver
 
         private async Task MonitorAppAsync(ApplicationInfo application)
         {
-            var repOrInstList = await GetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.Target)).ConfigureAwait(true);
+            var repOrInstList = await this.GetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.Target)).ConfigureAwait(true);
 
             if (repOrInstList.Count == 0)
             {
@@ -195,7 +205,7 @@ namespace FabricObserver
 
             foreach (var repOrInst in repOrInstList)
             {
-                Token.ThrowIfCancellationRequested();
+                this.Token.ThrowIfCancellationRequested();
 
                 int processid = (int)repOrInst.ReplicaHostProcessId;
                 var cpuUsage = new CpuUsage();
@@ -205,7 +215,7 @@ namespace FabricObserver
                     // App level...
                     currentProcess = Process.GetProcessById(processid);
 
-                    Token.ThrowIfCancellationRequested();
+                    this.Token.ThrowIfCancellationRequested();
 
                     if (currentProcess == null)
                     {
@@ -215,7 +225,7 @@ namespace FabricObserver
                     var procName = currentProcess.ProcessName;
 
                     // Add new resource data structures for each app service process...
-                    var id = $"{application.Target.Replace("fabric:/", "")}:{procName}";
+                    var id = $"{application.Target.Replace("fabric:/", string.Empty)}:{procName}";
 
                     if (!this.allAppCpuData.Any(list => list.Id == id))
                     {
@@ -232,7 +242,7 @@ namespace FabricObserver
 
                     while (!currentProcess.HasExited && i > 0)
                     {
-                        Token.ThrowIfCancellationRequested();
+                        this.Token.ThrowIfCancellationRequested();
 
                         int cpu = cpuUsage.GetCpuUsageProcess(currentProcess);
 
@@ -247,14 +257,16 @@ namespace FabricObserver
 
                         // Disk/Network/Etc... IO (per-process bytes read/write per sec)
                         this.allAppDiskReadsData.FirstOrDefault(x => x.Id == id)
-                            .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(currentProcess.ProcessName,
-                                                                              "Process",
-                                                                              "IO Read Bytes/sec") / 1000);
+                            .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(
+                                currentProcess.ProcessName,
+                                "Process",
+                                "IO Read Bytes/sec") / 1000);
 
                         this.allAppDiskWritesData.FirstOrDefault(x => x.Id == id)
-                            .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(currentProcess.ProcessName,
-                                                                              "Process",
-                                                                              "IO Write Bytes/sec") / 1000);
+                            .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(
+                                currentProcess.ProcessName,
+                                "Process",
+                                "IO Write Bytes/sec") / 1000);
                         --i;
 
                         Thread.Sleep(250);
@@ -271,18 +283,19 @@ namespace FabricObserver
                 {
                     if (e is Win32Exception)
                     {
-                        WriteToLogWithLevel(ObserverName,
-                                            "MonitorAsync failed to find current service process for " +
-                                            application.Target, LogLevel.Information);
+                        this.WriteToLogWithLevel(
+                            this.ObserverName,
+                            $"MonitorAsync failed to find current service process for {application.Target}",
+                            LogLevel.Information);
                     }
                     else
                     {
                         if (!(e is OperationCanceledException))
                         {
-                            WriteToLogWithLevel(ObserverName,
-                                                "Unhandled exception in MonitorAsync: \n" +
-                                                e.ToString(),
-                                                LogLevel.Warning);
+                            this.WriteToLogWithLevel(
+                                this.ObserverName,
+                                $"Unhandled exception in MonitorAsync: \n {e.ToString()}",
+                                LogLevel.Warning);
                         }
 
                         throw;
@@ -296,43 +309,52 @@ namespace FabricObserver
             }
         }
 
-        public async Task<List<ReplicaMonitoringInfo>> GetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter)
+        private async Task<List<ReplicaMonitoringInfo>> GetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter)
         {
-            var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter).ConfigureAwait(true);
-
+            var deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(this.NodeName, applicationNameFilter).ConfigureAwait(true);
             var currentReplicaInfoList = new List<ReplicaMonitoringInfo>();
 
             foreach (var deployedApp in deployedApps)
             {
-                var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(deployedApp.ApplicationName).ConfigureAwait(true);
+                var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(deployedApp.ApplicationName).ConfigureAwait(true);
+                ServiceList filteredServiceList = null;
 
-                try
+                var app = this.targetList.Where(x => x.Target.ToLower() == deployedApp.ApplicationName.OriginalString.ToLower()
+                                                     && (!string.IsNullOrEmpty(x.ServiceExcludeList)
+                                                     || !string.IsNullOrEmpty(x.ServiceIncludeList)))?.FirstOrDefault();
+                if (app != null)
                 {
-                    // ServiceExcludes...?
-                    if (this.targetList.Any(app => app.Target == deployedApp.ApplicationName.OriginalString
-                                                   && !string.IsNullOrEmpty(app.ServiceExcludeList)
-                                                   && serviceList.Any(service => app.ServiceExcludeList.Split(',')
-                                                                       .Any(s => service.ServiceName.OriginalString.Contains(s)))))
-                    {
-                        continue;
-                    }
+                    filteredServiceList = new ServiceList();
 
-                    // ServiceIncludes...?
-                    if (this.targetList.Any(app => app.Target == deployedApp.ApplicationName.OriginalString
-                                                   && !string.IsNullOrEmpty(app.ServiceIncludeList)
-                                                   && !serviceList.Any(service => app.ServiceIncludeList.Split(',')
-                                                                        .Any(s => service.ServiceName.OriginalString.Contains(s)))))
+                    if (!string.IsNullOrEmpty(app.ServiceExcludeList))
                     {
-                        continue;
+                        string[] list = app.ServiceExcludeList.Split(',');
+
+                        // Excludes...?
+                        foreach (var service in serviceList)
+                        {
+                            if (!list.Any(l => service.ServiceName.OriginalString.Contains(l)))
+                            {
+                                filteredServiceList.Add(service);
+                            }
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(app.ServiceIncludeList))
+                    {
+                        string[] list = app.ServiceIncludeList.Split(',');
+
+                        // Includes...?
+                        foreach (var service in serviceList)
+                        {
+                            if (list.Any(l => service.ServiceName.OriginalString.Contains(l)))
+                            {
+                                filteredServiceList.Add(service);
+                            }
+                        }
                     }
                 }
-                catch (ArgumentNullException ae)
-                {
-                    /* log failure, default to monitoring all app services... */
-                    this.ObserverLogger.LogInfo($"Handled failure in service exclude/include detection:\n{ae.ToString()}");
-                }
 
-                var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName).ConfigureAwait(true);
+                var replicasOrInstances = await this.GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList ?? serviceList).ConfigureAwait(true);
 
                 currentReplicaInfoList.AddRange(replicasOrInstances);
 
@@ -343,23 +365,24 @@ namespace FabricObserver
             return currentReplicaInfoList;
         }
 
-        public async Task<List<ReplicaMonitoringInfo>> GetDeployedPrimaryReplicaAsync(Uri appName)
+        private async Task<List<ReplicaMonitoringInfo>> GetDeployedPrimaryReplicaAsync(Uri appName, ServiceList services)
         {
-            var deployedReplicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName).ConfigureAwait(true);
+            var deployedReplicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, appName).ConfigureAwait(true);
             var replicaMonitoringList = new List<ReplicaMonitoringInfo>();
 
             foreach (var deployedReplica in deployedReplicaList)
             {
                 if (deployedReplica is DeployedStatefulServiceReplica statefulReplica)
                 {
-                    if (statefulReplica.ReplicaRole == ReplicaRole.Primary)
+                    if (statefulReplica.ReplicaRole == ReplicaRole.Primary
+                        && services.Any(s => s.ServiceName == statefulReplica.ServiceName))
                     {
                         var replicaInfo = new ReplicaMonitoringInfo()
                         {
                             ApplicationName = appName,
                             ReplicaHostProcessId = statefulReplica.HostProcessId,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                            Partitionid = statefulReplica.Partitionid  
+                            Partitionid = statefulReplica.Partitionid,
                         };
 
                         replicaMonitoringList.Add(replicaInfo);
@@ -368,14 +391,15 @@ namespace FabricObserver
                     }
                 }
 
-                if (deployedReplica is DeployedStatelessServiceInstance statelessReplica)
+                if (deployedReplica is DeployedStatelessServiceInstance statelessReplica
+                    && services.Any(s => s.ServiceName == statelessReplica.ServiceName))
                 {
                     var replicaInfo = new ReplicaMonitoringInfo()
                     {
                         ApplicationName = appName,
                         ReplicaHostProcessId = statelessReplica.HostProcessId,
                         ReplicaOrInstanceId = statelessReplica.InstanceId,
-                        Partitionid = statelessReplica.Partitionid
+                        Partitionid = statelessReplica.Partitionid,
                     };
 
                     replicaMonitoringList.Add(replicaInfo);
@@ -387,22 +411,23 @@ namespace FabricObserver
             return replicaMonitoringList;
         }
 
+        /// <inheritdoc/>
         public override Task ReportAsync(CancellationToken token)
         {
             try
             {
-                Token.ThrowIfCancellationRequested();
-                var timeToLiveWarning = SetTimeToLiveWarning();
+                this.Token.ThrowIfCancellationRequested();
+                var timeToLiveWarning = this.SetTimeToLiveWarning();
 
                 // App-specific reporting...
                 foreach (var app in this.targetList)
                 {
-                    Token.ThrowIfCancellationRequested();
+                    this.Token.ThrowIfCancellationRequested();
 
                     // Process data for reporting...
                     foreach (var replicaOrInstance in this.replicaOrInstanceList.Where(x => x.ApplicationName.OriginalString == app.Target))
                     {
-                        Token.ThrowIfCancellationRequested();
+                        this.Token.ThrowIfCancellationRequested();
 
                         Process p = Process.GetProcessById((int)replicaOrInstance.ReplicaHostProcessId);
 
@@ -412,67 +437,74 @@ namespace FabricObserver
                             continue;
                         }
 
-                        var id = $"{app.Target.Replace("fabric:/", "")}:{p.ProcessName}";
+                        var id = $"{app.Target.Replace("fabric:/", string.Empty)}:{p.ProcessName}";
 
                         // Log (csv) CPU/Mem/DiskIO per app...
-                        if (CsvFileLogger.EnableCsvLogging || IsTelemetryEnabled)
+                        if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryEnabled)
                         {
-                            LogAllAppResourceDataToCsv(id);
+                            this.LogAllAppResourceDataToCsv(id);
                         }
 
                         // CPU
-                        ProcessResourceDataReportHealth(this.allAppCpuData.Where(x => x.Id == id).FirstOrDefault(),
-                                                        app.CpuErrorLimitPct,
-                                                        app.CpuWarningLimitPct,
-                                                        timeToLiveWarning,
-                                                        HealthReportType.Application,
-                                                        app.Target,
-                                                        replicaOrInstance,
-                                                        app.DumpProcessOnError);
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppCpuData.Where(x => x.Id == id).FirstOrDefault(),
+                            app.CpuErrorLimitPct,
+                            app.CpuWarningLimitPct,
+                            timeToLiveWarning,
+                            HealthReportType.Application,
+                            app.Target,
+                            replicaOrInstance,
+                            app.DumpProcessOnError);
+
                         // Memory
-                        ProcessResourceDataReportHealth(this.allAppMemData.Where(x => x.Id == id).FirstOrDefault(),
-                                                        
-                                                        app.MemoryErrorLimitMB,
-                                                        app.MemoryWarningLimitMB,                                                  
-                                                        timeToLiveWarning,
-                                                        HealthReportType.Application,
-                                                        app.Target,
-                                                        replicaOrInstance,
-                                                        app.DumpProcessOnError);
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppMemData.Where(x => x.Id == id).FirstOrDefault(),
+                            app.MemoryErrorLimitMB,
+                            app.MemoryWarningLimitMB,
+                            timeToLiveWarning,
+                            HealthReportType.Application,
+                            app.Target,
+                            replicaOrInstance,
+                            app.DumpProcessOnError);
+
                         // DiskIO
-                        ProcessResourceDataReportHealth(this.allAppDiskReadsData.Where(x => x.Id == id).FirstOrDefault(),
-                                                        app.DiskIOErrorReadsPerSecMS,
-                                                        app.DiskIOWarningReadsPerSecMS,
-                                                        timeToLiveWarning,
-                                                        HealthReportType.Application,
-                                                        app.Target,
-                                                        replicaOrInstance);
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppDiskReadsData.Where(x => x.Id == id).FirstOrDefault(),
+                            app.DiskIOErrorReadsPerSecMS,
+                            app.DiskIOWarningReadsPerSecMS,
+                            timeToLiveWarning,
+                            HealthReportType.Application,
+                            app.Target,
+                            replicaOrInstance);
 
-                        ProcessResourceDataReportHealth(this.allAppDiskWritesData.Where(x => x.Id == id).FirstOrDefault(),
-                                                        app.DiskIOErrorWritesPerSecMS,
-                                                        app.DiskIOWarningWritesPerSecMS,
-                                                        timeToLiveWarning,
-                                                        HealthReportType.Application,
-                                                        app.Target,
-                                                        replicaOrInstance);
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppDiskWritesData.Where(x => x.Id == id).FirstOrDefault(),
+                            app.DiskIOErrorWritesPerSecMS,
+                            app.DiskIOWarningWritesPerSecMS,
+                            timeToLiveWarning,
+                            HealthReportType.Application,
+                            app.Target,
+                            replicaOrInstance);
 
-                        // Ports 
-                        ProcessResourceDataReportHealth(this.allAppTotalActivePortsData.Where(x => x.Id == id).FirstOrDefault(),
-                                                        app.NetworkErrorActivePorts,
-                                                        app.NetworkWarningActivePorts,
-                                                        timeToLiveWarning,
-                                                        HealthReportType.Application,
-                                                        app.Target,
-                                                        replicaOrInstance);
+                        // Ports
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppTotalActivePortsData.Where(x => x.Id == id).FirstOrDefault(),
+                            app.NetworkErrorActivePorts,
+                            app.NetworkWarningActivePorts,
+                            timeToLiveWarning,
+                            HealthReportType.Application,
+                            app.Target,
+                            replicaOrInstance);
 
-                        // Ports 
-                        ProcessResourceDataReportHealth(this.allAppEphemeralPortsData.Where(x => x.Id == id).FirstOrDefault(),
-                                                        app.NetworkErrorEphemeralPorts,
-                                                        app.NetworkWarningEphemeralPorts,
-                                                        timeToLiveWarning,
-                                                        HealthReportType.Application,
-                                                        app.Target,
-                                                        replicaOrInstance);
+                        // Ports
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppEphemeralPortsData.Where(x => x.Id == id).FirstOrDefault(),
+                            app.NetworkErrorEphemeralPorts,
+                            app.NetworkWarningEphemeralPorts,
+                            timeToLiveWarning,
+                            HealthReportType.Application,
+                            app.Target,
+                            replicaOrInstance);
                     }
                 }
 
@@ -480,84 +512,96 @@ namespace FabricObserver
             }
             catch (Exception e)
             {
-                WriteToLogWithLevel(ObserverName,
-                                    "Unhandled exception in ReportAsync: \n" +
-                                    e.ToString(),
-                                    LogLevel.Error);
-                throw;
+                this.WriteToLogWithLevel(
+                    this.ObserverName,
+                    $"Unhandled exception in ReportAsync: \n{e.ToString()}",
+                    LogLevel.Error);
 
+                throw;
             }
         }
 
         private void LogAllAppResourceDataToCsv(string appName)
         {
-            if (!CsvFileLogger.EnableCsvLogging && !IsTelemetryEnabled)
+            if (!this.CsvFileLogger.EnableCsvLogging && !this.IsTelemetryEnabled)
             {
                 return;
             }
 
-            var fileName = appName.Replace(":", "") +
-                           NodeName;
+            var fileName = appName.Replace(":", string.Empty) +
+                           this.NodeName;
 
             // CPU Time
-            CsvFileLogger.LogData(fileName,
-                                  appName,
-                                  "% CPU Time",
-                                  "Average",
-                                  Math.Round(this.allAppCpuData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "% CPU Time",
+                "Average",
+                Math.Round(this.allAppCpuData.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
-            CsvFileLogger.LogData(fileName,
-                                  appName,
-                                  "% CPU Time",
-                                  "Peak",
-                                  Math.Round(Convert.ToDouble(this.allAppCpuData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "% CPU Time",
+                "Peak",
+                Math.Round(Convert.ToDouble(this.allAppCpuData.Where(x => x.Id == appName)
                                                                      .FirstOrDefault().MaxDataValue)));
+
             // Memory
-            CsvFileLogger.LogData(fileName,
-                                  appName,
-                                  "Memory (Working set) MB",
-                                  "Average",
-                                  Math.Round(this.allAppMemData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "Memory (Working set) MB",
+                "Average",
+                Math.Round(this.allAppMemData.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
-            CsvFileLogger.LogData(fileName,
-                                  appName,
-                                  "Memory (Working set) MB",
-                                  "Peak",
-                                  Math.Round(Convert.ToDouble(this.allAppMemData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "Memory (Working set) MB",
+                "Peak",
+                Math.Round(Convert.ToDouble(this.allAppMemData.Where(x => x.Id == appName)
                                                                      .FirstOrDefault().MaxDataValue)));
+
             // IO Read Bytes/s
-            CsvFileLogger.LogData(fileName,
-                                  appName,
-                                  "IO Read Bytes/sec",
-                                  "Average",
-                                  Math.Round(this.allAppDiskReadsData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "IO Read Bytes/sec",
+                "Average",
+                Math.Round(this.allAppDiskReadsData.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
-            CsvFileLogger.LogData(fileName,
-                                  appName,
-                                  "IO Read Bytes/sec",
-                                  "Peak",
-                                  Math.Round(Convert.ToDouble(this.allAppDiskReadsData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "IO Read Bytes/sec",
+                "Peak",
+                Math.Round(Convert.ToDouble(this.allAppDiskReadsData.Where(x => x.Id == appName)
                                                                      .FirstOrDefault().MaxDataValue)));
+
             // IO Write Bytes/s
-            CsvFileLogger.LogData(fileName,
-                                  appName,
-                                  "IO Write Bytes/sec",
-                                  "Average",
-                                  Math.Round(this.allAppDiskWritesData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "IO Write Bytes/sec",
+                "Average",
+                Math.Round(this.allAppDiskWritesData.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
-            CsvFileLogger.LogData(fileName,
-                                  appName,
-                                  "IO Write Bytes/sec",
-                                  "Peak",
-                                  Math.Round(Convert.ToDouble(this.allAppDiskWritesData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "IO Write Bytes/sec",
+                "Peak",
+                Math.Round(Convert.ToDouble(this.allAppDiskWritesData.Where(x => x.Id == appName)
                                                                     .FirstOrDefault().MaxDataValue)));
 
             // Network
-            CsvFileLogger.LogData(fileName,
-                                   appName,
-                                   "Active Ports",
-                                   "Total",
-                                   Math.Round(Convert.ToDouble(this.allAppTotalActivePortsData.Where(x => x.Id == appName)
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "Active Ports",
+                "Total",
+                Math.Round(Convert.ToDouble(this.allAppTotalActivePortsData.Where(x => x.Id == appName)
                                                                    .FirstOrDefault().MaxDataValue)));
             DataTableFileLogger.Flush();
         }

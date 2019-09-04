@@ -3,31 +3,36 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-using System.Fabric;
-using System.IO;
-using System.Net;
-//using System.Security.Cryptography.X509Certificates;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
-using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Runtime;
-
 namespace FabricObserver
 {
+    using System.Collections.Generic;
+    using System.Fabric;
+    using System.IO;
+    using System.Net;
+
+    // using System.Security.Cryptography.X509Certificates;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
+    using Microsoft.ServiceFabric.Services.Communication.Runtime;
+    using Microsoft.ServiceFabric.Services.Runtime;
+
     /// <summary>
-    /// The FabricRuntime creates an instance of this class for each service type instance. 
+    /// The FabricRuntime creates an instance of this class for each service type instance.
     /// </summary>
     internal sealed class FabricObserverWeb : StatelessService
     {
-        internal FabricClient fabricClient;
+        private FabricClient fabricClient;
 
-        public FabricObserverWeb(StatelessServiceContext context) : base(context)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FabricObserverWeb"/> class.
+        /// </summary>
+        /// <param name="context">service context...</param>
+        public FabricObserverWeb(StatelessServiceContext context)
+            : base(context)
         {
             this.fabricClient = new FabricClient();
-        } 
+        }
 
         /// <summary>
         /// Optional override to create listeners (like tcp, http) for this service instance.
@@ -52,13 +57,13 @@ namespace FabricObserver
                                         });
                                     })
                                     .ConfigureServices(services => services.AddSingleton(serviceContext))
-                                    .ConfigureServices(services => services.AddSingleton(fabricClient))
+                                    .ConfigureServices(services => services.AddSingleton(this.fabricClient))
                                     .UseContentRoot(Directory.GetCurrentDirectory())
                                     .UseStartup<Startup>()
                                     .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
                                     .UseUrls("http://localhost:5000") // localhost only, by default...
                                     .Build();
-                    }))
+                    })),
             };
         }
     }

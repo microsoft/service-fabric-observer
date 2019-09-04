@@ -14,15 +14,19 @@ namespace FabricObserver.Utilities
     /// </summary>
     public class ObserverHealthReporter
     {
-        private readonly Logger Logger;
+        private readonly Logger logger;
         private FabricClient fabricClient = null;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
+        /// </summary>
+        /// <param name="logger">file logger instance...</param>
         public ObserverHealthReporter(Logger logger)
         {
             this.fabricClient = ObserverManager.FabricClientInstance;
             this.fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
             this.fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
-            Logger = logger;
+            this.logger = logger;
         }
 
         /// <summary>
@@ -32,19 +36,20 @@ namespace FabricObserver.Utilities
         /// <param name="propertyName">Name of the health property</param>
         /// <param name="healthState">Health state (Ok, Error, etc)</param>
         /// <param name="description">Description of the health condition</param>
-        public void ReportFabricObserverServiceHealth(string serviceName,
-                                                      string propertyName,
-                                                      HealthState healthState,
-                                                      string description)
+        public void ReportFabricObserverServiceHealth(
+            string serviceName,
+            string propertyName,
+            HealthState healthState,
+            string description)
         {
             if (healthState == HealthState.Error)
             {
-                this.Logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + "{0}", description);
+                this.logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + "{0}", description);
             }
 
             if (healthState == HealthState.Warning)
             {
-                this.Logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + "{0}", description);
+                this.logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + "{0}", description);
             }
         }
 
@@ -62,6 +67,7 @@ namespace FabricObserver.Utilities
             {
                 timeToLive = healthReport.HealthReportTimeToLive;
             }
+
             // Errors will block SF infra from doing things like upgrades...
             // We probably should be careful here and limit health events
             // to warnings only (we'll dump on Error state if the user specifies this...)
@@ -75,7 +81,7 @@ namespace FabricObserver.Utilities
                 }
             }
 
-            string property = "", kind = "";
+            string property = string.Empty, kind = string.Empty;
 
             if (healthReport.Code != null)
             {
@@ -117,7 +123,7 @@ namespace FabricObserver.Utilities
             {
                 Description = kind + healthReport.HealthMessage,
                 TimeToLive = timeToLive,
-                RemoveWhenExpired = true
+                RemoveWhenExpired = true,
             };
 
             // Log event...
@@ -125,15 +131,15 @@ namespace FabricObserver.Utilities
             {
                 if (healthReport.State == HealthState.Error)
                 {
-                    Logger.LogError(healthReport.NodeName + ": {0}", healthInformation.Description);
+                    this.logger.LogError(healthReport.NodeName + ": {0}", healthInformation.Description);
                 }
                 else if (healthReport.State == HealthState.Warning)
                 {
-                    Logger.LogWarning(healthReport.NodeName + ": {0}", healthInformation.Description);
+                    this.logger.LogWarning(healthReport.NodeName + ": {0}", healthInformation.Description);
                 }
                 else
                 {
-                    Logger.LogInfo(healthReport.NodeName + ": {0}", healthInformation.Description);
+                    this.logger.LogInfo(healthReport.NodeName + ": {0}", healthInformation.Description);
                 }
             }
 
@@ -154,6 +160,6 @@ namespace FabricObserver.Utilities
     public enum HealthReportType
     {
         Application,
-        Node
+        Node,
     }
 }

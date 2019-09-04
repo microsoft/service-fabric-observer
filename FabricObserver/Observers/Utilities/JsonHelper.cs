@@ -3,13 +3,13 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http.Formatting;
 using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 
 namespace FabricObserver.Utilities
 {
@@ -22,7 +22,7 @@ namespace FabricObserver.Utilities
                 return new JsonMediaTypeFormatter
                 {
                     SerializerSettings = MediaTypeFormatterSettings,
-                    UseDataContractJsonSerializer = false
+                    UseDataContractJsonSerializer = false,
                 };
             }
         }
@@ -61,26 +61,28 @@ namespace FabricObserver.Utilities
             {
                 new StringEnumConverter { NamingStrategy = new CamelCaseNamingStrategy() },
             },
-            TypeNameHandling = TypeNameHandling.Auto
+            TypeNameHandling = TypeNameHandling.Auto,
         };
 
         public static T ReadFromJsonStream<T>(Stream stream)
         {
-            var data = (T)JsonMediaTypeFormatter.ReadFromStreamAsync(typeof(T),
-                                                                     stream,
-                                                                     null,
-                                                                     null).Result;
+            var data = (T)JsonMediaTypeFormatter.ReadFromStreamAsync(
+                typeof(T),
+                stream,
+                null,
+                null).Result;
 
             return data;
         }
 
         public static void WriteToStream<T>(T data, Stream stream)
         {
-            JsonMediaTypeFormatter.WriteToStreamAsync(typeof(T), 
-                                                      data, 
-                                                      stream, 
-                                                      null, 
-                                                      null).Wait();
+            JsonMediaTypeFormatter.WriteToStreamAsync(
+                typeof(T),
+                data,
+                stream,
+                null,
+                null).Wait();
         }
 
         private static Stream CreateStreamFromString(string s)

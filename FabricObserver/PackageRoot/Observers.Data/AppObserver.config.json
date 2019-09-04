@@ -16,9 +16,10 @@
     "networkWarningEphemeralPorts": 400
   },
   {
-    "target": "fabric:/MyApp2",
+    "target": "fabric:/DataAggregation",
+    "serviceIncludeList": "DataAggregation.DeviceCreationServiceType",
     "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 30,
+    "cpuWarningLimitPct": 8,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
     "diskIOWarningReadsPerSecMS": 0,
