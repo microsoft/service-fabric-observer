@@ -9,6 +9,6 @@ namespace FabricObserver.Utilities
     {
         Information,
         Warning,
-        Error
+        Error,
     }
 }

@@ -5,15 +5,19 @@
 
 namespace FabricObserver.Interfaces
 {
-    interface IDataTableFileLogger<TLogger>
+    public interface IDataTableFileLogger<TLogger>
     {
         bool EnableCsvLogging { get; set; }
+
         string DataLogFolderPath { get; set; }
+
         void ConfigureLogger(string filename);
-        void LogData(string fileName,
-                     string target,
-                     string metric,
-                     string stat,
-                     double value);
+
+        void LogData(
+            string fileName,
+            string target,
+            string metric,
+            string stat,
+            double value);
     }
 }

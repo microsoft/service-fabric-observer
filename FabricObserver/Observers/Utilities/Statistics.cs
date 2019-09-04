@@ -9,14 +9,14 @@ using System.Linq;
 
 namespace FabricObserver.Utilities
 {
-    class Statistics
+    public sealed class Statistics
     {
-        public static double StandardDeviation<T>(List<T> Data)
+        public static double StandardDeviation<T>(List<T> data)
         {
             var average = 0.0;
             List<double> squaredMeanDifferences = new List<double>();
 
-            var v = Data as List<long>;
+            var v = data as List<long>;
             if (v != null && v.Count > 0)
             {
                 average = v.Average();
@@ -24,7 +24,7 @@ namespace FabricObserver.Utilities
                                                 select (n - average) * (n - average));
             }
 
-            var x = Data as List<int>;
+            var x = data as List<int>;
             if (x != null && x.Count > 0)
             {
                 average = x.Average();
@@ -32,7 +32,7 @@ namespace FabricObserver.Utilities
                                                 select (n - average) * (n - average));
             }
 
-            var y = Data as List<float>;
+            var y = data as List<float>;
             if (y != null && y.Count > 0)
             {
                 average = Convert.ToDouble(y.Average());
@@ -40,7 +40,7 @@ namespace FabricObserver.Utilities
                                                 select (n - average) * (n - average));
             }
 
-            var z = Data as List<double>;
+            var z = data as List<double>;
             if (z != null && z.Count > 0)
             {
                 average = z.Average();
@@ -59,6 +59,11 @@ namespace FabricObserver.Utilities
 
         public static double StandardDeviation2(IEnumerable<int> sequence)
         {
+            if (sequence == null)
+            {
+                return -1;
+            }
+
             double sum = 0;
             double sumOfSquares = 0;
             double count = 0;
@@ -70,15 +75,22 @@ namespace FabricObserver.Utilities
                 sumOfSquares += item * item;
             }
 
-            var variance = sumOfSquares - sum * sum / count;
+            var variance = sumOfSquares - (sum * sum / count);
+
             return Math.Sqrt(variance / count);
         }
 
         public static double StandardDeviation3(IEnumerable<double> sequence)
         {
+            if (sequence == null)
+            {
+                return -1;
+            }
+
             var computation = ComputeSumAndSumOfSquares(sequence);
 
-            var variance = computation.Item3 - computation.Item2 * computation.Item2 / computation.Item1;
+            var variance = computation.Item3 - (computation.Item2 * computation.Item2 / computation.Item1);
+
             return Math.Sqrt(variance / computation.Item1);
         }
 

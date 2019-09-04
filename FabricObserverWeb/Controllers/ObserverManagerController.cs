@@ -3,28 +3,28 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System;
-using System.Fabric;
-using System.IO;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using System.Linq;
-using Microsoft.AspNetCore.Mvc;
-
 namespace FabricObserver
 {
+    using System;
+    using System.Fabric;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Text;
+    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Mvc;
+
     [Route("api/ObserverManager")]
     [Produces("text/html")]
     [ApiController]
     public class ObserverManagerController : ControllerBase
     {
         private const int MaxRetries = 3;
-        StringBuilder sb = null;
-        private readonly StatelessServiceContext ServiceContext = null;
-        private FabricClient fabricClient;
+        private readonly StatelessServiceContext serviceContext = null;
+        private readonly FabricClient fabricClient;
+        private StringBuilder sb = null;
 
-        string script = @"
+        private string script = @"
                 <script type='text/javascript'>
                 function toggle(e) {
                     var container = document.getElementById(e);
@@ -43,9 +43,14 @@ namespace FabricObserver
                 }
                 </script>";
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverManagerController"/> class.
+        /// </summary>
+        /// <param name="serviceContext">service context...</param>
+        /// <param name="fabricClient">FabricClient instance.</param>
         public ObserverManagerController(StatelessServiceContext serviceContext, FabricClient fabricClient)
         {
-            this.ServiceContext = serviceContext;
+            this.serviceContext = serviceContext;
             this.fabricClient = fabricClient;
         }
 
@@ -54,15 +59,15 @@ namespace FabricObserver
         [HttpGet]
         public string Get()
         {
-            string html = "";
+            string html = string.Empty;
             string observerLogFilePath = null;
-            var nodeName = ServiceContext.NodeContext.NodeName;
-            var configSettings = this.ServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+            var nodeName = this.serviceContext.NodeContext.NodeName;
+            var configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
             string logFolder = null;
             string logFileName = null;
 
             // Windows only for now...
-            if (configSettings != null) 
+            if (configSettings != null)
             {
                 string windrive = Environment.SystemDirectory.Substring(0, 3);
                 logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
@@ -70,7 +75,7 @@ namespace FabricObserver
                 observerLogFilePath = Path.Combine(logFolder, logFileName);
             }
 
-            // Implicit retry loop. Will run only once if no exceptions arise. 
+            // Implicit retry loop. Will run only once if no exceptions arise.
             // Can only run at most MaxRetries times.
             for (int i = 0; i < MaxRetries; i++)
             {
@@ -82,13 +87,13 @@ namespace FabricObserver
                     var diskFileInfoPath = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "disks.txt");
                     var sfInfraInfoPath = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "SFInfraInfo.txt");
 
-                    // These are the app-specific 
+                    // These are the app-specific
                     var currentDataHealthLogPathPart = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "apps");
-                    string sysInfofileText = "", evtVwrErrorsText = "", log = "", diskInfoTxt = "", appHealthText = "", sfInfraText = "", netInfofileText = "";
+                    string sysInfofileText = string.Empty, evtVwrErrorsText = string.Empty, log = string.Empty, diskInfoTxt = string.Empty, appHealthText = string.Empty, sfInfraText = string.Empty, netInfofileText = string.Empty;
                     bool hasSysInfo = false;
 
                     // Only show info from current day, by default. This is just for web UI (html).
-                    if (System.IO.File.Exists(observerLogFilePath) 
+                    if (System.IO.File.Exists(observerLogFilePath)
                         && System.IO.File.GetCreationTimeUtc(observerLogFilePath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
                         log = System.IO.File.ReadAllText(observerLogFilePath, Encoding.UTF8).Replace("\n", "<br/>");
@@ -119,7 +124,7 @@ namespace FabricObserver
                         sfInfraText = System.IO.File.ReadAllText(sfInfraInfoPath, Encoding.UTF8).Trim();
                     }
 
-                    appHealthText = "";
+                    appHealthText = string.Empty;
                     if (Directory.Exists(currentDataHealthLogPathPart))
                     {
                         var currentAppDataLogFiles = Directory.GetFiles(currentDataHealthLogPathPart);
@@ -133,29 +138,29 @@ namespace FabricObserver
                     }
 
                     // Node links..
-                    string nodeLinks = "";
+                    string nodeLinks = string.Empty;
 
                     var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
                     var ordered = nodeList.OrderBy(node => node.NodeName);
-                    var host = Request.Host.Value;
+                    var host = this.Request.Host.Value;
 
                     // Request originating from ObserverWeb node hyperlinks...
-                    if (Request.QueryString.HasValue && Request.Query.ContainsKey("fqdn"))
+                    if (this.Request.QueryString.HasValue && this.Request.Query.ContainsKey("fqdn"))
                     {
-                        host = Request.Query["fqdn"];
+                        host = this.Request.Query["fqdn"];
 
                         foreach (var node in ordered)
                         {
-                            nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverManager/" + node.NodeName + "'>" + node.NodeName + "</a> | ";
+                            nodeLinks += "| <a href='" + this.Request.Scheme + "://" + host + "/api/ObserverManager/" + node.NodeName + "'>" + node.NodeName + "</a> | ";
                         }
                     }
 
-                    sb = new StringBuilder();
+                    this.sb = new StringBuilder();
 
-                    sb.AppendLine("<html>\n\t<head>");
-                    sb.AppendLine("\n\t\t<title>FabricObserver Node Health Information: Errors and Warnings</title>");
-                    sb.AppendLine("\n\t\t" + script);
-                    sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
+                    this.sb.AppendLine("<html>\n\t<head>");
+                    this.sb.AppendLine("\n\t\t<title>FabricObserver Node Health Information: Errors and Warnings</title>");
+                    this.sb.AppendLine("\n\t\t" + this.script);
+                    this.sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
                                    "\t\t\t.container {\n" +
                                    "\t\t\t\tfont-family: Consolas; font-size: 14px; background-color: lightblue; padding: 5px; border: 1px solid grey; " +
                                    "width: 98%;\n" +
@@ -169,30 +174,31 @@ namespace FabricObserver
                                    "\t\t\t}\n" +
                                    "\t\t\t a:link { text-decoration: none; }" +
                                    "\n\t\t</style>");
-                    sb.AppendLine("\n\t</head>");
-                    sb.AppendLine("\n\t<body>");
-                    sb.AppendLine("\n\t\t\t <br/>");
+                    this.sb.AppendLine("\n\t</head>");
+                    this.sb.AppendLine("\n\t<body>");
+                    this.sb.AppendLine("\n\t\t\t <br/>");
                     if (!hasSysInfo && !string.IsNullOrEmpty(sysInfofileText))
                     {
-                        sb.AppendLine("\n\t\t\t<div class=\"container\"><div style=\"position: relative; width: 80%; margin-left: auto; margin-right: auto; font-family: Consolas;\"><br/>" + 
-                                       "<h2>Host Machine and Service Fabric Information: Node " + ServiceContext.NodeContext.NodeName + "</h2>" + nodeLinks + "<pre>" + 
+                        this.sb.AppendLine("\n\t\t\t<div class=\"container\"><div style=\"position: relative; width: 80%; margin-left: auto; margin-right: auto; font-family: Consolas;\"><br/>" +
+                                       "<h2>Host Machine and Service Fabric Information: Node " + this.serviceContext.NodeContext.NodeName + "</h2>" + nodeLinks + "<pre>" +
                                        sysInfofileText + "\n\nDisk Info: \n\n" + diskInfoTxt + netInfofileText + "\n\n" + sfInfraText + "</pre></div></div>");
 
                         hasSysInfo = true;
                     }
-                    sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\">" +
+
+                    this.sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\">" +
                                   "<br/><strong>Daily Errors and Warnings on " + nodeName + " - " + DateTime.UtcNow.ToString("MM/dd/yyyy") + " UTC</strong><br/><br/>" + log + appHealthText + "</div>");
 
                     if (!string.IsNullOrEmpty(evtVwrErrorsText))
                     {
-                        sb.AppendLine("\n\t\t\t" + evtVwrErrorsText);
+                        this.sb.AppendLine("\n\t\t\t" + evtVwrErrorsText);
                     }
 
-                    sb.AppendLine("\n\t\t\t</div>");
-                    sb.AppendLine("\n\t</body>");
-                    sb.AppendLine("</html>");
-                    html = sb.ToString();
-                    sb.Clear();
+                    this.sb.AppendLine("\n\t\t\t</div>");
+                    this.sb.AppendLine("\n\t</body>");
+                    this.sb.AppendLine("</html>");
+                    html = this.sb.ToString();
+                    this.sb.Clear();
 
                     break;
                 }
@@ -207,7 +213,7 @@ namespace FabricObserver
 
             return html;
         }
-        
+
         // GET: api/ObserverManager/_SFRole_0
         [HttpGet("{name}", Name = "GetNode")]
         public string Get(string name)
@@ -226,11 +232,12 @@ namespace FabricObserver
                         addr = "http://" + addr;
                     }
 
-                    string fqdn = "?fqdn=" + Request.Host;
+                    string fqdn = "?fqdn=" + this.Request.Host;
                     var req = WebRequest.Create(addr + ":5000/api/ObserverManager" + fqdn);
                     req.Credentials = CredentialCache.DefaultCredentials;
                     var response = (HttpWebResponse)req.GetResponse();
                     Stream dataStream = response.GetResponseStream();
+
                     // Open the stream using a StreamReader for easy access.
                     StreamReader reader = new StreamReader(dataStream);
                     string responseFromServer = reader.ReadToEnd();
