@@ -564,9 +564,13 @@ namespace FabricObserver
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpace : ErrorWarningCode.WarningDiskSpace;
                 }
-                else if (data.Property.Contains("Memory"))
+                else if (data.Property.Contains("Committed Memory"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryCommitted : ErrorWarningCode.WarningMemoryCommitted;
+                }
+                else if (data.Property.Contains("Percent Memory"))
+                {
+                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryPercentUsed : ErrorWarningCode.WarningMemoryPercentUsed;
                 }
                 else if (data.Property.Contains("Read"))
                 {
