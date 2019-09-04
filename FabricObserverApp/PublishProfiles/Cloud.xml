@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PublishProfile xmlns="http://schemas.microsoft.com/2015/05/fabrictools">
-  <ClusterConnectionParameters ConnectionEndpoint="winlrc-ctorre-10.westus2.cloudapp.azure.com:19000"
+  <ClusterConnectionParameters ConnectionEndpoint=""
                                X509Credential="true"
-                               ServerCertThumbprint="12AE293C437433F9F529D02B88EF6E3FBDC2A366"
+                               ServerCertThumbprint=""
                                FindType="FindByThumbprint"
-                               FindValue="12AE293C437433F9F529D02B88EF6E3FBDC2A366"
+                               FindValue=""
                                StoreLocation="CurrentUser"
                                StoreName="My" />
   <ApplicationParameterFile Path="..\ApplicationParameters\Cloud.xml" />
