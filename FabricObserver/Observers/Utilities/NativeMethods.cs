@@ -18,7 +18,7 @@ namespace FabricObserver.Utilities
             STATUS_SUCCESS = 0x00000000,
             STATUS_BUFFER_OVERFLOW = unchecked((int)0x80000005L),
             STATUS_INFO_LENGTH_MISMATCH = unchecked((int)0xC0000004L),
-            STATUS_NO_MEMORY = unchecked((int)0xC0000017L)
+            STATUS_NO_MEMORY = unchecked((int)0xC0000017L),
         }
 
         internal enum SYSTEM_INFORMATION_CLASS
@@ -32,7 +32,7 @@ namespace FabricObserver.Utilities
             SystemInterruptInformation = 23,
             SystemExceptionInformation = 33,
             SystemRegistryQuotaInformation = 37,
-            SystemLookasideInformation = 45
+            SystemLookasideInformation = 45,
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -43,9 +43,12 @@ namespace FabricObserver.Utilities
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetProcessTimes(IntPtr hProcess, out FILETIME
-                   lpCreationTime, out FILETIME lpExitTime, out FILETIME lpKernelTime,
-                   out FILETIME lpUserTime);
+        internal static extern bool GetProcessTimes(
+            IntPtr hProcess,
+            out FILETIME lpCreationTime,
+            out FILETIME lpExitTime,
+            out FILETIME lpKernelTime,
+            out FILETIME lpUserTime);
 
         [DllImport("kernel32.dll")]
         internal static extern uint GetTickCount();
@@ -53,9 +56,12 @@ namespace FabricObserver.Utilities
         [StructLayout(LayoutKind.Explicit, Size = 8)]
         internal struct LARGE_INTEGER
         {
-            [FieldOffset(0)] public ulong QuadPart;
-            [FieldOffset(0)] public ulong LowPart;
-            [FieldOffset(4)] public ulong HighPart;
+            [FieldOffset(0)]
+            public ulong QuadPart;
+            [FieldOffset(0)]
+            public ulong LowPart;
+            [FieldOffset(4)]
+            public ulong HighPart;
         }
 
         [DllImport("ntdll.dll")]
@@ -67,24 +73,29 @@ namespace FabricObserver.Utilities
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetVolumePathName(string lpszVolumeName,
-                char[] lpszVolumePathNames, uint cchBufferLength);
+        internal static extern bool GetVolumePathName(
+            string lpszVolumeName,
+            char[] lpszVolumePathNames,
+            uint cchBufferLength);
 
         // Process dump support...
-        [DllImport("dbghelp.dll",
-                   EntryPoint = "MiniDumpWriteDump",
-                   CallingConvention = CallingConvention.StdCall,
-                   CharSet = CharSet.Unicode,
-                   ExactSpelling = true,
-                   SetLastError = true)]
+        [DllImport(
+            "dbghelp.dll",
+            EntryPoint = "MiniDumpWriteDump",
+            CallingConvention = CallingConvention.StdCall,
+            CharSet = CharSet.Unicode,
+            ExactSpelling = true,
+            SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool MiniDumpWriteDump(IntPtr hProcess,
-                                                    uint processId,
-                                                    SafeHandle hFile,
-                                                    MINIDUMP_TYPE dumpType,
-                                                    IntPtr expParam,
-                                                    IntPtr userStreamParam,
-                                                    IntPtr callbackParam);
+        public static extern bool MiniDumpWriteDump(
+            IntPtr hProcess,
+            uint processId,
+            SafeHandle hFile,
+            MINIDUMP_TYPE dumpType,
+            IntPtr expParam,
+            IntPtr userStreamParam,
+            IntPtr callbackParam);
+
         [Flags]
         public enum MINIDUMP_TYPE : int
         {
@@ -111,6 +122,6 @@ namespace FabricObserver.Utilities
             MiniDumpWithModuleHeaders = 0x00080000,
             MiniDumpFilterTriage = 0x00100000,
             MiniDumpValidTypeFlags = 0x001fffff,
-        };
+        }
     }
 }

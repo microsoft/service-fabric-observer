@@ -10,26 +10,30 @@ using System.Threading;
 namespace FabricObserver.Utilities
 {
     // https://stackoverflow.com/questions/1563191/cleanest-way-to-write-retry-logic
-
     public static class Retry
     {
-        public static void Do(Action action,
-                              TimeSpan retryInterval,
-                              CancellationToken token,
-                              int maxAttempts = 3)
+        public static void Do(
+            Action action,
+            TimeSpan retryInterval,
+            CancellationToken token,
+            int maxAttempts = 3)
         {
-            Do<object>(() =>
+            Do<object>(
+                () =>
             {
                 action();
                 token.ThrowIfCancellationRequested();
                 return null;
-            }, retryInterval, token, maxAttempts);
+            }, retryInterval,
+                token,
+                maxAttempts);
         }
 
-        public static T Do<T>(Func<T> action,
-                              TimeSpan retryInterval,
-                              CancellationToken token,
-                              int maxAttemptCount = 3)
+        public static T Do<T>(
+            Func<T> action,
+            TimeSpan retryInterval,
+            CancellationToken token,
+            int maxAttemptCount = 3)
         {
             var exceptions = new List<Exception>();
 
@@ -43,6 +47,7 @@ namespace FabricObserver.Utilities
                     {
                         Thread.Sleep(retryInterval);
                     }
+
                     return action();
                 }
                 catch (Exception ex)
@@ -50,6 +55,7 @@ namespace FabricObserver.Utilities
                     exceptions.Add(ex);
                 }
             }
+
             throw new AggregateException(exceptions);
         }
     }

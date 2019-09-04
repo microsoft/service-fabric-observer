@@ -13,34 +13,41 @@ namespace FabricObserver.Model
 {
     public class ConfigurationSetting<T>
     {
-        public ConfigurationSetting(ConfigurationSettings configurationSettings,
-                                    string configurationSectionName,
-                                    string settingName,
-                                    T defaultValue) : this(configurationSectionName,
-                                                           settingName,
-                                                           defaultValue,
-                                                           true)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConfigurationSetting{T}"/> class.
+        /// </summary>
+        public ConfigurationSetting(
+            ConfigurationSettings configurationSettings,
+            string configurationSectionName,
+            string settingName,
+            T defaultValue)
+            : this(
+                                        configurationSectionName,
+                                        settingName,
+                                        defaultValue,
+                                        true)
         {
-            ConfigurationSettings = configurationSettings;
+            this.ConfigurationSettings = configurationSettings;
         }
 
         /// <summary>
-        ///   Initializes a new instance of the ConfigurationSetting class.
+        /// Initializes a new instance of the <see cref="ConfigurationSetting{T}"/> class.
         /// </summary>
-        /// <param name="configurationSectionName"></param>
+        /// <param name="configurationSectionName">name</param>
         /// <param name="settingName"> Name of the setting </param>
         /// <param name="defaultValue"> Default value of the setting if it does not exist in the ACS </param>
         /// <param name="enableTracing"> Whether to log the value of the setting when it is read from the ACS </param>
-        private ConfigurationSetting(string configurationSectionName,
-                                     string settingName,
-                                     T defaultValue,
-                                     bool enableTracing)
+        private ConfigurationSetting(
+            string configurationSectionName,
+            string settingName,
+            T defaultValue,
+            bool enableTracing)
         {
-            SettingName = settingName;
-            DefaultValue = defaultValue;
-            ValueSpecified = false;
-            DisableTracing = !enableTracing;
-            ConfigurationSectionName = configurationSectionName;
+            this.SettingName = settingName;
+            this.DefaultValue = defaultValue;
+            this.ValueSpecified = false;
+            this.DisableTracing = !enableTracing;
+            this.ConfigurationSectionName = configurationSectionName;
         }
 
         /// <summary>
@@ -55,28 +62,28 @@ namespace FabricObserver.Model
         {
             get
             {
-                if (!ValueSpecified)
+                if (!this.ValueSpecified)
                 {
-                    Value1 = DefaultValue;
-                    var appConfigValue = GetConfigurationSetting(SettingName);
+                    this.Value1 = this.DefaultValue;
+                    var appConfigValue = this.GetConfigurationSetting(this.SettingName);
 
                     if (appConfigValue != null)
                     {
-                        if (!TryParse(appConfigValue, out T val))
+                        if (!this.TryParse(appConfigValue, out T val))
                         {
-                            Value1 = DefaultValue;
+                            this.Value1 = this.DefaultValue;
                         }
                         else
                         {
-                            Value1 = val;
+                            this.Value1 = val;
                         }
                     }
 
-                    ValueSpecified = true;
+                    this.ValueSpecified = true;
                 }
 
                 // This is ALWAYS the ACS value of the setting (never overwritten)
-                return Value1;
+                return this.Value1;
             }
         }
 
@@ -89,6 +96,7 @@ namespace FabricObserver.Model
         protected string SettingName { get; }
 
         protected T Value1 { get; set; }
+
         protected bool ValueSpecified { get; set; }
 
         /// <summary>
@@ -110,34 +118,42 @@ namespace FabricObserver.Model
                 {
                     return value;
                 }
+
                 if (type == typeof(bool))
                 {
                     return bool.Parse(value);
                 }
+
                 if (type == typeof(int))
                 {
                     return int.Parse(value);
                 }
+
                 if (type == typeof(double))
                 {
                     return double.Parse(value);
                 }
+
                 if (type == typeof(Guid))
                 {
                     return Guid.Parse(value);
                 }
+
                 if (type == typeof(Uri))
                 {
                     return new Uri(value);
                 }
+
                 if (type == typeof(SecureString))
                 {
                     return StringToSecureString(value);
                 }
+
                 if (type.IsEnum)
                 {
                     return Enum.Parse(type, value, true);
                 }
+
                 if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
                     if (value.Length == 0)
@@ -145,8 +161,9 @@ namespace FabricObserver.Model
                         return null;
                     }
 
-                    return Parse(value, type.GetGenericArguments()[0]);
+                    return this.Parse(value, type.GetGenericArguments()[0]);
                 }
+
                 if (type.IsArray && type.GetElementType() == typeof(byte))
                 {
                     return Convert.FromBase64String(value);
@@ -186,7 +203,7 @@ namespace FabricObserver.Model
         /// <returns> True if succeeds </returns>
         public bool TryParse<TU>(string valueString, out TU value)
         {
-            var result = Parse(valueString, typeof(TU));
+            var result = this.Parse(valueString, typeof(TU));
             if (result == null)
             {
                 value = default(TU);
@@ -201,32 +218,31 @@ namespace FabricObserver.Model
         /// Get Windows Fabric Settings from config.
         /// </summary>
         /// <param name="parameterName">Return settings for the parameter name</param>
-        /// <returns></returns>
         protected string GetConfigurationSetting(string parameterName)
         {
-            if (string.IsNullOrEmpty(parameterName) || ConfigurationSettings == null)
+            if (string.IsNullOrEmpty(parameterName) || this.ConfigurationSettings == null)
             {
                 return null;
             }
 
-            if (!ConfigurationSettings.Sections.Contains(ConfigurationSectionName)
-                || ConfigurationSettings.Sections[ConfigurationSectionName] == null)
+            if (!this.ConfigurationSettings.Sections.Contains(this.ConfigurationSectionName)
+                || this.ConfigurationSettings.Sections[this.ConfigurationSectionName] == null)
             {
                 return null;
             }
 
-            if (!ConfigurationSettings.Sections[ConfigurationSectionName].Parameters.Contains(parameterName))
+            if (!this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters.Contains(parameterName))
             {
                 return null;
             }
 
-            string parameterValue = ConfigurationSettings.Sections[ConfigurationSectionName].Parameters[parameterName].Value;
+            string parameterValue = this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].Value;
 
-            if (ConfigurationSettings.Sections[ConfigurationSectionName].Parameters[parameterName].IsEncrypted &&
+            if (this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].IsEncrypted &&
                 !string.IsNullOrEmpty(parameterValue))
             {
                 var paramValueAsCharArray = SecureStringToCharArray(
-                    ConfigurationSettings.Sections[ConfigurationSectionName].Parameters[parameterName].DecryptValue());
+                    this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].DecryptValue());
 
                 return new string(paramValueAsCharArray);
             }

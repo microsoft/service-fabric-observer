@@ -3,7 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricObserver.Utilities;
 using System;
 using System.Fabric;
 using System.Fabric.Health;
@@ -13,6 +12,7 @@ using System.Management;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Utilities;
 
 namespace FabricObserver
 {
@@ -24,14 +24,23 @@ namespace FabricObserver
     {
         private string osReport;
         private string osStatus;
-        public string TestManifestPath { get; set; }
-        public OSObserver() : base(ObserverConstants.OSObserverName) { }
 
+        public string TestManifestPath { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="OSObserver"/> class.
+        /// </summary>
+        public OSObserver()
+            : base(ObserverConstants.OSObserverName)
+        {
+        }
+
+        /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
-            GetComputerInfo(token);
-            await ReportAsync(token).ConfigureAwait(true);
-            LastRunDateTime = DateTime.Now;
+            this.GetComputerInfo(token);
+            await this.ReportAsync(token).ConfigureAwait(true);
+            this.LastRunDateTime = DateTime.Now;
         }
 
         private void GetComputerInfo(CancellationToken token)
@@ -98,16 +107,17 @@ namespace FabricObserver
                 int activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
                 Tuple<int, int> dynamicPortRange = NetworkUsage.TupleGetDynamicPortRange();
                 string clusterManifestXml = null;
-                if (IsTestRun)
+                if (this.IsTestRun)
                 {
-                    clusterManifestXml = File.ReadAllText(TestManifestPath);
+                    clusterManifestXml = File.ReadAllText(this.TestManifestPath);
                 }
                 else
                 {
-                    clusterManifestXml = FabricClientInstance.ClusterManager.GetClusterManifestAsync().GetAwaiter().GetResult();
+                    clusterManifestXml = this.FabricClientInstance.ClusterManager.GetClusterManifestAsync().GetAwaiter().GetResult();
                 }
-                Tuple<int, int> appPortRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
-                
+
+                Tuple<int, int> appPortRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+
                 // Enabled Firewall rules...
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
@@ -145,10 +155,11 @@ namespace FabricObserver
             }
             catch (Exception e)
             {
-                HealthReporter.ReportFabricObserverServiceHealth(FabricServiceContext.ServiceName.OriginalString,
-                                                                      ObserverName,
-                                                                      HealthState.Error,
-                                                                      $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Error,
+                    $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
                 throw;
             }
             finally
@@ -162,7 +173,7 @@ namespace FabricObserver
         {
             ManagementObjectSearcher searcher = null;
             ManagementObjectCollection results = null;
-            string ret = "";
+            string ret = string.Empty;
             token.ThrowIfCancellationRequested();
 
             try
@@ -172,7 +183,7 @@ namespace FabricObserver
 
                 if (results.Count < 1)
                 {
-                    return "";
+                    return string.Empty;
                 }
 
                 var resultsOrdered = results.Cast<ManagementObject>()
@@ -191,7 +202,9 @@ namespace FabricObserver
                 ret = sb.ToString().Trim();
                 sb.Clear();
             }
-            catch (ArgumentException) { }
+            catch (ArgumentException)
+            {
+            }
             finally
             {
                 results?.Dispose();
@@ -203,6 +216,7 @@ namespace FabricObserver
             return ret;
         }
 
+        /// <inheritdoc/>
         public override Task ReportAsync(CancellationToken token)
         {
             try
@@ -216,31 +230,32 @@ namespace FabricObserver
                     string healthMessage = $"OS reporting unhealthy: {this.osStatus}";
                     var healthReport = new Utilities.HealthReport
                     {
-                        Observer = ObserverName,
-                        NodeName = NodeName,
+                        Observer = this.ObserverName,
+                        NodeName = this.NodeName,
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
-                        HealthReportTimeToLive = SetTimeToLiveWarning()
+                        HealthReportTimeToLive = this.SetTimeToLiveWarning(),
                     };
 
-                    HealthReporter.ReportHealthToServiceFabric(healthReport);
+                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                    // This means this observer created a Warning or Error SF Health Report 
-                    HasActiveFabricErrorOrWarning = true;
+                    // This means this observer created a Warning or Error SF Health Report
+                    this.HasActiveFabricErrorOrWarning = true;
 
                     // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example...)...
-                    if (IsTelemetryEnabled)
+                    if (this.IsTelemetryEnabled)
                     {
-                        _ = ObserverTelemetryClient?.ReportHealthAsync(FabricRuntime.GetActivationContext().ApplicationName,
-                                                                       FabricServiceContext.ServiceName.OriginalString,
-                                                                       "FabricObserver",
-                                                                       ObserverName,
-                                                                       $"{NodeName}/OS reporting unhealthy: {this.osStatus}",
-                                                                       HealthState.Error,
-                                                                       token);
+                        _ = this.ObserverTelemetryClient?.ReportHealthAsync(
+                            FabricRuntime.GetActivationContext().ApplicationName,
+                            this.FabricServiceContext.ServiceName.OriginalString,
+                            "FabricObserver",
+                            this.ObserverName,
+                            $"{this.NodeName}/OS reporting unhealthy: {this.osStatus}",
+                            HealthState.Error,
+                            token);
                     }
                 }
-                else if (HasActiveFabricErrorOrWarning &&
+                else if (this.HasActiveFabricErrorOrWarning &&
                          this.osStatus != null &&
                          this.osStatus.ToUpper() == "OK")
                 {
@@ -248,52 +263,51 @@ namespace FabricObserver
                     string healthMessage = $"OS reporting healthy: {this.osStatus}";
                     var healthReport = new Utilities.HealthReport
                     {
-                        Observer = ObserverName,
-                        NodeName = NodeName,
+                        Observer = this.ObserverName,
+                        NodeName = this.NodeName,
                         HealthMessage = healthMessage,
                         State = HealthState.Ok,
-                        HealthReportTimeToLive = default(TimeSpan)
+                        HealthReportTimeToLive = default(TimeSpan),
                     };
 
-                    HealthReporter.ReportHealthToServiceFabric(healthReport);
+                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                     // Reset internal health state...
-                    HasActiveFabricErrorOrWarning = false;
+                    this.HasActiveFabricErrorOrWarning = false;
                 }
 
-                var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "SysInfo.txt");
+                var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SysInfo.txt");
 
                 // This file is used by the web application (log reader...)...
-                if (!ObserverLogger.TryWriteLogFile(logPath, "Last updated on " +
-                                                    DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss") + " UTC<br/>" +
-                                                    this.osReport))
+                if (!this.ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{this.osReport}"))
                 {
-                    HealthReporter.ReportFabricObserverServiceHealth(FabricServiceContext.ServiceName.OriginalString,
-                                                                     ObserverName,
-                                                                     HealthState.Warning,
-                                                                     "Unable to create SysInfo.txt file...");
+                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                        this.FabricServiceContext.ServiceName.OriginalString,
+                        this.ObserverName,
+                        HealthState.Warning,
+                        "Unable to create SysInfo.txt file...");
                 }
 
                 var persistentReport = new Utilities.HealthReport
                 {
-                    Observer = ObserverName,
+                    Observer = this.ObserverName,
                     HealthMessage = this.osReport,
                     State = HealthState.Ok,
-                    NodeName = NodeName,
-                    HealthReportTimeToLive = TimeSpan.MaxValue
+                    NodeName = this.NodeName,
+                    HealthReportTimeToLive = TimeSpan.MaxValue,
                 };
 
-                HealthReporter.ReportHealthToServiceFabric(persistentReport);
+                this.HealthReporter.ReportHealthToServiceFabric(persistentReport);
 
                 return Task.CompletedTask;
-
             }
             catch (Exception e)
             {
-                HealthReporter.ReportFabricObserverServiceHealth(FabricServiceContext.ServiceName.OriginalString,
-                                                                 ObserverName,
-                                                                 HealthState.Error,
-                                                                 $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Error,
+                    $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
                 throw;
             }
         }

@@ -12,28 +12,35 @@ namespace FabricObserver.Utilities
     internal class DiskUsage : IDisposable
     {
         internal string Drive { get; private set; }
+
         private WindowsPerfCounters winPerfCounters;
         private bool isDisposed = false;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DiskUsage"/> class.
+        /// </summary>
         public DiskUsage()
         {
             var driveLetter = Environment.CurrentDirectory.Substring(0, 2);
-            Drive = driveLetter;
+            this.Drive = driveLetter;
             this.winPerfCounters = new WindowsPerfCounters();
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DiskUsage"/> class.
+        /// </summary>
+        /// <param name="driveLetter">Drive letter...</param>
         public DiskUsage(string driveLetter)
         {
-            Drive = driveLetter;
+            this.Drive = driveLetter;
             this.winPerfCounters = new WindowsPerfCounters();
         }
 
-        // end ctors
         /// <summary>
-        /// Returns the percent used space (as an integer value) of the current drive where this code is running from...
+        /// Gets the percent used space (as an integer value) of the current drive where this code is running from...
         /// Or from whatever drive letter you supplied to DiskUsage(string driveLetter) ctor...
         /// </summary>
-        internal int PercentUsedSpace => GetCurrentDiskSpaceUsedPercent(Drive);
+        internal int PercentUsedSpace => this.GetCurrentDiskSpaceUsedPercent(this.Drive);
 
         internal int GetCurrentDiskSpaceUsedPercent(string drive)
         {
@@ -63,7 +70,7 @@ namespace FabricObserver.Utilities
                 }
 
                 var name = allDrives[i].Name;
-                var pctUsed = GetCurrentDiskSpaceUsedPercent(allDrives[i].Name);
+                var pctUsed = this.GetCurrentDiskSpaceUsedPercent(allDrives[i].Name);
                 tuples.SetValue(new Tuple<string, int>(name, pctUsed), i);
             }
 
@@ -115,9 +122,10 @@ namespace FabricObserver.Utilities
             }
         }
 
-        internal float PerfCounterGetDiskIOInfo(string instance,
-                                                string category,
-                                                string countername)
+        internal float PerfCounterGetDiskIOInfo(
+            string instance,
+            string category,
+            string countername)
         {
             if (countername.Contains("Read"))
             {
@@ -133,8 +141,6 @@ namespace FabricObserver.Utilities
         {
             return this.winPerfCounters.PerfCounterGetAverageDiskQueueLength(instance);
         }
-
-        #region IDisposable Support
 
         protected virtual void Dispose(bool disposing)
         {
@@ -153,20 +159,19 @@ namespace FabricObserver.Utilities
             }
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
-            Dispose(true);
-            //GC.SuppressFinalize(this);
+            this.Dispose(true);
         }
-        #endregion
     }
 
-    enum SizeUnit
+    public enum SizeUnit
     {
         Bytes,
         Kilobytes,
         Megabytes,
         Gigabytes,
-        Terabytes
+        Terabytes,
     }
 }

@@ -10,12 +10,14 @@ namespace FabricObserver.Model
     public class NetworkObserverConfig
     {
         public string AppTarget { get; set; }
+
         public List<Endpoint> Endpoints { get; set; }
     }
 
     public class Endpoint
     {
         public string HostName { get; set; }
+
         public int Port { get; set; }
     }
 }

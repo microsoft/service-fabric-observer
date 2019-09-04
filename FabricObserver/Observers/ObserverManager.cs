@@ -3,9 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricObserver.Interfaces;
-using FabricObserver.Utilities;
-using FabricObserver.Utilities.Telemetry;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,40 +13,38 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Interfaces;
+using FabricObserver.Utilities;
+using FabricObserver.Utilities.Telemetry;
 
 namespace FabricObserver
 {
     // This class manages the lifetime of all observers from instantiation to "destruction",
-    // and sequentially runs all observer instances in a never-ending while loop, 
+    // and sequentially runs all observer instances in a never-ending while loop,
     // with optional sleeps, and reliable shutdown event handling.
     public class ObserverManager : IDisposable
     {
-        private ObserverHealthReporter HealthReporter { get; set; }
-        private EventWaitHandle globalShutdownEventHandle = null;
-        private volatile bool shutdownSignalled = false;
-        private int shutdownGracePeriodInSeconds = 2;
-        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(5);
-        private CancellationToken token;
-        private CancellationTokenSource cts;
-        private bool hasDisposed = false;
-        private static bool etwEnabled = false;
-        private string Fqdn { get; set; }
-        private Logger Logger { get; set; }
-        private DataTableFileLogger DataLogger { get; set; }
-        internal List<ObserverBase> Observers;
         public string ApplicationName { get; set; }
+
         public bool IsObserverRunning { get; set; } = false;
+
         public static int ObserverExecutionLoopSleepSeconds { get; private set; } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
+
         public static FabricClient FabricClientInstance { get; set; }
+
         public static StatelessServiceContext FabricServiceContext { get; set; }
+
         public static IObserverTelemetryProvider TelemetryClient { get; set; }
+
         public static bool TelemetryEnabled { get; set; } = false;
+
         public static bool EtwEnabled
         {
             get
             {
-               return bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) ? etwEnabled : false;
+                return bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) ? etwEnabled : false;
             }
+
             set
             {
                 etwEnabled = value;
@@ -76,34 +71,58 @@ namespace FabricObserver
             }
         }
 
-        public ObserverManager(StatelessServiceContext context,
-                               CancellationToken token)
+        private ObserverHealthReporter HealthReporter { get; set; }
+
+        private EventWaitHandle globalShutdownEventHandle = null;
+        private volatile bool shutdownSignalled = false;
+        private int shutdownGracePeriodInSeconds = 2;
+        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(5);
+        private CancellationToken token;
+        private CancellationTokenSource cts;
+        private bool hasDisposed = false;
+        private static bool etwEnabled = false;
+        private readonly List<ObserverBase> observers;
+
+        private string Fqdn { get; set; }
+
+        private Logger Logger { get; set; }
+
+        private DataTableFileLogger DataLogger { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverManager"/> class.
+        /// </summary>
+        public ObserverManager(
+            StatelessServiceContext context,
+            CancellationToken token)
         {
             this.token = token;
             this.cts = new CancellationTokenSource();
-            this.token.Register(() => { ShutdownHandler(this, null); });
+            this.token.Register(() => { this.ShutdownHandler(this, null); });
             FabricClientInstance = new FabricClient();
             FabricServiceContext = context;
-            DataLogger = new DataTableFileLogger();
-            Logger = new Logger("ObserverManager");
-            HealthReporter = new ObserverHealthReporter(Logger);
-            SetPropertiesFromConfigurationParameters();
+            this.DataLogger = new DataTableFileLogger();
+            this.Logger = new Logger("ObserverManager");
+            this.HealthReporter = new ObserverHealthReporter(this.Logger);
+            this.SetPropertiesFromConfigurationParameters();
 
             // Populate the Observer list for the sequential run loop...
-            this.Observers = GetObservers();
+            this.observers = GetObservers();
         }
 
-        // For unit testing...
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverManager"/> class.
+        /// </summary>
         public ObserverManager(ObserverBase observer)
         {
             this.cts = new CancellationTokenSource();
             this.token = this.cts.Token;
-            this.token.Register(() => { ShutdownHandler(this, null); });
-            Logger = new Logger("ObserverManagerSingleObserverRun");
-            HealthReporter = new ObserverHealthReporter(Logger);
-            this.Observers = new List<ObserverBase>(new ObserverBase[]
+            this.token.Register(() => { this.ShutdownHandler(this, null); });
+            this.Logger = new Logger("ObserverManagerSingleObserverRun");
+            this.HealthReporter = new ObserverHealthReporter(this.Logger);
+            this.observers = new List<ObserverBase>(new ObserverBase[]
             {
-                observer
+                observer,
             });
         }
 
@@ -134,8 +153,13 @@ namespace FabricObserver
 
                 return parameter.Value;
             }
-            catch (FabricElementNotFoundException) { }
-            catch (NullReferenceException) { }
+            catch (FabricElementNotFoundException)
+            {
+            }
+            catch (NullReferenceException)
+            {
+            }
+
             return null;
         }
 
@@ -145,14 +169,14 @@ namespace FabricObserver
             {
                 Thread.Sleep(this.shutdownGracePeriodInSeconds * 1000);
 
-                shutdownSignalled = true;
+                this.shutdownSignalled = true;
                 this.globalShutdownEventHandle?.Set();
-                StopObservers();
+                this.StopObservers();
             }
         }
 
         // This impl is to ensure FO exits if shutdown is requested while the over loop is sleeping
-        // So, instead of blocking with a Thread.Sleep, for example, ThreadSleep is used to ensure 
+        // So, instead of blocking with a Thread.Sleep, for example, ThreadSleep is used to ensure
         // we can receive signals and act accordingly during thread sleep state...
         private void ThreadSleep(EventWaitHandle ewh, TimeSpan timeout)
         {
@@ -165,13 +189,13 @@ namespace FabricObserver
             var elapsedTime = new TimeSpan(0, 0, 0);
             var stopwatch = new Stopwatch();
 
-            while (!shutdownSignalled &&
+            while (!this.shutdownSignalled &&
                    !this.token.IsCancellationRequested &&
                    timeout > elapsedTime)
             {
                 stopwatch.Start();
 
-                // the event can be signalled by CtrlC, 
+                // the event can be signalled by CtrlC,
                 // Exit ASAP when the program terminates (i.e., shutdown/abort is signalled...)
                 ewh.WaitOne(timeout.Subtract(elapsedTime));
                 stopwatch.Stop();
@@ -191,26 +215,26 @@ namespace FabricObserver
         {
             var observers = new List<ObserverBase>(new ObserverBase[]
             {
-                // Observes, records and reports on general OS properties and state... 
-                // Run this first to get basic information about the VM state, 
+                // Observes, records and reports on general OS properties and state...
+                // Run this first to get basic information about the VM state,
                 // Firewall rules in place, active ports, basic resource infomation...
                 new OSObserver(),
 
                 // User-configurable observer that records and reports on local disk (node level, host level...) properties...
-                // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service, 
+                // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service,
                 // for use in upstream analysis, etc...
                 new DiskObserver(),
 
-                // User-configurable, VM-level machine resource observer that records and reports on node-level resource usage conditions, 
-                // recording data in CSVs. Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service, 
+                // User-configurable, VM-level machine resource observer that records and reports on node-level resource usage conditions,
+                // recording data in CSVs. Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service,
                 // for use in upstream analysis, etc...
                 new NodeObserver(),
 
                 // This observer only collects basic SF information for use in reporting (from Windows Registry...) in user-configurable intervals...
                 new SFConfigurationObserver(),
 
-                // Observes, records and reports on CPU/Mem usage, established port count, Disk IO (r/w) for Service Fabric System services 
-                // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc...). Long-running data is stored in app-specific CSVs (optional) 
+                // Observes, records and reports on CPU/Mem usage, established port count, Disk IO (r/w) for Service Fabric System services
+                // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc...). Long-running data is stored in app-specific CSVs (optional)
                 // or sent to diagnostic/telemetry service, for use in upstream analysis, etc...
                 new FabricSystemObserver(),
 
@@ -219,7 +243,7 @@ namespace FabricObserver
                 new AppObserver(),
 
                 // NetworkObserver for Internet connection state of user-supplied host/port pairs, active port and firewall rule count monitoring...
-                new NetworkObserver()
+                new NetworkObserver(),
             });
 
             // Only return a list with enabled observer instances...
@@ -228,51 +252,56 @@ namespace FabricObserver
 
         private void SetPropertiesFromConfigurationParameters()
         {
-            ApplicationName = FabricRuntime.GetActivationContext().ApplicationName;
+            this.ApplicationName = FabricRuntime.GetActivationContext().ApplicationName;
 
             // Observers
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout),
-                                                   out int result))
+            if (int.TryParse(
+                GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout),
+                out int result))
             {
                 this.observerExecTimeout = TimeSpan.FromSeconds(result);
             }
 
             // Loggers
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter),
-                                                    out bool enableVerboseLogging))
+            if (bool.TryParse(
+                GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter),
+                out bool enableVerboseLogging))
             {
-                Logger.EnableVerboseLogging = enableVerboseLogging;
+                this.Logger.EnableVerboseLogging = enableVerboseLogging;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds),
-                                                   out int execFrequency))
+            if (int.TryParse(
+                GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds),
+                out int execFrequency))
             {
                 ObserverExecutionLoopSleepSeconds = execFrequency;
 
-                Logger.LogInfo($"ExecutionFrequency is {ObserverExecutionLoopSleepSeconds} Seconds");
+                this.Logger.LogInfo($"ExecutionFrequency is {ObserverExecutionLoopSleepSeconds} Seconds");
             }
 
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableLongRunningCSVLogging),
-                                                    out bool enableCSVLogging))
+            if (bool.TryParse(
+                GetConfigSettingValue(ObserverConstants.EnableLongRunningCSVLogging),
+                out bool enableCSVLogging))
             {
-                DataLogger.EnableCsvLogging = enableCSVLogging;
+                this.DataLogger.EnableCsvLogging = enableCSVLogging;
             }
 
             string dataLogPath = GetConfigSettingValue(ObserverConstants.DataLogPath);
             if (!string.IsNullOrEmpty(dataLogPath))
             {
-                DataLogger.DataLogFolderPath = dataLogPath;
+                this.DataLogger.DataLogFolderPath = dataLogPath;
             }
 
             string observerLogPath = GetConfigSettingValue(ObserverConstants.ObserverLogPath);
             if (!string.IsNullOrEmpty(observerLogPath))
             {
-                Logger.LogFolderBasePath = observerLogPath;
+                this.Logger.LogFolderBasePath = observerLogPath;
             }
 
             // Shutdown
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverShutdownGracePeriodInSeconds),
-                                                   out int shutdownGracePeriodInSeconds))
+            if (int.TryParse(
+                GetConfigSettingValue(ObserverConstants.ObserverShutdownGracePeriodInSeconds),
+                out int shutdownGracePeriodInSeconds))
             {
                 this.shutdownGracePeriodInSeconds = shutdownGracePeriodInSeconds;
             }
@@ -310,10 +339,10 @@ namespace FabricObserver
                 this.globalShutdownEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 
                 // Register for console cancel/shutdown events (Ctrl+C/Ctrl+Break/shutdown) and wait for an event
-                Console.CancelKeyPress += ShutdownHandler;
+                Console.CancelKeyPress += this.ShutdownHandler;
 
                 // Continue running until a shutdown signal is sent
-                Logger.LogInfo("Starting Observers loop...");
+                this.Logger.LogInfo("Starting Observers loop...");
 
                 // Observers run sequentially. See RunObservers impl...
                 while (true)
@@ -321,24 +350,25 @@ namespace FabricObserver
                     if (this.shutdownSignalled || this.token.IsCancellationRequested)
                     {
                         this.globalShutdownEventHandle.Set();
-                        Logger.LogInfo("Shutdown signalled. Stopping...");
+                        this.Logger.LogInfo("Shutdown signalled. Stopping...");
                         break;
                     }
 
-                    if (RunObservers())
-                    { 
+                    if (this.RunObservers())
+                    {
                         if (ObserverExecutionLoopSleepSeconds > 0)
                         {
-                            Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again...");
-                            ThreadSleep(this.globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
+                            this.Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again...");
+                            this.ThreadSleep(this.globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
                         }
+
                         Logger.Flush();
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Unhanded Exception. Taking down FO process.\n Details: {ex.ToString()}");
+                this.Logger.LogError($"Unhanded Exception. Taking down FO process.\n Details: {ex.ToString()}");
 
                 // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy...
                 // Don't swallow the exception...
@@ -355,12 +385,12 @@ namespace FabricObserver
                     this.shutdownSignalled = true;
                 }
 
-                SignalAbortToRunningObserver();
-                IsObserverRunning = false;
+                this.SignalAbortToRunningObserver();
+                this.IsObserverRunning = false;
             }
             catch (Exception e)
             {
-                Logger.LogWarning($"Unhandled Exception thrown during ObserverManager.Stop(): {e.ToString()}");
+                this.Logger.LogWarning($"Unhandled Exception thrown during ObserverManager.Stop(): {e.ToString()}");
 
                 throw;
             }
@@ -372,11 +402,11 @@ namespace FabricObserver
         /// </summary>
         private string GetFabricObserverInternalConfiguration()
         {
-            int enabledObserverCount = this.Observers.Where(obs => obs.IsEnabled).Count();
+            int enabledObserverCount = this.observers.Where(obs => obs.IsEnabled).Count();
             string observerList = "{ ";
-            string ret = "";
+            string ret = string.Empty;
 
-            foreach (var obs in this.Observers)
+            foreach (var obs in this.observers)
             {
                 observerList += $"{obs.ObserverName} ";
             }
@@ -390,19 +420,19 @@ namespace FabricObserver
 
         private void SignalAbortToRunningObserver()
         {
-            Logger.LogInfo("Signalling task cancellation to currently running Observer...");
+            this.Logger.LogInfo("Signalling task cancellation to currently running Observer...");
             this.cts.Cancel();
-            Logger.LogInfo("Successfully signalled cancellation to currently running Observer...");
+            this.Logger.LogInfo("Successfully signalled cancellation to currently running Observer...");
         }
 
         private bool RunObservers()
         {
-            // Continue to run the next Observer if current one fails while initializing or running 
+            // Continue to run the next Observer if current one fails while initializing or running
             var exceptionBuilder = new StringBuilder();
             var exceptionStackTraceBuilder = new StringBuilder();
             bool allExecuted = true;
 
-            foreach (var observer in this.Observers)
+            foreach (var observer in this.observers)
             {
                 try
                 {
@@ -418,24 +448,24 @@ namespace FabricObserver
                         continue;
                     }
 
-                    Logger.LogInfo($"Starting {observer.ObserverName}");
+                    this.Logger.LogInfo($"Starting {observer.ObserverName}");
 
-                    IsObserverRunning = true;
+                    this.IsObserverRunning = true;
 
                     // Synchronous call...
                     var isCompleted = observer.ObserveAsync(this.cts.Token).Wait(this.observerExecTimeout);
-                    IsObserverRunning = false;
+                    this.IsObserverRunning = false;
 
                     // The observer is taking too long (hung?), move on to next observer...
-                    // Currently, this observer will not run again for the lifetime of this FO service instance. 
-                    // So, application will need a restart... 
+                    // Currently, this observer will not run again for the lifetime of this FO service instance.
+                    // So, application will need a restart...
                     // TODO: Be less restrictive, but do fix the broken observer if/when this happens...
                     if (!isCompleted)
                     {
                         string observerHealthWarning = observer.ObserverName + $" has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it...";
 
-                        Logger.LogError(observerHealthWarning);
+                        this.Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
 
                         continue;
@@ -445,16 +475,16 @@ namespace FabricObserver
 
                     if (observer.HasActiveFabricErrorOrWarning)
                     {
-                        if (!string.IsNullOrEmpty(Fqdn))
+                        if (!string.IsNullOrEmpty(this.Fqdn))
                         {
-                            errWarnMsg = $"<a style=\"font-weight: bold; color: red;\" href=\"http://{Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>.";
+                            errWarnMsg = $"<a style=\"font-weight: bold; color: red;\" href=\"http://{this.Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>.";
                         }
                         else
                         {
                             errWarnMsg = $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
                         }
 
-                        Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
+                        this.Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
                     }
                     else
                     {
@@ -462,27 +492,31 @@ namespace FabricObserver
                         _ = observer.ObserverLogger.TryDeleteInstanceLog();
                         try
                         {
-                            if (File.Exists(Logger.FilePath))
+                            if (File.Exists(this.Logger.FilePath))
                             {
                                 // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s)...
-                                File.WriteAllLines(Logger.FilePath,
-                                                   File.ReadLines(Logger.FilePath)
+                                File.WriteAllLines(
+                                    this.Logger.FilePath,
+                                    File.ReadLines(this.Logger.FilePath)
                                                    .Where(line => !line.Contains(observer.ObserverName)).ToList());
                             }
                         }
-                        catch { }
-                        Logger.LogInfo($"Successfully ran {observer.ObserverName}. " + errWarnMsg);
+                        catch
+                        {
+                        }
+
+                        this.Logger.LogInfo($"Successfully ran {observer.ObserverName}. " + errWarnMsg);
                     }
                 }
                 catch (AggregateException ex)
                 {
-                    IsObserverRunning = false;
+                    this.IsObserverRunning = false;
 
                     if (!(ex.InnerException is OperationCanceledException) && !(ex.InnerException is TaskCanceledException))
                     {
-                        Logger.LogError($"Exception while running {observer.ObserverName}");
-                        Logger.LogError($"Exception: {ex.InnerException.Message}");
-                        Logger.LogError($"StackTrace: {ex.InnerException.StackTrace}");
+                        this.Logger.LogError($"Exception while running {observer.ObserverName}");
+                        this.Logger.LogError($"Exception: {ex.InnerException.Message}");
+                        this.Logger.LogError($"StackTrace: {ex.InnerException.StackTrace}");
 
                         exceptionBuilder.AppendLine($"{observer.ObserverName} - Exception: {ex.InnerException.Message}");
                         exceptionStackTraceBuilder.AppendLine($"{observer.ObserverName} - StackTrace: {ex.InnerException.StackTrace}");
@@ -493,7 +527,7 @@ namespace FabricObserver
                 catch (Exception e)
                 {
                     var message = $"Unhandled Exception from {observer.ObserverName} rethrown from ObserverManager: {e.ToString()}";
-                    Logger.LogError(message);
+                    this.Logger.LogError(message);
 
                     throw;
                 }
@@ -501,26 +535,26 @@ namespace FabricObserver
 
             if (allExecuted)
             {
-                Logger.LogInfo(ObserverConstants.AllObserversExecutedMessage);
-                HealthReporter.ReportFabricObserverServiceHealth(ObserverConstants.ObserverManangerName,
-                                                                 ApplicationName,
-                                                                 HealthState.Ok,
-                                                                 ObserverConstants.AllObserversExecutedMessage);
+                this.Logger.LogInfo(ObserverConstants.AllObserversExecutedMessage);
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    ObserverConstants.ObserverManangerName,
+                    this.ApplicationName,
+                    HealthState.Ok,
+                    ObserverConstants.AllObserversExecutedMessage);
             }
             else
             {
-                Logger.LogError(exceptionBuilder.ToString());
-                Logger.LogError(exceptionStackTraceBuilder.ToString());
-                HealthReporter.ReportFabricObserverServiceHealth(ObserverConstants.ObserverManangerName,
-                                                                 ApplicationName,
-                                                                 HealthState.Error,
-                                                                 exceptionBuilder.ToString());
+                this.Logger.LogError(exceptionBuilder.ToString());
+                this.Logger.LogError(exceptionStackTraceBuilder.ToString());
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    ObserverConstants.ObserverManangerName,
+                    this.ApplicationName,
+                    HealthState.Error,
+                    exceptionBuilder.ToString());
             }
 
             return allExecuted;
         }
-
-        #region IDisposable Support
 
         protected virtual void Dispose(bool disposing)
         {
@@ -528,9 +562,9 @@ namespace FabricObserver
             {
                 if (disposing)
                 {
-                    if (IsObserverRunning)
+                    if (this.IsObserverRunning)
                     {
-                        StopObservers();
+                        this.StopObservers();
                     }
 
                     if (this.globalShutdownEventHandle != null)
@@ -538,14 +572,14 @@ namespace FabricObserver
                         this.globalShutdownEventHandle.Dispose();
                     }
 
-                    if (this.Observers?.Count > 0)
+                    if (this.observers?.Count > 0)
                     {
-                        foreach (var obs in this.Observers)
+                        foreach (var obs in this.observers)
                         {
                             obs?.Dispose();
                         }
 
-                        this.Observers.Clear();
+                        this.observers.Clear();
                     }
 
                     if (FabricClientInstance != null)
@@ -571,11 +605,11 @@ namespace FabricObserver
             }
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
-            Dispose(true);
+            this.Dispose(true);
             GC.SuppressFinalize(this);
         }
-        #endregion
     }
 }

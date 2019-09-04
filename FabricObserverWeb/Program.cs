@@ -3,13 +3,13 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using Microsoft.ServiceFabric.Services.Runtime;
-using System;
-using System.Diagnostics;
-using System.Threading;
-
 namespace FabricObserver
 {
+    using System;
+    using System.Diagnostics;
+    using System.Threading;
+    using Microsoft.ServiceFabric.Services.Runtime;
+
     internal static class Program
     {
         /// <summary>
@@ -24,15 +24,17 @@ namespace FabricObserver
                 // When Service Fabric creates an instance of this service type,
                 // an instance of the class is created in this host process.
 
-                ServiceRuntime.RegisterServiceAsync("FabricObserverWebType",
-                                                    context => new FabricObserverWeb(context)) 
+                ServiceRuntime.RegisterServiceAsync(
+                    "FabricObserverWebType",
+                    context => new FabricObserverWeb(context))
                                                     .GetAwaiter()
                                                     .GetResult();
 
-                ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, 
-                                                                 typeof(FabricObserverWeb).Name);
+                ServiceEventSource.Current.ServiceTypeRegistered(
+                    Process.GetCurrentProcess().Id,
+                    typeof(FabricObserverWeb).Name);
 
-                // Prevents this host process from terminating so services keeps running. 
+                // Prevents this host process from terminating so services keeps running.
                 Thread.Sleep(Timeout.Infinite);
             }
             catch (Exception e)

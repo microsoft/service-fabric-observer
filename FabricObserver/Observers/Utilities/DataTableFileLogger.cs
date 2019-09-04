@@ -3,22 +3,27 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
+using System.IO;
 using FabricObserver.Interfaces;
 using NLog;
 using NLog.Targets;
 using NLog.Time;
-using System;
-using System.IO;
 
 namespace FabricObserver.Utilities
 {
     // CSV file logger for long-running monitoring data (memory/cpu/disk/network usage data)...
     public class DataTableFileLogger : IDataTableFileLogger<ILogger>
     {
-        internal static ILogger logger = null;
+        /// <inheritdoc/>
         public bool EnableCsvLogging { get; set; } = false;
+
+        /// <inheritdoc/>
         public string DataLogFolderPath { get; set; } = null;
 
+        private static ILogger Logger { get; set; } = null;
+
+        /// <inheritdoc/>
         public void ConfigureLogger(string filename)
         {
             // default log directory...
@@ -26,16 +31,16 @@ namespace FabricObserver.Utilities
             string logPath = windrive + "\\observer_logs\\fabric_observer_data";
 
             // log directory supplied in config... Set in ObserverManager.
-            if (!string.IsNullOrEmpty(DataLogFolderPath))
+            if (!string.IsNullOrEmpty(this.DataLogFolderPath))
             {
-                logPath = DataLogFolderPath;
+                logPath = this.DataLogFolderPath;
             }
 
             var csvPath = Path.Combine(logPath, filename + ".csv");
 
-            if (logger == null)
+            if (Logger == null)
             {
-                logger = LogManager.GetCurrentClassLogger();
+                Logger = LogManager.GetCurrentClassLogger();
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
@@ -55,36 +60,43 @@ namespace FabricObserver.Utilities
             <column name="stat" layout="${event-properties:stat}" />
             <column name="value" layout="${event-properties:value}" />
         */
-        public void LogData(string fileName,
-                            string target,
-                            string metric,
-                            string stat,
-                            double value)
+
+        /// <inheritdoc/>
+        public void LogData(
+            string fileName,
+            string target,
+            string metric,
+            string stat,
+            double value)
         {
-            // If you provided an IObserverTelemetry impl, then this will, for example, 
+            // If you provided an IObserverTelemetry impl, then this will, for example,
             // send traces up to App Insights (Azure). See the App.config for settings example.
-            if (!EnableCsvLogging)
+            if (!this.EnableCsvLogging)
             {
                 if (!ObserverManager.TelemetryEnabled)
                 {
                     return;
                 }
 
-                if (logger == null)
+                if (Logger == null)
                 {
-                    logger = LogManager.GetCurrentClassLogger();
+                    Logger = LogManager.GetCurrentClassLogger();
                 }
 
-                logger.Info($"{target}/{metric}/{stat}: {value}");
+                Logger.Info($"{target}/{metric}/{stat}: {value}");
 
                 return;
             }
 
             // Else, reconfigure logger to write to file on disk...
-            ConfigureLogger(fileName);
+            this.ConfigureLogger(fileName);
 
-            logger.Info("{target}{metric}{stat}{value}",
-                         target, metric, stat, value);
+            Logger.Info(
+                "{target}{metric}{stat}{value}",
+                target,
+                metric,
+                stat,
+                value);
         }
 
         internal static void ShutDown()
