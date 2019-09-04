@@ -24,6 +24,8 @@ namespace FabricObserver.Utilities
         // Memory
         public const string ErrorMemoryCommitted = "FO009";
         public const string WarningMemoryCommitted = "FO0010";
+        public const string ErrorMemoryPercentUsed = "FO0023";
+        public const string WarningMemoryPercentUsed = "FO0024";
 
         // Networking
         public const string ErrorNetworkEndpointUnreachable = "FO0011";
