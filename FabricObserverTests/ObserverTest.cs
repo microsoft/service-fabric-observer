@@ -332,7 +332,7 @@ namespace FabricObserverTests
             });
 
             objReady?.Wait();
-    
+
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
                 // wait...

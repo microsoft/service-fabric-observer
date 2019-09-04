@@ -22,6 +22,7 @@ namespace FabricObserver
         private FabricResourceUsageData<int> activePortsData = null;
         private FabricResourceUsageData<int> ephemeralPortsData = null;
         private WindowsPerfCounters perfCounters;
+        private bool disposed = false;
 
         public int CpuErrorUsageThresholdPct { get; set; }
 
@@ -395,11 +396,9 @@ namespace FabricObserver
             }
         }
 
-        bool disposed = false;
-
         protected override void Dispose(bool disposing)
         {
-            if (disposed)
+            if (this.disposed)
             {
                 return;
             }

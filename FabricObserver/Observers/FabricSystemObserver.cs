@@ -43,6 +43,7 @@ namespace FabricObserver
         // amount of time, in seconds, it took this observer to complete run run...
         private TimeSpan runtime = TimeSpan.MinValue;
         private Stopwatch stopWatch;
+        private bool disposed = false;
 
         // Health Report data container - For use in analysis to deterWarne health state...
         private List<FabricResourceUsageData<int>> allCpuData;
@@ -666,6 +667,31 @@ namespace FabricObserver
             return Task.CompletedTask;
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (this.perfCounters != null)
+                {
+                    this.perfCounters.Dispose();
+                    this.perfCounters = null;
+                }
+
+                if (this.diskUsage != null)
+                {
+                    this.diskUsage.Dispose();
+                    this.diskUsage = null;
+                }
+
+                this.disposed = true;
+            }
+        }
+
         private void ProcessResourceDataList<T>(
             List<FabricResourceUsageData<T>> data,
             T thresholdError,
@@ -756,33 +782,6 @@ namespace FabricObserver
             }
 
             return HealthState.Ok;
-        }
-
-        bool disposed = false;
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-                if (this.perfCounters != null)
-                {
-                    this.perfCounters.Dispose();
-                    this.perfCounters = null;
-                }
-
-                if (this.diskUsage != null)
-                {
-                    this.diskUsage.Dispose();
-                    this.diskUsage = null;
-                }
-
-                this.disposed = true;
-            }
         }
     }
 }

@@ -39,6 +39,7 @@ namespace FabricObserver
         private List<ReplicaMonitoringInfo> replicaOrInstanceList;
         private WindowsPerfCounters perfCounters = null;
         private DiskUsage diskUsage = null;
+        private bool disposed = false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
@@ -521,6 +522,31 @@ namespace FabricObserver
             }
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (this.perfCounters != null)
+                {
+                    this.perfCounters.Dispose();
+                    this.perfCounters = null;
+                }
+
+                if (this.diskUsage != null)
+                {
+                    this.diskUsage.Dispose();
+                    this.diskUsage = null;
+                }
+
+                this.disposed = true;
+            }
+        }
+
         private void LogAllAppResourceDataToCsv(string appName)
         {
             if (!this.CsvFileLogger.EnableCsvLogging && !this.IsTelemetryEnabled)
@@ -604,33 +630,6 @@ namespace FabricObserver
                 Math.Round(Convert.ToDouble(this.allAppTotalActivePortsData.Where(x => x.Id == appName)
                                                                    .FirstOrDefault().MaxDataValue)));
             DataTableFileLogger.Flush();
-        }
-
-        bool disposed = false;
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-                if (this.perfCounters != null)
-                {
-                    this.perfCounters.Dispose();
-                    this.perfCounters = null;
-                }
-
-                if (this.diskUsage != null)
-                {
-                    this.diskUsage.Dispose();
-                    this.diskUsage = null;
-                }
-
-                this.disposed = true;
-            }
         }
     }
 }
