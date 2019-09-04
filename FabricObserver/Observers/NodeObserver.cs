@@ -394,5 +394,23 @@ namespace FabricObserver
                 throw;
             }
         }
+
+        bool disposed = false;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            if (disposing && this.perfCounters != null)
+            {
+                this.perfCounters.Dispose();
+                this.perfCounters = null;
+            }
+
+            this.disposed = true;
+        }
     }
 }

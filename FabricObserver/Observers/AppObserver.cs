@@ -605,5 +605,32 @@ namespace FabricObserver
                                                                    .FirstOrDefault().MaxDataValue)));
             DataTableFileLogger.Flush();
         }
+
+        bool disposed = false;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (this.perfCounters != null)
+                {
+                    this.perfCounters.Dispose();
+                    this.perfCounters = null;
+                }
+
+                if (this.diskUsage != null)
+                {
+                    this.diskUsage.Dispose();
+                    this.diskUsage = null;
+                }
+
+                this.disposed = true;
+            }
+        }
     }
 }
