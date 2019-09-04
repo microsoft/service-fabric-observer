@@ -91,17 +91,17 @@
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="CpuErrorLimitPercent" Value="0" />
+    <Parameter Name="CpuErrorLimitPercent" Value="" />
     <Parameter Name="CpuWarningLimitPercent" Value="80" />
-    <Parameter Name="MemoryErrorLimitMB" Value="0" />
-    <Parameter Name="MemoryWarningLimitMB" Value ="0" />
-    <Parameter Name="MemoryErrorLimitPercent" Value="0" />
+    <Parameter Name="MemoryErrorLimitMB" Value="" />
+    <Parameter Name="MemoryWarningLimitMB" Value ="" />
+    <Parameter Name="MemoryErrorLimitPercent" Value="" />
     <Parameter Name="MemoryWarningLimitPercent" Value ="80" />
-    <Parameter Name="NetworkErrorActivePorts" Value="0" />
+    <Parameter Name="NetworkErrorActivePorts" Value="" />
     <Parameter Name="NetworkWarningActivePorts" Value="45000" />
-    <Parameter Name="NetworkErrorFirewallRules" Value="0" />
+    <Parameter Name="NetworkErrorFirewallRules" Value="" />
     <Parameter Name="NetworkWarningFirewallRules" Value="2500" />
-    <Parameter Name="NetworkErrorEphemeralPorts" Value="0" />
+    <Parameter Name="NetworkErrorEphemeralPorts" Value="" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
   </Section>
   <Section Name="OSObserverConfiguration">
