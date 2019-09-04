@@ -17,36 +17,36 @@ namespace FabricObserverTests
         /// <summary>
         /// Initializes a new instance of the <see cref="MockCodePackageActivationContext"/> class.
         /// </summary>
-        /// <param name="ApplicationName"></param>
-        /// <param name="ApplicationTypeName"></param>
-        /// <param name="CodePackageName"></param>
-        /// <param name="CodePackageVersion"></param>
-        /// <param name="Context"></param>
-        /// <param name="LogDirectory"></param>
-        /// <param name="TempDirectory"></param>
-        /// <param name="WorkDirectory"></param>
-        /// <param name="ServiceManifestName"></param>
-        /// <param name="ServiceManifestVersion"></param>
+        /// <param name="applicationName"></param>
+        /// <param name="applicationTypeName"></param>
+        /// <param name="codePackageName"></param>
+        /// <param name="codePackageVersion"></param>
+        /// <param name="context"></param>
+        /// <param name="logDirectory"></param>
+        /// <param name="tempDirectory"></param>
+        /// <param name="workDirectory"></param>
+        /// <param name="serviceManifestName"></param>
+        /// <param name="serviceManifestVersion"></param>
         public MockCodePackageActivationContext(
-            string ApplicationName,
-            string ApplicationTypeName,
-            string CodePackageName,
-            string CodePackageVersion,
-            string Context,
-            string LogDirectory,
-            string TempDirectory,
-            string WorkDirectory,
-            string ServiceManifestName,
-            string ServiceManifestVersion)
+            string applicationName,
+            string applicationTypeName,
+            string codePackageName,
+            string codePackageVersion,
+            string context,
+            string logDirectory,
+            string tempDirectory,
+            string workDirectory,
+            string serviceManifestName,
+            string serviceManifestVersion)
         {
-            this.ApplicationName = ApplicationName;
-            this.ApplicationTypeName = ApplicationTypeName;
-            this.CodePackageName = CodePackageName;
-            this.CodePackageVersion = CodePackageVersion;
-            this.ContextId = Context;
-            this.LogDirectory = LogDirectory;
-            this.TempDirectory = TempDirectory;
-            this.WorkDirectory = WorkDirectory;
+            this.ApplicationName = applicationName;
+            this.ApplicationTypeName = applicationTypeName;
+            this.CodePackageName = codePackageName;
+            this.CodePackageVersion = codePackageVersion;
+            this.ContextId = context;
+            this.LogDirectory = logDirectory;
+            this.TempDirectory = tempDirectory;
+            this.WorkDirectory = workDirectory;
         }
 
         private string ServiceManifestName { get; set; }
