@@ -47,6 +47,8 @@ namespace FabricObserverTests
             this.LogDirectory = logDirectory;
             this.TempDirectory = tempDirectory;
             this.WorkDirectory = workDirectory;
+            this.ServiceManifestName = serviceManifestName;
+            this.ServiceManifestVersion = serviceManifestVersion;
         }
 
         private string ServiceManifestName { get; set; }

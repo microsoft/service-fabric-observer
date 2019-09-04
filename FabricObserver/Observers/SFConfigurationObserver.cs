@@ -210,71 +210,75 @@ namespace FabricObserver
                 }
 
                 // Application Info...
-                sb.AppendLine("\nDeployed Apps:\n");
-                foreach (var app in appList)
+                if (appList != null)
                 {
-                    token.ThrowIfCancellationRequested();
+                    sb.AppendLine("\nDeployed Apps:\n");
 
-                    var appName = app.ApplicationName;
-                    var appType = app.ApplicationTypeName;
-                    var appVersion = app.ApplicationTypeVersion;
-                    var healthState = app.HealthState.ToString();
-                    var status = app.ApplicationStatus.ToString();
-
-                    sb.AppendLine("Application Name: " + appName.OriginalString);
-                    sb.AppendLine("Type: " + appType);
-                    sb.AppendLine("Version: " + appVersion);
-                    sb.AppendLine("Health state: " + healthState);
-                    sb.AppendLine("Status: " + status);
-
-                    // App's Service(s)...
-                    sb.AppendLine("\n\tServices:");
-                    var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
-                    var replicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, app.ApplicationName).ConfigureAwait(true);
-
-                    foreach (var service in serviceList)
+                    foreach (var app in appList)
                     {
-                        var kind = service.ServiceKind;
-                        var type = service.ServiceTypeName;
-                        var serviceName = service.ServiceName;
-                        var serviceDescription = await this.FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
-                        var processModel = serviceDescription.ServicePackageActivationMode.ToString();
+                        token.ThrowIfCancellationRequested();
 
-                        foreach (var rep in replicaList)
+                        var appName = app.ApplicationName;
+                        var appType = app.ApplicationTypeName;
+                        var appVersion = app.ApplicationTypeVersion;
+                        var healthState = app.HealthState.ToString();
+                        var status = app.ApplicationStatus.ToString();
+
+                        sb.AppendLine("Application Name: " + appName.OriginalString);
+                        sb.AppendLine("Type: " + appType);
+                        sb.AppendLine("Version: " + appVersion);
+                        sb.AppendLine("Health state: " + healthState);
+                        sb.AppendLine("Status: " + status);
+
+                        // App's Service(s)...
+                        sb.AppendLine("\n\tServices:");
+                        var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
+                        var replicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, app.ApplicationName).ConfigureAwait(true);
+
+                        foreach (var service in serviceList)
                         {
-                            if (service.ServiceName != rep.ServiceName)
+                            var kind = service.ServiceKind;
+                            var type = service.ServiceTypeName;
+                            var serviceName = service.ServiceName;
+                            var serviceDescription = await this.FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
+                            var processModel = serviceDescription.ServicePackageActivationMode.ToString();
+
+                            foreach (var rep in replicaList)
                             {
-                                continue;
+                                if (service.ServiceName != rep.ServiceName)
+                                {
+                                    continue;
+                                }
+
+                                // Get established port count per service...
+                                int procId = (int)rep.HostProcessId;
+                                int ports = -1, ephemeralPorts = -1;
+
+                                if (procId > -1)
+                                {
+                                    ports = NetworkUsage.GetActivePortCount(procId);
+                                    ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
+                                }
+
+                                sb.AppendLine("\tService Name: " + serviceName.OriginalString);
+                                sb.AppendLine("\tTypeName: " + type);
+                                sb.AppendLine("\tKind: " + kind);
+                                sb.AppendLine("\tProcessModel: " + processModel);
+
+                                if (ports > -1)
+                                {
+                                    sb.AppendLine("\tActive Ports: " + ports);
+                                }
+
+                                if (ephemeralPorts > -1)
+                                {
+                                    sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
+                                }
+
+                                sb.AppendLine();
+
+                                break;
                             }
-
-                            // Get established port count per service...
-                            int procId = (int)rep.HostProcessId;
-                            int ports = -1, ephemeralPorts = -1;
-
-                            if (procId > -1)
-                            {
-                                ports = NetworkUsage.GetActivePortCount(procId);
-                                ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
-                            }
-
-                            sb.AppendLine("\tService Name: " + serviceName.OriginalString);
-                            sb.AppendLine("\tTypeName: " + type);
-                            sb.AppendLine("\tKind: " + kind);
-                            sb.AppendLine("\tProcessModel: " + processModel);
-
-                            if (ports > -1)
-                            {
-                                sb.AppendLine("\tActive Ports: " + ports);
-                            }
-
-                            if (ephemeralPorts > -1)
-                            {
-                                sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
-                            }
-
-                            sb.AppendLine();
-
-                            break;
                         }
                     }
                 }

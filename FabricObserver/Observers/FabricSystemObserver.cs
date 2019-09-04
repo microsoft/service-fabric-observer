@@ -293,10 +293,12 @@ namespace FabricObserver
         {
             this.Token = token;
 
-            if (!this.Initialize() || this.Token.IsCancellationRequested)
+            if (this.Token.IsCancellationRequested)
             {
                 return;
             }
+
+            this.Initialize();
 
             if (this.FabricClientInstance.QueryManager.GetNodeListAsync().GetAwaiter().GetResult()?.Count > 3
                 && await this.CheckClusterHealthStateAsync(
@@ -754,6 +756,33 @@ namespace FabricObserver
             }
 
             return HealthState.Ok;
+        }
+
+        bool disposed = false;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (this.perfCounters != null)
+                {
+                    this.perfCounters.Dispose();
+                    this.perfCounters = null;
+                }
+
+                if (this.diskUsage != null)
+                {
+                    this.diskUsage.Dispose();
+                    this.diskUsage = null;
+                }
+
+                this.disposed = true;
+            }
         }
     }
 }

@@ -514,14 +514,12 @@ namespace FabricObserver
                     {
                         int procId = (int)replicaOrInstance.ReplicaHostProcessId;
 
-                        if (procName != null &&
-                            !this.serviceDumpCountDictionary.ContainsKey(procName))
+                        if (!this.serviceDumpCountDictionary.ContainsKey(procName))
                         {
                             this.serviceDumpCountDictionary.Add(procName, 0);
                         }
 
-                        if (procName != null &&
-                            this.serviceDumpCountDictionary[procName] < this.maxDumps)
+                        if (this.serviceDumpCountDictionary[procName] < this.maxDumps)
                         {
                             // DumpServiceProcess defaults to a Full dump with
                             // process memory, handles and thread data...

@@ -125,6 +125,7 @@ namespace FabricObserver
                     }
 
                     appHealthText = string.Empty;
+
                     if (Directory.Exists(currentDataHealthLogPathPart))
                     {
                         var currentAppDataLogFiles = Directory.GetFiles(currentDataHealthLogPathPart);
@@ -177,17 +178,16 @@ namespace FabricObserver
                     this.sb.AppendLine("\n\t</head>");
                     this.sb.AppendLine("\n\t<body>");
                     this.sb.AppendLine("\n\t\t\t <br/>");
-                    if (!hasSysInfo && !string.IsNullOrEmpty(sysInfofileText))
+
+                    if (!string.IsNullOrEmpty(sysInfofileText))
                     {
                         this.sb.AppendLine("\n\t\t\t<div class=\"container\"><div style=\"position: relative; width: 80%; margin-left: auto; margin-right: auto; font-family: Consolas;\"><br/>" +
                                        "<h2>Host Machine and Service Fabric Information: Node " + this.serviceContext.NodeContext.NodeName + "</h2>" + nodeLinks + "<pre>" +
                                        sysInfofileText + "\n\nDisk Info: \n\n" + diskInfoTxt + netInfofileText + "\n\n" + sfInfraText + "</pre></div></div>");
-
-                        hasSysInfo = true;
                     }
 
                     this.sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\">" +
-                                  "<br/><strong>Daily Errors and Warnings on " + nodeName + " - " + DateTime.UtcNow.ToString("MM/dd/yyyy") + " UTC</strong><br/><br/>" + log + appHealthText + "</div>");
+                                       "<br/><strong>Daily Errors and Warnings on " + nodeName + " - " + DateTime.UtcNow.ToString("MM/dd/yyyy") + " UTC</strong><br/><br/>" + log + appHealthText + "</div>");
 
                     if (!string.IsNullOrEmpty(evtVwrErrorsText))
                     {

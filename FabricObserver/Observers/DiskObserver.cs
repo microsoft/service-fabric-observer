@@ -207,7 +207,7 @@ namespace FabricObserver
             }
             finally
             {
-                diskUsage?.Dispose();
+                diskUsage.Dispose();
                 diskUsage = null;
             }
 
