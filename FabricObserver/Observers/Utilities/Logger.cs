@@ -20,7 +20,7 @@ namespace FabricObserver.Utilities
         private const int RetriesValue = 5;
 
         // Text file logger for observers - info/warn/error...
-        private ILogger logger { get; set; }
+        private ILogger OLogger { get; set; }
 
         private string loggerName = null;
 
@@ -42,8 +42,12 @@ namespace FabricObserver.Utilities
 
         static Logger()
         {
-            // The static type may have been disposed, so recreate it if that's the case...
-            if (ObserverManager.EtwEnabled && !string.IsNullOrEmpty(ObserverManager.EtwProviderName) && EtwLogger == null)
+            if (!ObserverManager.EtwEnabled || string.IsNullOrEmpty(ObserverManager.EtwProviderName))
+            {
+                return;
+            }
+
+            if (EtwLogger == null)
             {
                 EtwLogger = new EventSource(ObserverManager.EtwProviderName);
             }
@@ -108,13 +112,13 @@ namespace FabricObserver.Utilities
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
-            this.logger = LogManager.GetLogger(this.loggerName);
+            this.OLogger = LogManager.GetLogger(this.loggerName);
         }
 
         /// <inheritdoc/>
         public void LogTrace(string observer, string format, params object[] parameters)
         {
-            this.logger.Trace(observer + "|" + format, parameters);
+            this.OLogger.Trace(observer + "|" + format, parameters);
         }
 
         /// <inheritdoc/>
@@ -125,19 +129,19 @@ namespace FabricObserver.Utilities
                 return;
             }
 
-            this.logger.Info(format, parameters);
+            this.OLogger.Info(format, parameters);
         }
 
         /// <inheritdoc/>
         public void LogError(string format, params object[] parameters)
         {
-            this.logger.Error(format, parameters);
+            this.OLogger.Error(format, parameters);
         }
 
         /// <inheritdoc/>
         public void LogWarning(string format, params object[] parameters)
         {
-            this.logger.Warn(format, parameters);
+            this.OLogger.Warn(format, parameters);
         }
 
         /// <inheritdoc/>
