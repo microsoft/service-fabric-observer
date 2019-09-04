@@ -54,7 +54,6 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~P:FabricObserver.ObserverBase.ObserverName")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~P:FabricObserver.Utilities.Logger.EnableVerboseLogging")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~P:FabricObserver.Utilities.Logger.Foldername")]
-
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1201:Elements should appear in the correct order", Justification = "Noise...", Scope = "member", Target = "~F:FabricObserver.Model.ConfigSettings.configurationSettings")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1201:Elements should appear in the correct order", Justification = "Noise...", Scope = "member", Target = "~F:FabricObserver.ObserverBase.disposedValue")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1201:Elements should appear in the correct order", Justification = "Noise...", Scope = "member", Target = "~F:FabricObserver.ObserverManager.globalShutdownEventHandle")]

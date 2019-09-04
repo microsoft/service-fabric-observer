@@ -90,7 +90,6 @@ namespace FabricObserver
                     // These are the app-specific
                     var currentDataHealthLogPathPart = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "apps");
                     string sysInfofileText = string.Empty, evtVwrErrorsText = string.Empty, log = string.Empty, diskInfoTxt = string.Empty, appHealthText = string.Empty, sfInfraText = string.Empty, netInfofileText = string.Empty;
-                    bool hasSysInfo = false;
 
                     // Only show info from current day, by default. This is just for web UI (html).
                     if (System.IO.File.Exists(observerLogFilePath)
