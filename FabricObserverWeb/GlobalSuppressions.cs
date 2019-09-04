@@ -1,11 +1,4 @@
-﻿
-// This file is used by Code Analysis to maintain SuppressMessage 
-// attributes that are applied to this project.
-// Project-level suppressions either have no target or are given 
-// a specific target and scoped to a namespace, type, member, etc.
-
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~M:FabricObserver.Controllers.ObserverLogController.Get(System.String,System.String)~Microsoft.AspNetCore.Mvc.ActionResult")]
-
+﻿[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1202:Elements should be ordered by access", Justification = "Noise...", Scope = "member", Target = "~M:FabricObserver.Controllers.ObserverLogController.Get(System.String,System.String)~Microsoft.AspNetCore.Mvc.ActionResult")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:Elements should be documented", Justification = "Noise...", Scope = "member", Target = "~F:FabricObserver.FabricObserverWeb.fabricClient")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:Elements should be documented", Justification = "Noise...", Scope = "member", Target = "~F:FabricObserver.ServiceEventSource.Current")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:Elements should be documented", Justification = "Noise...", Scope = "member", Target = "~F:FabricObserver.ServiceEventSource.Keywords.Requests")]
@@ -46,7 +39,6 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:Elements should be documented", Justification = "Noise...", Scope = "type", Target = "~T:FabricObserver.ServiceEventSource.Keywords")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:Elements should be documented", Justification = "Noise...", Scope = "type", Target = "~T:FabricObserver.Startup")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1600:Elements should be documented", Justification = "Noise...", Scope = "type", Target = "~T:FabricObserver.Utilities")]
-
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:File may only contain a single type", Justification = "Noise...", Scope = "type", Target = "~T:FabricObserver.Controllers.ObserverLogEntry")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:File may only contain a single type", Justification = "Noise...", Scope = "type", Target = "~T:FabricObserver.HtmlOutputFormatter")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1633:File should have header", Justification = "Noise...")]
