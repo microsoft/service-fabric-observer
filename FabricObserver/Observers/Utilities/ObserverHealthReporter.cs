@@ -93,9 +93,6 @@ namespace FabricObserver.Utilities
                 case ObserverConstants.AppObserverName:
                     property = "AppResourceUsage";
                     break;
-                case ObserverConstants.CertificateObserverName:
-                    property = "Certificates";
-                    break;
                 case ObserverConstants.DiskObserverName:
                     property = "DiskHealth";
                     break;
