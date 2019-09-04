@@ -21,6 +21,7 @@ namespace FabricObserver
         private FabricResourceUsageData<int> firewallData = null;
         private FabricResourceUsageData<int> activePortsData = null;
         private FabricResourceUsageData<int> ephemeralPortsData = null;
+        private FabricResourceUsageData<int> allMemDataPercentUsed = null;
         private WindowsPerfCounters perfCounters;
         private bool disposed = false;
 
@@ -43,6 +44,10 @@ namespace FabricObserver
         public int EphemeralPortsWarningThreshold { get; set; }
 
         public int FirewallRulesWarningThreshold { get; set; }
+
+        public int MemoryErrorLimitPercent { get; set; }
+
+        public int MemoryWarningLimitPercent { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NodeObserver"/> class.
@@ -115,6 +120,11 @@ namespace FabricObserver
             {
                 this.ephemeralPortsData = new FabricResourceUsageData<int>("Ephemeral Active Ports", "EphemeralPortsInUse");
             }
+
+            if (this.allMemDataPercentUsed == null)
+            {
+                this.allMemDataPercentUsed = new FabricResourceUsageData<int>("Percent Memory in Use", "SysMemoryPercentUsed");
+            }
         }
 
         private void SetThresholdsFromConfiguration()
@@ -168,6 +178,15 @@ namespace FabricObserver
                 this.FirewallRulesErrorThreshold = firewallRulesErrorThreshold;
             }
 
+            var errMemPercentUsed = this.GetSettingParameterValue(
+                ObserverConstants.NodeObserverConfigurationSectionName,
+                ObserverConstants.NodeObserverMemoryUsePercentError);
+
+            if (!string.IsNullOrEmpty(errMemPercentUsed) && int.TryParse(errMemPercentUsed, out int memoryPercentUsedErrorThreshold))
+            {
+                this.MemoryErrorLimitPercent = memoryPercentUsedErrorThreshold;
+            }
+
             /* Warning thresholds */
 
             this.Token.ThrowIfCancellationRequested();
@@ -216,12 +235,21 @@ namespace FabricObserver
             {
                 this.FirewallRulesWarningThreshold = firewallRulesWarningThreshold;
             }
+
+            var warnMemPercentUsed = this.GetSettingParameterValue(
+              ObserverConstants.NodeObserverConfigurationSectionName,
+              ObserverConstants.NodeObserverMemoryUsePercentWarning);
+
+            if (!string.IsNullOrEmpty(warnMemPercentUsed) && int.TryParse(warnMemPercentUsed, out int memoryPercentUsedWarningThreshold))
+            {
+                this.MemoryWarningLimitPercent = memoryPercentUsedWarningThreshold;
+            }
         }
 
         private async Task GetSystemCpuMemoryValuesAsync(CancellationToken token)
         {
             await Task.Run(
-                () =>
+            () =>
             {
                 token.ThrowIfCancellationRequested();
 
@@ -253,6 +281,12 @@ namespace FabricObserver
                         }
 
                         Thread.Sleep(250);
+                    }
+
+                    // Does not need to run in the loop...
+                    if (this.MemoryWarningLimitPercent > 0)
+                    {
+                        this.allMemDataPercentUsed.Data.Add(OSObserver.PercentTotalMemoryInUseOnVM);
                     }
                 }
                 catch (Exception e)
@@ -356,6 +390,15 @@ namespace FabricObserver
                         this.allMemDataCommittedBytes,
                         this.MemErrorUsageThresholdMB,
                         this.MemWarningUsageThresholdMB,
+                        timeToLiveWarning);
+                }
+
+                if (this.allMemDataPercentUsed.AverageDataValue > 0)
+                {
+                    this.ProcessResourceDataReportHealth(
+                        this.allMemDataPercentUsed,
+                        this.MemoryErrorLimitPercent,
+                        this.MemoryWarningLimitPercent,
                         timeToLiveWarning);
                 }
 

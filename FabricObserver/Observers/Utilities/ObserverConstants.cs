@@ -5,7 +5,7 @@
 
 namespace FabricObserver.Utilities
 {
-    public static class ObserverConstants
+    public sealed class ObserverConstants
     {
         public const string ObserverManangerName = "ObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
@@ -35,8 +35,9 @@ namespace FabricObserver.Utilities
         // Setting name for Grace period of shutdown in seconds.
         public const string ObserverShutdownGracePeriodInSeconds = "ObserverShutdownGracePeriodInSeconds";
 
-        // Setting name for  Maximum time an observer should run before being considered hung or in some failure state...
+        // Setting name for Maximum time an observer should run before being considered hung or in some failure state...
         public const string ObserverExecutionTimeout = "ObserverExecutionTimeout";
+
         public const string DiskObserverName = "DiskObserver";
         public const string DiskObserverConfigurationSectionName = "DiskObserverConfiguration";
         public const string DiskObserverIntervalParameterName = "RunInterval";
@@ -48,39 +49,25 @@ namespace FabricObserver.Utilities
         public const string DiskObserverIOWritesWarning = "IOWritesWarningThreshold";
         public const string DiskObserverAverageQueueLengthError = "AverageQueueLengthErrorThreshold";
         public const string DiskObserverAverageQueueLengthWarning = "AverageQueueLengthWarningThreshold";
-
-        // WMI queries...
-        public const string DiskDriveWMIQuery = "SELECT Caption, DeviceID from Win32_DiskDrive";
-        public const string PartitionsWMIQueryTemplate = "ASSOCIATORS OF {{Win32_DiskDrive.DeviceID='{0}'}} " +
-                                                         "WHERE AssocClass = Win32_DiskDriveToDiskPartition";
-
-        public const string LogicalDisksWMIQueryTemplate = "ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{0}'}} " +
-                                                           "WHERE AssocClass = Win32_LogicalDiskToPartition";
-
         public const string SFConfigurationObserverName = "SFConfigurationObserver";
         public const string InfrastructureConfigurationVersionName = "InfrastructureConfigurationVersion";
         public const string InfrastructureObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
         public const string InfrastructureObserverIntervalParameterName = "RunInterval";
         public const string OSObserverName = "OSObserver";
-        internal const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
-        internal const string OSObserverObserverIntervalParameterName = "RunInterval";
-
-        // Observer name
-        internal const string CertificateObserverName = "CertificateObserver";
+        public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
+        public const string OSObserverObserverIntervalParameterName = "RunInterval";
 
         // Observer configuration parameters
-        internal const string CertificateObserverConfigurationSectionName = "CertificateObserverConfiguration";
-        internal const string CertificateObserverExclusionsSectionName = "CertificateObserverExclusions";
-        internal const string CertificateObserverIntervalParameterName = "ObserverRunInterval";
-        internal const string CertificateObserverThresholdParameterName = "ObserverExpiryThreshold";
+        public const string CertificateObserverIntervalParameterName = "ObserverRunInterval";
+        public const string CertificateObserverThresholdParameterName = "ObserverExpiryThreshold";
         public const string ContainerObserverName = "ContainerObserver";
         public const string ContainerObserverConfigurationSectionName = "ContainerObserverConfiguration";
         public const string AppObserverName = "AppObserver";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
         public const string NodeObserverName = "NodeObserver";
         public const string NodeObserverConfigurationSectionName = "NodeObserverConfiguration";
-        public const string NodeObserverCpuErrorLimitPct = "CpuErrorLimitPct";
-        public const string NodeObserverCpuWarningLimitPct = "CpuWarningLimitPct";
+        public const string NodeObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
+        public const string NodeObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
         public const string NodeObserverMemoryErrorLimitMB = "MemoryErrorLimitMB";
         public const string NodeObserverMemoryWarningLimitMB = "MemoryWarningLimitMB";
         public const string NodeObserverNetworkErrorActivePorts = "NetworkErrorActivePorts";
@@ -89,6 +76,8 @@ namespace FabricObserver.Utilities
         public const string NodeObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
+        public const string NodeObserverMemoryUsePercentError = "MemoryErrorLimitPercent";
+        public const string NodeObserverMemoryUsePercentWarning = "MemoryWarningLimitPercent";
         public const string NetworkObserverName = "NetworkObserver";
         public const string NetworkObserverConfigurationSectionName = "NetworkObserverConfiguration";
         public const string FabricSystemObserverName = "FabricSystemObserver";
@@ -104,12 +93,12 @@ namespace FabricObserver.Utilities
         public const string FabricSystemObserverErrorPercentUnhealthyNodes = "PercentUnhealthyNodesErrorThreshold";
         public const string FabricSystemObserverWarnPercentUnhealthyNodes = "PercentUnhealthyNodesWarnThreshold";
         public const string FabricSystemObserverMonitorWindowsEventLog = "MonitorWindowsEventLog";
-        internal const string ObserverEnabled = "Enabled";
-        internal const string AIKey = "AppInsightsInstrumentationKey";
-        internal const string TelemetryEnabled = "EnableTelemetryProvider";
-        internal const string EnableEventSourceProvider = "EnableEventSourceProvider";
-        internal const string EventSourceProviderName = "EventSourceProviderName";
-        internal const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
+        public const string ObserverEnabled = "Enabled";
+        public const string AIKey = "AppInsightsInstrumentationKey";
+        public const string TelemetryEnabled = "EnableTelemetryProvider";
+        public const string EnableEventSourceProvider = "EnableEventSourceProvider";
+        public const string EventSourceProviderName = "EventSourceProviderName";
+        public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
         public const string ConfigPackageName = "Config";
         public const string ObserversDataPackageName = "Observers.Data";
         public const string AppObserverConfiguration = "AppObserverConfiguration";
