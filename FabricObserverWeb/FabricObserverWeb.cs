@@ -5,6 +5,7 @@
 
 namespace FabricObserver
 {
+    using System;
     using System.Collections.Generic;
     using System.Fabric;
     using System.IO;
@@ -20,9 +21,10 @@ namespace FabricObserver
     /// <summary>
     /// The FabricRuntime creates an instance of this class for each service type instance.
     /// </summary>
-    internal sealed class FabricObserverWeb : StatelessService
+    internal sealed class FabricObserverWeb : StatelessService, IDisposable
     {
         private FabricClient fabricClient;
+        private bool disposed = false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserverWeb"/> class.
@@ -32,6 +34,13 @@ namespace FabricObserver
             : base(context)
         {
             this.fabricClient = new FabricClient();
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            this.Dispose(true);
         }
 
         /// <summary>
@@ -65,6 +74,23 @@ namespace FabricObserver
                                     .Build();
                     })),
             };
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                if (disposing)
+                {
+                    if (this.fabricClient != null)
+                    {
+                        this.fabricClient.Dispose();
+                        this.fabricClient = null;
+                    }
+                }
+
+                this.disposed = true;
+            }
         }
     }
 }

@@ -115,7 +115,7 @@ namespace FabricObserver.Utilities
 
                     p.StartInfo = ps;
                     p.Start();
-                    var stdOutput = p?.StandardOutput;
+                    var stdOutput = p.StandardOutput;
 
                     // (process, port count)
                     var ephemeralPortProcessTupleList = new List<Tuple<int, int>>();
@@ -140,7 +140,7 @@ namespace FabricObserver.Utilities
                         ephemeralPortList.Add(portRow);
                     }
 
-                    var exitStatus = p?.ExitCode.ToString();
+                    var exitStatus = p.ExitCode.ToString();
                     stdOutput?.Close();
 
                     if (exitStatus != "0")
@@ -222,7 +222,7 @@ namespace FabricObserver.Utilities
                     p.StartInfo = ps;
                     p.Start();
 
-                    var stdOutput = p?.StandardOutput;
+                    var stdOutput = p.StandardOutput;
                     string output = stdOutput?.ReadToEnd();
                     string startPort = output?.Substring(
                         output.Trim().IndexOf(":") + 2,
@@ -230,7 +230,7 @@ namespace FabricObserver.Utilities
                                                          .Trim(' ', '\r', '\n');
 
                     string portCount = output?.Substring(output.Trim().LastIndexOf(":") + 2).Trim(' ', '\r', '\n');
-                    string exitStatus = p?.ExitCode.ToString();
+                    string exitStatus = p.ExitCode.ToString();
                     stdOutput?.Close();
 
                     if (exitStatus != "0")
@@ -286,7 +286,7 @@ namespace FabricObserver.Utilities
 
                     p.StartInfo = ps;
                     p.Start();
-                    var stdOutput = p?.StandardOutput;
+                    var stdOutput = p.StandardOutput;
 
                     var ephemeralPortList = new List<string>();
 
@@ -305,7 +305,7 @@ namespace FabricObserver.Utilities
                         }
                     }
 
-                    var exitStatus = p?.ExitCode.ToString();
+                    var exitStatus = p.ExitCode.ToString();
                     stdOutput?.Close();
 
                     if (exitStatus != "0")

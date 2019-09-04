@@ -281,7 +281,7 @@ namespace FabricObserverTests
                 obsMgr.StartObservers();
             });
 
-            objReady.Wait();
+            objReady?.Wait();
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
@@ -331,8 +331,8 @@ namespace FabricObserverTests
                 obsMgr.StartObservers();
             });
 
-            objReady.Wait();
-
+            objReady?.Wait();
+    
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
                 // wait...
@@ -380,7 +380,7 @@ namespace FabricObserverTests
                 obsMgr.StartObservers();
             });
 
-            objReady.Wait();
+            objReady?.Wait();
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
@@ -429,7 +429,7 @@ namespace FabricObserverTests
                 obsMgr.StartObservers();
             });
 
-            objReady.Wait();
+            objReady?.Wait();
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
@@ -478,7 +478,7 @@ namespace FabricObserverTests
                 obsMgr.StartObservers();
             });
 
-            objReady.Wait();
+            objReady?.Wait();
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
@@ -527,7 +527,7 @@ namespace FabricObserverTests
                 obsMgr.StartObservers();
             });
 
-            objReady.Wait();
+            objReady?.Wait();
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
@@ -576,7 +576,7 @@ namespace FabricObserverTests
                 obsMgr.StartObservers();
             });
 
-            objReady.Wait();
+            objReady?.Wait();
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {

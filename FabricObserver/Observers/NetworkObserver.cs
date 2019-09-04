@@ -288,45 +288,52 @@ namespace FabricObserver
 
         private string GetNetworkInterfaceInfo()
         {
-            var iPGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
-            var nics = NetworkInterface.GetAllNetworkInterfaces();
-
-            if (nics?.Length < 1)
+            try
             {
-                return null;
-            }
+                var iPGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
+                var nics = NetworkInterface.GetAllNetworkInterfaces();
 
-            var interfaceInfo = new StringBuilder(string.Format(
-                "Network Interface information for {0}:\n     ",
-                iPGlobalProperties.HostName));
-
-            foreach (var nic in nics)
-            {
-                var properties = nic.GetIPProperties();
-
-                interfaceInfo.Append("\n" + nic.Description + "\n");
-                interfaceInfo.AppendFormat("  Interface type    : {0}\n", nic.NetworkInterfaceType);
-                interfaceInfo.AppendFormat("  Operational status: {0}\n", nic.OperationalStatus);
-
-                // Traffic...
-                if (nic.OperationalStatus == OperationalStatus.Up)
+                if (nics == null || nics.Length < 1)
                 {
-                    interfaceInfo.AppendLine("  Traffic Info:");
-
-                    var stats = nic.GetIPv4Statistics();
-
-                    interfaceInfo.AppendFormat("    Bytes received: {0}\n", stats.BytesReceived);
-                    interfaceInfo.AppendFormat("    Bytes sent: {0}\n", stats.BytesSent);
-                    interfaceInfo.AppendFormat("    Incoming Packets With Errors: {0}\n", stats.IncomingPacketsWithErrors);
-                    interfaceInfo.AppendFormat("    Outgoing Packets With Errors: {0}\n", stats.OutgoingPacketsWithErrors);
-                    interfaceInfo.AppendLine();
+                    return string.Empty;
                 }
+
+                var interfaceInfo = new StringBuilder(string.Format(
+                    "Network Interface information for {0}:\n     ",
+                    iPGlobalProperties.HostName));
+
+                foreach (var nic in nics)
+                {
+                    var properties = nic.GetIPProperties();
+
+                    interfaceInfo.Append("\n" + nic.Description + "\n");
+                    interfaceInfo.AppendFormat("  Interface type    : {0}\n", nic.NetworkInterfaceType);
+                    interfaceInfo.AppendFormat("  Operational status: {0}\n", nic.OperationalStatus);
+
+                    // Traffic...
+                    if (nic.OperationalStatus == OperationalStatus.Up)
+                    {
+                        interfaceInfo.AppendLine("  Traffic Info:");
+
+                        var stats = nic.GetIPv4Statistics();
+
+                        interfaceInfo.AppendFormat("    Bytes received: {0}\n", stats.BytesReceived);
+                        interfaceInfo.AppendFormat("    Bytes sent: {0}\n", stats.BytesSent);
+                        interfaceInfo.AppendFormat("    Incoming Packets With Errors: {0}\n", stats.IncomingPacketsWithErrors);
+                        interfaceInfo.AppendFormat("    Outgoing Packets With Errors: {0}\n", stats.OutgoingPacketsWithErrors);
+                        interfaceInfo.AppendLine();
+                    }
+                }
+
+                var s = interfaceInfo.ToString();
+                interfaceInfo.Clear();
+
+                return s;
             }
-
-            var s = interfaceInfo.ToString();
-            interfaceInfo.Clear();
-
-            return s;
+            catch (NetworkInformationException)
+            {
+                return string.Empty;
+            }
         }
 
         private void SetHealthState(Endpoint endpoint, bool passed)

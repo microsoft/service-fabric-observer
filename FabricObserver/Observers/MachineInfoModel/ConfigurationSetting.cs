@@ -156,11 +156,6 @@ namespace FabricObserver.Model
 
                 if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
-                    if (value.Length == 0)
-                    {
-                        return null;
-                    }
-
                     return this.Parse(value, type.GetGenericArguments()[0]);
                 }
 
@@ -170,6 +165,7 @@ namespace FabricObserver.Model
                 }
 
                 var parseMethod = type.GetMethod("Parse", new[] { typeof(string) });
+
                 if (parseMethod == null)
                 {
                     return null;
