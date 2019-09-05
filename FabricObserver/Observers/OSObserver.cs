@@ -27,6 +27,10 @@ namespace FabricObserver
 
         public static int PercentTotalMemoryInUseOnVM { get; private set; } = -1;
 
+        public static int TotalVisibleMemoryGB { get; private set; } = -1;
+
+        public static int TotalFreeMemoryGB { get; private set; } = -1;
+
         public string TestManifestPath { get; set; }
 
         /// <summary>
@@ -61,8 +65,8 @@ namespace FabricObserver
                 foreach (var prop in results)
                 {
                     token.ThrowIfCancellationRequested();
-                    long visibleTotal = -1;
-                    long freePhysical = -1;
+                    int visibleTotal = -1;
+                    int freePhysical = -1;
 
                     foreach (var p in prop.Properties)
                     {
@@ -117,6 +121,8 @@ namespace FabricObserver
                     {
                         double usedPct = ((double)(visibleTotal - freePhysical)) / visibleTotal;
                         PercentTotalMemoryInUseOnVM = (int)(usedPct * 100);
+                        TotalVisibleMemoryGB = visibleTotal;
+                        TotalFreeMemoryGB = freePhysical;
                         sb.AppendLine($"Percent RAM in use: {PercentTotalMemoryInUseOnVM}%");
                     }
                 }
