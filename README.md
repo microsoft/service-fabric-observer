@@ -1,5 +1,3 @@
-**Introduction**
-
 **FabricObserver (FO)** is a complete, working example of a fully functioning, easily-configurable stateless Service Fabric (SF) watchdog service that observes and reports on both user services and (optionally) internal fabric services for potential **user-defined problems** related to resource usage across Disk, CPU, Memory, Networking. FO employs a simple .NET development model, enabling the quick creation of new observers for developers, and a very simple configuration pattern, enabling OPS people to readily deploy FO with meaningful warning thresholds for the Service Fabric applications and services they ship. You can deploy the [sfpkgs](https://github.com/microsoft/service-fabric-observer/releases) directly as part of an [ARM deployment](https://github.com/Azure-Samples/service-fabric-dotnet-quickstart/blob/master/ARM/UserApp.json), for example, and get benefits from this service without doing anything. However, you will definitely want to take advantage of configuration to better support your **specific workloads and app deployments**. As Service Fabric developers and ops pros, you can extend FabricObserver very easily and make it work specifically for your needs. 
 
 **FO is not a replacement for, nor is it an alternative to, existing Monitoring and Diagnostics services.**  Think of it only as a highly configurable and extensible watchdog service that is designed to be run in Service Fabric clusters composed of Windows VMs.
@@ -20,12 +18,7 @@ To learn about **Building FO**, please see the [Build readme](Build.md).
     
 To learn more about **Observers and their configuration**, please see the [Observers readme](./Documentation/Observers.md).  
   
-For more information about **the design of FabricObserver**, please see the [Design readme](./Documentation/Design.md).  
-  
-
-**Conclusion**
-
-Observers are designed to be low impact, long-lived objects that perform specific observational and related reporting activities across iteration intervals defined in configuration settings for each observer type. As their name clearly suggests, they do not mitigate in this first version. They observe, record, and report. For Warning and Errors, we will utilize Service Fabric Health store and reporting mechanisms to surface important information in SFX. This release also includes a telemtry provider interface and ships with an AppInsights implementation. So, you can stream events to AppInsights by simply enabling the feature in Settings.xml and providing your AppInsights key.  
+For more information about **the design of FabricObserver**, please see the [Design readme](./Documentation/Design.md).   
 
 We hope you find FabricObserver useful and that it never adds any burden to your cluster - it should be a silent partner up until it let's you know something is wrong based on what you asked it to observe and report. Please put FO into all of your Service Fabric deployments and help yourself catch issues before they become incidents. Also, we'd love your contributions and partnership. 
 
