@@ -1,3 +1,6 @@
+Observers are designed to be low impact, long-lived objects that perform specific observational and related reporting activities across iteration intervals defined in configuration settings for each observer type. As their name clearly suggests, they do not mitigate in this first version. They observe, record, and report. For Warning and Errors, we will utilize Service Fabric Health store and reporting mechanisms to surface important information in SFX. This release also includes a telemtry provider interface and ships with an AppInsights implementation. So, you can stream events to AppInsights by simply enabling the feature in Settings.xml and providing your AppInsights key. 
+
+
 **Currently Implemented Observers**  
 
 ***AppObserver***  
