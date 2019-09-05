@@ -41,7 +41,6 @@ folder (AppObserver.config.json):
 [
   {
     "target": "fabric:/MyApp",
-    "serviceExcludeList" : "MyService13,MyService17",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "diskIOErrorReadsPerSecMS": 0,
@@ -49,25 +48,25 @@ folder (AppObserver.config.json):
     "diskIOWarningReadsPerSecMS": 0,
     "diskIOWarningWritesPerSecMS": 0,
     "dumpProcessOnError": false,
-    "memoryErrorLimitMB": 0,
-    "memoryWarningLimitMB": 1024,
+    "memoryErrorLimitPercent": 0,
+    "memoryWarningLimitPercent": 60,
     "networkErrorActivePorts": 0,
-    "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
+    "networkWarningActivePorts": 800,
     "networkWarningEphemeralPorts": 400
   },
   {
-    "target": "fabric:/MyApp2",
-    "serviceIncludeList" : "MyService3",
+    "target": "fabric:/MyApp1",
+    "serviceIncludeList": "MyService42, MyOtherService42",
     "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 30,
+    "cpuWarningLimitPct": 8,
     "diskIOErrorReadsPerSecMS": 0,
     "diskIOErrorWritesPerSecMS": 0,
     "diskIOWarningReadsPerSecMS": 0,
     "diskIOWarningWritesPerSecMS": 0,
     "dumpProcessOnError": false,
-    "memoryErrorLimitMB": 0,
-    "memoryWarningLimitMB": 1024,
+    "memoryErrorLimitPercent": 0,
+    "memoryWarningLimitPercent": 60,
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
@@ -82,8 +81,8 @@ folder (AppObserver.config.json):
     "diskIOWarningReadsPerSecMS": 0,
     "diskIOWarningWritesPerSecMS": 0,
     "dumpProcessOnError": false,
-    "memoryErrorLimitMB": 0,
-    "memoryWarningLimitMB": 250,
+    "memoryErrorLimitPercent": 0,
+    "memoryWarningLimitPercent": 30,
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
@@ -98,8 +97,8 @@ folder (AppObserver.config.json):
     "diskIOWarningReadsPerSecMS": 0,
     "diskIOWarningWritesPerSecMS": 0,
     "dumpProcessOnError": false,
-    "memoryErrorLimitMB": 0,
-    "memoryWarningLimitMB": 1024,
+    "memoryErrorLimitPercent": 0,
+    "memoryWarningLimitPercent": 30,
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
@@ -109,18 +108,16 @@ folder (AppObserver.config.json):
 ```
 Settings descriptions: 
 
-Note that all of these are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values.
+Note that all of these are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer). It's up to you. Whatever makes you happy!
 
 **target**: App URI string to observe. Required.
 \
 **serviceExcludeList**: A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense)  
 **serviceIncludeList**: A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  
-**memoryErrorLimitMB**: Maximum service process private working set,
-in Megabytes, that should generate a Fabric Error (SFX and local log) \[Note:
-this shouldn't have to be supplied in bytes...\]\
-**memoryWarningLimitMB**: Minimum service process private working set,
-in Megabytes, that should generate a Fabric Warning (SFX and local log)
-\[Note: this shouldn't have to be supplied in bytes...\]\
+**memoryErrorLimitMB**: Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log)  
+**memoryWarningLimitMB**: Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log)  
+**memoryErrorLimitPercent**: Maximum percentage of memory used by an App's service process (integer) that should generate a Fabric Error (SFX and local log)  
+**memoryWarningLimitPercent**: Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) 
 **cpuErrorLimitPct**: Maximum CPU percentage that should generate a
 Fabric Error \
 **cpuWarningLimitPct**: Minimum CPU percentage that should generate a
@@ -365,33 +362,31 @@ until the observer runs again...
 
 **Input**:
 ```xml
- <Section Name="NodeObserverConfiguration">
+  <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="CpuErrorLimitPct" Value="0" />
-    <Parameter Name="CpuWarningLimitPct" Value="80" />
-    <Parameter Name="MemoryErrorLimitMB" Value="0" />
-    <Parameter Name="MemoryWarningLimitMB" Value ="28000" />
-    <Parameter Name="NetworkErrorActivePorts" Value="0" />
-    <Parameter Name="NetworkWarningActivePorts" Value="45000" />
-    <Parameter Name="NetworkErrorFirewallRules" Value="0" />
+    <Parameter Name="CpuErrorLimitPercent" Value="" />
+    <Parameter Name="CpuWarningLimitPercent" Value="90" />
+    <Parameter Name="MemoryErrorLimitMB" Value="" />
+    <Parameter Name="MemoryWarningLimitMB" Value ="" />
+    <Parameter Name="MemoryErrorLimitPercent" Value="" />
+    <Parameter Name="MemoryWarningLimitPercent" Value ="90" />
+    <Parameter Name="NetworkErrorActivePorts" Value="" />
+    <Parameter Name="NetworkWarningActivePorts" Value="55000" />
+    <Parameter Name="NetworkErrorFirewallRules" Value="" />
     <Parameter Name="NetworkWarningFirewallRules" Value="2500" />
-    <Parameter Name="NetworkErrorEphemeralPorts" Value="0" />
+    <Parameter Name="NetworkErrorEphemeralPorts" Value="" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
   </Section>
 ```  
 Settings descriptions:  
 
-**CpuErrorLimitPct**: Maximum CPU percentage that should generate an
-Error (SFX and local log)\
-**CpuWarningLimitPct**: Minimum CPU percentage that should generate a
-Warning (SFX and local log)\
-**MemoryErrorLimitMB**: Maximum service process private working set,
-in Megabytes, that should generate an Error (SFX and local log) \[Note:
-this shouldn't have to be supplied in bytes...\]\
-**MemoryWarningLimitMB**: Minimum service process private working set,
-in Megabytes, that should generate an Warning (SFX and local log)
-\[Note: this shouldn't have to be supplied in bytes...\]\
+**CpuErrorLimitPct**: Maximum CPU percentage that should generate an Error  
+**CpuWarningLimitPct**: Minimum CPU percentage that should generate a Warning 
+**MemoryErrorLimitMB**: Maximum amount of committed memory on virtual machine that will generate an Error. 
+**MemoryWarningLimitMB**: Minimum amount of committed memory that will generate a Warning.  
+**MemoryErrorLimitPercent**: Maximum percentage of memory in use on virtual machine that will generate an Error. 
+**MemoryWarningLimitPercent**: Minimum percentage of memory in use on virtual machine that will generate a Warning.  
 **NetworkErrorFirewallRules**: Number of established Firewall Rules that will generate a Health Warning  
 **NetworkWarningFirewallRules**:  Number of established Firewall Rules that will generate a Health Error  
 **NetworkErrorActivePorts:** Maximum number of established ports in use by
