@@ -13,42 +13,48 @@ namespace FabricObserver.Model
 
         public string ServiceIncludeList { get; set; }
 
-        public long MemoryWarningLimitMB { get; set; } = 1000;
+        public long MemoryWarningLimitMB { get; set; }
 
-        public long MemoryErrorLimitMB { get; set; } = 4000;
+        public long MemoryErrorLimitMB { get; set; }
 
-        public int CpuErrorLimitPct { get; set; } = 0;
+        public int MemoryWarningLimitPercent { get; set; }
 
-        public int CpuWarningLimitPct { get; set; } = 75;
+        public int MemoryErrorLimitPercent { get; set; }
 
-        public int DiskIOErrorReadsPerSecMS { get; set; } = 0;
+        public int CpuErrorLimitPct { get; set; }
 
-        public int DiskIOErrorWritesPerSecMS { get; set; } = 0;
+        public int CpuWarningLimitPct { get; set; }
 
-        public int DiskIOWarningReadsPerSecMS { get; set; } = 100;
+        public int DiskIOErrorReadsPerSecMS { get; set; }
 
-        public int DiskIOWarningWritesPerSecMS { get; set; } = 0;
+        public int DiskIOErrorWritesPerSecMS { get; set; }
 
-        public int NetworkErrorActivePorts { get; set; } = 0;
+        public int DiskIOWarningReadsPerSecMS { get; set; }
 
-        public int NetworkWarningActivePorts { get; set; } = 40000;
+        public int DiskIOWarningWritesPerSecMS { get; set; }
 
-        public int NetworkErrorEphemeralPorts { get; set; } = 0;
+        public int NetworkErrorActivePorts { get; set; }
 
-        public int NetworkWarningEphemeralPorts { get; set; } = 20000;
+        public int NetworkWarningActivePorts { get; set; }
 
-        public int NetworkErrorFirewallRules { get; set; } = 0;
+        public int NetworkErrorEphemeralPorts { get; set; }
 
-        public int NetworkWarningFirewallRules { get; set; } = 2500;
+        public int NetworkWarningEphemeralPorts { get; set; }
 
-        public bool DumpProcessOnError { get; set; } = false;
+        public int NetworkErrorFirewallRules { get; set; }
+
+        public int NetworkWarningFirewallRules { get; set; }
+
+        public bool DumpProcessOnError { get; set; }
 
         /// <inheritdoc/>
         public override string ToString() => $"ApplicationName: {this.Target ?? string.Empty}\n" +
                                              $"ServiceExcludeList: {this.ServiceExcludeList ?? string.Empty}\n" +
                                              $"ServiceIncludeList: {this.ServiceIncludeList ?? string.Empty}\n" +
-                                             $"MemoryWarningLimit: {this.MemoryWarningLimitMB}\n" +
-                                             $"MemoryErrorLimit: {this.MemoryErrorLimitMB}\n" +
+                                             $"MemoryWarningLimitMB: {this.MemoryWarningLimitMB}\n" +
+                                             $"MemoryErrorLimitMB: {this.MemoryErrorLimitMB}\n" +
+                                             $"MemoryWarningLimitPercent: {this.MemoryWarningLimitPercent}\n" +
+                                             $"MemoryErrorLimitPercent: {this.MemoryErrorLimitPercent}\n" +
                                              $"CpuWarningLimit: {this.CpuWarningLimitPct}\n" +
                                              $"CpuErrorLimit: {this.CpuErrorLimitPct}\n" +
                                              $"DiskErrorIOReadsPerSecMS: {this.DiskIOErrorReadsPerSecMS}\n" +
