@@ -31,7 +31,8 @@ namespace FabricObserver
         // Health Report data containers - For use in analysis to determine health state...
         // These lists are cleared after each healthy iteration.
         private List<FabricResourceUsageData<int>> allAppCpuData;
-        private List<FabricResourceUsageData<long>> allAppMemData;
+        private List<FabricResourceUsageData<long>> allAppMemDataMB;
+        private List<FabricResourceUsageData<double>> allAppMemDataPercent;
         private List<FabricResourceUsageData<float>> allAppDiskReadsData;
         private List<FabricResourceUsageData<float>> allAppDiskWritesData;
         private List<FabricResourceUsageData<int>> allAppTotalActivePortsData;
@@ -51,7 +52,8 @@ namespace FabricObserver
             this.allAppCpuData = new List<FabricResourceUsageData<int>>();
             this.allAppDiskReadsData = new List<FabricResourceUsageData<float>>();
             this.allAppDiskWritesData = new List<FabricResourceUsageData<float>>();
-            this.allAppMemData = new List<FabricResourceUsageData<long>>();
+            this.allAppMemDataMB = new List<FabricResourceUsageData<long>>();
+            this.allAppMemDataPercent = new List<FabricResourceUsageData<double>>();
             this.allAppTotalActivePortsData = new List<FabricResourceUsageData<int>>();
             this.allAppEphemeralPortsData = new List<FabricResourceUsageData<int>>();
         }
@@ -233,7 +235,8 @@ namespace FabricObserver
                         this.allAppCpuData.Add(new FabricResourceUsageData<int>("CPU Time", id));
                         this.allAppDiskReadsData.Add(new FabricResourceUsageData<float>("IO Read Bytes/sec", id));
                         this.allAppDiskWritesData.Add(new FabricResourceUsageData<float>("IO Write Bytes/sec", id));
-                        this.allAppMemData.Add(new FabricResourceUsageData<long>("Memory (Private working set)", id));
+                        this.allAppMemDataMB.Add(new FabricResourceUsageData<long>("Memory (Private working set)", id));
+                        this.allAppMemDataPercent.Add(new FabricResourceUsageData<double>("Percent Memory in Use", id));
                         this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>("Total Active Ports", id));
                         this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>("Ephemeral Ports", id));
                     }
@@ -254,7 +257,14 @@ namespace FabricObserver
 
                         // Memory (private working set)...
                         var mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(currentProcess.ProcessName);
-                        this.allAppMemData.FirstOrDefault(x => x.Id == id).Data.Add((long)mem);
+                        this.allAppMemDataMB.FirstOrDefault(x => x.Id == id).Data.Add((long)mem);
+
+                        // Memory (percent in use)...
+                        if (OSObserver.TotalVisibleMemoryGB > -1)
+                        {
+                            double usedPct = Math.Round(((double)(mem * 100)) / (OSObserver.TotalVisibleMemoryGB * 1024), 2);
+                            this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(usedPct);
+                        }
 
                         // Disk/Network/Etc... IO (per-process bytes read/write per sec)
                         this.allAppDiskReadsData.FirstOrDefault(x => x.Id == id)
@@ -459,9 +469,19 @@ namespace FabricObserver
 
                         // Memory
                         this.ProcessResourceDataReportHealth(
-                            this.allAppMemData.Where(x => x.Id == id).FirstOrDefault(),
+                            this.allAppMemDataMB.Where(x => x.Id == id).FirstOrDefault(),
                             app.MemoryErrorLimitMB,
                             app.MemoryWarningLimitMB,
+                            timeToLiveWarning,
+                            HealthReportType.Application,
+                            app.Target,
+                            replicaOrInstance,
+                            app.DumpProcessOnError);
+
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppMemDataPercent.Where(x => x.Id == id).FirstOrDefault(),
+                            app.MemoryErrorLimitPercent,
+                            app.MemoryWarningLimitPercent,
                             timeToLiveWarning,
                             HealthReportType.Application,
                             app.Target,
@@ -579,14 +599,28 @@ namespace FabricObserver
                 appName,
                 "Memory (Working set) MB",
                 "Average",
-                Math.Round(this.allAppMemData.Where(x => x.Id == appName)
+                Math.Round(this.allAppMemDataMB.Where(x => x.Id == appName)
                                                     .FirstOrDefault().AverageDataValue));
             this.CsvFileLogger.LogData(
                 fileName,
                 appName,
                 "Memory (Working set) MB",
                 "Peak",
-                Math.Round(Convert.ToDouble(this.allAppMemData.Where(x => x.Id == appName)
+                Math.Round(Convert.ToDouble(this.allAppMemDataMB.Where(x => x.Id == appName)
+                                                                     .FirstOrDefault().MaxDataValue)));
+            this.CsvFileLogger.LogData(
+               fileName,
+               appName,
+               "Memory (Percent in use)",
+               "Average",
+               Math.Round(this.allAppMemDataPercent.Where(x => x.Id == appName)
+                                                   .FirstOrDefault().AverageDataValue));
+            this.CsvFileLogger.LogData(
+                fileName,
+                appName,
+                "Memory (Percent in use)",
+                "Peak",
+                Math.Round(Convert.ToDouble(this.allAppMemDataPercent.Where(x => x.Id == appName)
                                                                      .FirstOrDefault().MaxDataValue)));
 
             // IO Read Bytes/s
