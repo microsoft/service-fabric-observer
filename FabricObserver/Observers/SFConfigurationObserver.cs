@@ -4,6 +4,8 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Diagnostics.Tracing;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
@@ -210,6 +212,7 @@ namespace FabricObserver
                 }
 
                 // Application Info...
+                // TODO: Emit ETW event for App and Service info...
                 if (appList != null)
                 {
                     sb.AppendLine("\nDeployed Apps:\n");
@@ -218,13 +221,13 @@ namespace FabricObserver
                     {
                         token.ThrowIfCancellationRequested();
 
-                        var appName = app.ApplicationName;
+                        var appName = app.ApplicationName.OriginalString;
                         var appType = app.ApplicationTypeName;
                         var appVersion = app.ApplicationTypeVersion;
                         var healthState = app.HealthState.ToString();
                         var status = app.ApplicationStatus.ToString();
 
-                        sb.AppendLine("Application Name: " + appName.OriginalString);
+                        sb.AppendLine("Application Name: " + appName);
                         sb.AppendLine("Type: " + appType);
                         sb.AppendLine("Version: " + appVersion);
                         sb.AppendLine("Health state: " + healthState);
@@ -237,8 +240,9 @@ namespace FabricObserver
 
                         foreach (var service in serviceList)
                         {
-                            var kind = service.ServiceKind;
+                            var kind = service.ServiceKind.ToString();
                             var type = service.ServiceTypeName;
+                            var serviceManifestversion = service.ServiceManifestVersion;
                             var serviceName = service.ServiceName;
                             var serviceDescription = await this.FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
                             var processModel = serviceDescription.ServicePackageActivationMode.ToString();
@@ -264,6 +268,7 @@ namespace FabricObserver
                                 sb.AppendLine("\tTypeName: " + type);
                                 sb.AppendLine("\tKind: " + kind);
                                 sb.AppendLine("\tProcessModel: " + processModel);
+                                sb.AppendLine("\tServiceManifest Version: " + serviceManifestversion);
 
                                 if (ports > -1)
                                 {
@@ -276,6 +281,31 @@ namespace FabricObserver
                                 }
 
                                 sb.AppendLine();
+
+                                // ETW...
+                                if (this.IsEtwEnabled)
+                                {
+                                    Logger.EtwLogger?.Write(
+                                        $"FabricObserverDataEvent",
+                                        new
+                                        {
+                                            Level = 0, // Info
+                                            Node = this.NodeName,
+                                            Observer = this.ObserverName,
+                                            AppName = appName,
+                                            AppType = appType,
+                                            AppVersion = appVersion,
+                                            AppHealthState = healthState,
+                                            AppStatus = status,
+                                            ServiceName = serviceName.OriginalString,
+                                            ServiceTypeName = type,
+                                            Kind = kind,
+                                            ProcessModel = processModel,
+                                            ServiceManifestVersion = serviceManifestversion,
+                                            ActivePorts = ports,
+                                            EphemeralPorts = ephemeralPorts,
+                                        });
+                                }
 
                                 break;
                             }
