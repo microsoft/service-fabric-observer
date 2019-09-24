@@ -490,7 +490,7 @@ namespace FabricObserver
                     {
                         Level = 0, // Info
                         Node = this.NodeName,
-                        Observer = $" {this.ObserverName}",
+                        Observer = this.ObserverName,
                         Property = data.Property,
                         Id = data.Id,
                         Value = $"{Math.Round(data.AverageDataValue)}",
