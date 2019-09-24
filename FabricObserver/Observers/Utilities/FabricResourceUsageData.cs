@@ -31,14 +31,16 @@ namespace FabricObserver.Utilities
             this.Data = new List<T>();
             this.Property = property;
             this.Id = id;
+            this.Units = string.Empty;
 
             if (property.ToLower().Contains("memory"))
             {
                 this.Units = "MB";
             }
 
-            if (property.ToLower().Contains("cpu") || property.ToLower().Contains("disk space")
-                || property.ToLower().Contains("percent"))
+            if (property.ToLower().Contains("cpu") ||
+                property.ToLower().Contains("percent") ||
+                property.ToLower().Contains("%"))
             {
                 this.Units = "%";
             }
