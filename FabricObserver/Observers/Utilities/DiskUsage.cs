@@ -4,8 +4,8 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 
 namespace FabricObserver.Utilities
 {
@@ -46,21 +46,22 @@ namespace FabricObserver.Utilities
         {
             if (string.IsNullOrEmpty(drive))
             {
-                return 0; // Don't throw here...
+                return -1; // Don't throw here...
             }
 
             var driveInfo = new DriveInfo(drive);
             long availableMB = driveInfo.AvailableFreeSpace / 1024 / 1024;
             long totalMB = driveInfo.TotalSize / 1024 / 1024;
             double usedPct = ((double)(totalMB - availableMB)) / totalMB;
+
             return (int)(usedPct * 100);
         }
 
-        internal Tuple<string, int>[] GetCurrentDiskSpaceUsedPercentAllDrives()
+        internal List<Tuple<string, int>> GetCurrentDiskSpaceUsedPercentAllDrives()
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
 
-            var tuples = new Tuple<string, int>[] { };
+            var tuples = new List<Tuple<string, int>>();
 
             for (int i = 0; i < allDrives.Length; i++)
             {
@@ -69,9 +70,9 @@ namespace FabricObserver.Utilities
                     continue;
                 }
 
-                var name = allDrives[i].Name;
-                var pctUsed = this.GetCurrentDiskSpaceUsedPercent(allDrives[i].Name);
-                tuples.SetValue(new Tuple<string, int>(name, pctUsed), i);
+                var drivename = allDrives[i].Name;
+                var pctUsed = this.GetCurrentDiskSpaceUsedPercent(drivename);
+                tuples.Add(Tuple.Create(drivename.Substring(0, 1), pctUsed));
             }
 
             return tuples;
