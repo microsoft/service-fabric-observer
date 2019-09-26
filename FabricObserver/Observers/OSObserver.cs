@@ -208,6 +208,7 @@ namespace FabricObserver
             string numProcs = "-1";
             string lastBootTime = string.Empty;
             string installDate = string.Empty;
+            int driveCount = 0;
 
             try
             {
@@ -298,16 +299,30 @@ namespace FabricObserver
                         PercentTotalMemoryInUseOnVM = (int)(usedPct * 100);
                         TotalVisibleMemoryGB = visibleTotal;
                         TotalFreeMemoryGB = freePhysical;
-                        sb.AppendLine($"Percent RAM in use: {PercentTotalMemoryInUseOnVM}%");
+                        sb.AppendLine($"PercentMemoryInUse: {PercentTotalMemoryInUseOnVM}%");
                     }
                 }
 
-                // Disk info for display in SFX...
+                // Disk info for display in SFX and tracing (ETW)...
                 var diskSpaceUsageTupleList = diskUsage.GetCurrentDiskSpaceUsedPercentAllDrives();
+
+                try
+                {
+                    // We only care about ready drives (so, things like an empty DVD drive are not interesting...)
+                    driveCount = DriveInfo.GetDrives().Where(d => d.IsReady).Count();
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+
+                sb.AppendLine($"LogicalDriveCount: {driveCount}");
 
                 foreach (var tuple in diskSpaceUsageTupleList)
                 {
-                    sb.AppendLine($"Disk space usage for drive {tuple.Item1}: {tuple.Item2}%");
+                    sb.AppendLine($"DiskSpaceConsumed - Drive {tuple.Item1}: {tuple.Item2}%");
                 }
 
                 this.osReport = sb.ToString();
@@ -339,29 +354,29 @@ namespace FabricObserver
 
                 if (firewalls > -1)
                 {
-                    this.osReport += $"Total number of enabled Firewall rules: {firewalls}\r\n";
+                    this.osReport += $"EnabledFireWallRules: {firewalls}\r\n";
                 }
 
                 if (activePorts > -1)
                 {
-                    this.osReport += $"Total number of active TCP ports: {activePorts}\r\n";
+                    this.osReport += $"ActivePorts: {activePorts}\r\n";
                 }
 
                 if (dynamicPortRange.Item1 > -1)
                 {
                     osEphemeralPortRange = $"{dynamicPortRange.Item1} - {dynamicPortRange.Item2}";
-                    this.osReport += $"Windows ephemeral TCP port range: {osEphemeralPortRange}\r\n";
+                    this.osReport += $"WindowsEphemeralPortRange: {osEphemeralPortRange}\r\n";
                 }
 
                 if (appPortRange.Item1 > -1)
                 {
                     fabricAppPortRange = $"{appPortRange.Item1} - {appPortRange.Item2}";
-                    this.osReport += $"Fabric Application TCP port range: {fabricAppPortRange}\r\n";
+                    this.osReport += $"FabricApplicationPortRange: {fabricAppPortRange}\r\n";
                 }
 
                 if (activeEphemeralPorts > -1)
                 {
-                    this.osReport += $"Total number of active ephemeral TCP ports: {activeEphemeralPorts}\r\n";
+                    this.osReport += $"ActiveEphemeralPorts: {activeEphemeralPorts}\r\n";
                 }
 
                 string osHotFixes = GetWindowsHotFixes(token);
@@ -390,6 +405,7 @@ namespace FabricObserver
                             PercentMemoryInUse = PercentTotalMemoryInUseOnVM,
                             NumberOfRunningProcesses = int.Parse(numProcs),
                             LogicalProcessorCount = Environment.ProcessorCount,
+                            LogicalDriveCount = driveCount,
                             ActiveFirewallRules = firewalls,
                             ActivePorts = activePorts,
                             ActiveEphemeralPorts = activeEphemeralPorts,
