@@ -81,21 +81,24 @@ namespace FabricObserver.Utilities
         internal double GetAvailabeDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             var driveInfo = new DriveInfo(driveLetter);
-            long available = (long)driveInfo.AvailableFreeSpace;
+            long available = driveInfo.AvailableFreeSpace;
+
             return ConvertToSizeUnits(available, sizeUnit);
         }
 
         internal double GetUsedDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             var driveInfo = new DriveInfo(driveLetter);
-            long used = (long)driveInfo.TotalSize - driveInfo.AvailableFreeSpace;
+            long used = driveInfo.TotalSize - driveInfo.AvailableFreeSpace;
+
             return ConvertToSizeUnits(used, sizeUnit);
         }
 
         internal double GetTotalDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             var driveInfo = new DriveInfo(driveLetter);
-            long total = (long)driveInfo.TotalSize;
+            long total = driveInfo.TotalSize;
+
             return ConvertToSizeUnits(total, sizeUnit);
         }
 
