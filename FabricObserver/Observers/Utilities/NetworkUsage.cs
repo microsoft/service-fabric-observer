@@ -78,6 +78,7 @@ namespace FabricObserver.Utilities
             return -1;
         }
 
+        /// <returns>List of string,int Tuples.</returns>
         /// <summary>
         ///  Returns number of ephemeral ports (ports within a dynamic numerical range) in use by a process
         ///  on node as a List<Tuple<int, int>> (process id, port count in use by said process) ordered by port count, descending...
@@ -173,10 +174,10 @@ namespace FabricObserver.Utilities
                         ephemeralPortProcessTupleList.Add(Tuple.Create(
                             int.Parse(proc),
                             ephemeralPortList.Where(s => s.Split(
-                                                              new string[] { " " },
-                                                              StringSplitOptions.RemoveEmptyEntries)[4].Trim() == proc
-                                                          && (GetPortNumberFromConsoleOutputRow(s, protoParam) >= lowPortRange
-                                                          && GetPortNumberFromConsoleOutputRow(s, protoParam) <= highPortRange)).Count()));
+                                                            new string[] { " " },
+                                                            StringSplitOptions.RemoveEmptyEntries)[4].Trim() == proc
+                                                            && GetPortNumberFromConsoleOutputRow(s, protoParam) >= lowPortRange
+                                                            && GetPortNumberFromConsoleOutputRow(s, protoParam) <= highPortRange).Count()));
                     }
 
                     var ret = ephemeralPortProcessTupleList.OrderByDescending(x => x.Item2).ToList();
@@ -403,6 +404,9 @@ namespace FabricObserver.Utilities
                 searcher = new ManagementObjectSearcher(scope, q);
                 results = searcher.Get();
                 count = results.Count;
+            }
+            catch (ManagementException)
+            {
             }
             finally
             {
