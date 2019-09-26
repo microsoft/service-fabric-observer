@@ -4,8 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Tracing;
-using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
@@ -19,7 +17,7 @@ using Microsoft.Win32;
 namespace FabricObserver
 {
     // This observer doesn't monitor or report health status.
-    // It provides information about the currently installed Service Fabric runtime environment.
+    // It provides information about the currently installed Service Fabric runtime environment, apps, and services.
     // The output (a local file) is used by the API service that outputs HTML (http://localhost:5000/api/ObserverManager).
     public class SFConfigurationObserver : ObserverBase
     {

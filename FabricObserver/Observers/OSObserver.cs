@@ -49,203 +49,6 @@ namespace FabricObserver
             this.LastRunDateTime = DateTime.Now;
         }
 
-        private void GetComputerInfo(CancellationToken token)
-        {
-            ManagementObjectSearcher win32OSInfo = null;
-            ManagementObjectCollection results = null;
-
-            var sb = new StringBuilder();
-
-            try
-            {
-                win32OSInfo = new ManagementObjectSearcher("SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory,TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
-                results = win32OSInfo.Get();
-                sb.AppendLine($"\nOS Info:\n");
-
-                foreach (var prop in results)
-                {
-                    token.ThrowIfCancellationRequested();
-                    int visibleTotal = -1;
-                    int freePhysical = -1;
-
-                    foreach (var p in prop.Properties)
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        string n = p.Name;
-                        string v = p.Value.ToString();
-
-                        if (string.IsNullOrEmpty(n) || string.IsNullOrEmpty(v))
-                        {
-                            continue;
-                        }
-
-                        if (n.ToLower() == "caption")
-                        {
-                            n = "OS";
-                        }
-
-                        if (n.ToLower() == "status")
-                        {
-                            this.osStatus = v;
-                        }
-
-                        if (n.ToLower().Contains("date") || n.ToLower().Contains("bootuptime"))
-                        {
-                            v = ManagementDateTimeConverter.ToDateTime(v).ToString();
-                        }
-
-                        if (n.ToLower().Contains("memory"))
-                        {
-                            // For output...
-                            int i = int.Parse(v) / 1024 / 1024;
-                            v = i.ToString() + " GB";
-
-                            // For use by any other observer that needs to know percent of RAM in use on node...
-                            if (n.ToLower().Contains("totalvisible"))
-                            {
-                                visibleTotal = i;
-                            }
-
-                            if (n.ToLower().Contains("freephysical"))
-                            {
-                                freePhysical = i;
-                            }
-                        }
-
-                        sb.AppendLine($"{n}: {v}");
-                    }
-
-                    // Calculate percent RAM available...
-                    if (visibleTotal > -1 && freePhysical > -1)
-                    {
-                        double usedPct = ((double)(visibleTotal - freePhysical)) / visibleTotal;
-                        PercentTotalMemoryInUseOnVM = (int)(usedPct * 100);
-                        TotalVisibleMemoryGB = visibleTotal;
-                        TotalFreeMemoryGB = freePhysical;
-                        sb.AppendLine($"Percent RAM in use: {PercentTotalMemoryInUseOnVM}%");
-                    }
-                }
-
-                this.osReport = sb.ToString();
-                sb.Clear();
-
-                // Active, bound ports...
-                int activePorts = NetworkUsage.GetActivePortCount();
-
-                // Active, ephemeral ports...
-                int activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
-                Tuple<int, int> dynamicPortRange = NetworkUsage.TupleGetDynamicPortRange();
-                string clusterManifestXml = null;
-                if (this.IsTestRun)
-                {
-                    clusterManifestXml = File.ReadAllText(this.TestManifestPath);
-                }
-                else
-                {
-                    clusterManifestXml = this.FabricClientInstance.ClusterManager.GetClusterManifestAsync().GetAwaiter().GetResult();
-                }
-
-                Tuple<int, int> appPortRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
-
-                // Enabled Firewall rules...
-                int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
-
-                if (firewalls > -1)
-                {
-                    this.osReport += $"Total number of enabled Firewall rules: {firewalls}\n";
-                }
-
-                if (activePorts > -1)
-                {
-                    this.osReport += $"Total number of active TCP ports: {activePorts}\n";
-                }
-
-                if (dynamicPortRange.Item1 > -1)
-                {
-                    this.osReport += $"Windows ephemeral TCP port range: {dynamicPortRange.Item1} - {dynamicPortRange.Item2}\n";
-                }
-
-                if (appPortRange.Item1 > -1)
-                {
-                    this.osReport += $"Fabric Application TCP port range: {appPortRange.Item1} - {appPortRange.Item2}\n";
-                }
-
-                if (activeEphemeralPorts > -1)
-                {
-                    this.osReport += $"Total number of active ephemeral TCP ports: {activeEphemeralPorts}\n";
-                }
-
-                string osHotFixes = GetHotFixes(token);
-
-                if (!string.IsNullOrEmpty(osHotFixes))
-                {
-                    this.osReport += $"\nOS Patches/Hot Fixes:\n\n{osHotFixes}\n";
-                }
-            }
-            catch (Exception e)
-            {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
-                    HealthState.Error,
-                    $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
-                throw;
-            }
-            finally
-            {
-                results?.Dispose();
-                win32OSInfo?.Dispose();
-            }
-        }
-
-        public static string GetHotFixes(CancellationToken token)
-        {
-            ManagementObjectSearcher searcher = null;
-            ManagementObjectCollection results = null;
-            string ret = string.Empty;
-            token.ThrowIfCancellationRequested();
-
-            try
-            {
-                searcher = new ManagementObjectSearcher("SELECT * FROM Win32_QuickFixEngineering");
-                results = searcher.Get();
-
-                if (results.Count < 1)
-                {
-                    return string.Empty;
-                }
-
-                var resultsOrdered = results.Cast<ManagementObject>()
-                                            .OrderByDescending(obj => obj["InstalledOn"]);
-
-                var sb = new StringBuilder();
-
-                foreach (var obj in resultsOrdered)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    sb.AppendFormat("{0}  {1}", obj["HotFixID"], obj["InstalledOn"]);
-                    sb.AppendLine();
-                }
-
-                ret = sb.ToString().Trim();
-                sb.Clear();
-            }
-            catch (ArgumentException)
-            {
-            }
-            finally
-            {
-                results?.Dispose();
-                results = null;
-                searcher?.Dispose();
-                searcher = null;
-            }
-
-            return ret;
-        }
-
         /// <inheritdoc/>
         public override Task ReportAsync(CancellationToken token)
         {
@@ -276,13 +79,13 @@ namespace FabricObserver
                     if (this.IsTelemetryEnabled)
                     {
                         _ = this.ObserverTelemetryClient?.ReportHealthAsync(
-                            FabricRuntime.GetActivationContext().ApplicationName,
-                            this.FabricServiceContext.ServiceName.OriginalString,
-                            "FabricObserver",
-                            this.ObserverName,
-                            $"{this.NodeName}/OS reporting unhealthy: {this.osStatus}",
-                            HealthState.Error,
-                            token);
+                                FabricRuntime.GetActivationContext().ApplicationName,
+                                this.FabricServiceContext.ServiceName.OriginalString,
+                                "FabricObserver",
+                                this.ObserverName,
+                                $"{this.NodeName}/OS reporting unhealthy: {this.osStatus}",
+                                HealthState.Error,
+                                token);
                     }
                 }
                 else if (this.HasActiveFabricErrorOrWarning &&
@@ -339,6 +142,281 @@ namespace FabricObserver
                     HealthState.Error,
                     $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
                 throw;
+            }
+        }
+
+        private static string GetWindowsHotFixes(CancellationToken token)
+        {
+            ManagementObjectSearcher searcher = null;
+            ManagementObjectCollection results = null;
+            string ret = string.Empty;
+            token.ThrowIfCancellationRequested();
+
+            try
+            {
+                searcher = new ManagementObjectSearcher("SELECT * FROM Win32_QuickFixEngineering");
+                results = searcher.Get();
+
+                if (results.Count < 1)
+                {
+                    return string.Empty;
+                }
+
+                var resultsOrdered = results.Cast<ManagementObject>()
+                                            .OrderByDescending(obj => obj["InstalledOn"]);
+
+                var sb = new StringBuilder();
+
+                foreach (var obj in resultsOrdered)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    sb.AppendFormat("{0}", obj["HotFixID"]);
+                    sb.AppendLine();
+                }
+
+                ret = sb.ToString().Trim();
+                sb.Clear();
+            }
+            catch (ArgumentException)
+            {
+            }
+            catch (ManagementException)
+            {
+            }
+            finally
+            {
+                results?.Dispose();
+                results = null;
+                searcher?.Dispose();
+                searcher = null;
+            }
+
+            return ret;
+        }
+
+        private void GetComputerInfo(CancellationToken token)
+        {
+            ManagementObjectSearcher win32OSInfo = null;
+            ManagementObjectCollection results = null;
+
+            var sb = new StringBuilder();
+            var diskUsage = new DiskUsage();
+
+            string osName = string.Empty;
+            string osVersion = string.Empty;
+            string numProcs = "-1";
+            string lastBootTime = string.Empty;
+            string installDate = string.Empty;
+
+            try
+            {
+                win32OSInfo = new ManagementObjectSearcher("SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory,TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+                results = win32OSInfo.Get();
+                sb.AppendLine($"\nOS Info:\n");
+
+                foreach (var prop in results)
+                {
+                    token.ThrowIfCancellationRequested();
+                    int visibleTotal = -1;
+                    int freePhysical = -1;
+
+                    foreach (var p in prop.Properties)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        string n = p.Name;
+                        string v = p.Value.ToString();
+
+                        if (string.IsNullOrEmpty(n) || string.IsNullOrEmpty(v))
+                        {
+                            continue;
+                        }
+
+                        if (n.ToLower() == "caption")
+                        {
+                            n = "OS";
+                            osName = v;
+                        }
+
+                        if (n.ToLower() == "numberofprocesses")
+                        {
+                            // Number of running processes
+                            numProcs = v;
+
+                            // Also show number of processors on machine (logical cores)...
+                            sb.AppendLine($"LogicalProcessorCount: {Environment.ProcessorCount}");
+                        }
+
+                        if (n.ToLower() == "status")
+                        {
+                            this.osStatus = v;
+                        }
+
+                        if (n.ToLower() == "version")
+                        {
+                            osVersion = v;
+                        }
+
+                        if (n.ToLower().Contains("bootuptime"))
+                        {
+                            v = ManagementDateTimeConverter.ToDateTime(v).ToString();
+                            lastBootTime = v;
+                        }
+
+                        if (n.ToLower().Contains("date"))
+                        {
+                            v = ManagementDateTimeConverter.ToDateTime(v).ToString();
+                            installDate = v;
+                        }
+
+                        if (n.ToLower().Contains("memory"))
+                        {
+                            // For output...
+                            int i = int.Parse(v) / 1024 / 1024;
+                            v = i.ToString() + " GB";
+
+                            // For use by any other observer that needs to know percent of RAM in use on node...
+                            if (n.ToLower().Contains("totalvisible"))
+                            {
+                                visibleTotal = i;
+                            }
+
+                            if (n.ToLower().Contains("freephysical"))
+                            {
+                                freePhysical = i;
+                            }
+                        }
+
+                        sb.AppendLine($"{n}: {v}");
+                    }
+
+                    // Calculate percent RAM available...
+                    if (visibleTotal > -1 && freePhysical > -1)
+                    {
+                        double usedPct = ((double)(visibleTotal - freePhysical)) / visibleTotal;
+                        PercentTotalMemoryInUseOnVM = (int)(usedPct * 100);
+                        TotalVisibleMemoryGB = visibleTotal;
+                        TotalFreeMemoryGB = freePhysical;
+                        sb.AppendLine($"Percent RAM in use: {PercentTotalMemoryInUseOnVM}%");
+                    }
+                }
+
+                // Disk info for display in SFX...
+                var diskSpaceUsageTupleList = diskUsage.GetCurrentDiskSpaceUsedPercentAllDrives();
+
+                foreach (var tuple in diskSpaceUsageTupleList)
+                {
+                    sb.AppendLine($"Disk space usage for drive {tuple.Item1}: {tuple.Item2}%");
+                }
+
+                this.osReport = sb.ToString();
+                sb.Clear();
+
+                // Active, bound ports...
+                int activePorts = NetworkUsage.GetActivePortCount();
+
+                // Active, ephemeral ports...
+                int activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
+                var dynamicPortRange = NetworkUsage.TupleGetDynamicPortRange();
+                string clusterManifestXml = null;
+                string osEphemeralPortRange = string.Empty;
+                string fabricAppPortRange = string.Empty;
+
+                if (this.IsTestRun)
+                {
+                    clusterManifestXml = File.ReadAllText(this.TestManifestPath);
+                }
+                else
+                {
+                    clusterManifestXml = this.FabricClientInstance.ClusterManager.GetClusterManifestAsync().GetAwaiter().GetResult();
+                }
+
+                var appPortRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+
+                // Enabled Firewall rules...
+                int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
+
+                if (firewalls > -1)
+                {
+                    this.osReport += $"Total number of enabled Firewall rules: {firewalls}\r\n";
+                }
+
+                if (activePorts > -1)
+                {
+                    this.osReport += $"Total number of active TCP ports: {activePorts}\r\n";
+                }
+
+                if (dynamicPortRange.Item1 > -1)
+                {
+                    osEphemeralPortRange = $"{dynamicPortRange.Item1} - {dynamicPortRange.Item2}";
+                    this.osReport += $"Windows ephemeral TCP port range: {osEphemeralPortRange}\r\n";
+                }
+
+                if (appPortRange.Item1 > -1)
+                {
+                    fabricAppPortRange = $"{appPortRange.Item1} - {appPortRange.Item2}";
+                    this.osReport += $"Fabric Application TCP port range: {fabricAppPortRange}\r\n";
+                }
+
+                if (activeEphemeralPorts > -1)
+                {
+                    this.osReport += $"Total number of active ephemeral TCP ports: {activeEphemeralPorts}\r\n";
+                }
+
+                string osHotFixes = GetWindowsHotFixes(token);
+
+                if (!string.IsNullOrEmpty(osHotFixes))
+                {
+                    this.osReport += $"\nOS Patches/Hot Fixes:\n\n{osHotFixes}\r\n";
+                }
+
+                // ETW...
+                if (this.IsEtwEnabled)
+                {
+                    Logger.EtwLogger?.Write(
+                        $"FabricObserverDataEvent",
+                        new
+                        {
+                            Level = 0, // Info
+                            Node = this.NodeName,
+                            Observer = this.ObserverName,
+                            OS = osName,
+                            OSVersion = osVersion,
+                            OSInstallDate = installDate,
+                            LastBootUpTime = lastBootTime,
+                            TotalVisibleMemorySizeGB = TotalVisibleMemoryGB,
+                            TotalFreeMemoryGB = TotalFreeMemoryGB,
+                            PercentMemoryInUse = PercentTotalMemoryInUseOnVM,
+                            NumberOfRunningProcesses = int.Parse(numProcs),
+                            LogicalProcessorCount = Environment.ProcessorCount,
+                            ActiveFirewallRules = firewalls,
+                            ActivePorts = activePorts,
+                            ActiveEphemeralPorts = activeEphemeralPorts,
+                            WindowsDynamicPortRange = osEphemeralPortRange,
+                            FabricAppPortRange = fabricAppPortRange,
+                            HotFixes = osHotFixes.Replace("\r\n", ", ").TrimEnd(','),
+                        });
+                }
+            }
+            catch (ManagementException)
+            {
+            }
+            catch (Exception e)
+            {
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Error,
+                    $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
+
+                throw;
+            }
+            finally
+            {
+                results?.Dispose();
+                win32OSInfo?.Dispose();
+                diskUsage?.Dispose();
             }
         }
     }
