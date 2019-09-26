@@ -18,7 +18,7 @@ namespace FabricObserver
 {
     // This observer monitors OS health state and provides static and dynamic OS level information.
     // This observer is not configurable. It will signal infinte TTL Ok Health Reports that will show up
-    // under node details in SFX.
+    // under node details in SFX as well as emit ETW events. It is best to *not* disable this observer...
     // The output (a local file) is used by the API service and returns HTML output (http://localhost:5000/api/ObserverManager).
     public class OSObserver : ObserverBase
     {
@@ -310,6 +310,10 @@ namespace FabricObserver
                 {
                     // We only care about ready drives (so, things like an empty DVD drive are not interesting...)
                     driveCount = DriveInfo.GetDrives().Where(d => d.IsReady).Count();
+                    sb.AppendLine($"LogicalDriveCount: {driveCount}");
+                }
+                catch (ArgumentException)
+                {
                 }
                 catch (IOException)
                 {
@@ -317,8 +321,6 @@ namespace FabricObserver
                 catch (UnauthorizedAccessException)
                 {
                 }
-
-                sb.AppendLine($"LogicalDriveCount: {driveCount}");
 
                 foreach (var tuple in diskSpaceUsageTupleList)
                 {
