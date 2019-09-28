@@ -556,19 +556,19 @@ namespace FabricObserver
             {
                 string errorWarningKind = null;
 
-                if (data.Property.Contains("CPU"))
+                if (data.Property.ToLower().Contains("cpu"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorCpuTime : ErrorWarningCode.WarningCpuTime;
                 }
-                else if (data.Property.Contains("Disk Space"))
+                else if (data.Property.ToLower().Contains("disk space"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpace : ErrorWarningCode.WarningDiskSpace;
                 }
-                else if (data.Property.Contains("Committed Memory"))
+                else if (data.Property == "Memory Consumption MB")
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryCommitted : ErrorWarningCode.WarningMemoryCommitted;
                 }
-                else if (data.Property.Contains("Percent Memory"))
+                else if (data.Property == "Memory Consumption %")
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryPercentUsed : ErrorWarningCode.WarningMemoryPercentUsed;
                 }
@@ -696,13 +696,14 @@ namespace FabricObserver
             if (this.LastRunDateTime == DateTime.MinValue)
             {
                 return TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds)
-                                 .Add(TimeSpan.FromMinutes(TTLAddMinutes));
+                       .Add(TimeSpan.FromMinutes(TTLAddMinutes));
             }
             else
             {
                 return DateTime.Now.Subtract(this.LastRunDateTime)
                        .Add(TimeSpan.FromSeconds(runDuration))
-                       .Add(TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds));
+                       .Add(TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds))
+                       .Add(TimeSpan.FromMinutes(TTLAddMinutes));
             }
         }
 
