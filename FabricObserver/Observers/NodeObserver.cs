@@ -103,7 +103,7 @@ namespace FabricObserver
 
             if (this.allMemDataCommittedBytes == null)
             {
-                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>("Total Committed Memory", "SysMemoryCommittedMb");
+                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>("Memory Consumption MB", "SysMemoryCommittedMb");
             }
 
             if (this.firewallData == null)
@@ -123,7 +123,7 @@ namespace FabricObserver
 
             if (this.allMemDataPercentUsed == null)
             {
-                this.allMemDataPercentUsed = new FabricResourceUsageData<int>("Percent Memory in Use", "SysMemoryPercentUsed");
+                this.allMemDataPercentUsed = new FabricResourceUsageData<int>("Memory Consumption %", "SysMemoryPercentUsed");
             }
         }
 
@@ -280,13 +280,12 @@ namespace FabricObserver
                             this.allMemDataCommittedBytes.Data.Add(this.perfCounters.PerfCounterGetMemoryInfoMB());
                         }
 
-                        Thread.Sleep(250);
-                    }
+                        if (this.MemoryWarningLimitPercent > 0)
+                        {
+                            this.allMemDataPercentUsed.Data.Add(ObserverManager.GetPercentPhysicalMemoryInUse());
+                        }
 
-                    // Does not need to run in the loop...
-                    if (this.MemoryWarningLimitPercent > 0)
-                    {
-                        this.allMemDataPercentUsed.Data.Add(OSObserver.PercentTotalMemoryInUseOnVM);
+                        Thread.Sleep(250);
                     }
                 }
                 catch (Exception e)
