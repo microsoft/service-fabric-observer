@@ -10,6 +10,7 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
+using System.Management;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -124,6 +125,62 @@ namespace FabricObserver
             {
                 observer,
             });
+        }
+
+        public static int GetPercentPhysicalMemoryInUse()
+        {
+            ManagementObjectSearcher win32OSInfo = null;
+            ManagementObjectCollection results = null;
+
+            try
+            {
+                win32OSInfo = new ManagementObjectSearcher("SELECT FreePhysicalMemory,TotalVisibleMemorySize FROM Win32_OperatingSystem");
+                results = win32OSInfo.Get();
+
+                foreach (var prop in results)
+                {
+                    long visibleTotal = -1;
+                    long freePhysical = -1;
+
+                    foreach (var p in prop.Properties)
+                    {
+                        string n = p.Name;
+                        var v = p.Value;
+
+                        if (n.ToLower().Contains("totalvisible"))
+                        {
+                            visibleTotal = Convert.ToInt64(v);
+                        }
+
+                        if (n.ToLower().Contains("freephysical"))
+                        {
+                            freePhysical = Convert.ToInt64(v);
+                        }
+                    }
+
+                    if (visibleTotal > -1 && freePhysical > -1)
+                    {
+                        double usedPct = ((double)(visibleTotal - freePhysical)) / visibleTotal;
+                        return (int)(usedPct * 100);
+                    }
+                }
+            }
+            catch (FormatException)
+            {
+            }
+            catch (InvalidCastException)
+            {
+            }
+            catch (ManagementException)
+            {
+            }
+            finally
+            {
+                win32OSInfo?.Dispose();
+                results?.Dispose();
+            }
+
+            return -1;
         }
 
         private static string GetConfigSettingValue(string parameterName)
@@ -459,7 +516,8 @@ namespace FabricObserver
                     // The observer is taking too long (hung?), move on to next observer...
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
                     // So, application will need a restart...
-                    // TODO: Be less restrictive, but do fix the broken observer if/when this happens...
+                    // TODO: Be less restrictive, but do fix the broken observer if/when this happens, as it means there is probably
+                    // a bug in your code...
                     if (!isCompleted)
                     {
                         string observerHealthWarning = observer.ObserverName + $" has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
