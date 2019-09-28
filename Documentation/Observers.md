@@ -171,15 +171,15 @@ settings housed in Settings.xml.
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="DiskSpaceWarningThreshold" Value="80" />
-    <Parameter Name="DiskSpaceErrorThreshold" Value="" />
+    <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
+    <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
     <Parameter Name="AverageQueueLengthWarningThreshold" Value ="5" />
     <!-- These may or may not be useful to you. Depends on your IO-bound workload... -->
     <Parameter Name="IOReadsErrorThreshold" Value="" />
     <Parameter Name="IOReadsWarningThreshold" Value="" />
     <Parameter Name="IOWritesErrorThreshold" Value="" />
-    <Parameter Name="IOWritesWarningThreshold" Value="" />	  
+    <Parameter Name="IOWritesWarningThreshold" Value="" />
   </Section>
 ```
 
