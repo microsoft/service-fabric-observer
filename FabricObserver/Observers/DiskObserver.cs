@@ -34,9 +34,9 @@ namespace FabricObserver
         private TimeSpan monitorDuration = TimeSpan.FromSeconds(5);
         private Stopwatch stopWatch;
 
-        public int DiskSpaceErrorThreshold { get; set; }
+        public int DiskSpacePercentErrorThreshold { get; set; }
 
-        public int DiskSpaceWarningThreshold { get; set; }
+        public int DiskSpacePercentWarningThreshold { get; set; }
 
         public int IOReadsErrorThreshold { get; set; }
 
@@ -114,7 +114,7 @@ namespace FabricObserver
                             this.diskIOWritesData.Add(new FabricResourceUsageData<float>("Disk sec/Write (ms)", id));
                         }
 
-                        // Disk space...
+                        // Disk space %...
                         if (!this.diskSpacePercentageUsageData.Any(data => data.Id == id))
                         {
                             this.diskSpacePercentageUsageData.Add(new FabricResourceUsageData<double>("Disk Space Consumption %", id));
@@ -122,17 +122,17 @@ namespace FabricObserver
 
                         if (!this.diskSpaceUsageData.Any(data => data.Id == id))
                         {
-                            this.diskSpaceUsageData.Add(new FabricResourceUsageData<double>("Disk Space Consumption", id));
+                            this.diskSpaceUsageData.Add(new FabricResourceUsageData<double>("Disk Space Consumption MB", id));
                         }
 
                         if (!this.diskSpaceAvailableData.Any(data => data.Id == id))
                         {
-                            this.diskSpaceAvailableData.Add(new FabricResourceUsageData<double>("Disk Space Available", id));
+                            this.diskSpaceAvailableData.Add(new FabricResourceUsageData<double>("Disk Space Available MB", id));
                         }
 
                         if (!this.diskSpaceTotalData.Any(data => data.Id == id))
                         {
-                            this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>("Disk Space Total", id));
+                            this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>("Disk Space Total MB", id));
                         }
 
                         // Current disk queue length...
@@ -162,15 +162,15 @@ namespace FabricObserver
 
                             this.diskSpaceUsageData.FirstOrDefault(
                                                      x => x.Id == id)
-                                                     .Data.Add(diskUsage.GetUsedDiskSpace(id));
+                                                     .Data.Add(diskUsage.GetUsedDiskSpace(id, SizeUnit.Megabytes));
 
                             this.diskSpaceAvailableData.FirstOrDefault(
                                                      x => x.Id == id)
-                                                     .Data.Add(diskUsage.GetAvailabeDiskSpace(id));
+                                                     .Data.Add(diskUsage.GetAvailabeDiskSpace(id, SizeUnit.Megabytes));
 
                             this.diskSpaceTotalData.FirstOrDefault(
                                                      x => x.Id == id)
-                                                     .Data.Add(diskUsage.GetTotalDiskSpace(id));
+                                                     .Data.Add(diskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
 
                             this.diskAverageQueueLengthData.FirstOrDefault(
                                                              x => x.Id == id)
@@ -222,17 +222,17 @@ namespace FabricObserver
                 if (int.TryParse(
                     this.GetSettingParameterValue(
                     ObserverConstants.DiskObserverConfigurationSectionName,
-                    ObserverConstants.DiskObserverDiskSpaceError), out int diskUsedWarning))
+                    ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
-                    this.DiskSpaceErrorThreshold = diskUsedWarning;
+                    this.DiskSpacePercentErrorThreshold = diskUsedError;
                 }
 
                 if (int.TryParse(
                     this.GetSettingParameterValue(
                     ObserverConstants.DiskObserverConfigurationSectionName,
-                    ObserverConstants.DiskObserverDiskSpaceWarning), out int diskUsedError))
+                    ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
-                    this.DiskSpaceWarningThreshold = diskUsedError;
+                    this.DiskSpacePercentWarningThreshold = diskUsedWarning;
                 }
 
                 if (int.TryParse(
@@ -344,14 +344,14 @@ namespace FabricObserver
                         timeToLiveWarning);
                 }
 
-                // Disk Space Usage %
+                // Disk Space Usage % from Settings.xml...
                 foreach (var data in this.diskSpacePercentageUsageData)
                 {
                     token.ThrowIfCancellationRequested();
                     this.ProcessResourceDataReportHealth(
                         data,
-                        this.DiskSpaceErrorThreshold,
-                        this.DiskSpaceWarningThreshold,
+                        this.DiskSpacePercentErrorThreshold,
+                        this.DiskSpacePercentWarningThreshold,
                         timeToLiveWarning);
                 }
 

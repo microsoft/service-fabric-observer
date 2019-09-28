@@ -25,13 +25,11 @@ namespace FabricObserver
         private string osReport;
         private string osStatus;
 
-        public static int PercentTotalMemoryInUseOnVM { get; private set; } = -1;
-
         public static int TotalVisibleMemoryGB { get; private set; } = -1;
 
-        public static int TotalFreeMemoryGB { get; private set; } = -1;
-
         public string TestManifestPath { get; set; }
+
+        private int TotalFreeMemoryGB { get; set; } = -1;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="OSObserver"/> class.
@@ -219,8 +217,6 @@ namespace FabricObserver
                 foreach (var prop in results)
                 {
                     token.ThrowIfCancellationRequested();
-                    int visibleTotal = -1;
-                    int freePhysical = -1;
 
                     foreach (var p in prop.Properties)
                     {
@@ -277,34 +273,21 @@ namespace FabricObserver
                             int i = int.Parse(v) / 1024 / 1024;
                             v = i.ToString() + " GB";
 
-                            // For use by any other observer that needs to know percent of RAM in use on node...
-                            if (n.ToLower().Contains("totalvisible"))
+                            // Set statics... TotalVisible only needs to be set once...
+                            if (TotalVisibleMemoryGB < 0 && n.ToLower().Contains("totalvisible"))
                             {
-                                visibleTotal = i;
+                                TotalVisibleMemoryGB = i;
                             }
 
                             if (n.ToLower().Contains("freephysical"))
                             {
-                                freePhysical = i;
+                                this.TotalFreeMemoryGB = i;
                             }
                         }
 
                         sb.AppendLine($"{n}: {v}");
                     }
-
-                    // Calculate percent RAM available...
-                    if (visibleTotal > -1 && freePhysical > -1)
-                    {
-                        double usedPct = ((double)(visibleTotal - freePhysical)) / visibleTotal;
-                        PercentTotalMemoryInUseOnVM = (int)(usedPct * 100);
-                        TotalVisibleMemoryGB = visibleTotal;
-                        TotalFreeMemoryGB = freePhysical;
-                        sb.AppendLine($"PercentMemoryInUse: {PercentTotalMemoryInUseOnVM}%");
-                    }
                 }
-
-                // Disk info for display in SFX and tracing (ETW)...
-                var diskSpaceUsageTupleList = diskUsage.GetCurrentDiskSpaceUsedPercentAllDrives();
 
                 try
                 {
@@ -320,11 +303,6 @@ namespace FabricObserver
                 }
                 catch (UnauthorizedAccessException)
                 {
-                }
-
-                foreach (var tuple in diskSpaceUsageTupleList)
-                {
-                    sb.AppendLine($"DiskSpaceConsumed - Drive {tuple.Item1}: {tuple.Item2}%");
                 }
 
                 this.osReport = sb.ToString();
@@ -402,12 +380,11 @@ namespace FabricObserver
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
-                            TotalVisibleMemorySizeGB = TotalVisibleMemoryGB,
-                            TotalFreeMemoryGB = TotalFreeMemoryGB,
-                            PercentMemoryInUse = PercentTotalMemoryInUseOnVM,
-                            NumberOfRunningProcesses = int.Parse(numProcs),
+                            TotalMemorySizeGB = TotalVisibleMemoryGB,
                             LogicalProcessorCount = Environment.ProcessorCount,
                             LogicalDriveCount = driveCount,
+                            FreeMemoryGB = this.TotalFreeMemoryGB,
+                            NumberOfRunningProcesses = int.Parse(numProcs),
                             ActiveFirewallRules = firewalls,
                             ActivePorts = activePorts,
                             ActiveEphemeralPorts = activeEphemeralPorts,
