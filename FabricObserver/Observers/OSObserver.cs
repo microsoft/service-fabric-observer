@@ -24,12 +24,9 @@ namespace FabricObserver
     {
         private string osReport;
         private string osStatus;
-
-        public static int TotalVisibleMemoryGB { get; private set; } = -1;
+        private int totalVisibleMemoryGB = -1;
 
         public string TestManifestPath { get; set; }
-
-        private int TotalFreeMemoryGB { get; set; } = -1;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="OSObserver"/> class.
@@ -119,16 +116,16 @@ namespace FabricObserver
                         "Unable to create SysInfo.txt file...");
                 }
 
-                var persistentReport = new Utilities.HealthReport
+                var osReport = new Utilities.HealthReport
                 {
                     Observer = this.ObserverName,
                     HealthMessage = this.osReport,
                     State = HealthState.Ok,
                     NodeName = this.NodeName,
-                    HealthReportTimeToLive = TimeSpan.MaxValue,
+                    HealthReportTimeToLive = this.SetTimeToLiveWarning(),
                 };
 
-                this.HealthReporter.ReportHealthToServiceFabric(persistentReport);
+                this.HealthReporter.ReportHealthToServiceFabric(osReport);
 
                 return Task.CompletedTask;
             }
@@ -269,19 +266,20 @@ namespace FabricObserver
 
                         if (n.ToLower().Contains("memory"))
                         {
+                            if (n.ToLower().Contains("freephysical") ||
+                                n.ToLower().Contains("freevirtual"))
+                            {
+                                continue;
+                            }
+
                             // For output...
                             int i = int.Parse(v) / 1024 / 1024;
                             v = i.ToString() + " GB";
 
-                            // Set statics... TotalVisible only needs to be set once...
-                            if (TotalVisibleMemoryGB < 0 && n.ToLower().Contains("totalvisible"))
+                            // TotalVisible only needs to be set once...
+                            if (n.ToLower().Contains("totalvisible"))
                             {
-                                TotalVisibleMemoryGB = i;
-                            }
-
-                            if (n.ToLower().Contains("freephysical"))
-                            {
-                                this.TotalFreeMemoryGB = i;
+                                this.totalVisibleMemoryGB = i;
                             }
                         }
 
@@ -306,7 +304,6 @@ namespace FabricObserver
                 }
 
                 this.osReport = sb.ToString();
-                sb.Clear();
 
                 // Active, bound ports...
                 int activePorts = NetworkUsage.GetActivePortCount();
@@ -339,24 +336,24 @@ namespace FabricObserver
 
                 if (activePorts > -1)
                 {
-                    this.osReport += $"ActivePorts: {activePorts}\r\n";
+                    this.osReport += $"TotalActiveTCPPorts: {activePorts}\r\n";
                 }
 
                 if (dynamicPortRange.Item1 > -1)
                 {
                     osEphemeralPortRange = $"{dynamicPortRange.Item1} - {dynamicPortRange.Item2}";
-                    this.osReport += $"WindowsEphemeralPortRange: {osEphemeralPortRange}\r\n";
+                    this.osReport += $"WindowsEphemeralTCPPortRange: {osEphemeralPortRange}\r\n";
                 }
 
                 if (appPortRange.Item1 > -1)
                 {
                     fabricAppPortRange = $"{appPortRange.Item1} - {appPortRange.Item2}";
-                    this.osReport += $"FabricApplicationPortRange: {fabricAppPortRange}\r\n";
+                    this.osReport += $"FabricApplicationTCPPortRange: {fabricAppPortRange}\r\n";
                 }
 
                 if (activeEphemeralPorts > -1)
                 {
-                    this.osReport += $"ActiveEphemeralPorts: {activeEphemeralPorts}\r\n";
+                    this.osReport += $"ActiveEphemeralTCPPorts: {activeEphemeralPorts}\r\n";
                 }
 
                 string osHotFixes = GetWindowsHotFixes(token);
@@ -380,10 +377,9 @@ namespace FabricObserver
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
-                            TotalMemorySizeGB = TotalVisibleMemoryGB,
+                            TotalMemorySizeGB = this.totalVisibleMemoryGB,
                             LogicalProcessorCount = Environment.ProcessorCount,
                             LogicalDriveCount = driveCount,
-                            FreeMemoryGB = this.TotalFreeMemoryGB,
                             NumberOfRunningProcesses = int.Parse(numProcs),
                             ActiveFirewallRules = firewalls,
                             ActivePorts = activePorts,
@@ -412,6 +408,7 @@ namespace FabricObserver
                 results?.Dispose();
                 win32OSInfo?.Dispose();
                 diskUsage?.Dispose();
+                sb.Clear();
             }
         }
     }
