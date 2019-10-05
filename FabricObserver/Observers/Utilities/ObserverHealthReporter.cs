@@ -77,16 +77,18 @@ namespace FabricObserver.Utilities
                 sendOptions.Immediate = true;
                 if (healthReport.HealthReportTimeToLive == default(TimeSpan))
                 {
-                    timeToLive = TimeSpan.FromMinutes(5);
+                    timeToLive = TimeSpan.FromMinutes(10);
                 }
             }
 
-            string property = string.Empty, kind = string.Empty;
+            string kind = string.Empty;
 
             if (healthReport.Code != null)
             {
                 kind = healthReport.Code + ": ";
             }
+
+            string property;
 
             switch (healthReport.Observer)
             {

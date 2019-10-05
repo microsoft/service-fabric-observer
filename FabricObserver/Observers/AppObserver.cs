@@ -235,8 +235,8 @@ namespace FabricObserver
                         this.allAppCpuData.Add(new FabricResourceUsageData<int>("CPU Time", id));
                         this.allAppDiskReadsData.Add(new FabricResourceUsageData<float>("IO Read Bytes/sec", id));
                         this.allAppDiskWritesData.Add(new FabricResourceUsageData<float>("IO Write Bytes/sec", id));
-                        this.allAppMemDataMB.Add(new FabricResourceUsageData<long>("Memory (Private working set)", id));
-                        this.allAppMemDataPercent.Add(new FabricResourceUsageData<double>("Percent Memory in Use", id));
+                        this.allAppMemDataMB.Add(new FabricResourceUsageData<long>("Memory Consumption MB", id));
+                        this.allAppMemDataPercent.Add(new FabricResourceUsageData<double>("Memory Consumption %", id));
                         this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>("Total Active Ports", id));
                         this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>("Ephemeral Ports", id));
                     }
@@ -260,9 +260,12 @@ namespace FabricObserver
                         this.allAppMemDataMB.FirstOrDefault(x => x.Id == id).Data.Add((long)mem);
 
                         // Memory (percent in use)...
-                        if (OSObserver.TotalVisibleMemoryGB > -1)
+                        var memInfo = ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
+                        long totalMem = memInfo.Item1;
+
+                        if (totalMem > -1)
                         {
-                            double usedPct = Math.Round(((double)(mem * 100)) / (OSObserver.TotalVisibleMemoryGB * 1024), 2);
+                            double usedPct = Math.Round(((double)(mem * 100)) / (totalMem * 1024), 2);
                             this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(usedPct);
                         }
 
