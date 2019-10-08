@@ -255,11 +255,11 @@ namespace FabricObserver
                             this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
                         }
 
-                        // Memory (private working set)...
+                        // Memory (private working set (process))...
                         var mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(currentProcess.ProcessName);
                         this.allAppMemDataMB.FirstOrDefault(x => x.Id == id).Data.Add((long)mem);
 
-                        // Memory (percent in use)...
+                        // Memory (percent in use (total))...
                         var memInfo = ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
                         long totalMem = memInfo.Item1;
 
