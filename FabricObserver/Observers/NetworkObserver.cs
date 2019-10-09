@@ -165,6 +165,8 @@ namespace FabricObserver
                 }
             }
 
+            int configCount = 0;
+
             foreach (var config in this.userEndpoints)
             {
                 this.token.ThrowIfCancellationRequested();
@@ -175,6 +177,8 @@ namespace FabricObserver
                 {
                     continue;
                 }
+
+                configCount++;
 
                 foreach (var endpoint in config.Endpoints)
                 {
@@ -195,6 +199,12 @@ namespace FabricObserver
                         $"Monitoring outbound connection state to {endpoint.HostName} on Node {this.NodeName} for app {config.AppTarget}",
                         LogLevel.Information);
                 }
+            }
+
+            // This observer shouldn't run if there are no app-specific endpoint/port pairs provided...
+            if (configCount < 1)
+            {
+                return false;
             }
 
             return true;
