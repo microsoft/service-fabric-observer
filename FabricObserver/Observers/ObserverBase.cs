@@ -50,6 +50,7 @@ namespace FabricObserver
 
         /// <inheritdoc/>
         public string NodeName { get; set; }
+        public string NodeType { get; private set; }
 
         /// <inheritdoc/>
         public ObserverHealthReporter HealthReporter { get; }
@@ -112,6 +113,7 @@ namespace FabricObserver
             this.ObserverName = observerName;
             this.FabricServiceContext = ObserverManager.FabricServiceContext;
             this.NodeName = this.FabricServiceContext.NodeContext.NodeName;
+            this.NodeType = this.FabricServiceContext.NodeContext.NodeType;
 
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
