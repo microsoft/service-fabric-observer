@@ -104,6 +104,15 @@
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
   </Section>
+  <Section Name="CertificateObserverConfiguration">
+    <Parameter Name="Enabled" Value="True" />
+    <!-- Default is 14 days for each -->
+    <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="14" />
+    <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="14" />
+    <!-- These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
+    <Parameter Name="AppCertThumbprintsToObserve" Value="[]"/>
+    <Parameter Name="AppCertCommonNamesToObserve" Value="[]"/>
+  </Section>
   <!-- *** It is highly recommended that you do not disable the following observers ***-->
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
