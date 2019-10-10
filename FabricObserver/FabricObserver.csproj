@@ -243,6 +243,8 @@
     <Compile Include="Observers\MachineInfoModel\NetworkObserverConfig.cs" />
     <Compile Include="Observers\NetworkObserver.cs" />
     <Compile Include="Observers\NodeObserver.cs" />
+    <Compile Include="Observers\Utilities\SecurityConfiguration.cs" />
+    <Compile Include="Observers\Utilities\SecurityType.cs" />
     <Compile Include="Observers\Utilities\HealthReport.cs" />
     <Compile Include="Observers\Utilities\Logger.cs" />
     <Compile Include="Observers\Utilities\NativeMethods.cs" />
@@ -292,6 +294,7 @@
     <None Include="PackageRoot\ServiceManifest.xml" />
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="stylecop.json" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
