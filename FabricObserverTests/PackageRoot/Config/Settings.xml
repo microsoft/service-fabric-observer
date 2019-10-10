@@ -93,6 +93,15 @@
     <Parameter Name="RunInterval" Value="1.00:00:00" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
   </Section>
+  <Section Name="CertificateObserverConfiguration">
+    <Parameter Name="Enabled" Value="True" />
+    <!-- Default is 14 days for each -->
+    <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="14" />
+    <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="14" />
+    <!-- These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
+    <Parameter Name="AppCertThumbprintsToObserve" Value="[]"/>
+    <Parameter Name="AppCertCommonNamesToObserve" Value="[]"/>
+  </Section>
   <Section Name="SFConfigurationObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <!-- TODO - Just need to call the GetRunInterval function in ObserveAsync... -->
