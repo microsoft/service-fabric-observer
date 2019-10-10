@@ -25,8 +25,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace FabricObserverTests
 {
     [TestClass]
-    //[DeploymentItem(@"MyValidCert.p12")]
-    //[DeploymentItem(@"MyExpiredCert.p12")]
+
+    // [DeploymentItem(@"MyValidCert.p12")]
+    // [DeploymentItem(@"MyExpiredCert.p12")]
     public class ObserverTest
     {
         private static readonly Uri ServiceName = new Uri("fabric:/app/service");
@@ -282,7 +283,6 @@ namespace FabricObserverTests
         }
 
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
-
         [TestMethod]
         public void Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
         {
@@ -747,13 +747,13 @@ namespace FabricObserverTests
 
             obs.DaysUntilAppExpireWarningThreshold = 14;
             obs.DaysUntilClusterExpireWarningThreshold = 14;
-            obs.appCertificateCommonNamesToObserve = commonNamesToObserve;
-            obs.appCertificateThumbprintsToObserve = thumbprintsToObserve;
-            obs.securityConfiguration = new CertificateObserver.SecurityConfiguration
+            obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
+            obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
+            obs.SecurityConfiguration = new SecurityConfiguration
             {
-                SecurityType = CertificateObserver.SecurityType.None,
-                clusterCertThumbprintOrCommonName = string.Empty,
-                clusterCertSecondaryThumbprint = string.Empty,
+                SecurityType = SecurityType.None,
+                ClusterCertThumbprintOrCommonName = string.Empty,
+                ClusterCertSecondaryThumbprint = string.Empty,
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -794,17 +794,17 @@ namespace FabricObserverTests
             commonNamesToObserve.Add("MyExpiredCert"); // common name of expired cert
 
             var thumbprintsToObserve = new System.Collections.Generic.List<string>();
-            thumbprintsToObserve.Add("1fda27a2923505e47de37db48ff685b049642c25"); //thumbprint of valid cert, but warning threshold causes expiring
+            thumbprintsToObserve.Add("1fda27a2923505e47de37db48ff685b049642c25"); // thumbprint of valid cert, but warning threshold causes expiring
 
             obs.DaysUntilAppExpireWarningThreshold = int.MaxValue;
             obs.DaysUntilClusterExpireWarningThreshold = 14;
-            obs.appCertificateCommonNamesToObserve = commonNamesToObserve;
-            obs.appCertificateThumbprintsToObserve = thumbprintsToObserve;
-            obs.securityConfiguration = new CertificateObserver.SecurityConfiguration
+            obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
+            obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
+            obs.SecurityConfiguration = new SecurityConfiguration
             {
-                SecurityType = CertificateObserver.SecurityType.None,
-                clusterCertThumbprintOrCommonName = string.Empty,
-                clusterCertSecondaryThumbprint = string.Empty,
+                SecurityType = SecurityType.None,
+                ClusterCertThumbprintOrCommonName = string.Empty,
+                ClusterCertSecondaryThumbprint = string.Empty,
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
