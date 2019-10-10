@@ -1,5 +1,4 @@
-﻿using FabricObserver.Utilities;
-using NLog;
+﻿using NLog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,36 +11,36 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Xml;
+using FabricObserver.Utilities;
 
-namespace FabricObserver.Observers
+namespace FabricObserver
 {
-    class CertificateObserver : ObserverBase
+    public class CertificateObserver : ObserverBase
     {
         // By default, CertificateObserver runs once a day, and its reports last a single day
         private const int SECONDSBETWEENRUNS = 100; //86400 = 1 day
-        private DateTime lastRan = DateTime.MinValue;
 
-        private int DaysUntilClusterExpireWarningThreshold { get; set; }
-        private int DaysUntilAppExpireWarningThreshold { get; set; }
-        private List<string> appCertificateThumbprintsToObserve { get; set; }
-        private List<string> appCertificateCommonNamesToObserve { get; set; }
+        public int DaysUntilClusterExpireWarningThreshold { get; set; }
+        public int DaysUntilAppExpireWarningThreshold { get; set; }
+        public List<string> appCertificateThumbprintsToObserve { get; set; }
+        public List<string> appCertificateCommonNamesToObserve { get; set; }
 
-        private List<string> notFoundWarnings;
-        private List<string> expiredWarnings;
-        private List<string> expiringWarnings;
+        public List<string> notFoundWarnings;
+        public List<string> expiredWarnings;
+        public List<string> expiringWarnings;
 
-        private SecurityConfiguration securityConfiguration;
+        public SecurityConfiguration securityConfiguration;
 
         public CertificateObserver() : base(ObserverConstants.CertificateObserverName) { }
 
-        private struct SecurityConfiguration
+        public struct SecurityConfiguration
         {
             public SecurityType SecurityType { get; set; }
             public string clusterCertThumbprintOrCommonName { get; set; }
             public string clusterCertSecondaryThumbprint { get; set; }
         }
 
-        private enum SecurityType
+        public enum SecurityType
         {
             None,
             Thumbprint,
@@ -237,7 +236,7 @@ namespace FabricObserver.Observers
         {
 
             // Only run once per SECONDSBETWEENRUNS (default 1 day)
-            if(DateTime.Now.Subtract(this.lastRan).TotalSeconds < SECONDSBETWEENRUNS) {
+            if(DateTime.Now.Subtract(this.LastRunDateTime).TotalSeconds < SECONDSBETWEENRUNS) {
                 return;
             }
 
@@ -246,7 +245,10 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            await Initialize(token);
+            if (!this.IsTestRun)
+            {
+                await Initialize(token);
+            }
 
             this.expiredWarnings = new List<string>();
             this.expiringWarnings = new List<string>();
@@ -318,6 +320,8 @@ namespace FabricObserver.Observers
                     HealthReportTimeToLive = TimeSpan.FromDays(1)
                     // RemoveWhenExpired = True; automatically
                 };
+
+                this.HasActiveFabricErrorOrWarning = false;
             }
             else
             {
@@ -337,6 +341,8 @@ namespace FabricObserver.Observers
                     HealthReportTimeToLive = TimeSpan.FromSeconds(SECONDSBETWEENRUNS)
                     // RemoveWhenExpired = True; automatically
                 };
+
+                this.HasActiveFabricErrorOrWarning = true;
             }
 
             this.HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -345,7 +351,7 @@ namespace FabricObserver.Observers
             this.expiringWarnings = null;
             this.notFoundWarnings = null;
 
-            this.lastRan = DateTime.Now;
+            this.LastRunDateTime = DateTime.Now;
         }
     }
 }
