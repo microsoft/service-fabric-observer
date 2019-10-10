@@ -29,8 +29,9 @@ To learn how to build FabricObserver, please see the [Build readme](Build.md).
 FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows VM (node) of a Service Fabric cluster. It is an isolated, node-only service.
 
 Since observers live in their own application, they monitor other applications through the resource side effects of those applications. Here are the current observers and what they monitor:
+
 | Resource | Observer |
-|--|--|
+| --- | --- |
 | Disk (local storage disk health/availability, space usage, IO) | DiskObserver |
 | CPU/Memory (per process across Apps and Fabric system services) | Node Observer |
 | OS properties (install date, health status, list of hot fixes, hardware configuration, etc., ephemeral port range and real-time OS health status) | OS Observer |
