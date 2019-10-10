@@ -50,6 +50,7 @@ namespace FabricObserver
 
         /// <inheritdoc/>
         public string NodeName { get; set; }
+
         public string NodeType { get; private set; }
 
         /// <inheritdoc/>
