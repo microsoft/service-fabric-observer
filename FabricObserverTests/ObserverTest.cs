@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Fabric;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver;
@@ -24,6 +25,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace FabricObserverTests
 {
     [TestClass]
+    //[DeploymentItem(@"MyValidCert.p12")]
+    //[DeploymentItem(@"MyExpiredCert.p12")]
     public class ObserverTest
     {
         private static readonly Uri ServiceName = new Uri("fabric:/app/service");
@@ -61,22 +64,51 @@ namespace FabricObserverTests
             this.isSFRuntimePresentOnTestMachine = this.IsLocalSFRuntimePresent();
         }
 
-        private bool IsLocalSFRuntimePresent()
+        [ClassInitialize]
+        public static void InstallCerts(TestContext x)
         {
-            try
-            {
-                var ps = Process.GetProcessesByName("Fabric");
-                if (ps?.Length == 0)
-                {
-                    return false;
-                }
+            X509Certificate2 validCert = new X509Certificate2(
+                "MyValidCert.p12");
+            X509Certificate2 expiredCert = new X509Certificate2(
+                "MyExpiredCert.p12");
 
-                return true;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
+            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.ReadWrite);
+            store.Add(validCert);
+            store.Add(expiredCert);
+        }
+
+        [ClassCleanup]
+        public static void UninstallCerts()
+        {
+            X509Certificate2 validCert = new X509Certificate2(
+                "MyValidCert.p12");
+            X509Certificate2 expiredCert = new X509Certificate2(
+                "MyExpiredCert.p12");
+
+            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.ReadWrite);
+            store.Remove(validCert);
+            store.Remove(expiredCert);
+        }
+
+        [TestMethod]
+        public void CertificateObserver_Constructor_test()
+        {
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new CertificateObserver();
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            Assert.IsTrue(obs.CsvFileLogger != null);
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.CertificateObserverName);
+
+            obs.Dispose();
+            ObserverManager.FabricClientInstance.Dispose();
         }
 
         [TestMethod]
@@ -217,7 +249,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// TODO.
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -250,6 +282,56 @@ namespace FabricObserverTests
         }
 
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
+
+        [TestMethod]
+        public void Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+
+            var stopWatch = new Stopwatch();
+
+            var obs = new CertificateObserver
+            {
+                IsEnabled = true,
+                NodeName = "_Test_0",
+            };
+
+            var obsMgr = new ObserverManager(obs)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            var objReady = new ManualResetEventSlim(false);
+
+            stopWatch.Start();
+            var t = Task.Factory.StartNew(() =>
+            {
+                objReady.Set();
+                obsMgr.StartObservers();
+            });
+
+            objReady?.Wait();
+
+            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
+            {
+                // wait...
+            }
+
+            stopWatch.Stop();
+
+            // Observer is running. Stop it...
+            obsMgr.StopObservers();
+            Thread.Sleep(5);
+
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+
+            obs.Dispose();
+            objReady?.Dispose();
+        }
+
         [TestMethod]
         public void Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
         {
@@ -638,8 +720,110 @@ namespace FabricObserverTests
         /****** These tests do NOT work without a running local SF cluster
                 or in an Azure DevOps VSTest Pipeline ******/
 
+        [TestMethod]
+        public async Task CertificateObserver_validCerts()
+        {
+            if (!this.isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new CertificateObserver
+            {
+                IsTestRun = true,
+            };
+
+            var commonNamesToObserve = new System.Collections.Generic.List<string>();
+            commonNamesToObserve.Add("MyValidCert"); // Common name of valid cert
+
+            var thumbprintsToObserve = new System.Collections.Generic.List<string>();
+            thumbprintsToObserve.Add("1fda27a2923505e47de37db48ff685b049642c25"); // thumbprint of valid cert
+
+            obs.DaysUntilAppExpireWarningThreshold = 14;
+            obs.DaysUntilClusterExpireWarningThreshold = 14;
+            obs.appCertificateCommonNamesToObserve = commonNamesToObserve;
+            obs.appCertificateThumbprintsToObserve = thumbprintsToObserve;
+            obs.securityConfiguration = new CertificateObserver.SecurityConfiguration
+            {
+                SecurityType = CertificateObserver.SecurityType.None,
+                clusterCertThumbprintOrCommonName = string.Empty,
+                clusterCertSecondaryThumbprint = string.Empty,
+            };
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors...
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions...
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run...
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            ObserverManager.FabricClientInstance.Dispose();
+        }
+
+        [TestMethod]
+        public async Task CertificateObserver_expiredAndexpiringCerts()
+        {
+            if (!this.isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new CertificateObserver
+            {
+                IsTestRun = true,
+            };
+
+            var commonNamesToObserve = new System.Collections.Generic.List<string>();
+            commonNamesToObserve.Add("MyExpiredCert"); // common name of expired cert
+
+            var thumbprintsToObserve = new System.Collections.Generic.List<string>();
+            thumbprintsToObserve.Add("1fda27a2923505e47de37db48ff685b049642c25"); //thumbprint of valid cert, but warning threshold causes expiring
+
+            obs.DaysUntilAppExpireWarningThreshold = int.MaxValue;
+            obs.DaysUntilClusterExpireWarningThreshold = 14;
+            obs.appCertificateCommonNamesToObserve = commonNamesToObserve;
+            obs.appCertificateThumbprintsToObserve = thumbprintsToObserve;
+            obs.securityConfiguration = new CertificateObserver.SecurityConfiguration
+            {
+                SecurityType = CertificateObserver.SecurityType.None,
+                clusterCertThumbprintOrCommonName = string.Empty,
+                clusterCertSecondaryThumbprint = string.Empty,
+            };
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors...
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions...
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run...
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            ObserverManager.FabricClientInstance.Dispose();
+        }
+
         /// <summary>
-        ///
+        /// NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1173,5 +1357,23 @@ namespace FabricObserverTests
         }
 
         /***** End Tests that require a currently running SF Cluster... *****/
+
+        private bool IsLocalSFRuntimePresent()
+        {
+            try
+            {
+                var ps = Process.GetProcessesByName("Fabric");
+                if (ps?.Length == 0)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
     }
 }
