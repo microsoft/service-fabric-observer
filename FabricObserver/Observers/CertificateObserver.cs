@@ -18,7 +18,7 @@ namespace FabricObserver
     public class CertificateObserver : ObserverBase
     {
         // By default, CertificateObserver runs once a day, and its reports last a single day
-        private const int SECONDSBETWEENRUNS = 100; //86400 = 1 day
+        private const int SECONDSBETWEENRUNS = 86400; //86400 = 1 day
 
         public int DaysUntilClusterExpireWarningThreshold { get; set; }
         public int DaysUntilAppExpireWarningThreshold { get; set; }
