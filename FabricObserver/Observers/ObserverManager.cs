@@ -303,6 +303,9 @@ namespace FabricObserver
 
                 // NetworkObserver for Internet connection state of user-supplied host/port pairs, active port and firewall rule count monitoring...
                 new NetworkObserver(),
+
+                // CertificateObserver alerts to expiring certificates in LocalMachine/My
+                new CertificateObserver(),
             });
 
             // Only return a list with enabled observer instances...

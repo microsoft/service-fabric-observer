@@ -57,9 +57,15 @@ namespace FabricObserver.Utilities
         public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
         public const string OSObserverObserverIntervalParameterName = "RunInterval";
 
+        // Certificate Observer
+        public const string CertificateObserverName = "CertificateObserver";
+        public const string CertificateObserverConfigurationSectionName = "CertificateObserverConfiguration";
+        public const string CertificateObserverDaysUntilClusterExpiryWarningThreshold = "DaysUntilClusterExpiryWarningThreshold";
+        public const string CertificateObserverDaysUntilAppExpiryWarningThreshold = "DaysUntilAppExpiryWarningThreshold";
+        public const string CertificateObserverAppCertificateThumbprints = "AppCertThumbprintsToObserve";
+        public const string CertificateObserverAppCertificateCommonNames = "AppCertCommonNamesToObserve";
+
         // Observer configuration parameters
-        public const string CertificateObserverIntervalParameterName = "ObserverRunInterval";
-        public const string CertificateObserverThresholdParameterName = "ObserverExpiryThreshold";
         public const string ContainerObserverName = "ContainerObserver";
         public const string ContainerObserverConfigurationSectionName = "ContainerObserverConfiguration";
         public const string AppObserverName = "AppObserver";
