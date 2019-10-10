@@ -15,7 +15,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Interfaces;
-using FabricObserver.Observers;
 using FabricObserver.Utilities;
 using FabricObserver.Utilities.Telemetry;
 
