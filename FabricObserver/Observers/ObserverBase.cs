@@ -122,20 +122,22 @@ namespace FabricObserver
             }
 
             // Observer Logger setup...
-            this.ObserverLogger = new Logger(observerName);
+            string logFolderBasePath = null;
             string observerLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
                 ObserverConstants.ObserverLogPath);
 
             if (!string.IsNullOrEmpty(observerLogPath))
             {
-                this.ObserverLogger.LogFolderBasePath = observerLogPath;
+                logFolderBasePath = observerLogPath;
             }
             else
             {
                 string logFolderBase = $@"{Environment.CurrentDirectory}\observer_logs";
-                this.ObserverLogger.LogFolderBasePath = logFolderBase;
+                logFolderBasePath = logFolderBase;
             }
+
+            this.ObserverLogger = new Logger(observerName, logFolderBasePath);
 
             // Observer enabled?
             if (bool.TryParse(
