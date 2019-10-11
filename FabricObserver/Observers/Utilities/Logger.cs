@@ -57,11 +57,17 @@ namespace FabricObserver.Utilities
         /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.
         /// </summary>
         /// <param name="observerName">Name of observer...</param>
-        public Logger(string observerName)
+        /// <param name="logFolderBasePath">Base folder path...</param>
+        public Logger(string observerName, string logFolderBasePath = null)
         {
             this.Foldername = observerName;
             this.Filename = observerName + ".log";
             this.loggerName = observerName;
+
+            if (!string.IsNullOrEmpty(logFolderBasePath))
+            {
+                this.LogFolderBasePath = logFolderBasePath;
+            }
 
             this.InitializeLoggers();
         }
