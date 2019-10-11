@@ -60,11 +60,34 @@ namespace FabricObserver
             this.ExpiringWarnings = new List<string>();
             this.NotFoundWarnings = new List<string>();
 
-            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
 
             try
             {
                 store.Open(OpenFlags.ReadOnly);
+
+                // Cluster Certificates
+                if (this.SecurityConfiguration.SecurityType == SecurityType.CommonName)
+                {
+                    this.CheckLastestBySubjectName(store, this.SecurityConfiguration.ClusterCertThumbprintOrCommonName, this.DaysUntilClusterExpireWarningThreshold);
+                }
+                else if (this.SecurityConfiguration.SecurityType == SecurityType.Thumbprint)
+                {
+                    this.CheckByThumbprint(store, this.SecurityConfiguration.ClusterCertThumbprintOrCommonName, this.DaysUntilClusterExpireWarningThreshold);
+                }
+
+                // App certificates
+                foreach (string commonname in this.AppCertificateCommonNamesToObserve)
+                {
+                    this.CheckLastestBySubjectName(store, commonname, this.DaysUntilAppExpireWarningThreshold);
+                }
+
+                foreach (string thumbprint in this.AppCertificateThumbprintsToObserve)
+                {
+                    this.CheckByThumbprint(store, thumbprint, this.DaysUntilAppExpireWarningThreshold);
+                }
+
+                await this.ReportAsync(token).ConfigureAwait(true);
             }
             catch (SecurityException e)
             {
@@ -74,29 +97,10 @@ namespace FabricObserver
                     Utilities.LogLevel.Warning);
                 return;
             }
-
-            // Cluster Certificates
-            if (this.SecurityConfiguration.SecurityType == SecurityType.CommonName)
+            finally
             {
-                this.CheckLastestBySubjectName(store, this.SecurityConfiguration.ClusterCertThumbprintOrCommonName, this.DaysUntilClusterExpireWarningThreshold);
+                store?.Dispose();
             }
-            else if (this.SecurityConfiguration.SecurityType == SecurityType.Thumbprint)
-            {
-                this.CheckByThumbprint(store, this.SecurityConfiguration.ClusterCertThumbprintOrCommonName, this.DaysUntilClusterExpireWarningThreshold);
-            }
-
-            // App certificates
-            foreach (string commonname in this.AppCertificateCommonNamesToObserve)
-            {
-                this.CheckLastestBySubjectName(store, commonname, this.DaysUntilAppExpireWarningThreshold);
-            }
-
-            foreach (string thumbprint in this.AppCertificateThumbprintsToObserve)
-            {
-                this.CheckByThumbprint(store, thumbprint, this.DaysUntilAppExpireWarningThreshold);
-            }
-
-            await this.ReportAsync(token).ConfigureAwait(true);
         }
 
         /// <inheritdoc/>
