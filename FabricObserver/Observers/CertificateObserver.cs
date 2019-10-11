@@ -60,7 +60,7 @@ namespace FabricObserver
             this.ExpiringWarnings = new List<string>();
             this.NotFoundWarnings = new List<string>();
 
-            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
 
             try
             {
@@ -250,7 +250,7 @@ namespace FabricObserver
                 nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
 
                 // Failover Manager...
-                XmlNodeList certificateNode = xdoc.SelectNodes($"//sf:NodeType[@Name='{this.NodeType}']//sf:Certificates", nsmgr);
+                var certificateNode = xdoc.SelectNodes($"//sf:NodeType[@Name='{this.NodeType}']//sf:Certificates", nsmgr);
                 if (certificateNode.Count == 0)
                 {
                     this.SecurityConfiguration.SecurityType = SecurityType.None;
@@ -289,29 +289,29 @@ namespace FabricObserver
                 this.WriteToLogWithLevel(
                 this.ObserverName,
                 $"There was an issue parsing the cluster manifest. Observer cannot run.",
-                Utilities.LogLevel.Error);
+                LogLevel.Error);
 
                 throw;
             }
             finally
             {
-                sreader.Dispose();
-                xreader.Dispose();
+                sreader?.Dispose();
+                xreader?.Dispose();
             }
         }
 
         private void CheckLastestBySubjectName(X509Store store, string subjectName, int warningThreshold)
         {
-            X509Certificate2Collection certificates = store.Certificates.Find(X509FindType.FindBySubjectName, subjectName, false);
+            var certificates = store.Certificates.Find(X509FindType.FindBySubjectName, subjectName, false);
             X509Certificate2 newestcertificate = null;
-            DateTime newestNotAfter = DateTime.MinValue;
+            var newestNotAfter = DateTime.MinValue;
 
             if (certificates.Count == 0)
             {
                 this.NotFoundWarnings.Add($"Could not find requested certificate with common name: {subjectName} in LocalMachine/My");
             }
 
-            foreach (X509Certificate2 certificate in certificates)
+            foreach (var certificate in certificates)
             {
                 if (certificate.NotAfter > newestNotAfter)
                 {
@@ -320,8 +320,8 @@ namespace FabricObserver
                 }
             }
 
-            DateTime expiry = newestcertificate.NotAfter;                               // Expiration time in local time (not UTC)
-            System.TimeSpan timeUntilExpiry = expiry.Subtract(System.DateTime.Now);
+            var expiry = newestcertificate.NotAfter;                               // Expiration time in local time (not UTC)
+            var timeUntilExpiry = expiry.Subtract(System.DateTime.Now);
 
             if (timeUntilExpiry.TotalMilliseconds < 0)
             {
@@ -335,7 +335,7 @@ namespace FabricObserver
 
         private void CheckByThumbprint(X509Store store, string thumbprint, int warningThreshold)
         {
-            X509Certificate2Collection certificates = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
+            var certificates = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
 
             if (certificates.Count == 0)
             {
@@ -346,8 +346,8 @@ namespace FabricObserver
             var enumerator = certificates.GetEnumerator();
             enumerator.MoveNext();
 
-            DateTime expiry = enumerator.Current.NotAfter;                               // Expiration time in local time (not UTC)
-            System.TimeSpan timeUntilExpiry = expiry.Subtract(System.DateTime.Now);
+            var expiry = enumerator.Current.NotAfter;                               // Expiration time in local time (not UTC)
+            var timeUntilExpiry = expiry.Subtract(System.DateTime.Now);
 
             if (timeUntilExpiry.TotalMilliseconds < 0)
             {
