@@ -472,28 +472,6 @@ namespace FabricObserver
             }
         }
 
-        /// <summary>
-        /// This function gets FabricObserver's internal configuration for telemetry for Charles and company...
-        /// No PII. As you can see, this is generic information.
-        /// </summary>
-        private string GetFabricObserverInternalConfiguration()
-        {
-            int enabledObserverCount = this.observers.Where(obs => obs.IsEnabled).Count();
-            string observerList = "{ ";
-            string ret = string.Empty;
-
-            foreach (var obs in this.observers)
-            {
-                observerList += $"{obs.ObserverName} ";
-            }
-
-            observerList += "}";
-
-            ret = string.Format("EnabledObserverCount: {0}, EnabledObservers: {1}", enabledObserverCount, observerList);
-
-            return ret;
-        }
-
         private void SignalAbortToRunningObserver()
         {
             this.Logger.LogInfo("Signalling task cancellation to currently running Observer...");
