@@ -278,6 +278,7 @@ namespace FabricObserver
                     this.SecurityConfiguration.SecurityType = SecurityType.Thumbprint;
                     this.SecurityConfiguration.ClusterCertThumbprintOrCommonName = clusterCertificateNode.Attributes.GetNamedItem("X509FindValue").Value;
                     var secondaryThumbprintAttribute = clusterCertificateNode.Attributes.GetNamedItem("X509FindValueSecondary");
+
                     if (secondaryThumbprintAttribute != null)
                     {
                         this.SecurityConfiguration.ClusterCertSecondaryThumbprint = secondaryThumbprintAttribute.Value;
