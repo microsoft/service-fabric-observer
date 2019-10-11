@@ -102,8 +102,28 @@ namespace FabricObserver
             this.token.Register(() => { this.ShutdownHandler(this, null); });
             FabricClientInstance = new FabricClient();
             FabricServiceContext = context;
+
+            // Observer Logger setup...
+            string logFolderBasePath = null;
+            string observerLogPath = GetConfigSettingValue(
+                ObserverConstants.ObserverLogPath);
+
+            if (!string.IsNullOrEmpty(observerLogPath))
+            {
+                logFolderBasePath = observerLogPath;
+            }
+            else
+            {
+                string logFolderBase = $@"{Environment.CurrentDirectory}\observer_logs";
+                logFolderBasePath = logFolderBase;
+            }
+
+            // this logs metrics from observers, if enabled, and/or sends
+            // telemetry data to your implemented provider...
             this.DataLogger = new DataTableFileLogger();
-            this.Logger = new Logger("ObserverManager");
+
+            // this logs error/warning/info messages for ObserverManager...
+            this.Logger = new Logger("ObserverManager", logFolderBasePath);
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertiesFromConfigurationParameters();
 
@@ -274,6 +294,9 @@ namespace FabricObserver
         {
             var observers = new List<ObserverBase>(new ObserverBase[]
             {
+                // CertificateObserver alerts to expiring certificates in LocalMachine/My
+                new CertificateObserver(),
+
                 // Observes, records and reports on general OS properties and state...
                 // Run this first to get basic information about the VM state,
                 // Firewall rules in place, active ports, basic resource infomation...
@@ -303,9 +326,6 @@ namespace FabricObserver
 
                 // NetworkObserver for Internet connection state of user-supplied host/port pairs, active port and firewall rule count monitoring...
                 new NetworkObserver(),
-
-                // CertificateObserver alerts to expiring certificates in LocalMachine/My
-                new CertificateObserver(),
             });
 
             // Only return a list with enabled observer instances...
@@ -352,12 +372,6 @@ namespace FabricObserver
             if (!string.IsNullOrEmpty(dataLogPath))
             {
                 this.DataLogger.DataLogFolderPath = dataLogPath;
-            }
-
-            string observerLogPath = GetConfigSettingValue(ObserverConstants.ObserverLogPath);
-            if (!string.IsNullOrEmpty(observerLogPath))
-            {
-                this.Logger.LogFolderBasePath = observerLogPath;
             }
 
             // Shutdown
