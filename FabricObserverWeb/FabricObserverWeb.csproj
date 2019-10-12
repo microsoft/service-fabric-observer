@@ -8,7 +8,8 @@
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <AssemblyName>FabricObserverWeb</AssemblyName>
-    <RootNamespace>FabricObserver</RootNamespace>
+    <RootNamespace>FabricObserverWeb</RootNamespace>
+    <PackageProjectUrl></PackageProjectUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <CodeAnalysisRuleSet />

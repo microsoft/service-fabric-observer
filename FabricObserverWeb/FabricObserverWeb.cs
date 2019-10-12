@@ -3,14 +3,13 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace FabricObserver
+namespace FabricObserverWeb
 {
     using System;
     using System.Collections.Generic;
     using System.Fabric;
     using System.IO;
     using System.Net;
-
     // using System.Security.Cryptography.X509Certificates;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.DependencyInjection;
