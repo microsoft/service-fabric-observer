@@ -1,4 +1,4 @@
-﻿namespace FabricObserver.Controllers
+﻿namespace FabricObserverWeb.Controllers
 {
     using System;
     using System.Collections.Generic;

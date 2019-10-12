@@ -3,14 +3,14 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace FabricObserver
+namespace FabricObserverWeb
 {
     using System;
     using System.Diagnostics.Tracing;
     using System.Fabric;
     using System.Threading.Tasks;
 
-    [EventSource(Name = "Microsoft-WebFrontEnd-ObserverWeb")]
+    [EventSource(Name = "Service-Fabric-ObserverWebApi")]
     internal sealed class ServiceEventSource : EventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
