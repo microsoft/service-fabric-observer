@@ -108,8 +108,6 @@ namespace FabricObserver.Utilities
                     property = "Networking";
                     break;
                 case ObserverConstants.OSObserverName:
-                    property = "OperatingSystem";
-                    break;
                 case ObserverConstants.NodeObserverName:
                     property = "VirtualMachine";
                     break;
