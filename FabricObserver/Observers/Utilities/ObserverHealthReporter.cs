@@ -93,25 +93,25 @@ namespace FabricObserver.Utilities
             switch (healthReport.Observer)
             {
                 case ObserverConstants.AppObserverName:
-                    property = "AppResourceUsage";
+                    property = "App";
+                    break;
+                case ObserverConstants.CertificateObserverName:
+                    property = "Security";
                     break;
                 case ObserverConstants.DiskObserverName:
-                    property = "DiskHealth";
+                    property = "Disk";
                     break;
                 case ObserverConstants.FabricSystemObserverName:
-                    property = "FabricServices";
-                    break;
-                case ObserverConstants.SFConfigurationObserverName:
-                    property = "SFInfraConfig";
+                    property = "FabricSystem";
                     break;
                 case ObserverConstants.NetworkObserverName:
                     property = "Networking";
                     break;
                 case ObserverConstants.OSObserverName:
-                    property = "OS";
+                    property = "OperatingSystem";
                     break;
                 case ObserverConstants.NodeObserverName:
-                    property = "NodeResourceUsage";
+                    property = "VirtualMachine";
                     break;
                 default:
                     property = "Generic";
