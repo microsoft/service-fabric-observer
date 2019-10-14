@@ -130,7 +130,7 @@ namespace FabricObserver
                     ReportType = HealthReportType.Node,
                     EmitLogEvent = true,
                     NodeName = this.NodeName,
-                    HealthMessage = $"All cluster and monitored app certificates are healthy",
+                    HealthMessage = $"All cluster and monitored app certificates are healthy.",
                     State = System.Fabric.Health.HealthState.Ok,
                     HealthReportTimeToLive = TimeSpan.FromDays(1),
 
