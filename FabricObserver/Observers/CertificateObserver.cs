@@ -15,6 +15,7 @@ namespace FabricObserver
     {
         // By default, CertificateObserver runs once a day, and its reports last a single day
         private const int SECONDSBETWEENRUNS = 86400; // 86400 = 1 day
+        private const string HowToUpdateCertsSFLinkHtml = "<a href=\"https://aka.ms/AA69ai7\" target=\"_new\">Click here to learn how to update expired certs</a>";
 
         public CertificateObserver()
         : base(ObserverConstants.CertificateObserverName)
@@ -129,7 +130,7 @@ namespace FabricObserver
                     ReportType = HealthReportType.Node,
                     EmitLogEvent = true,
                     NodeName = this.NodeName,
-                    HealthMessage = "All cluster and observed app certificates outside of expiration warning window",
+                    HealthMessage = $"All cluster and monitored app certificates are healthy",
                     State = System.Fabric.Health.HealthState.Ok,
                     HealthReportTimeToLive = TimeSpan.FromDays(1),
 
@@ -140,9 +141,9 @@ namespace FabricObserver
             }
             else
             {
-                string healthMessage = (this.ExpiredWarnings.Count == 0 ? string.Empty : (this.ExpiredWarnings.Aggregate(string.Empty, (i, j) => i + "\n" + j) + "\n")) +
+                string healthMessage = (this.ExpiredWarnings.Count == 0 ? string.Empty : (this.ExpiredWarnings.Aggregate(string.Empty, (i, j) => i + "\n" + j) + "\n" + HowToUpdateCertsSFLinkHtml + "\n")) +
                                        (this.NotFoundWarnings.Count == 0 ? string.Empty : (this.NotFoundWarnings.Aggregate(string.Empty, (i, j) => i + "\n" + j) + "\n")) +
-                                       (this.ExpiringWarnings.Count == 0 ? string.Empty : this.ExpiringWarnings.Aggregate(string.Empty, (i, j) => i + "\n" + j));
+                                       (this.ExpiringWarnings.Count == 0 ? string.Empty : this.ExpiringWarnings.Aggregate(string.Empty, (i, j) => i + "\n" + j) + "\n" + HowToUpdateCertsSFLinkHtml);
 
                 healthReport = new HealthReport
                 {
