@@ -1,15 +1,21 @@
+# Observers
+
 Observers are designed to be low impact, long-lived objects that perform specific observational and related reporting activities across iteration intervals defined in configuration settings for each observer type. As their name clearly suggests, they do not mitigate in this first version. They observe, record, and report. For Warning and Errors, we will utilize Service Fabric Health store and reporting mechanisms to surface important information in SFX. This release also includes a telemtry provider interface and ships with an AppInsights implementation. So, you can stream events to AppInsights by simply enabling the feature in Settings.xml and providing your AppInsights key. 
 
+[How to implement a new Observer](#writing-a-new-observer)
 
-**Currently Implemented Observers**  
+## Currently Implemented Observers  
 
-***AppObserver***  
-***DiskObserver***  
-***FabricSystemObserver***  
-***NetworkObserver***  
-***NodeObserver***  
-***OSObserver*** (Not configurable beyond Enable/Disable)  
-***SFConfigurationObserver***  (Not configurable beyond Enable/Disable)  
+| Observer | Description |
+| --- | --- |
+| [AppObserver](#appobserver) |  |
+| [CertificateObserver](#certificateobserver) |  |
+| [DiskObserver](#diskobserver) |  |
+| [FabricSystemObserver](#fabricsystemobserver) |  |
+| [NetworkObserver](#networkobserver) |  |
+| [NodeObserver](#nodeobserver) |  |
+| [OSObserver](#osobserver) | (Not configurable beyond Enable/Disable) |
+| [SFConfigurationObserver](#sfconfigurationobserver) | (Not configurable beyond Enable/Disable) |
 
 Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide an ApplicationInsights key, then you will also see the output in your log analytics queries. Each observer has configuration settings in PackageRoot/Config/Settings.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds), which are more verbose and do not lend themselves very well to the Settings.xml to schema, in json files located in PackageRoot/Observers.Data folder.  
 
@@ -20,7 +26,7 @@ will block service upgrades and other Fabric runtime operations from taking plac
 **Fabric Observers - What they do and how to configure them**  
   
 
-**AppObserver**  
+## AppObserver  
 Observer that monitors CPU usage, Memory use, and Disk space
 availability for Service Fabric Application services (processes). This
 observer will alert when user-supplied thresholds are reached.
@@ -157,7 +163,7 @@ This observer also monitors the FabricObserver service itself across
 CPU/Mem/Disk.  
 
 
-**DiskObserver**  
+## DiskObserver
 This observer monitors, records and analyzes storage disk information.
 Depending upon configuration settings, it signals disk health status
 warnings (or OK state) for all logical disks it detects.
@@ -222,7 +228,7 @@ data across iterations for use in analysis. Included are Average and
 Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean setting.**
 
 
-**FabricSystemObserver**  
+## FabricSystemObserver 
 This observer monitors Fabric system services for 1 minute per global
 observer iteration e.g., Fabric, FabricApplicationGateway, FabricCAS,
 FabricDCA, FabricDnsService, FabricGateway, FabricHost,
@@ -285,7 +291,7 @@ design goal). The number of active ports in use by each fabric service
 is logged per iteration.
 
 
-**NetworkObserver**
+## NetworkObserver
 
 This observer checks outbound connection state for user-supplied endpoints (hostname/port pairs).
 
@@ -356,7 +362,7 @@ network failures which will result in Fabric Health warnings that live
 until the observer runs again...  
 
 
-**NodeObserver**
+## NodeObserver
  This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports).
  Thresholds for Erorr and Warning signals are user-supplied in PackageRoot/Config/Settings.xml.
 
@@ -404,7 +410,7 @@ CpuMemDiskPorts\_\[nodeName\].csv, containing long-running data (across
 all run iterations of the observer).
 
 
-**OSObserver**\
+## OSObserver
 This observer records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. It submits an infinite OK SF Health Report that is visible in SFX at the node level (Details tab) and by calling http://localhost:5000/api/ObserverManager. It shares a set of static fields that other observers can use (and do), so ***it's best to not disable this observer***. It should be the first observer to run in the observer list (as it is, by default). There is no reason to disable OSObserver (so, don't). **Only for consistency reasons does the enable/disable setting exist for OSObserver**. 
 \
 \
@@ -450,7 +456,7 @@ KB4132216  4/9/2019
 KB4485447  4/9/2019  
 
 
-**SFConfigurationObserver**  
+## SFConfigurationObserver 
 
 This observer doesn't monitor or report health status. 
 It provides information about the currently installed Service Fabric runtime environment.
