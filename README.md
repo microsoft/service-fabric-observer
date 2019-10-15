@@ -4,6 +4,8 @@
 1. Monitors a broad range of resources that tend to be important to all service fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
 2. Provides a simple model in which new observers can be built and configured and run automatically through a .NET development model.
 
+FO is a standalone Service Fabric Application, so it can be deployed and run alongside your applciations without any change to them.
+
 ```
 FO is not a replacement nor alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO can give useful and timely ops information.
 ```
@@ -16,7 +18,7 @@ Fabric Observer comes with a number of Observers that run out-of-the-box. Observ
 
 ```
 It is not recommended to run FO with the default thresholds. It is recommended to first enable observers with ignored thresholds (by setting the threshold to 0), then run FO to monitor over a learning period the baseline behavior of your cluster along the measured metrics. After the learning period, the observers should be enabled with thresholds that make sense for the cluster.
-``
+```
 
 In Warning and Error states, an observer will signal `Warning` Service Fabric Health Reports. This warning state and related reports are viewable in SFX, the EventStore, and AppInsights, if enabled. Most observers will clean the Warning state in the case the issue is transient, but others will indicate a long-running problem with applications in the cluster. For example, high CPU usage above the user-assigned threshold will put a cluster in Warning State if the NodeObserver is enabled, but will soon go back to Healthy if it is a transient spike. An expiring certificate Warning however will remain until the user takes manual intervention to update their application's certificates. 
 
@@ -28,11 +30,15 @@ For more information about **the design of FabricObserver**, please see the [Des
 
 ## Build and run
 
-To learn how to build FabricObserver, please see the [Build readme](Build.md).  
+1. Clone the repo
+2. Install the [.NET Core 2.2 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.2) (to build FabricObserverWeb)*
+3. FabricObserverApp can be run and deployed through Visual Studio
+
+*Note: Different versions of Visual Studio necessitate different versions of the SDK to be installed - make sure the correct version is installed.*
 
 ## Observer Model
 
-FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows VM (node) of a Service Fabric cluster. It is an isolated, node-only service.
+FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows VM (node) of a Service Fabric cluster. It is an isolated, node-only service. 
 
 Since observers live in their own application, they monitor other applications through the resource side effects of those applications. Here are the current observers and what they monitor:
 
@@ -46,7 +52,7 @@ Since observers live in their own application, they monitor other applications t
 | Application certificates | Certificate Observer |
 | **Another resource you find important** | **Observer you implement** |
 
-To learn more about the current **Observers and their configuration**, please see the [Observers readme](./Documentation/Observers.md).  
+To learn more about the current Observers and their configuration, please see the [Observers readme](./Documentation/Observers.md).  
     
 ```
 Just observe it.
