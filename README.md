@@ -1,22 +1,28 @@
 # Fabric Observer
 
-**FabricObserver (FO)** is an implementation of a Service Fabric watchdog service as a Service Fabric application that 
-1. Out-of-the-box monitors a broad range of resources that tend to be important to all service fabric applications, like disk, CPU, memory, networking, and cluster certificates.
+**FabricObserver (FO)** is a working implementation of a Service Fabric watchdog service as a Service Fabric application that 
+1. Monitors a broad range of resources that tend to be important to all service fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
 2. Provides a simple model in which new observers can be built and configured and run automatically through a .NET development model.
 
-aka FO works today and can be extended to meet the special needs of your Service Fabric applciation.
+```
+FO is not a replacement nor alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO can give useful and timely ops information.
+```
 
-```
-FO is not a replacement for, nor is it an alternative to, existing Monitoring and Diagnostics services.
-```
+[Read more about Service Fabric health monitoring](https://docs.microsoft.com/azure/service-fabric/service-fabric-health-introduction)
 
 ## How it works
 
-Fabric Observer comes with a number of Observers that run as-is. However, most of the observers should not be run until the proper thresholds are set that match your specific needs and application. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
+Fabric Observer comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
 
-In Warning and Error states, an observer will signal status (reports) via a Service Fabric Health Report. Thresholds and information about what constitues a Warning or Error is configured by the user. These are viewable with other health reports in SFX and event store.
+```
+It is not recommended to run FO with the default thresholds. It is recommended to first enable observers with ignored thresholds (by setting the threshold to 0), then run FO to monitor over a learning period the baseline behavior of your cluster along the measured metrics. After the learning period, the observers should be enabled with thresholds that make sense for the cluster.
+``
 
-FO also ships with an AppInsights telemetry implementation, but you can use whatever provider you want as long you implement the [IObserverTelemetryProvider interface](/FabricObserver/Observers/Interfaces/IObserverTelemetryProvider.cs). 
+In Warning and Error states, an observer will signal `Warning` Service Fabric Health Reports. This warning state and related reports are viewable in SFX, the EventStore, and AppInsights, if enabled. Most observers will clean the Warning state in the case the issue is transient, but others will indicate a long-running problem with applications in the cluster. For example, high CPU usage above the user-assigned threshold will put a cluster in Warning State if the NodeObserver is enabled, but will soon go back to Healthy if it is a transient spike. An expiring certificate Warning however will remain until the user takes manual intervention to update their application's certificates. 
+
+[Read more about Service Fabric Health Reports](https://docs.microsoft.com/azure/service-fabric/service-fabric-report-health)
+
+FO ships with an AppInsights telemetry implementation, other providers can be used by implementing the [IObserverTelemetryProvider interface](/FabricObserver/Observers/Interfaces/IObserverTelemetryProvider.cs). 
 
 For more information about **the design of FabricObserver**, please see the [Design readme](./Documentation/Design.md). 
 
