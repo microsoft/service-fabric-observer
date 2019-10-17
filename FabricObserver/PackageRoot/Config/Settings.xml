@@ -58,7 +58,7 @@
     <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
     <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
-    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="5" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="7" />
     <!-- These may or may not be useful to you. Depends on your IO-bound workload... -->
     <Parameter Name="IOReadsErrorThreshold" Value="" />
     <Parameter Name="IOReadsWarningThreshold" Value="" />
