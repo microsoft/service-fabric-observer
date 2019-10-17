@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Diagnostics;
 using System.Fabric;
 using System.IO;
@@ -66,31 +67,41 @@ namespace FabricObserverTests
         }
 
         [ClassInitialize]
-        public static void InstallCerts(TestContext x)
+        public static void InstallCerts(TestContext tc)
         {
-            X509Certificate2 validCert = new X509Certificate2(
-                "MyValidCert.p12");
-            X509Certificate2 expiredCert = new X509Certificate2(
-                "MyExpiredCert.p12");
+            var validCert = new X509Certificate2("MyValidCert.p12");
+            var expiredCert = new X509Certificate2("MyExpiredCert.p12");
+            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
 
-            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-            store.Open(OpenFlags.ReadWrite);
-            store.Add(validCert);
-            store.Add(expiredCert);
+            try
+            {
+                store.Open(OpenFlags.ReadWrite);
+                store.Add(validCert);
+                store.Add(expiredCert);
+            }
+            finally
+            {
+                store?.Dispose();
+            }
         }
 
         [ClassCleanup]
         public static void UninstallCerts()
         {
-            X509Certificate2 validCert = new X509Certificate2(
-                "MyValidCert.p12");
-            X509Certificate2 expiredCert = new X509Certificate2(
-                "MyExpiredCert.p12");
+            var validCert = new X509Certificate2("MyValidCert.p12");
+            var expiredCert = new X509Certificate2("MyExpiredCert.p12");
+            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
 
-            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-            store.Open(OpenFlags.ReadWrite);
-            store.Remove(validCert);
-            store.Remove(expiredCert);
+            try
+            {
+                store.Open(OpenFlags.ReadWrite);
+                store.Remove(validCert);
+                store.Remove(expiredCert);
+            }
+            finally
+            {
+                store?.Dispose();
+            }
         }
 
         [TestMethod]
@@ -812,7 +823,7 @@ namespace FabricObserverTests
             // observer ran to completion with no errors...
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected error conditions...
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
             // observer did not have any internal errors during run...
