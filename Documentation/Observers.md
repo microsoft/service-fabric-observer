@@ -1,37 +1,40 @@
 # Observers
 
-Observers are designed to be low impact, long-lived objects that perform specific observational and related reporting activities across iteration intervals defined in configuration settings for each observer type. As their name clearly suggests, they do not mitigate in this first version. They observe, record, and report. For Warning and Errors, we will utilize Service Fabric Health store and reporting mechanisms to surface important information in SFX. This release also includes a telemtry provider interface and ships with an AppInsights implementation. So, you can stream events to AppInsights by simply enabling the feature in Settings.xml and providing your AppInsights key. 
+Observers are low-impact, long-lived objects that perform specialied monitoring and reporting activities. Observers monitor and report, but they aren't designed to take action. Observers generally monitor appliations through their side effects on the node, like resource usage, but do not actually communicate with the applications. Observers report to SF Event Store (viewable through SFX) in warning and error states, and can use built-in AppInsights support to report there as well.
 
-[How to implement a new Observer](#writing-a-new-observer)
+> AppInsights can be enabled in `Settings.xml` by providing your AppInsights key
 
+### Logging
+
+Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide an ApplicationInsights key, then you will also see the output in your log analytics queries. Each observer has configuration settings in PackageRoot/Config/Settings.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds) in json files located in PackageRoot/Observers.Data folder.  
+
+### Emiting Errors
+
+Service Fabric Error Health Events block upgrades and other important Fabric runtime operations. Error thresholds should be set such that putting the cluster in an emergency state incurs less cost than allowing the state to continue. For this reason, Fabric Observer by default ***treats Errors as Warnings***.  However if your cluster health policy is to [ConsiderWarningAsError](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-health-introduction#cluster-health-policy), FabricObserver has a ***high risk of putting your cluster in an error state***. Proceed with caution.
+
+## [How to implement a new Observer](#writing-a-new-observer)
 ## Currently Implemented Observers  
 
 | Observer | Description |
 | --- | --- |
-| [AppObserver](#appobserver) |  |
-| [CertificateObserver](#certificateobserver) |  |
-| [DiskObserver](#diskobserver) |  |
-| [FabricSystemObserver](#fabricsystemobserver) |  |
-| [NetworkObserver](#networkobserver) |  |
-| [NodeObserver](#nodeobserver) |  |
-| [OSObserver](#osobserver) | (Not configurable beyond Enable/Disable) |
-| [SFConfigurationObserver](#sfconfigurationobserver) | (Not configurable beyond Enable/Disable) |
-
-Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide an ApplicationInsights key, then you will also see the output in your log analytics queries. Each observer has configuration settings in PackageRoot/Config/Settings.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds), which are more verbose and do not lend themselves very well to the Settings.xml to schema, in json files located in PackageRoot/Observers.Data folder.  
-
-**A note on Error thresholds**  
-A Service Fabric Error Health Event is a critical event. You should be thoughtful about when to emit Errors versus Warnings as Errors
-will block service upgrades and other Fabric runtime operations from taking place. The default configuration settings for all configurable observers do not have error thresholds set to prevent blocking runtime operations like upgrade. Only set error thresholds when you are comfortable with the blocking nature of these critical health events. There is nothing wrong with setting error thresholds, but please be thoughtful and spend some time understanding when to emit health errors versus warnings, depending upon your scenario. This is just a note of caution, not a proclamation to never emit Error events. It's very reasonable to emit an Error health event when some threshold is reached that can lead to critical failure in your service. In fact, it's the right thing to do. Again, just be cautious and judicious in how you rely on Errors.  
+| [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes). Alerts when user-supplied thresholds are reached. |
+| [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
+| [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are reached. |
+| [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric System services (compare to AppObserver) |
+| [NetworkObserver](#networkobserver) | Monitors outbound connection state for user-supplied endpoints (hostname/port pairs), i.e. it checks that the node can reach specific endpoints. |
+| [NodeObserver](#nodeobserver) | This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports). |
+| [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. |
+| [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. |
 
 **Fabric Observers - What they do and how to configure them**  
   
-
 ## AppObserver  
 Observer that monitors CPU usage, Memory use, and Disk space
 availability for Service Fabric Application services (processes). This
 observer will alert when user-supplied thresholds are reached.
 
-**Input**: JSON config file supplied by user, stored in
+### Input
+JSON config file supplied by user, stored in
 PackageRoot/Observers.Data folder. This data contains JSON arrays
 objects which constitute Service Fabric Apps (identified by service
 URI's). Users supply Error/Warning thresholds for CPU use, Memory use and Disk
@@ -114,44 +117,30 @@ folder (AppObserver.config.json):
 ```
 Settings descriptions: 
 
-Note that all of these are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer). It's up to you. Whatever makes you happy!
+All settings are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer).
 
-**target**: App URI string to observe. Required.
-\
-**serviceExcludeList**: A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense)  
-**serviceIncludeList**: A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  
-**memoryErrorLimitMB**: Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log)  
-**memoryWarningLimitMB**: Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log)  
-**memoryErrorLimitPercent**: Maximum percentage of memory used by an App's service process (integer) that should generate a Fabric Error (SFX and local log)  
-**memoryWarningLimitPercent**: Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) 
-**cpuErrorLimitPct**: Maximum CPU percentage that should generate a
-Fabric Error \
-**cpuWarningLimitPct**: Minimum CPU percentage that should generate a
-Fabric Warning \
-**diskIOErrorReadsPerSecMS:** Maximum number of milliseconds for average
-sec/Read IO on system logical disk that will generate a Fabric
-Error.\
-**diskIOWarningReadsPerSecMS**: Minimum number of milliseconds for average
-sec/Read IO on system logical disk that will generate a Fabric warning.\
-**diskIOErrorWritesPerSecMS:** Maximum number of milliseconds for average
-sec/Write IO on system logical disk that will generate a Fabric
-Error.\
-**diskIOWarningWritesPerSecMS**: Minimum number of milliseconds for average
-sec/Write IO on system logical disk that will generate a Fabric
-Warning.\
-**dumpProcessOnError**: Instructs whether or not FabricObserver should  
-dump your service process when service health is detected to be in an 
-Error (critical) state...  
-**networkErrorActivePorts:** Maximum number of established TCP ports in use by
-app process that will generate a Fabric Error.\
-**networkWarningActivePorts:** Minimum number of established TCP ports in use by
-app process that will generate a Fabric Warning.\
-**networkErrorEphemeralPorts:** Maximum number of ephemeral TCP ports (within a dynamic port range) in use by
-app process that will generate a Fabric Error.\
-**networkWarningEphemeralPorts:** Minimum number of established TCP ports (within a dynamic port range) in use by
-app process that will generate a Fabric Warning.\  
 
-**Output**: Log text(Error/Warning), Service Fabric Application Health Report
+| Setting | Description |
+| :--- | :--- |
+**target** | App URI string to observe. Required.
+**serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense)  
+**serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  
+**memoryErrorLimitMB** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log)  
+**memoryWarningLimitMB**| Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log)  
+**memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate a Fabric Error (SFX and local log)  
+**memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) 
+**cpuErrorLimitPct** | Maximum CPU percentage that should generate a Fabric Error \
+**cpuWarningLimitPct** | Minimum CPU percentage that should generate a Fabric Warning \
+**diskIOErrorReadsPerSecMS** | Maximum number of milliseconds for average sec/Read IO on system logical disk that will generate a Fabric Error.\
+**diskIOWarningReadsPerSecMS** | Minimum number of milliseconds for average sec/Read IO on system logical disk that will generate a Fabric warning.\
+**diskIOErrorWritesPerSecMS** | Maximum number of milliseconds for average sec/Write IO on system logical disk that will generate a Fabric Error.\
+**diskIOWarningWritesPerSecMS** | Minimum number of milliseconds for average sec/Write IO on system logical disk that will generate a Fabric Warning.\
+**dumpProcessOnError** | Instructs whether or not FabricObserver should   dump your service process when service health is detected to be in an  Error (critical) state...  
+**networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate a Fabric Error.\
+**networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning.\
+**networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Error.\
+**networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Warning.\  
+**Output**| Log text(Error/Warning), Service Fabric Application Health Report
 (Error/Warning/ok), telemetry data.
 
 AppObserver also optionally outputs CSV files for each app containing all resource usage data across iterations for use in analysis. Included are Average and Peak measurements. You can turn this on/off in Settings.xml, where there are comments explaining the feature further.  
@@ -162,6 +151,27 @@ as explained above. Like FabricSystemObserver, all data is stored in in-memory d
 This observer also monitors the FabricObserver service itself across
 CPU/Mem/Disk.  
 
+## CertificateObserver
+Monitors the expiration date of the cluster certificate and any other certificates provided by the user. 
+
+### Notes
+- If the cluster is unsecured or uses Windows security, the observer will not monitor the cluster security but will still monitor user-provided certificates. 
+- The user can provide a list of thumbprints and/or common names of certificates they use on the VM, and the Observer will emit warnings if they pass the expiration Warning threshold. 
+- In the case of common-name, CertificateObserver will monitor the ***newest*** valid certificate with that common name, whether it is the cluster certificate or another certificate.
+- A user should provide either the thumbprint or the commonname of any certifcate they want monitored, not both, as this will lead to redudant alerts.
+
+### Configuration
+```xml
+<Section Name="CertificateObserverConfiguration">
+  <Parameter Name="Enabled" Value="True" />
+  <!-- Default is 14 days for each -->
+  <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="14" />
+  <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="14" />
+  <!-- These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
+  <Parameter Name="AppCertThumbprintsToObserve" Value="[]"/>
+  <Parameter Name="AppCertCommonNamesToObserve" Value="[]"/>
+</Section>
+```
 
 ## DiskObserver
 This observer monitors, records and analyzes storage disk information.
@@ -385,24 +395,20 @@ until the observer runs again...
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
   </Section>
 ```  
-Settings descriptions:  
-
-**CpuErrorLimitPct**: Maximum CPU percentage that should generate an Error  
-**CpuWarningLimitPct**: Minimum CPU percentage that should generate a Warning 
-**MemoryErrorLimitMB**: Maximum amount of committed memory on virtual machine that will generate an Error. 
-**MemoryWarningLimitMB**: Minimum amount of committed memory that will generate a Warning.  
-**MemoryErrorLimitPercent**: Maximum percentage of memory in use on virtual machine that will generate an Error. 
-**MemoryWarningLimitPercent**: Minimum percentage of memory in use on virtual machine that will generate a Warning.  
-**NetworkErrorFirewallRules**: Number of established Firewall Rules that will generate a Health Warning  
-**NetworkWarningFirewallRules**:  Number of established Firewall Rules that will generate a Health Error  
-**NetworkErrorActivePorts:** Maximum number of established ports in use by
-all processes on node that will generate a Fabric Error.\
-**NetworkWarningActivePorts:** Minimum number of established TCP ports in use by
-all processes on node that will generate a Fabric Warning.\
-**NetworkErrorEphemeralPorts:** Maximum number of established ephemeral TCP ports in use by
-app process that will generate a Fabric Error.\
-**NetworkWarningEphemeralPorts:** Minimum number of established ephemeral TCP ports in use by
-all processes on node that will generate a Fabric warning.\
+Setting | Description
+:--- | :---  
+**CpuErrorLimitPct** | Maximum CPU percentage that should generate an Error  
+**CpuWarningLimitPct** | Minimum CPU percentage that should generate a Warning 
+**MemoryErrorLimitMB** | Maximum amount of committed memory on virtual machine that will generate an Error. 
+**MemoryWarningLimitMB** | Minimum amount of committed memory that will generate a Warning.  
+**MemoryErrorLimitPercent** | Maximum percentage of memory in use on virtual machine that will generate an Error. 
+**MemoryWarningLimitPercent** | Minimum percentage of memory in use on virtual machine that will generate a Warning.  
+**NetworkErrorFirewallRules** | Number of established Firewall Rules that will generate a Health Warning  
+**NetworkWarningFirewallRules** |  Number of established Firewall Rules that will generate a Health Error  
+**NetworkErrorActivePorts** | Maximum number of established ports in use by all processes on node that will generate a Fabric Error.\
+**NetworkWarningActivePorts** | Minimum number of established TCP ports in use by all processes on node that will generate a Fabric Warning.\
+**NetworkErrorEphemeralPorts** | Maximum number of established ephemeral TCP ports in use by app process that will generate a Fabric Error.\
+**NetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on node that will generate a Fabric warning.\
 
 **Output**:\
 SFX Warnings when min/max thresholds are reached. CSV file,
@@ -422,7 +428,7 @@ is an Error when OS Status is not "OK" (which means something is wrong at the OS
 this means trouble...) and long-lived Ok Health Report that contains the information it collected about the node it's running on.  
 
 Example output: 
-
+```
 Last updated on 9/4/2019 17:26:18 UTC
 
 OS Info:  
@@ -454,7 +460,7 @@ KB4498947  5/19/2019
 KB4054590  4/9/2019  
 KB4132216  4/9/2019  
 KB4485447  4/9/2019  
-
+```
 
 ## SFConfigurationObserver 
 
@@ -462,3 +468,87 @@ This observer doesn't monitor or report health status.
 It provides information about the currently installed Service Fabric runtime environment.
 The output (a local file) is used by the FabricObserver API service, rendered as HTML (e.g., http://localhost:5000/api/ObserverManager). You can learn more about API service [here](/FabricObserverWeb/ReadMe.md).
 
+# Writing a New Observer
+
+Writing a new observer consists of extending `ObserverBase`, creating configuration, and writing your logic.
+
+## Create `MyObserver.cs`, extending `ObserverBase`
+```csharp
+namespace FabricObserver
+{
+    public class MyObserver : ObserverBase
+    {
+        // Most observers have an initialize where they read their settings
+        private async Task Initialize(CancellationToken token)
+        {
+            var mythreshold = this.GetSettingParameterValue(
+                ObserverConstants.MyObserverConfigurationSectionName,
+                ObserverConstants.MyObserverThreshold);
+            if (!string.IsNullOrEmpty(mythreshold))
+            {
+                this.mytheshold = threshold;
+            }
+            else
+            {
+                this.mythreshold = "foo";
+            }
+
+            // ...
+        }
+
+        public override async Task ObserveAsync(CancellationToken token)
+        {
+          Initialize(token);
+          // ...
+          ReportAsync(token);
+        }
+
+        public override async Task ReportAsync(CancellationToken token)
+        {
+          // read state recorded by ObserveAsync
+          // ...
+          healthReport = new Utilities.HealthReport
+                {
+                    Observer = this.ObserverName,
+                    ReportType = "",
+                    EmitLogEvent = "",
+                    NodeName = "",
+                    HealthMessage = "",
+                    State = "",
+                    HealthReportTimeToLive = ""
+                };
+
+                this.HasActiveFabricErrorOrWarning = "";
+        }
+
+            this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+    }
+}
+```
+
+## Create configuration section in `Settings.xml`
+```xml
+  <Section Name="MyObserverConfiguration">
+    <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="MyThreshold" Value="10" />
+    <Parameter Name="MyFlag" Value="False" />
+```
+
+## Add references to configuration in `ObserverConstants.cs`
+```csharp
+// My Observer
+public const string MyObserverName = "CertificateObserver";
+public const string MyObserverConfigurationSectionName = "MyObserverConfiguration";
+public const string MyObserverThreshold = "MyThreshold";
+public const string MyObserverFlag = "MyFlag";
+```
+
+## Add observer to `ObserverManager.GetObservers()`
+```csharp
+// ...
+new CertificateObserver(),
+new MyObserver()
+// ...
+```
+
+That's it, your observer will now be queued and run alongside the other enabled observers.
