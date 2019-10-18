@@ -79,7 +79,7 @@ namespace FabricObserverTests
         /// <inheritdoc/>
         public string WorkDirectory { get; private set; }
 
-        // Interface required events... These are never used. Ignore the Warnings(CS0067).
+        // Interface required events... These are never used. Ignore the Warnings(CS0414).
 
         /// <inheritdoc/>
         public event EventHandler<PackageAddedEventArgs<CodePackage>> CodePackageAddedEvent = null;
