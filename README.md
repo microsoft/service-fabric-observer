@@ -7,7 +7,7 @@
 FO is a standalone Service Fabric Application, so it can be deployed and run alongside your applciations without any change to them.
 
 
-> FO is not a replacement nor alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO can give useful and timely ops information.
+> FO is not an alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
 
 [Read more about Service Fabric health monitoring](https://docs.microsoft.com/azure/service-fabric/service-fabric-health-introduction)
 
