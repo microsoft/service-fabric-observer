@@ -45,7 +45,7 @@
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <!-- Default is 14 days for each -->
+    <!-- Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="42" />
     <!-- These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
