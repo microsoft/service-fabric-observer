@@ -17,16 +17,16 @@ namespace FabricObserverTests
         /// <summary>
         /// Initializes a new instance of the <see cref="MockCodePackageActivationContext"/> class.
         /// </summary>
-        /// <param name="applicationName"></param>
-        /// <param name="applicationTypeName"></param>
-        /// <param name="codePackageName"></param>
-        /// <param name="codePackageVersion"></param>
-        /// <param name="context"></param>
-        /// <param name="logDirectory"></param>
-        /// <param name="tempDirectory"></param>
-        /// <param name="workDirectory"></param>
-        /// <param name="serviceManifestName"></param>
-        /// <param name="serviceManifestVersion"></param>
+        /// <param name="applicationName">applicationName.</param>
+        /// <param name="applicationTypeName">applicationTypeName.</param>
+        /// <param name="codePackageName">codePackageName.</param>
+        /// <param name="codePackageVersion">codePackageVersion.</param>
+        /// <param name="context">context.</param>
+        /// <param name="logDirectory">logDirectory.</param>
+        /// <param name="tempDirectory">tempDirectory.</param>
+        /// <param name="workDirectory">workDirectory.</param>
+        /// <param name="serviceManifestName">serviceManifestName.</param>
+        /// <param name="serviceManifestVersion">serviceManifestVersion.</param>
         public MockCodePackageActivationContext(
             string applicationName,
             string applicationTypeName,
