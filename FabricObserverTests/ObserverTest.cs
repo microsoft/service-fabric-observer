@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data;
 using System.Diagnostics;
 using System.Fabric;
 using System.IO;
@@ -105,6 +104,25 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public void AppObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new AppObserver();
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            Assert.IsTrue(obs.CsvFileLogger != null);
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.AppObserverName);
+
+            obs.Dispose();
+            ObserverManager.FabricClientInstance.Dispose();
+        }
+
+        [TestMethod]
         public void CertificateObserver_Constructor_test()
         {
             ObserverManager.FabricServiceContext = this.context;
@@ -124,25 +142,6 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public void OSObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new OSObserver();
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
-
-            obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
-        }
-
-        [TestMethod]
         public void DiskObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
@@ -156,25 +155,6 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.CsvFileLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.DiskObserverName);
-
-            obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
-        }
-
-        [TestMethod]
-        public void AppObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new AppObserver();
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.AppObserverName);
 
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
@@ -241,6 +221,25 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public void OSObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new OSObserver();
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            Assert.IsTrue(obs.CsvFileLogger != null);
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
+
+            obs.Dispose();
+            ObserverManager.FabricClientInstance.Dispose();
+        }
+
+        [TestMethod]
         public void SFConfigurationObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
@@ -261,7 +260,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// TODO.
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -834,7 +833,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail
+        /// NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail.
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -873,7 +872,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -911,7 +910,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -960,7 +959,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1004,7 +1003,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1052,7 +1051,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1100,7 +1099,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1138,7 +1137,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1186,7 +1185,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1232,7 +1231,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1278,7 +1277,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1323,7 +1322,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        ///
+        /// ...
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
