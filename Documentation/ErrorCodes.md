@@ -1,36 +1,32 @@
 **FabricObserver Error and Warning Codes** 
 
-        // CPU
-        ErrorCpuTime = "FO001";  
-        WarningCpuTime = "FO002";  
+        // CPU...
+        ErrorCpuTime = "FO001";
+        WarningCpuTime = "FO002";
 
         // Disk
-        ErrorDiskSpace = "FO003";  
-        WarningDiskSpace = "FO004";  
-        ErrorDiskIoReads = "FO005";  
-        WarningDiskIoReads = "FO006";  
-        ErrorDiskIoWrites = "FO007";  
-        WarningDiskIoWrites = "FO008";  
-        ErrorDiskAverageQueueLength = "FO021";  
-        WarningDiskAverageQueueLength = "FO022";  
+        ErrorDiskSpace = "FO003";
+        WarningDiskSpace = "FO004";
+        ErrorDiskIoReads = "FO005";
+        WarningDiskIoReads = "FO006";
+        ErrorDiskIoWrites = "FO007";
+        WarningDiskIoWrites = "FO008";
+        ErrorDiskAverageQueueLength = "FO009";
+        WarningDiskAverageQueueLength = "FO010";
 
         // Memory
-        ErrorMemoryCommitted = "FO009";  
-        WarningMemoryCommitted = "FO0010";  
-        ErrorMemoryPercentUsed = "FO0023";  
-        WarningMemoryPercentUsed = "FO0024";  
+        ErrorMemoryCommitted = "FO011";
+        WarningMemoryCommitted = "FO012";
+        ErrorMemoryPercentUsed = "FO013";
+        WarningMemoryPercentUsed = "FO014";
 
         // Networking
-        ErrorNetworkEndpointUnreachable = "FO0011";  
-        WarningNetworkEndpointUnreachable = "FO0012";  
-        ErrorTooManyActivePorts = "FO0013";  
-        WarningTooManyActivePorts = "FO0014";  
-        ErrorTooManyFirewallRules = "FO0015";  
-        WarningTooManyFirewallRules = "FO0016";  
-        ErrorNetworkBytesSent = "FO0017";  
-        WarningNetworkBytesSent = "FO0018";  
-        ErrorNetworkBytesReceived = "FO0019";  
-        WarningNetworkBytesReceived = "FO0020";  
-  
-        // WTF
-        Unknown = "FO00";  
+        ErrorNetworkEndpointUnreachable = "FO015";
+        WarningNetworkEndpointUnreachable = "FO016";
+        ErrorTooManyActivePorts = "FO017";
+        string WarningTooManyActivePorts = "FO018";
+        ErrorTooManyFirewallRules = "FO019";
+        WarningTooManyFirewallRules = "FO020";
+
+        // Unknown
+        Unknown = "FO000";
