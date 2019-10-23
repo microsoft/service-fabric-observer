@@ -28,10 +28,9 @@ For more information about **the design of FabricObserver**, please see the [Des
 ## Build and run
 
 1. Clone the repo
-2. Install the [.NET Core 2.2 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.2) (to build FabricObserverWeb)*
-3. FabricObserverApp can be run and deployed through Visual Studio
-
-*Note: Different versions of Visual Studio necessitate different versions of the SDK to be installed - make sure the correct version is installed.*
+2. Install the [.NET Core 2.2 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.2) (if you want to build FabricObserverWebApi)*
+   Please note that if you are using VS2017, you will have to install .NET Core 2.1, as VS2017 does not support 2.2 for ASPNETCORE.
+3. FabricObserverApp can be run and deployed through Visual Studio or Powershell, like any SF app
 
 ## Observer Model
 
