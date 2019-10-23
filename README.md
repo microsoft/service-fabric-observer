@@ -13,7 +13,7 @@ FO is a standalone Service Fabric Application, so it can be deployed and run alo
 
 ## How it works
 
-Fabric Observer comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
+FabricObserver comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
 
 > It is not recommended to run FO with the default thresholds. It is recommended to first enable observers with ignored thresholds (by setting the threshold to 0), then run FO to monitor over a learning period the baseline behavior of your cluster along the measured metrics. After the learning period, the observers should be enabled with thresholds that make sense for the cluster.
 
