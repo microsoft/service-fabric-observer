@@ -1,4 +1,4 @@
-# Fabric Observer
+# FabricObserver
 
 **FabricObserver (FO)** is a working implementation of a Service Fabric watchdog service as a Service Fabric application that 
 1. Monitors a broad range of resources that tend to be important to all service fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
@@ -42,11 +42,11 @@ Since observers live in their own application, they monitor other applications t
 | Resource | Observer |
 | --- | --- |
 | Disk (local storage disk health/availability, space usage, IO) | DiskObserver |
-| CPU/Memory (per process across Apps and Fabric system services) | Node Observer |
-| OS properties (install date, health status, list of hot fixes, hardware configuration, etc., ephemeral port range and real-time OS health status) | OS Observer |
-| Networking (general health and monitoring of availability of user-specified, per-app endpoints) | Network Observer |
+| CPU/Memory (per process across Apps and Fabric system services) | NodeObserver |
+| OS properties (install date, health status, list of hot fixes, hardware configuration, etc., ephemeral port range and real-time OS health status) | OSObserver |
+| Networking (general health and monitoring of availability of user-specified, per-app endpoints) | NetworkObserver |
 | Service Fabric Infrastructure | FabricSystemObserver |
-| Application certificates | Certificate Observer |
+| Application certificates | CertificateObserver |
 | **Another resource you find important** | **Observer you implement** |
 
 To learn more about the current Observers and their configuration, please see the [Observers readme](./Documentation/Observers.md).  
