@@ -18,28 +18,24 @@ namespace FabricObserver.Utilities
         public const string WarningDiskIoReads = "FO006";
         public const string ErrorDiskIoWrites = "FO007";
         public const string WarningDiskIoWrites = "FO008";
-        public const string ErrorDiskAverageQueueLength = "FO021";
-        public const string WarningDiskAverageQueueLength = "FO022";
+        public const string ErrorDiskAverageQueueLength = "FO009";
+        public const string WarningDiskAverageQueueLength = "FO010";
 
         // Memory
-        public const string ErrorMemoryCommitted = "FO009";
-        public const string WarningMemoryCommitted = "FO0010";
-        public const string ErrorMemoryPercentUsed = "FO0023";
-        public const string WarningMemoryPercentUsed = "FO0024";
+        public const string ErrorMemoryCommitted = "FO011";
+        public const string WarningMemoryCommitted = "FO012";
+        public const string ErrorMemoryPercentUsed = "FO013";
+        public const string WarningMemoryPercentUsed = "FO014";
 
         // Networking
-        public const string ErrorNetworkEndpointUnreachable = "FO0011";
-        public const string WarningNetworkEndpointUnreachable = "FO0012";
-        public const string ErrorTooManyActivePorts = "FO0013";
-        public const string WarningTooManyActivePorts = "FO0014";
-        public const string ErrorTooManyFirewallRules = "FO0015";
-        public const string WarningTooManyFirewallRules = "FO0016";
-        public const string ErrorNetworkBytesSent = "FO0017";
-        public const string WarningNetworkBytesSent = "FO0018";
-        public const string ErrorNetworkBytesReceived = "FO0019";
-        public const string WarningNetworkBytesReceived = "FO0020";
+        public const string ErrorNetworkEndpointUnreachable = "FO015";
+        public const string WarningNetworkEndpointUnreachable = "FO016";
+        public const string ErrorTooManyActivePorts = "FO017";
+        public const string WarningTooManyActivePorts = "FO018";
+        public const string ErrorTooManyFirewallRules = "FO019";
+        public const string WarningTooManyFirewallRules = "FO020";
 
         // Unknown
-        public const string Unknown = "FO00";
+        public const string Unknown = "FO000";
     }
 }
