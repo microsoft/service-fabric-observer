@@ -4,7 +4,7 @@
 1. Monitors a broad range of resources that tend to be important to all service fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
 2. Provides a simple model in which new observers can be built and configured and run automatically through a .NET development model.
 
-FO is a standalone Service Fabric Application that runs on each cluster node, so it can be deployed and run alongside your applications without any change to them.
+FO is a standalone Stateless Service Fabric Application that runs on each cluster node, so it can be deployed and run alongside your applications without any change to them.
 
 
 > FO is not an alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
