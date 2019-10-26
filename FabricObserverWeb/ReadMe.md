@@ -21,7 +21,7 @@ will return JSON string:
 
 {"date":"08-29-2019 21:07:11.6257","healthState":"Ok","message":""} 
 
-when current state of the local node is healthy. In the case when it is not healthy, you will see healthState:Warning/Error with the message field containing the details, including an FOxxx error code.
+when current state of the local node is healthy. In the case when it is not healthy, you will see healthState:Warning/Error with the message field containing the details, including an [FOxxx error code](/Documentation/ErrorCodes.md).
 
 This API also supports html output for "pretty" printing on a web page. For example, 
 
