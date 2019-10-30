@@ -51,7 +51,7 @@ Example Output in SFX:
 SF Event Store:  
 
 
-![alt text](/Documentation/Images/AppCpuWarnEventWithClear.jpg "Logo Title Text 1")  
+![alt text](/Documentation/Images/CpuWarnEventsClear.jpg "Logo Title Text 1")  
 
 
 
