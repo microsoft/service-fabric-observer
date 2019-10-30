@@ -72,13 +72,13 @@ Here is the magical setting to have DiskObserver warn you when disk space consum
 Without working set, there can be no work.
 - Hercule Poirot (Not really, but if you like mysteries...)
 ```
-Memory is always an important resource in today's data-heavy workloads. Sure, just rent more. However, you definitely 
-keep an eye on how much memory your services are consuming as part of their Happy Place (under load) and determine the Bad Place 
-in order to define meaningful Warning threshold. You have options here.
+Memory is always an important resource in today's data and compute heavy workloads. Sure, just rent more virtual RAM... However, you definitely 
+need to keep an eye on how much memory your services are consuming as part of their Happy Place (under load) and determine the Bad Place 
+in order to define meaningful memory use Warning thresholds. 
 
 ***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful percent-used thresold.  
 
-***Solution:*** AppObserver confidently rides in through the heat and dust!  
+***Solution:*** AppObserver is your friend.  
 
 The first two JSON objects below tell AppObserver to warn when any of the services under MyApp app reach 30% memory use (as a percentage of total memory). 
  
@@ -100,6 +100,24 @@ The third one scopes to all services _but_ 3 (a new wrinkle!) and asks AppObserv
   }
 ```
 
+**What about the state of the Machine, as a whole?** 
+
+***Problem:*** I want to know when Total CPU Time and Memory Consumption on the VM (or real machine)
+reaches certain points and then emit a Warning.  
+
+***Solution:*** Enter NodeObserver.  
+
+NodeObserver doesn't speak JSON (can you believe it!!??....). So, you simply set the desired warning
+thresholds in PackageRoot/Config/Settings.xml:  
+
+```
+  <Section Name="NodeObserverConfiguration">
+    <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="CpuWarningLimitPercent" Value="90" />
+    <Parameter Name="MemoryWarningLimitPercent" Value="90" />
+  </Section>
+```
 
 **Networking: Endpoint Availability**  
 
