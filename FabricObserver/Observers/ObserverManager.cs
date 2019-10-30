@@ -289,12 +289,15 @@ namespace FabricObserver
         }
 
         // Observers are instance types. Create them, store in persistent list...
-        // List order matters... These are cycled through sequentially.
+        // List order matters... These are cycled through sequentially, one observer at a time.
         private static List<ObserverBase> GetObservers()
         {
+            // You can simply not create an instance of an observer you don't want to run. The list
+            // below is just for reference. GetObservers only returns enabled observers, anyway...
             var observers = new List<ObserverBase>(new ObserverBase[]
             {
-                // CertificateObserver alerts to expiring certificates in LocalMachine/My
+                // CertificateObserver monitors Certificate health and will emit Warnings for expiring 
+                // Cluster and App certificates that are housed in the LocalMachine/My Certificate Store
                 new CertificateObserver(),
 
                 // Observes, records and reports on general OS properties and state...
@@ -318,6 +321,9 @@ namespace FabricObserver
                 // Observes, records and reports on CPU/Mem usage, established port count, Disk IO (r/w) for Service Fabric System services
                 // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc...). Long-running data is stored in app-specific CSVs (optional)
                 // or sent to diagnostic/telemetry service, for use in upstream analysis, etc...
+                // ***NOTE***: It is not a good idea to run this observer with Warning thresholds unless you understand how your
+                // service code impacts the resource usage behavior of the underlying fabric system services. 
+                // This is here for example only.
                 new FabricSystemObserver(),
 
                 // User-configurable, App-level (app service processes) machine resource observer that records and reports on service-level resource usage...
