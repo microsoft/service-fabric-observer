@@ -1,61 +1,17 @@
 ﻿[
   {
-    "target": "fabric:/MyApp",
-    "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 30,
-    "diskIOErrorReadsPerSecMS": 0,
-    "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 0,
-    "diskIOWarningWritesPerSecMS": 0,
-    "dumpProcessOnError": false,
-    "memoryErrorLimitPercent": 0,
-    "memoryWarningLimitPercent": 60,
-    "networkErrorActivePorts": 0,
-    "networkErrorEphemeralPorts": 0,
-    "networkWarningActivePorts": 800,
-    "networkWarningEphemeralPorts": 400
-  },
-  {
-    "target": "fabric:/MyApp1",
-    "serviceIncludeList": "MyService42, MyOtherService42",
-    "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 8,
-    "diskIOErrorReadsPerSecMS": 0,
-    "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 0,
-    "diskIOWarningWritesPerSecMS": 0,
-    "dumpProcessOnError": false,
-    "memoryErrorLimitPercent": 0,
-    "memoryWarningLimitPercent": 60,
-    "networkErrorActivePorts": 0,
-    "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 0,
-    "networkWarningEphemeralPorts": 400
-  },
-  {
     "target": "fabric:/FabricObserver",
     "cpuWarningLimitPct": 30,
-    "networkWarningActivePorts": 800,
-    "networkWarningEphemeralPorts": 400
-  },
-  {
-    "target": "fabric:/FabricObserver",
-    "memoryWarningLimitPercent": 30
+    "memoryWarningLimitMB": 300,
+    "networkWarningActivePorts": 80,
+    "networkWarningEphemeralPorts": 40
   },
   {
     "target": "fabric:/FabricObserverWebApi",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
-    "diskIOErrorReadsPerSecMS": 0,
-    "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 0,
-    "diskIOWarningWritesPerSecMS": 0,
-    "dumpProcessOnError": false,
-    "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 30,
-    "networkErrorActivePorts": 0,
-    "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 0,
-    "networkWarningEphemeralPorts": 400
+    "networkWarningActivePorts": 80,
+    "networkWarningEphemeralPorts": 40
   }
 ]
