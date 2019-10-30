@@ -44,15 +44,14 @@ You would add this to PackageRoot/Observer.Data/AppObserver.config.json:
 
 Example Output in SFX: 
 
-Cluster level:  
 
-![alt text](/Documentation/Images/AppCpuWarnCluster.jpg "Logo Title Text 1")  
-
-
-App level:  
+![alt text](/Documentation/Images/AppCpuWarningDescription.jpg "Logo Title Text 1")  
 
 
-![alt text](/Documentation/Images/CPUWarnApp.jpg "Logo Title Text 1")  
+SF Event Store:  
+
+
+![alt text](/Documentation/Images/AppCpuWarnEventWithClear.jpg "Logo Title Text 1")  
 
 
 
@@ -76,15 +75,9 @@ Add this to DiskObserver's configuration section and it will warn you when disk 
 
 Example Output in SFX: 
 
-Node Level:  
+![alt text](/Documentation/Images/DiskWarnDescriptionNode.jpg "Logo Title Text 1")  
 
-![alt text](/Documentation/Images/DiskWarnNode.jpg "Logo Title Text 1")  
 
-Cluster Level: 
-
-![alt text](/Documentation/Images/ClusterDiskMemory.jpg "Logo Title Text 1") 
-
- 
 **Memory Usage** 
 
 ***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful percent-used thresold.  
@@ -186,7 +179,7 @@ thresholds in PackageRoot/Config/Settings.xml:
 
 Example Output in SFX: 
 
-![alt text](/Documentation/Images/MemoryWarnNode.jpg "Logo Title Text 1") 
+![alt text](/Documentation/Images/MemoryWarnDescriptionNode.jpg "Logo Title Text 1") 
 
 
 
@@ -243,10 +236,4 @@ In NetworkObserver's configuration file (PackageRoot/Observers.Data/NetworkObser
 Example Output in SFX: 
 
 
-App Level: 
-
-![alt text](/Documentation/Images/NetworkEndpointWarning.jpg "Logo Title Text 1")   
-
-Cluster Level: 
-
-![alt text](/Documentation/Images/NetworkEndpointWarningCluster.jpg "Logo Title Text 1") 
+![alt text](/Documentation/Images/NetworkEndpointWarningDesc.jpg "Logo Title Text 1")   
