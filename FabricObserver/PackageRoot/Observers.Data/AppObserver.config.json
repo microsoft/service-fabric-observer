@@ -34,19 +34,13 @@
   },
   {
     "target": "fabric:/FabricObserver",
-    "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
-    "diskIOErrorReadsPerSecMS": 0,
-    "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 0,
-    "diskIOWarningWritesPerSecMS": 0,
-    "dumpProcessOnError": false,
-    "memoryErrorLimitPercent": 0,
-    "memoryWarningLimitPercent": 30,
-    "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 0,
     "networkWarningEphemeralPorts": 400
+  },
+  {
+    "target": "fabric:/FabricObserver",
+    "memoryWarningLimitPercent": 30
   },
   {
     "target": "fabric:/FabricObserverWebApi",
