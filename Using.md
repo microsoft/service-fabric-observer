@@ -1,13 +1,13 @@
 # Using FabricObserver - Scenarios
 
 **CPU Usage - CPU Time**  
-FO makes it really easy for you to monitor the CPU usage behavior of any or your Windows Service Fabric Applications' service processes.
-Remember that a Service Fabric Application is really just a logical "container" of related services, an abstract encapsulation or versioned configuration and code.
-With this definition in mind, FO enables you to observe the overall CPU usage of your Application (so, the cumulative impact on CPU Time of all of its services)
-or you can just monitor specific services and ask FO to Warn when some threshold is reached or exceeded. 
+FO makes it easy for you to monitor the CPU usage behavior of your Service Fabric Applications.
+Remember that a Service Fabric Application is just a logical "container" of related services, an abstract encapsulation or versioned configuration and code.
+With this definition in mind, FO enables you to observe the CPU usage of your Application (so, the impact on CPU Time of any of its services)
+or you can just monitor specific services. Either way, FO will Warn when some threshold you provide is reached or exceeded. 
 
 ***Problem***: I want to know how much CPU my App is using, specifically two of the 5 services that I know
-tend to eat more CPU then the rest of the family, and emit a warning when a specified threshold breached... 
+tend to eat more CPU then the rest of the family, and emit a warning when a specified threshold isbreached... 
 
 ***Solution***: The apt-named AppObserver is your friend. You can do exactly this, plus more. :)
 
@@ -76,12 +76,11 @@ Memory is always an important resource in today's data-heavy workloads. Sure, ju
 keep an eye on how much memory your services are consuming as part of their Happy Place (under load) and determine the Bad Place 
 in order to define meaningful Warning threshold. You have options here.
 
-***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful percent-used thresold.
+***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful percent-used thresold.  
+
 ***Solution:*** AppObserver confidently rides in through the heat and dust!  
 
-Like this:
-
-The first two Json objects below tell AppObserver to warn when any of the services under MyApp app reach 30% memory use (as a percentage of total memory). 
+The first two JSON objects below tell AppObserver to warn when any of the services under MyApp app reach 30% memory use (as a percentage of total memory). 
  
 The third one scopes to all services _but_ 3 (a new wrinkle!) and asks AppObserver to warn when any of them hit 40% memory use on the machine (virtual or not).
 
@@ -110,7 +109,7 @@ The third one scopes to all services _but_ 3 (a new wrinkle!) and asks AppObserv
 need to always be available (as if that is possible, but let's pretend, shall we)
 and if not, you want to put the impacted app into a Warning state. Here's how you would do that.
 
-Once again, ladies and gentlemen, Json. 
+Once again, ladies and gentlemen, JSON. 
 
 ```
 [
