@@ -14,6 +14,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E27A9B40-7F6A-4C9B-91EC-A8AC6C2DC009}"
 	ProjectSection(SolutionItems) = preProject
 		ReadMe.md = ReadMe.md
+		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabricObserverTests", "FabricObserverTests\FabricObserverTests.csproj", "{48C88BEB-9960-4183-861B-DF25C193E4C9}"
