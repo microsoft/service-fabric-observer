@@ -1,23 +1,24 @@
 # FabricObserver
 
-**FabricObserver (FO)** is a working implementation of a Service Fabric watchdog service as a Service Fabric application that 
-1. Monitors a broad range of resources that tend to be important to all service fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
+**FabricObserver (FO)** is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric application that 
+1. Monitors a broad range of resources that tend to be important to all Service Fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
 2. Provides a simple model in which new observers can be built and configured and run automatically through a .NET development model.
 
-FO is a standalone Service Fabric Application, so it can be deployed and run alongside your applications without any change to them.
+FO is a Stateless Service Fabric Application composed of a single service (Partition Count = Singleton, Instance Count = -1) that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design.
 
 
 > FO is not an alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
+
 
 [Read more about Service Fabric health monitoring](https://docs.microsoft.com/azure/service-fabric/service-fabric-health-introduction)
 
 ## How it works
 
-Fabric Observer comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
+FabricObserver comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
 
-> It is not recommended to run FO with the default thresholds. It is recommended to first enable observers with ignored thresholds (by setting the threshold to 0), then run FO to monitor over a learning period the baseline behavior of your cluster along the measured metrics. After the learning period, the observers should be enabled with thresholds that make sense for the cluster.
+When a Warning threshold is reached or exceeded, an observer will send a Health Report to Service Fabric's Health management system (either as a Node or App Health Report, depending on the observer). This Warning state and related reports are viewable in SFX, the Service Fabric EventStore, and Azure's Application Insights, if enabled.
 
-In Warning and Error states, an observer will signal `Warning` Service Fabric Health Reports. This warning state and related reports are viewable in SFX, the EventStore, and AppInsights, if enabled. Most observers will clean the Warning state in the case the issue is transient, but others will indicate a long-running problem with applications in the cluster. For example, high CPU usage above the user-assigned threshold will put a cluster in Warning State if the NodeObserver is enabled, but will soon go back to Healthy if it is a transient spike. An expiring certificate Warning however will remain until the user takes manual intervention to update their application's certificates. 
+Most observers will remove the Warning state in cases where the issue is transient, but others will maintain a long-running Warning for applications/services/nodes/security problems observed in the cluster. For example, high CPU usage above the user-assigned threshold for a VM or App/Service will put a Node into Warning State (NodeObserver) or Application Warning state (AppObserver), for example, but will soon go back to Healthy if it is a transient spike or after you mitigate the specific problem :-). An expiring certificate Warning from CertificateObsever, however, will remain until you update your application's certificates (Cluster certificates are already monitored by the SF runtime. This is not the case for Application certificates, so use CertificateObserver for this, if necessary).
 
 [Read more about Service Fabric Health Reports](https://docs.microsoft.com/azure/service-fabric/service-fabric-report-health)
 
@@ -27,11 +28,11 @@ For more information about **the design of FabricObserver**, please see the [Des
 
 ## Build and run
 
-1. Clone the repo
-2. Install the [.NET Core 2.2 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.2) (to build FabricObserverWeb)*
-3. FabricObserverApp can be run and deployed through Visual Studio
+1. Clone the repo.
+2. If you want to use the optional [FabricObserver API Service](/FabricObserverWeb) and you are using VS 2019, you must install [.NET Core 2.2 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.2). If you are using VS 2017, then install [.NET Core 2.1 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.1), as VS2017 does not support 2.2.
+2. Build (the required Nuget packages will be downloaded and installed automatically by Visual Studio). 
 
-*Note: Different versions of Visual Studio necessitate different versions of the SDK to be installed - make sure the correct version is installed.*
+FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app.
 
 ## Observer Model
 
