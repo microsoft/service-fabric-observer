@@ -7,7 +7,7 @@ With this definition in mind, FO enables you to observe the CPU usage of your Ap
 or you can just monitor specific services. Either way, FO will Warn when some threshold you provide is reached or exceeded. 
 
 ***Problem***: I want to know how much CPU my App is using, specifically two of the 5 services that I know
-tend to eat more CPU then the rest of the family, and emit a warning when a specified threshold isbreached... 
+tend to eat more CPU then the rest of the family, and emit a warning when a specified threshold is breached... 
 
 ***Solution***: The apt-named AppObserver is your friend. You can do exactly this, plus more. :)
 
@@ -99,6 +99,28 @@ The third one scopes to all services _but_ 3 (a new wrinkle!) and asks AppObserv
     "memoryWarningLimitPercent": 40
   }
 ```
+
+**Different thresholds for different services belonging to the same app**  
+
+***Problem:*** I want to monitor and report on different services for different thresholds 
+for one app.  
+
+***Solution:*** Easy. You can supply any number of array items in AppObserver's JSON configuration file
+regardless of target - there is no requirement for unique target properties in the object array. 
+
+```
+  {
+    "target": "fabric:/MyApp",
+    "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2",
+    "cpuWarningLimitPct": 45
+  },
+  {
+    "target": "fabric:/MyApp",
+    "serviceIncludeList": "MemoryCrunchingService1, MemoryCrunchingService42",
+    "memoryWarningLimitPercent": 30
+  }
+```
+
 
 **What about the state of the Machine, as a whole?** 
 
