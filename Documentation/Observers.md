@@ -16,7 +16,7 @@ Service Fabric Error Health Events block upgrades and other important Fabric run
 ## Currently Implemented Observers  
 
 | Observer | Description |
-| --- | --- |
+| :--- | :--- |
 | [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes). Alerts when user-supplied thresholds are reached. |
 | [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
 | [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are reached. |
@@ -26,7 +26,7 @@ Service Fabric Error Health Events block upgrades and other important Fabric run
 | [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. |
 | [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. |
 
-**Fabric Observers - What they do and how to configure them**  
+# Fabric Observers - What they do and how to configure them  
   
 ## AppObserver  
 Observer that monitors CPU usage, Memory use, and Disk space
@@ -40,8 +40,9 @@ objects which constitute Service Fabric Apps (identified by service
 URI's). Users supply Error/Warning thresholds for CPU use, Memory use and Disk
 IO, ports. Memory values are supplied as number of megabytes... CPU and
 Disk Space values are provided as percentages (integers: so, 80 = 80%...)... 
-**Please note that you can supply 0 for any of these setting. It just means that the threshold
-will be ignored. We recommend you do this for all Error thresholds until you become more 
+**Please note that you can omit any of these properties. You can also supply 0 as the value, which means that threshold
+will be ignored (they are not omitted below so you can see what fully specified object looks like. 
+We recommend you omit all Error thresholds until you become more 
 comfortable with the behavior of your services and the machine-level side effects produced by them**.
 
 Example JSON config file located in **PackageRoot\\Observers.Data**
@@ -119,29 +120,27 @@ Settings descriptions:
 
 All settings are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer).
 
-
 | Setting | Description |
 | :--- | :--- |
-**target** | App URI string to observe. Required.
-**serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense)  
-**serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  
-**memoryErrorLimitMB** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log)  
-**memoryWarningLimitMB**| Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log)  
-**memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate a Fabric Error (SFX and local log)  
-**memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) 
-**cpuErrorLimitPct** | Maximum CPU percentage that should generate a Fabric Error \
-**cpuWarningLimitPct** | Minimum CPU percentage that should generate a Fabric Warning \
-**diskIOErrorReadsPerSecMS** | Maximum number of milliseconds for average sec/Read IO on system logical disk that will generate a Fabric Error.\
-**diskIOWarningReadsPerSecMS** | Minimum number of milliseconds for average sec/Read IO on system logical disk that will generate a Fabric warning.\
-**diskIOErrorWritesPerSecMS** | Maximum number of milliseconds for average sec/Write IO on system logical disk that will generate a Fabric Error.\
-**diskIOWarningWritesPerSecMS** | Minimum number of milliseconds for average sec/Write IO on system logical disk that will generate a Fabric Warning.\
-**dumpProcessOnError** | Instructs whether or not FabricObserver should   dump your service process when service health is detected to be in an  Error (critical) state...  
-**networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate a Fabric Error.\
-**networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning.\
-**networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Error.\
-**networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Warning.\  
-**Output**| Log text(Error/Warning), Service Fabric Application Health Report
-(Error/Warning/ok), telemetry data.
+| **target** | App URI string to observe. Required. | 
+| **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
+| **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
+| **memoryErrorLimitMB** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log) |  
+| **memoryWarningLimitMB**| Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log) |  
+| **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate a Fabric Error (SFX and local log) |  
+| **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) | 
+| **cpuErrorLimitPct** | Maximum CPU percentage that should generate a Fabric Error |
+| **cpuWarningLimitPct** | Minimum CPU percentage that should generate a Fabric Warning |
+| **diskIOErrorReadsPerSecMS** | Maximum number of milliseconds for average sec/Read IO on system logical disk that will generate a Fabric Error. |
+| **diskIOWarningReadsPerSecMS** | Minimum number of milliseconds for average sec/Read IO on system logical disk that will generate a Fabric warning. |
+| **diskIOErrorWritesPerSecMS** | Maximum number of milliseconds for average sec/Write IO on system logical disk that will generate a Fabric Error. |
+| **diskIOWarningWritesPerSecMS** | Minimum number of milliseconds for average sec/Write IO on system logical disk that will generate a Fabric Warning. |
+| **dumpProcessOnError** | Instructs whether or not FabricObserver should   dump your service process when service health is detected to be in an  Error (critical) state... |  
+| **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate a Fabric Error. |
+| **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning. |
+| **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Error. |
+| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Warning. |  
+| **Output**| Log text(Error/Warning), Service Fabric Application Health Report |
 
 AppObserver also optionally outputs CSV files for each app containing all resource usage data across iterations for use in analysis. Included are Average and Peak measurements. You can turn this on/off in Settings.xml, where there are comments explaining the feature further.  
   
@@ -181,7 +180,8 @@ warnings (or OK state) for all logical disks it detects.
 After DiskObserver logs basic disk information, it performs 5 seconds of
 measurements on all logical disks across space usage and IO. The data collected are averaged and then
 used in ReportAsync to determine if a Warning shot should be fired based on user-supplied threshold 
-settings housed in Settings.xml.
+settings housed in Settings.xml. Note that you do not need to specify a threshold parameter that you 
+don't plan you using... You can either omit the XML node or leave the value blank (or set to 0).
 
 ```xml
   <Section Name="DiskObserverConfiguration">
@@ -189,9 +189,8 @@ settings housed in Settings.xml.
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
     <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
-    <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
-    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="5" />
-    <!-- These may or may not be useful to you. Depends on your IO-bound workload... -->
+    <Parameter Name="AverageQueueLengthErrorThreshold" Value="" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" Value="7" />
     <Parameter Name="IOReadsErrorThreshold" Value="" />
     <Parameter Name="IOReadsWarningThreshold" Value="" />
     <Parameter Name="IOWritesErrorThreshold" Value="" />
@@ -395,20 +394,20 @@ until the observer runs again...
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
   </Section>
 ```  
-Setting | Description
-:--- | :---  
-**CpuErrorLimitPct** | Maximum CPU percentage that should generate an Error  
-**CpuWarningLimitPct** | Minimum CPU percentage that should generate a Warning 
-**MemoryErrorLimitMB** | Maximum amount of committed memory on virtual machine that will generate an Error. 
-**MemoryWarningLimitMB** | Minimum amount of committed memory that will generate a Warning.  
-**MemoryErrorLimitPercent** | Maximum percentage of memory in use on virtual machine that will generate an Error. 
-**MemoryWarningLimitPercent** | Minimum percentage of memory in use on virtual machine that will generate a Warning.  
-**NetworkErrorFirewallRules** | Number of established Firewall Rules that will generate a Health Warning  
-**NetworkWarningFirewallRules** |  Number of established Firewall Rules that will generate a Health Error  
-**NetworkErrorActivePorts** | Maximum number of established ports in use by all processes on node that will generate a Fabric Error.\
-**NetworkWarningActivePorts** | Minimum number of established TCP ports in use by all processes on node that will generate a Fabric Warning.\
-**NetworkErrorEphemeralPorts** | Maximum number of established ephemeral TCP ports in use by app process that will generate a Fabric Error.\
-**NetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on node that will generate a Fabric warning.\
+| Setting | Description |
+| :--- | :--- | 
+| **CpuErrorLimitPct** | Maximum CPU percentage that should generate an Error |  
+| **CpuWarningLimitPct** | Minimum CPU percentage that should generate a Warning | 
+| **MemoryErrorLimitMB** | Maximum amount of committed memory on virtual machine that will generate an Error. | 
+| **MemoryWarningLimitMB** | Minimum amount of committed memory that will generate a Warning. |  
+| **MemoryErrorLimitPercent** | Maximum percentage of memory in use on virtual machine that will generate an Error. | 
+| **MemoryWarningLimitPercent** | Minimum percentage of memory in use on virtual machine that will generate a Warning. |  
+| **NetworkErrorFirewallRules** | Number of established Firewall Rules that will generate a Health Warning. |  
+| **NetworkWarningFirewallRules** |  Number of established Firewall Rules that will generate a Health Error. |  
+| **NetworkErrorActivePorts** | Maximum number of established ports in use by all processes on node that will generate a Fabric Error. |
+| **NetworkWarningActivePorts** | Minimum number of established TCP ports in use by all processes on node that will generate a Fabric Warning. |
+| **NetworkErrorEphemeralPorts** | Maximum number of established ephemeral TCP ports in use by app process that will generate a Fabric Error. |
+| **NetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on node that will generate a Fabric warning. |
 
 **Output**:\
 SFX Warnings when min/max thresholds are reached. CSV file,

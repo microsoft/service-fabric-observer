@@ -15,7 +15,7 @@
 
 For an app named MyApp, you would simply add this to PackageRoot/Observer.Data/AppObserver.config.json:  
 
-``` 
+```JSON 
 [
   {
     "target": "fabric:/MyApp",
@@ -27,7 +27,7 @@ For an app named MyApp, you would simply add this to PackageRoot/Observer.Data/A
 Now, let's say you have more then one App deployed (a common scenario) and only want to watch one or more of the services in a specific set of apps. 
 You would add this to PackageRoot/Observer.Data/AppObserver.config.json:
 
-``` 
+```JSON 
 [
  {
     "target": "fabric:/MyApp",
@@ -65,7 +65,7 @@ DiskObserver's Threshold settings are housed in the usual place: PackageRoot/Con
 
 Add this to DiskObserver's configuration section and it will warn you when disk space consumption reaches 80%:
 
-```
+```XML
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
@@ -88,7 +88,7 @@ The first two JSON objects below tell AppObserver to warn when any of the servic
  
 The third one scopes to all services _but_ 3 and asks AppObserver to warn when any of them hit 40% memory use on the machine (virtual or not).
 
-```
+```JSON
   {
     "target": "fabric:/MyApp",
     "memoryWarningLimitPercent": 30
@@ -113,7 +113,7 @@ for one app.
 ***Solution:*** Easy. You can supply any number of array items in AppObserver's JSON configuration file
 regardless of target - there is no requirement for unique target properties in the object array. 
 
-```
+```JSON
   {
     "target": "fabric:/MyApp",
     "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2",
@@ -130,7 +130,7 @@ regardless of target - there is no requirement for unique target properties in t
 If what you really want to do is monitor for different thresholds (like CPU and Memory) for a set of services, you would
 just add the threshold properties to one object: 
 
-```
+```JSON
   {
     "target": "fabric:/MyApp",
     "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2, MemoryCrunchingService1, MemoryCrunchingService42",
@@ -142,7 +142,7 @@ just add the threshold properties to one object:
 The following configuration tells AppObserver to monitor and report Warnings for multiple resources for two services belonging to MyApp:  
  
 
-```
+```JSON
 {
     "target": "fabric:/MyApp",
     "serviceIncludeList": "MyService42, MyOtherService42",
@@ -168,7 +168,7 @@ reaches certain points and then emit a Warning.
 NodeObserver doesn't speak JSON (can you believe it!!??....). So, you simply set the desired warning
 thresholds in PackageRoot/Config/Settings.xml:  
 
-```
+```XML
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
@@ -194,7 +194,7 @@ Let's say you have 3 critical endpoints that you want to monitor for availabilit
 In NetworkObserver's configuration file (PackageRoot/Observers.Data/NetworkObserver.config.json), add this:  
 
 
-```
+```JSON
 [
   {
     "appTarget": "fabric:/MyApp",
