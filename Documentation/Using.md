@@ -16,16 +16,10 @@ a number of threshold settings that are all optional, of course. Basically, that
 
 Let's first answer the question "How much CPU Time is too much?". Then, we use the answer to supply the following 
 configuration for MyApp and the two services we care about (the service include list):
-
 ``` 
 [
   {
     "target": "fabric:/MyApp",
-    "serviceIncludeList": "ILikeCpuService, IAlsoLikeCpuService",
-    "cpuWarningLimitPct": 65
-  }
-]
-```
     "serviceIncludeList": "ILikeCpuService, IAlsoLikeCpuService",
     "cpuWarningLimitPct": 65
   }
@@ -48,7 +42,8 @@ You would do this:
     "cpuWarningLimitPct": 65
   }
 ]
-```  
+```
+
 Example Output in SFX: 
 
 Cluster level:  
@@ -193,9 +188,8 @@ some threshold for some resource property should put the App or Node into an Err
   }
 ``` 
 > You can learn all about the currently implemeted Observers and their supported resource properties aross App and Node level observations [***here***](/Documentation/Observers.md). 
-  
 
-Now back to the regularly scheduled broadcast...  
+
 
 **What about the state of the Machine, as a whole?** 
 
