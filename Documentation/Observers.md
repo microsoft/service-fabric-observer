@@ -41,9 +41,9 @@ URI's). Users supply Error/Warning thresholds for CPU use, Memory use and Disk
 IO, ports. Memory values are supplied as number of megabytes... CPU and
 Disk Space values are provided as percentages (integers: so, 80 = 80%...)... 
 **Please note that you can omit any of these properties. You can also supply 0 as the value, which means that threshold
-will be ignored (they are not omitted below so you can see what fully specified object looks like. 
+will be ignored (they are not omitted below so you can see what a fully specified object looks like). 
 We recommend you omit all Error thresholds until you become more 
-comfortable with the behavior of your services and the machine-level side effects produced by them**.
+comfortable with the behavior of your services and the side effects they have on machine resources**.
 
 Example JSON config file located in **PackageRoot\\Observers.Data**
 folder (AppObserver.config.json):
