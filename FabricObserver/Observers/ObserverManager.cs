@@ -334,7 +334,7 @@ namespace FabricObserver
                 new NetworkObserver(),
             });
 
-            // Only return a list with enabled observer instances...
+            // Only return a list with user-enabled observer instances...
             return observers.Where(obs => obs.IsEnabled)?.ToList();
         }
 
