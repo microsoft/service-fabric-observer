@@ -1,3 +1,31 @@
+# Using FabricObserver - Scenarios
+
+**CPU Usage - CPU Time**  
+FO makes it really easy for you to monitor the CPU usage behavior of any or your Windows Service Fabric Applications' service processes.
+Remember that a Service Fabric Application is really just a logical "container" of related services, an abstract encapsulation or versioned configuration and code.
+With this definition in mind, FO enables you to observe the overall CPU usage of your Application (so, the cumulative impact on CPU Time of all of its services)
+or you can just monitor specific services and ask FO to Warn when some threshold is reached or exceeded. 
+
+***Problem***: I want to know how much CPU my App is using, specifically two of the 5 services that I know
+tend to eat more CPU then the rest of the family, and emit a warning when a specified threshold breached... 
+
+***Solution***: The apt-named AppObserver is your friend. You can do exactly this, plus more. :)
+
+AppObserver requires a JSON config file that contains an array of objects that represent an App (the target), its services, and 
+a number of threshold settings that are all optional, of course. Basically, that was a long-winded way of saying: there's a config for that.
+
+Let's first answer the question "How much CPU Time is too much?". Then, we use the answer to supply the following 
+configuration for MyApp and the two services we care about (the service include list):
+
+``` 
+[
+  {
+    "target": "fabric:/MyApp",
+    "serviceIncludeList": "ILikeCpuService, IAlsoLikeCpuService",
+    "cpuWarningLimitPct": 65
+  }
+]
+```
     "serviceIncludeList": "ILikeCpuService, IAlsoLikeCpuService",
     "cpuWarningLimitPct": 65
   }
