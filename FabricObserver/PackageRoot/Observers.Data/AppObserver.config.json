@@ -8,7 +8,6 @@
   },
   {
     "target": "fabric:/FabricObserverWebApi",
-    "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
