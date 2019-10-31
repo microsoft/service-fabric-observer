@@ -11,7 +11,7 @@
 
 ***Solution***: AppObserver is your friend. You can do exactly this, plus more. :)  
 
-> A Service Fabric Application is really just a logical "container" of related services, an abstract encapsulation or versioned configuration and code.
+> A Service Fabric Application is really just a logical "container" of related services, an abstract encapsulation of versioned configuration and code.
 
 For an app named MyApp, you would simply add this to PackageRoot/Observer.Data/AppObserver.config.json:  
 
