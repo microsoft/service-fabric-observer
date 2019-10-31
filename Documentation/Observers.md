@@ -427,39 +427,9 @@ is an Error when OS Status is not "OK" (which means something is wrong at the OS
 this means trouble...) and long-lived Ok Health Report that contains the information it collected about the node it's running on.  
 
 Example output: 
-```
-Last updated on 9/4/2019 17:26:18 UTC
 
-OS Info:  
-  
-OS: Microsoft Windows Server 2016 Datacenter  
-FreePhysicalMemory: 12 GB  
-FreeVirtualMemory: 17 GB  
-InstallDate: 5/17/2019 9:46:40 PM  
-LastBootUpTime: 5/28/2019 8:26:12 PM  
-NumberOfProcesses: 101  
-OSLanguage: 1033  
-Status: OK  
-TotalVirtualMemorySize: 22 GB  
-TotalVisibleMemorySize: 15 GB  
-Version: 10.0.14393  
-Percent RAM in use: 41%  
-Total number of enabled Firewall rules: 367  
-Total number of active TCP ports: 150  
-Windows ephemeral TCP port range: 49152 - 65535  
-Fabric Application TCP port range: 20000 - 30000  
-Total number of active ephemeral TCP ports: 88  
-  
-OS Patches/Hot Fixes:  
-  
-KB4509091  7/11/2019  
-KB4503537  6/13/2019  
-KB4494440  5/22/2019  
-KB4498947  5/19/2019  
-KB4054590  4/9/2019  
-KB4132216  4/9/2019  
-KB4485447  4/9/2019  
-```
+![alt text](/Documentation/Images/OSObserverOutput.jpg "Logo Title Text 1")  
+
 
 ## SFConfigurationObserver 
 
