@@ -99,7 +99,7 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
   },
   {
     "target": "fabric:/SomeOtherApp",
-    "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42"
+    "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42",
     "memoryWarningLimitPercent": 40
   }
 ```   
