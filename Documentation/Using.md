@@ -7,7 +7,7 @@
 **CPU Usage - CPU Time**  
 
 
-***Problem***: I want to know how much CPU my App is using and emit a warning when a specified threshold breached... 
+***Problem***: I want to know how much CPU my App is using and emit a warning when a specified threshold is reached... 
 
 ***Solution***: AppObserver is your friend. You can do exactly this, plus more. :)  
 
