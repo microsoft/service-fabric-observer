@@ -500,7 +500,7 @@ namespace FabricObserver
 *Note*: if you are measuring things that involve numeric values, then you should create instances of [FabricResourceUsageData<T>](/FabricObserver/Observers/Utilities/FabricResourceUsageData.cs) 
 objects, add to them during your monitoring, then call [ProcessResourceDataReportHealth](/FabricObserver/Observers/ObserverBase.cs#L446), which is already implemented in 
 ObserverBase and does the work of generating health reports based on what you provide (the data, related thresholds, etc...). 
-This is only useful when T is some type of number. See [NodeObserver](/FabricObserver/Observers/NodeObserver.cs) for an example. 
+This is only useful when T is some type of number. See [NodeObserver's related implentation](/FabricObserver/Observers/NodeObserver.cs) as an example. 
 	
 
 ## Create configuration section in `Settings.xml`
