@@ -296,7 +296,7 @@ namespace FabricObserver
             // below is just for reference. GetObservers only returns enabled observers, anyway...
             var observers = new List<ObserverBase>(new ObserverBase[]
             {
-                // CertificateObserver monitors Certificate health and will emit Warnings for expiring 
+                // CertificateObserver monitors Certificate health and will emit Warnings for expiring
                 // Cluster and App certificates that are housed in the LocalMachine/My Certificate Store
                 new CertificateObserver(),
 
@@ -322,7 +322,7 @@ namespace FabricObserver
                 // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc...). Long-running data is stored in app-specific CSVs (optional)
                 // or sent to diagnostic/telemetry service, for use in upstream analysis, etc...
                 // ***NOTE***: It is not a good idea to run this observer with Warning thresholds unless you understand how your
-                // service code impacts the resource usage behavior of the underlying fabric system services. 
+                // service code impacts the resource usage behavior of the underlying fabric system services.
                 // This is here for example only.
                 new FabricSystemObserver(),
 
