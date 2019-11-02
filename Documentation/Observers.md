@@ -27,6 +27,9 @@ Service Fabric Error Health Events block upgrades and other important Fabric run
 | [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. |
 
 # Fabric Observers - What they do and how to configure them  
+
+You can quickly get started by reading [this](/Documentation/Using.md).  
+
   
 ## AppObserver  
 Observer that monitors CPU usage, Memory use, and Disk space
