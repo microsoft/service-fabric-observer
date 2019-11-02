@@ -35,11 +35,12 @@
   </Section>
   <!-- Observer Configuration Settings -->
   <Section Name="AppObserverConfiguration">
+    <!-- Required Parameter for all Observers -->
     <Parameter Name="Enabled" Value="True" />
-    <!-- Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+    <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- The thresholds are held in a json file... Note that these thresholds apply to any service that is part 
+    <!-- Required: The thresholds are held in a json file... Note that these thresholds apply to any service that is part 
          of the Target Application, which is the logical container for service processes in Service Fabric parlance...-->
     <Parameter Name="AppObserverDataFileName" Value="AppObserver.config.json" />
   </Section>
@@ -48,13 +49,16 @@
     <!-- Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="42" />
-    <!-- These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
+    <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
     <Parameter Name="AppCertThumbprintsToObserve" Value="[]"/>
     <Parameter Name="AppCertCommonNamesToObserve" Value="[]"/>
   </Section>
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
+    <!-- For all Observers where thresholds are housed in this settings file 
+         you can either omit them or set values to "" or "0" if you don't need them.
+         They are all in place here for your reference. -->
     <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
     <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
