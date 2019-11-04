@@ -46,6 +46,10 @@
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
+         below, which means it won't run at most once a day (day = 24 hours). All observers support a RunInterval parameter.
+         Just add a Parameter like below to any of the observers' config sections... -->
+    <Parameter Name="RunInterval" Value="1.00:00:00" />
     <!-- Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="42" />

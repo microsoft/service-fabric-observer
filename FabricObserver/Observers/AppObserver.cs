@@ -77,6 +77,14 @@ namespace FabricObserver
                 return;
             }
 
+            // If set, this observer will only run during the supplied interval.
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            if (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            {
+                return;
+            }
+
             try
             {
                 this.perfCounters = new WindowsPerfCounters();
@@ -126,7 +134,7 @@ namespace FabricObserver
                 return true;
             }
 
-            ConfigSettings.Initialize(this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings, ObserverConstants.AppObserverConfiguration, "AppObserverDataFileName");
+            ConfigSettings.Initialize(this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings, ObserverConstants.AppObserverConfigurationSectionName, "AppObserverDataFileName");
             var appObserverDataFileName = Path.Combine(this.dataPackagePath, ConfigSettings.AppObserverDataFileName);
 
             if (!File.Exists(appObserverDataFileName))
