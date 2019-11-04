@@ -12,7 +12,17 @@ FO is a Stateless Service Fabric Application composed of a single service that r
 
 [Read more about Service Fabric health monitoring](https://docs.microsoft.com/azure/service-fabric/service-fabric-health-introduction)
 
-## How it works
+## How it works 
+
+Application Level Warnings: 
+
+![alt text](/Documentation/Images/AppCpuWarnCluster.jpg "")  
+
+Node Level Warnings: 
+
+![alt text](/Documentation/Images/Chaos3.jpg "")  
+![alt text](/Documentation/Images/ChaosNode.jpg "")  
+
 
 FabricObserver comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
 
