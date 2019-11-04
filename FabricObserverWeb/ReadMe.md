@@ -27,6 +27,10 @@ This API also supports html output for "pretty" printing on a web page. For exam
 
 http://localhost:5000/api/observermanager
 
-will display a bunch of very useful information about the node. 
+will display a bunch of very useful information about the node:  
+
+![alt text](/Documentation/Images/Page1.png "")  
+![alt text](/Documentation/Images/Page2.png "")  
+![alt text](/Documentation/Images/Page3.png "")  
 
 If you decide to expose this api over the Internet on a secure channel (SSL), and provide an FQDN (including port) setting in Settings.xml, then new features will become available like a node menu where you can navigate around the cluster to view node states. Also, you will be able to query for observer data on any node by supplying a node name on the API URI: e.g., https://[FQDN:Port]/api/ObserverLog/NodeObserver/[NodeName]
