@@ -35,7 +35,7 @@
   </Section>
   <!-- Observer Configuration Settings -->
   <Section Name="AppObserverConfiguration">
-    <!-- Required Parameter for all Observers -->
+    <!-- Required Parameter for all Observers: To enable or not enable, that is the question...-->
     <Parameter Name="Enabled" Value="True" />
     <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
@@ -47,10 +47,11 @@
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
-         below, which means it won't run at most once a day (day = 24 hours). All observers support a RunInterval parameter.
-         Just add a Parameter like below to any of the observers' config sections... -->
+         below, which means it won't run more than once a day (where day = 24 hours...). All observers support a RunInterval parameter.
+         Just add a Parameter like below to any of the observers' config sections when you want this level of run control...
+         Format: Day(s).Hours:Minutes:Seconds e.g., 1.00:00:00 = 1 day...-->
     <Parameter Name="RunInterval" Value="1.00:00:00" />
-    <!-- Default is 42 -->
+    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
