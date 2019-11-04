@@ -199,6 +199,7 @@ namespace FabricObserver
             var cpuError = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverErrorCpu);
+
             if (!string.IsNullOrEmpty(cpuError))
             {
                 this.CpuErrorUsageThresholdPct = int.Parse(cpuError);
@@ -207,6 +208,7 @@ namespace FabricObserver
             var memError = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverErrorMemory);
+
             if (!string.IsNullOrEmpty(memError))
             {
                 this.MemErrorUsageThresholdMB = int.Parse(memError);
@@ -215,6 +217,7 @@ namespace FabricObserver
             var diskIOReadsError = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverErrorDiskIOReads);
+
             if (!string.IsNullOrEmpty(diskIOReadsError))
             {
                 this.DiskErrorIOReadsThresholdMS = int.Parse(diskIOReadsError);
@@ -223,6 +226,7 @@ namespace FabricObserver
             var diskIOWritesError = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverErrorDiskIOWrites);
+
             if (!string.IsNullOrEmpty(diskIOWritesError))
             {
                 this.DiskErrorIOWritesThresholdMS = int.Parse(diskIOWritesError);
@@ -244,6 +248,7 @@ namespace FabricObserver
             var cpuWarn = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverWarnCpu);
+
             if (!string.IsNullOrEmpty(cpuWarn))
             {
                 this.CpuWarnUsageThresholdPct = int.Parse(cpuWarn);
@@ -252,6 +257,7 @@ namespace FabricObserver
             var memWarn = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverWarnMemory);
+
             if (!string.IsNullOrEmpty(memWarn))
             {
                 this.MemWarnUsageThresholdMB = int.Parse(memWarn);
@@ -260,6 +266,7 @@ namespace FabricObserver
             var diskIOReadsWarn = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverWarnDiskIOReads);
+
             if (!string.IsNullOrEmpty(diskIOReadsWarn))
             {
                 this.DiskWarnIOReadsThresholdMS = int.Parse(diskIOReadsWarn);
@@ -268,6 +275,7 @@ namespace FabricObserver
             var diskIOWritesWarn = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverWarnDiskIOWrites);
+
             if (!string.IsNullOrEmpty(diskIOWritesWarn))
             {
                 this.DiskWarnIOWritesThresholdMS = int.Parse(diskIOWritesWarn);
@@ -297,6 +305,14 @@ namespace FabricObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             this.Token = token;
+
+            // If set, this observer will only run during the supplied interval.
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            if (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            {
+                return;
+            }
 
             if (this.Token.IsCancellationRequested)
             {
