@@ -39,6 +39,14 @@ namespace FabricObserver
         /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
+            // If set, this observer will only run during the supplied interval.
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            if (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            {
+                return;
+            }
+
             this.GetComputerInfo(token);
             await this.ReportAsync(token).ConfigureAwait(true);
             this.LastRunDateTime = DateTime.Now;

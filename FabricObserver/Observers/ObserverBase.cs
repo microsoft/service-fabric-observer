@@ -88,7 +88,7 @@ namespace FabricObserver
         public bool HasActiveFabricErrorOrWarning { get; set; } = false;
 
         /// <inheritdoc/>
-        public TimeSpan RunInterval { get; set; } = TimeSpan.FromMinutes(10);
+        public TimeSpan RunInterval { get; set; } = TimeSpan.MinValue;
 
         public List<string> Settings { get; } = null;
 
@@ -149,6 +149,7 @@ namespace FabricObserver
                 this.IsEnabled = enabled;
             }
 
+            // Verbose logging?
             if (bool.TryParse(
                 this.GetSettingParameterValue(
                 observerName + "Configuration",
@@ -156,6 +157,16 @@ namespace FabricObserver
                 out bool enableVerboseLogging))
             {
                 this.ObserverLogger.EnableVerboseLogging = enableVerboseLogging;
+            }
+
+            // RunInterval?
+            if (TimeSpan.TryParse(
+                this.GetSettingParameterValue(
+                observerName + "Configuration",
+                ObserverConstants.ObserverRunIntervalParameterName),
+                out TimeSpan runInterval))
+            {
+                this.RunInterval = runInterval;
             }
 
             // DataLogger setup...
@@ -238,13 +249,17 @@ namespace FabricObserver
         }
 
         /// <summary>
-        /// Gets a dictionary of Parameters of the specified section
+        /// Gets a dictionary of Parameters of the specified section...
         /// </summary>
-        /// <param name="sectionName">Name of the section</param>
-        /// <returns>dictionary of Parameters</returns>
+        /// <param name="sectionName">Name of the section...</param>
+        /// <returns>A dictionary of Parameters key/value pairs (string, string) or null upon failure...</returns>
         public IDictionary<string, string> GetConfigSettingSectionParameters(string sectionName)
         {
-            Contract.Assert(!string.IsNullOrEmpty(sectionName));
+            if (string.IsNullOrEmpty(sectionName))
+            {
+                return null;
+            }
+
             IDictionary<string, string> container = new Dictionary<string, string>();
 
             var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
@@ -708,6 +723,9 @@ namespace FabricObserver
                 return DateTime.Now.Subtract(this.LastRunDateTime)
                        .Add(TimeSpan.FromSeconds(runDuration))
                        .Add(TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds))
+
+                       // If a RunInterval is specified, it must be reflected in the TTL...
+                       .Add(this.RunInterval > TimeSpan.MinValue ? this.RunInterval : TimeSpan.Zero)
                        .Add(TimeSpan.FromMinutes(TTLAddMinutes));
             }
         }
