@@ -1,5 +1,9 @@
 ﻿[
   {
+    "target": "fabric:/CpuStress",
+    "cpuWarningLimitPct": 30
+  },
+  {
     "target": "fabric:/FabricObserver",
     "cpuWarningLimitPct": 30,
     "memoryWarningLimitMB": 300,

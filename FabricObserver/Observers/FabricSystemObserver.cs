@@ -304,8 +304,6 @@ namespace FabricObserver
         /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
-            this.Token = token;
-
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
             if (this.RunInterval > TimeSpan.MinValue
@@ -313,6 +311,8 @@ namespace FabricObserver
             {
                 return;
             }
+
+            this.Token = token;
 
             if (this.Token.IsCancellationRequested)
             {
