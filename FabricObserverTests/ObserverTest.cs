@@ -749,11 +749,15 @@ namespace FabricObserverTests
                 IsTestRun = true,
             };
 
-            var commonNamesToObserve = new System.Collections.Generic.List<string>();
-            commonNamesToObserve.Add("MyValidCert"); // Common name of valid cert
+            var commonNamesToObserve = new System.Collections.Generic.List<string>
+            {
+                "MyValidCert", // Common name of valid cert
+            };
 
-            var thumbprintsToObserve = new System.Collections.Generic.List<string>();
-            thumbprintsToObserve.Add("1fda27a2923505e47de37db48ff685b049642c25"); // thumbprint of valid cert
+            var thumbprintsToObserve = new System.Collections.Generic.List<string>
+            {
+                "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
+            };
 
             obs.DaysUntilAppExpireWarningThreshold = 14;
             obs.DaysUntilClusterExpireWarningThreshold = 14;
@@ -800,11 +804,15 @@ namespace FabricObserverTests
                 IsTestRun = true,
             };
 
-            var commonNamesToObserve = new System.Collections.Generic.List<string>();
-            commonNamesToObserve.Add("MyExpiredCert"); // common name of expired cert
+            var commonNamesToObserve = new System.Collections.Generic.List<string>
+            {
+                "MyExpiredCert", // common name of expired cert
+            };
 
-            var thumbprintsToObserve = new System.Collections.Generic.List<string>();
-            thumbprintsToObserve.Add("1fda27a2923505e47de37db48ff685b049642c25"); // thumbprint of valid cert, but warning threshold causes expiring
+            var thumbprintsToObserve = new System.Collections.Generic.List<string>
+            {
+                "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert, but warning threshold causes expiring
+            };
 
             obs.DaysUntilAppExpireWarningThreshold = int.MaxValue;
             obs.DaysUntilClusterExpireWarningThreshold = 14;
