@@ -61,6 +61,14 @@ namespace FabricObserver
         /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
+            // If set, this observer will only run during the supplied interval.
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            if (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            {
+                return;
+            }
+
             bool initialized = this.Initialize();
             this.Token = token;
 
@@ -74,14 +82,6 @@ namespace FabricObserver
                     HealthState.Warning,
                     "This observer was unable to initialize correctly due to missing configuration info...");
 
-                return;
-            }
-
-            // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
-            if (this.RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
-            {
                 return;
             }
 
