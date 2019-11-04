@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Security;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,11 +11,8 @@ using FabricObserver.Utilities;
 
 namespace FabricObserver
 {
-    // TODO: Check for self-signed cert (CN = self...) versus not, and then supply correct link to TSG documentation for each.
     public class CertificateObserver : ObserverBase
     {
-        // By default, CertificateObserver runs once a day, and its reports last a single day
-        private const int SecondsBetweenRuns = 86400; // 86400 = 1 day
         private const string HowToUpdateCNCertsSFLinkHtml =
             "<a href=\"https://aka.ms/AA69ai7\" target=\"_blank\">Click here to learn how to update expiring/expired certificates.</a>";
 
@@ -45,11 +40,15 @@ namespace FabricObserver
 
         public SecurityConfiguration SecurityConfiguration { get; set; }
 
+        public TimeSpan HealthReportTimeToLive { get; set; } = TimeSpan.FromDays(1);
+
         /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
-            // Only run once per SECONDSBETWEENRUNS (default 1 day)
-            if (DateTime.Now.Subtract(this.LastRunDateTime).TotalSeconds < SecondsBetweenRuns)
+            // Only run once per specified time in Settings.xml... (default is already set to 1 day for CertificateObserver)
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter...
+            if (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
                 return;
             }
@@ -139,7 +138,7 @@ namespace FabricObserver
                     NodeName = this.NodeName,
                     HealthMessage = $"All cluster and monitored app certificates are healthy.",
                     State = System.Fabric.Health.HealthState.Ok,
-                    HealthReportTimeToLive = TimeSpan.FromDays(1),
+                    HealthReportTimeToLive = this.RunInterval > TimeSpan.MinValue ? this.RunInterval : this.HealthReportTimeToLive,
 
                     // RemoveWhenExpired = True; automatically
                 };
@@ -160,9 +159,7 @@ namespace FabricObserver
                     NodeName = this.NodeName,
                     HealthMessage = healthMessage,
                     State = System.Fabric.Health.HealthState.Warning,
-                    HealthReportTimeToLive = TimeSpan.FromSeconds(SecondsBetweenRuns),
-
-                    // RemoveWhenExpired = True; automatically
+                    HealthReportTimeToLive = this.RunInterval > TimeSpan.MinValue ? this.RunInterval : this.HealthReportTimeToLive,
                 };
 
                 this.HasActiveFabricErrorOrWarning = true;
