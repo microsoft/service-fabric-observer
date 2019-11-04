@@ -37,7 +37,7 @@ namespace FabricObserver.Model
         {
             ConfigSettings.configurationSettings = configurationSettings;
 
-            if (configurationSectionName == ObserverConstants.AppObserverConfiguration)
+            if (configurationSectionName == ObserverConstants.AppObserverConfigurationSectionName)
             {
                 AppObserverDataFileName = new ConfigurationSetting<string>(
                     configurationSettings,
@@ -45,7 +45,7 @@ namespace FabricObserver.Model
                     dataFileName,
                     string.Empty).Value;
             }
-            else if (configurationSectionName == ObserverConstants.NetworkObserverConfiguration)
+            else if (configurationSectionName == ObserverConstants.NetworkObserverConfigurationSectionName)
             {
                 NetworkObserverDataFileName = new ConfigurationSetting<string>(
                     configurationSettings,
@@ -63,7 +63,7 @@ namespace FabricObserver.Model
             configurationSettings = newConfigurationSettings;
 
             // Fabric Client settings
-            if (configurationSectionName == ObserverConstants.AppObserverConfiguration)
+            if (configurationSectionName == ObserverConstants.AppObserverConfigurationSectionName)
             {
                 AppObserverDataFileName = new ConfigurationSetting<string>(
                     configurationSettings,
@@ -71,7 +71,7 @@ namespace FabricObserver.Model
                     dataFileName,
                     string.Empty).Value;
             }
-            else if (configurationSectionName == ObserverConstants.NetworkObserverConfiguration)
+            else if (configurationSectionName == ObserverConstants.NetworkObserverConfigurationSectionName)
             {
                 NetworkObserverDataFileName = new ConfigurationSetting<string>(
                     configurationSettings,
