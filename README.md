@@ -17,6 +17,7 @@ FO is a Stateless Service Fabric Application composed of a single service that r
 Application Level Warnings: 
 
 ![alt text](/Documentation/Images/AppCpuWarnCluster.jpg "")  
+![alt text](/Documentation/Images/AppDetailsWarning.jpg "")  
 
 Node Level Warnings: 
 
