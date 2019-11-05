@@ -28,22 +28,13 @@ namespace FabricObserver
         {
         }
 
-        // Event keywords can be used to categorize events.
-        // Each keyword is a bit flag. A single event can be associated with multiple keywords (via EventAttribute.Keywords property).
-        // Keywords must be defined as a public class named 'Keywords' inside EventSource that uses them.
-        public static class Keywords
-        {
-            public const EventKeywords Requests = (EventKeywords)0x1L;
-            public const EventKeywords ServiceInitialization = (EventKeywords)0x2L;
-        }
-
-        // Define an instance method for each event you want to record and apply an [Event] attribute to it.
-        // The method name is the name of the event.
-        // Pass any parameters you want to record with the event (only primitive integer types, DateTime, Guid & string are allowed).
-        // Each event method implementation should check whether the event source is enabled, and if it is, call WriteEvent() method to raise the event.
-        // The number and types of arguments passed to every event method must exactly match what is passed to WriteEvent().
-        // Put [NonEvent] attribute on all methods that do not define an event.
-        // For more information see https://msdn.microsoft.com/en-us/library/system.diagnostics.tracing.eventsource.aspx
+        /* Define an instance method for each event you want to record and apply an [Event] attribute to it.
+           The method name is the name of the event.
+           Pass any parameters you want to record with the event (only primitive integer types, DateTime, Guid & string are allowed).
+           Each event method implementation should check whether the event source is enabled, and if it is, call WriteEvent() method to raise the event.
+           The number and types of arguments passed to every event method must exactly match what is passed to WriteEvent().
+           Put [NonEvent] attribute on all methods that do not define an event.
+           For more information see https://msdn.microsoft.com/en-us/library/system.diagnostics.tracing.eventsource.aspx */
         [NonEvent]
         public void Message(string message, params object[] args)
         {
@@ -183,5 +174,14 @@ namespace FabricObserver
             }
         }
 #endif
+
+        // Event keywords can be used to categorize events.
+        // Each keyword is a bit flag. A single event can be associated with multiple keywords (via EventAttribute.Keywords property).
+        // Keywords must be defined as a public class named 'Keywords' inside EventSource that uses them.
+        public static class Keywords
+        {
+            public const EventKeywords Requests = (EventKeywords)0x1L;
+            public const EventKeywords ServiceInitialization = (EventKeywords)0x2L;
+        }
     }
 }

@@ -10,7 +10,6 @@ namespace FabricObserverWeb
     using System.Fabric;
     using System.IO;
     using System.Net;
-    // using System.Security.Cryptography.X509Certificates;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
