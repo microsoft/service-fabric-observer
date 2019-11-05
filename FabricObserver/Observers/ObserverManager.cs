@@ -25,6 +25,17 @@ namespace FabricObserver
     // with optional sleeps, and reliable shutdown event handling.
     public class ObserverManager : IDisposable
     {
+        private readonly string nodeName = null;
+        private EventWaitHandle globalShutdownEventHandle = null;
+        private volatile bool shutdownSignalled = false;
+        private int shutdownGracePeriodInSeconds = 2;
+        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(5);
+        private CancellationToken token;
+        private CancellationTokenSource cts;
+        private bool hasDisposed = false;
+        private static bool etwEnabled = false;
+        private readonly List<ObserverBase> observers;
+
         public string ApplicationName { get; set; }
 
         public bool IsObserverRunning { get; set; } = false;
@@ -72,17 +83,6 @@ namespace FabricObserver
             }
         }
 
-        private readonly string nodeName = null;
-        private EventWaitHandle globalShutdownEventHandle = null;
-        private volatile bool shutdownSignalled = false;
-        private int shutdownGracePeriodInSeconds = 2;
-        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(5);
-        private CancellationToken token;
-        private CancellationTokenSource cts;
-        private bool hasDisposed = false;
-        private static bool etwEnabled = false;
-        private readonly List<ObserverBase> observers;
-
         private ObserverHealthReporter HealthReporter { get; set; }
 
         private string Fqdn { get; set; }
@@ -90,7 +90,6 @@ namespace FabricObserver
         private Logger Logger { get; set; }
 
         private DataTableFileLogger DataLogger { get; set; }
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
@@ -104,7 +103,7 @@ namespace FabricObserver
             this.token.Register(() => { this.ShutdownHandler(this, null); });
             FabricClientInstance = new FabricClient();
             FabricServiceContext = context;
-            this.nodeName = FabricServiceContext.NodeContext.NodeName;
+            this.nodeName = FabricServiceContext?.NodeContext.NodeName;
 
             // Observer Logger setup...
             string logFolderBasePath = null;
@@ -459,7 +458,7 @@ namespace FabricObserver
                 // Telemetry...
                 if (TelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, token);
+                    _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, this.token);
                 }
 
                 // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy...
@@ -542,7 +541,7 @@ namespace FabricObserver
                         // Telemetry...
                         if (TelemetryEnabled)
                         {
-                            _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", $"{observer.ObserverName} has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds.", token);
+                            _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", $"{observer.ObserverName} on node {this.nodeName} has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds.", this.token);
                         }
 
                         continue;
@@ -609,7 +608,7 @@ namespace FabricObserver
                     // Telemetry...
                     if (TelemetryEnabled)
                     {
-                        _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", message, token);
+                        _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", message, this.token);
                     }
 
                     throw;
