@@ -25,6 +25,17 @@ namespace FabricObserver
     // with optional sleeps, and reliable shutdown event handling.
     public class ObserverManager : IDisposable
     {
+        private readonly string nodeName = null;
+        private EventWaitHandle globalShutdownEventHandle = null;
+        private volatile bool shutdownSignalled = false;
+        private int shutdownGracePeriodInSeconds = 2;
+        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(5);
+        private CancellationToken token;
+        private CancellationTokenSource cts;
+        private bool hasDisposed = false;
+        private static bool etwEnabled = false;
+        private readonly List<ObserverBase> observers;
+
         public string ApplicationName { get; set; }
 
         public bool IsObserverRunning { get; set; } = false;
@@ -74,16 +85,6 @@ namespace FabricObserver
 
         private ObserverHealthReporter HealthReporter { get; set; }
 
-        private EventWaitHandle globalShutdownEventHandle = null;
-        private volatile bool shutdownSignalled = false;
-        private int shutdownGracePeriodInSeconds = 2;
-        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(5);
-        private CancellationToken token;
-        private CancellationTokenSource cts;
-        private bool hasDisposed = false;
-        private static bool etwEnabled = false;
-        private readonly List<ObserverBase> observers;
-
         private string Fqdn { get; set; }
 
         private Logger Logger { get; set; }
@@ -102,6 +103,7 @@ namespace FabricObserver
             this.token.Register(() => { this.ShutdownHandler(this, null); });
             FabricClientInstance = new FabricClient();
             FabricServiceContext = context;
+            this.nodeName = FabricServiceContext?.NodeContext.NodeName;
 
             // Observer Logger setup...
             string logFolderBasePath = null;
@@ -396,7 +398,7 @@ namespace FabricObserver
                 this.Fqdn = fqdn;
             }
 
-            // (ApplicationInsights) Telemetry...
+            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry...
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
@@ -450,7 +452,14 @@ namespace FabricObserver
             }
             catch (Exception ex)
             {
-                this.Logger.LogError($"Unhanded Exception. Taking down FO process.\n Details: {ex.ToString()}");
+                var message = $"Unhanded Exception in ObserverManager on node {this.nodeName}. Taking down FO process. Error info: {ex.ToString()}";
+                this.Logger.LogError(message);
+
+                // Telemetry...
+                if (TelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, this.token);
+                }
 
                 // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy...
                 // Don't swallow the exception...
@@ -529,6 +538,12 @@ namespace FabricObserver
                         this.Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
 
+                        // Telemetry...
+                        if (TelemetryEnabled)
+                        {
+                            _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", $"{observer.ObserverName} on node {this.nodeName} has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds.", this.token);
+                        }
+
                         continue;
                     }
 
@@ -587,8 +602,14 @@ namespace FabricObserver
                 }
                 catch (Exception e)
                 {
-                    var message = $"Unhandled Exception from {observer.ObserverName} rethrown from ObserverManager: {e.ToString()}";
+                    var message = $"Unhandled Exception from {observer.ObserverName} on node {this.nodeName} rethrown from ObserverManager: {e.ToString()}";
                     this.Logger.LogError(message);
+
+                    // Telemetry...
+                    if (TelemetryEnabled)
+                    {
+                        _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", message, this.token);
+                    }
 
                     throw;
                 }
