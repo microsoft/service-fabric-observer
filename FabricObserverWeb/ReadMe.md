@@ -17,11 +17,19 @@ e.g.,
 
 http://localhost:5000/api/ObserverLog/NodeObserver
 
-will return JSON string:
+will return a JSON string like this, for example:
 
 {"date":"08-29-2019 21:07:11.6257","healthState":"Ok","message":""} 
 
-when current state of the local node is healthy. In the case when it is not healthy, you will see healthState:Warning/Error with the message field containing the details, including an [FOxxx error code](/Documentation/ErrorCodes.md).
+when current state of the local node is healthy. In the case when it is not healthy, you will see healthState:Warning/Error with the message field containing the details, including an [FOxxx error code](/Documentation/ErrorCodes.md): 
+
+A DiskObserver example:  
+
+[{"date":"2019-11-05 19:09:19.1445","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"}]  
+
+Note that this is a JSON array as you can have multiple warnings (each time the observer detects a warning state, it write to log...), so you will see things like this:  
+
+[{"date":"2019-11-05 19:09:19.1445","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:09:57.3587","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:10:37.4418","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:11:16.6540","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:11:56.0752","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"}]
 
 This API also supports html output for "pretty" printing on a web page. For example, 
 
