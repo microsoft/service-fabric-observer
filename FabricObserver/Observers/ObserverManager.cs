@@ -72,8 +72,7 @@ namespace FabricObserver
             }
         }
 
-        private ObserverHealthReporter HealthReporter { get; set; }
-
+        private readonly string nodeName = null;
         private EventWaitHandle globalShutdownEventHandle = null;
         private volatile bool shutdownSignalled = false;
         private int shutdownGracePeriodInSeconds = 2;
@@ -84,11 +83,14 @@ namespace FabricObserver
         private static bool etwEnabled = false;
         private readonly List<ObserverBase> observers;
 
+        private ObserverHealthReporter HealthReporter { get; set; }
+
         private string Fqdn { get; set; }
 
         private Logger Logger { get; set; }
 
         private DataTableFileLogger DataLogger { get; set; }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
@@ -102,6 +104,7 @@ namespace FabricObserver
             this.token.Register(() => { this.ShutdownHandler(this, null); });
             FabricClientInstance = new FabricClient();
             FabricServiceContext = context;
+            this.nodeName = FabricServiceContext.NodeContext.NodeName;
 
             // Observer Logger setup...
             string logFolderBasePath = null;
@@ -396,7 +399,7 @@ namespace FabricObserver
                 this.Fqdn = fqdn;
             }
 
-            // (ApplicationInsights) Telemetry...
+            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry...
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
@@ -450,7 +453,14 @@ namespace FabricObserver
             }
             catch (Exception ex)
             {
-                this.Logger.LogError($"Unhanded Exception. Taking down FO process.\n Details: {ex.ToString()}");
+                var message = $"Unhanded Exception in ObserverManager on node {this.nodeName}. Taking down FO process. Error info: {ex.ToString()}";
+                this.Logger.LogError(message);
+
+                // Telemetry...
+                if (TelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, token);
+                }
 
                 // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy...
                 // Don't swallow the exception...
@@ -529,6 +539,12 @@ namespace FabricObserver
                         this.Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
 
+                        // Telemetry...
+                        if (TelemetryEnabled)
+                        {
+                            _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", $"{observer.ObserverName} has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds.", token);
+                        }
+
                         continue;
                     }
 
@@ -587,8 +603,14 @@ namespace FabricObserver
                 }
                 catch (Exception e)
                 {
-                    var message = $"Unhandled Exception from {observer.ObserverName} rethrown from ObserverManager: {e.ToString()}";
+                    var message = $"Unhandled Exception from {observer.ObserverName} on node {this.nodeName} rethrown from ObserverManager: {e.ToString()}";
                     this.Logger.LogError(message);
+
+                    // Telemetry...
+                    if (TelemetryEnabled)
+                    {
+                        _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", message, token);
+                    }
 
                     throw;
                 }

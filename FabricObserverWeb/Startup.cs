@@ -8,7 +8,6 @@ namespace FabricObserverWeb
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.AspNetCore.Mvc.Formatters;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
 
@@ -52,18 +51,6 @@ namespace FabricObserverWeb
 
             app.UseHttpsRedirection();
             app.UseMvc();
-        }
-    }
-
-    // Added to support HTML output to callers...
-    public class HtmlOutputFormatter : StringOutputFormatter
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="HtmlOutputFormatter"/> class.
-        /// </summary>
-        public HtmlOutputFormatter()
-        {
-            this.SupportedMediaTypes.Add("text/html");
         }
     }
 }
