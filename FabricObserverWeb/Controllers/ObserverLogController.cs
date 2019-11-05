@@ -467,7 +467,8 @@
 
             foreach (var item in logArray)
             {
-                if (!item.Contains("--"))
+                if (!item.Contains("--") &&
+                    (!item.Contains("WARN") || !item.Contains("ERROR")))
                 {
                     continue;
                 }
