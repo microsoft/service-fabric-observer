@@ -27,9 +27,14 @@ A DiskObserver example:
 
 [{"date":"2019-11-05 19:09:19.1445","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"}]  
 
-Note that this is a JSON array as you can have multiple warnings (each time the observer detects a warning state, it write to log...), so you will see things like this:  
+Note that this is a JSON array as you can have multiple warnings (each time the observer detects a warning state, the observer writes it to its log...), so you will see things like this:  
 
-[{"date":"2019-11-05 19:09:19.1445","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:09:57.3587","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:10:37.4418","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:11:16.6540","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:11:56.0752","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"}]
+[{"date":"2019-11-05 19:09:19.1445","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:09:57.3587","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:10:37.4418","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:11:16.6540","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"},{"date":"2019-11-05 19:11:56.0752","healthState":"WARN","message":"_Node_0: FO004: Disk Space Consumption % is at or above the specified Minimum limit (80%) - Average Disk Space Consumption %: 92%"}]  
+
+When the observer determines that the health state has returned to normal, you'll again see:  
+
+{"date":"11-05-2019 19:40:33.9957","healthState":"Ok","message":""}  
+
 
 This API also supports html output for "pretty" printing on a web page. For example, 
 
