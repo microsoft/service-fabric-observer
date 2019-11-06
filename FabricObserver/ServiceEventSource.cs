@@ -171,13 +171,14 @@ namespace FabricObserver
 
         private const int FabricObserverTelemetryEventId = 8;
 
+        // TODO: Use ClusterID for unique id...
         [Event(FabricObserverTelemetryEventId, Level = EventLevel.Verbose,
             Message = "FabricObserver Internal Diagnostic Event, " +
             "eventSourceId = {0}, applicationVersion = {1}, " +
             "fabricObserverConfiguration = {2}, " +
             "fabricObserverHealthState = {3}")]
         public void FabricObserverRuntimeNodeEvent(
-            Guid eventSourceId,
+            string clusterId,
             string applicationVersion,
             string foConfigInfo,
             string foHealthInfo)
@@ -186,7 +187,7 @@ namespace FabricObserver
             {
                 this.WriteEvent(
                     FabricObserverTelemetryEventId,
-                    eventSourceId.ToString(),
+                    clusterId,
                     applicationVersion,
                     foConfigInfo,
                     foHealthInfo);

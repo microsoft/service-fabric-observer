@@ -22,10 +22,10 @@ namespace FabricObserver.Model
             string settingName,
             T defaultValue)
             : this(
-                                        configurationSectionName,
-                                        settingName,
-                                        defaultValue,
-                                        true)
+                configurationSectionName,
+                settingName,
+                defaultValue,
+                true)
         {
             this.ConfigurationSettings = configurationSettings;
         }
@@ -275,6 +275,7 @@ namespace FabricObserver.Model
             }
 
             var secureString = new SecureString();
+
             foreach (var c in value)
             {
                 secureString.AppendChar(c);

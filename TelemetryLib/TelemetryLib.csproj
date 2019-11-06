@@ -28,6 +28,7 @@
     <PackageReference Include="Microsoft.ServiceFabric" Version="6.4.654" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClusterInformation.cs" />
     <Compile Include="ITelemetryEventSource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TelemetryEvents.cs" />
