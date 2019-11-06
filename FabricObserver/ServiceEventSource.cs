@@ -7,11 +7,12 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
+using Microsoft.ServiceFabric.TelemetryLib;
 
 namespace FabricObserver
 {
     [EventSource(Name = "Service-Fabric-FabricObserver", Guid = "373f2a64-4823-518a-32d1-78e36f922c24")]
-    internal sealed class ServiceEventSource : EventSource
+    internal sealed class ServiceEventSource : EventSource, ITelemetryEventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
@@ -28,13 +29,13 @@ namespace FabricObserver
         {
         }
 
-        /* Define an instance method for each event you want to record and apply an [Event] attribute to it.
-           The method name is the name of the event.
-           Pass any parameters you want to record with the event (only primitive integer types, DateTime, Guid & string are allowed).
-           Each event method implementation should check whether the event source is enabled, and if it is, call WriteEvent() method to raise the event.
-           The number and types of arguments passed to every event method must exactly match what is passed to WriteEvent().
-           Put [NonEvent] attribute on all methods that do not define an event.
-           For more information see https://msdn.microsoft.com/en-us/library/system.diagnostics.tracing.eventsource.aspx */
+        // Define an instance method for each event you want to record and apply an [Event] attribute to it.
+        // The method name is the name of the event.
+        // Pass any parameters you want to record with the event (only primitive integer types, DateTime, Guid & string are allowed).
+        // Each event method implementation should check whether the event source is enabled, and if it is, call WriteEvent() method to raise the event.
+        // The number and types of arguments passed to every event method must exactly match what is passed to WriteEvent().
+        // Put [NonEvent] attribute on all methods that do not define an event.
+        // For more information see https://msdn.microsoft.com/en-us/library/system.diagnostics.tracing.eventsource.aspx
         [NonEvent]
         public void Message(string message, params object[] args)
         {
@@ -158,6 +159,37 @@ namespace FabricObserver
             if (this.IsEnabled())
             {
                 this.WriteEvent(VerboseMessageEventId, message);
+            }
+        }
+
+        [NonEvent]
+        public void VerboseMessage(string message, params object[] args)
+        {
+            string finalMessage = string.Format(message, args);
+            this.VerboseMessage(finalMessage);
+        }
+
+        private const int FabricObserverTelemetryEventId = 8;
+
+        [Event(FabricObserverTelemetryEventId, Level = EventLevel.Verbose,
+            Message = "FabricObserver Internal Diagnostic Event, " +
+            "eventSourceId = {0}, applicationVersion = {1}, " +
+            "fabricObserverConfiguration = {2}, " +
+            "fabricObserverHealthState = {3}")]
+        public void FabricObserverRuntimeNodeEvent(
+            Guid eventSourceId,
+            string applicationVersion,
+            string foConfigInfo,
+            string foHealthInfo)
+        {
+            if (this.IsEnabled())
+            {
+                this.WriteEvent(
+                    FabricObserverTelemetryEventId,
+                    eventSourceId.ToString(),
+                    applicationVersion,
+                    foConfigInfo,
+                    foHealthInfo);
             }
         }
 
