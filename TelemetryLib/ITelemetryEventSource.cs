@@ -16,7 +16,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
         void VerboseMessage(string message, params object[] args);
 
         void FabricObserverRuntimeNodeEvent(
-            Guid eventSourceId,
+            string clusterId,
             string applicationVersion,
             string foConfigInfo,
             string foHealthInfo);

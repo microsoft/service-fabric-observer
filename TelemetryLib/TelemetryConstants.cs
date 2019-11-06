@@ -7,6 +7,10 @@ namespace Microsoft.ServiceFabric.TelemetryLib
 {
     internal static class TelemetryConstants
     {
-        internal const string AppInsightsInstrumentationKey = "c065641b-ec84-43fe-a8e7-c2bcbb697995"; //"$Token$"
+        internal const string AppInsightsInstrumentationKey = "$Token$"; 
+        internal const string Undefined = "undefined";
+        internal const string ClusterTypeStandalone = "standalone";
+        internal const string ClusterTypeSfrp = "SFRP";
+        internal const string ClusterTypePaasV1 = "PaasV1";
     }
 }

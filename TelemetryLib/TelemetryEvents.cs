@@ -7,6 +7,9 @@ using System.Collections.Generic;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using System;
+using System.Fabric;
+using System.Threading.Tasks;
+using System.Fabric.Query;
 
 namespace Microsoft.ServiceFabric.TelemetryLib
 {
@@ -19,8 +22,10 @@ namespace Microsoft.ServiceFabric.TelemetryLib
         private const string EventName = "FabricObserverRuntimeInfo";
         private readonly TelemetryClient telemetryClient;
         private readonly ITelemetryEventSource eventSource;
+        private readonly string clusterId, tenantId, clusterType;
+        private int? nodeCount = 0;
 
-        public TelemetryEvents(ITelemetryEventSource eventSource)
+        public TelemetryEvents(FabricClient fabricClient, ITelemetryEventSource eventSource)
         {
             this.eventSource = eventSource;
             var appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
@@ -28,23 +33,52 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             {
                 InstrumentationKey = AppInsightsInstrumentationKey
             };
+
+            ClusterIdentificationUtility clusterIdentificationUtility = null;
+            NodeList nodes = null;
+
+            try
+            {
+                clusterIdentificationUtility = new ClusterIdentificationUtility(fabricClient);
+                clusterIdentificationUtility.GetClusterIdAndType(
+                    out this.clusterId,
+                    out this.tenantId, 
+                    out this.clusterType);
+
+                Task.Run(async () =>
+                {
+                    nodes = await fabricClient.QueryManager.GetNodeListAsync();
+                    this.nodeCount = nodes?.Count;
+                }).Wait();
+            }
+            catch (AggregateException)
+            {
+                // No-op originating from failed node count task... Do not throw...
+            }
+            catch (ObjectDisposedException)
+            {
+                // No-op originating from failed node count task... Do not throw...
+            }
+            finally
+            {
+                clusterIdentificationUtility?.Dispose();
+            }
         }
 
         public void FabricObserverRuntimeNodeEvent(
-            Guid eventSourceId,
             string applicationVersion,
             string foConfigInfo,
             string foHealthInfo)
         {
             this.eventSource.FabricObserverRuntimeNodeEvent(
-                eventSourceId,
+                this.clusterId,
                 applicationVersion,
                 foConfigInfo,
                 foHealthInfo);
 
             IDictionary<string, string> eventProperties = new Dictionary<string, string>
             {
-                { "EventId", eventSourceId.ToString() },
+                { "ClusterId", $"{this.clusterId}_{this.nodeCount}" },
                 { "FabricObserverVersion", applicationVersion ?? "" },
                 { "FabricObserverHealthInfo", foHealthInfo ?? "" },
                 { "FabricObserverConfigInfo", foConfigInfo ?? "" },
