@@ -133,16 +133,16 @@ namespace FabricObserver
             this.Logger = new Logger("ObserverManager", logFolderBasePath);
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertiesFromConfigurationParameters();
-            this.telemetryEvents = new TelemetryEvents(ServiceEventSource.Current);
+            this.telemetryEvents = new TelemetryEvents(FabricClientInstance, ServiceEventSource.Current);
 
             // Populate the Observer list for the sequential run loop...
             this.observers = GetObservers();
 
             // FabricObserver Internal Diagnostic Telemetry (Non-PII)...
+            // Internally, TelemetryEvents determines current Cluster Id as uniquene identifier for transmitted events...
             if (FabricObserverInternalTelemetryEnabled)
             {
                 this.telemetryEvents.FabricObserverRuntimeNodeEvent(
-                    Guid.NewGuid(),
                     FabricServiceContext.CodePackageActivationContext.CodePackageVersion,
                     this.GetFabricObserverInternalConfiguration(),
                     "HealthState.Initialized");
