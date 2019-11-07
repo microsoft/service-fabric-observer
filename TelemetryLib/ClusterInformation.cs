@@ -51,7 +51,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             XmlNode sectionNode = this.xdoc.DocumentElement?.SelectSingleNode("//*[local-name()='Section' and @Name='" + sectionName + "']");
             XmlNode parameterNode = sectionNode?.SelectSingleNode("//*[local-name()='Parameter' and @Name='" + parameterName + "']");
             XmlAttribute attr = parameterNode?.Attributes?["Value"];
-            
+
             return attr?.Value;
         }
 

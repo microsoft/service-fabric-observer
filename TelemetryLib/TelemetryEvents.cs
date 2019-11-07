@@ -8,8 +8,6 @@ using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using System;
 using System.Fabric;
-using System.Threading.Tasks;
-using System.Fabric.Query;
 
 namespace Microsoft.ServiceFabric.TelemetryLib
 {
@@ -18,24 +16,25 @@ namespace Microsoft.ServiceFabric.TelemetryLib
     /// </summary>
     public class TelemetryEvents
     {
-        private readonly string AppInsightsInstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey;
-        private const string EventName = "FabricObserverRuntimeInfo";
+        private const string EventName = "TraceSessionStats";
+        private const string TaskName = "FabricObserver";
         private readonly TelemetryClient telemetryClient;
+        private readonly ServiceContext serviceContext = null;
         private readonly ITelemetryEventSource eventSource;
         private readonly string clusterId, tenantId, clusterType;
-        private int? nodeCount = 0;
 
-        public TelemetryEvents(FabricClient fabricClient, ITelemetryEventSource eventSource)
+        public TelemetryEvents(
+            FabricClient fabricClient,
+            ServiceContext context,
+            ITelemetryEventSource eventSource)
         {
             this.eventSource = eventSource;
+            this.serviceContext = context;
             var appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
-            this.telemetryClient = new TelemetryClient(appInsightsTelemetryConf)
-            {
-                InstrumentationKey = AppInsightsInstrumentationKey
-            };
-
+            appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey;
+            appInsightsTelemetryConf.TelemetryChannel.EndpointAddress = TelemetryConstants.TelemetryEndpoint;
+            this.telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
             ClusterIdentificationUtility clusterIdentificationUtility = null;
-            NodeList nodes = null;
 
             try
             {
@@ -45,19 +44,6 @@ namespace Microsoft.ServiceFabric.TelemetryLib
                     out this.tenantId, 
                     out this.clusterType);
 
-                Task.Run(async () =>
-                {
-                    nodes = await fabricClient.QueryManager.GetNodeListAsync();
-                    this.nodeCount = nodes?.Count;
-                }).Wait();
-            }
-            catch (AggregateException)
-            {
-                // No-op originating from failed node count task... Do not throw...
-            }
-            catch (ObjectDisposedException)
-            {
-                // No-op originating from failed node count task... Do not throw...
             }
             finally
             {
@@ -65,11 +51,18 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             }
         }
 
-        public void FabricObserverRuntimeNodeEvent(
+        public bool FabricObserverRuntimeNodeEvent(
             string applicationVersion,
             string foConfigInfo,
             string foHealthInfo)
         {
+            // This means that the token replacement did not take place and this is not a 
+            // SFPKG signed Release build of FO. So, don't do anything, just return;
+            if (TelemetryConstants.AppInsightsInstrumentationKey.Contains("Token"))
+            {
+                return false;
+            }
+
             this.eventSource.FabricObserverRuntimeNodeEvent(
                 this.clusterId,
                 applicationVersion,
@@ -78,17 +71,22 @@ namespace Microsoft.ServiceFabric.TelemetryLib
 
             IDictionary<string, string> eventProperties = new Dictionary<string, string>
             {
-                { "ClusterId", $"{this.clusterId}_{this.nodeCount}" },
+                { "ClusterId", $"{this.clusterId}" ?? "" },
+                { "ClusterType", $"{this.clusterType}" ?? "" },
                 { "FabricObserverVersion", applicationVersion ?? "" },
+                { "NodeNameHash", ((uint)this.serviceContext?.NodeContext?.NodeName.GetHashCode()).ToString() ?? "" },
                 { "FabricObserverHealthInfo", foHealthInfo ?? "" },
                 { "FabricObserverConfigInfo", foConfigInfo ?? "" },
+                { "Timestamp", DateTime.Now.ToString("G") }
             };
 
-            this.telemetryClient.TrackEvent(EventName, eventProperties);
-            this.telemetryClient.Flush();
+            this.telemetryClient?.TrackEvent(string.Format("{0}.{1}", TaskName, EventName), eventProperties);
+            this.telemetryClient?.Flush();
             
             // allow time for flushing
             System.Threading.Thread.Sleep(1000);
+
+            return true;
         }
     }
 }
