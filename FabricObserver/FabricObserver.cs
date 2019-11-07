@@ -23,7 +23,7 @@ namespace FabricObserver
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserver"/> class.
         /// </summary>
-        /// <param name="context"></param>
+        /// <param name="context">StatelessServiceContext.</param>
         public FabricObserver(StatelessServiceContext context)
             : base(context)
         {
@@ -42,6 +42,7 @@ namespace FabricObserver
         /// This is the main entry point for your service instance.
         /// </summary>
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
+        /// <returns>a Task.</returns>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
             this.observerManager = new ObserverManager(this.Context, cancellationToken);

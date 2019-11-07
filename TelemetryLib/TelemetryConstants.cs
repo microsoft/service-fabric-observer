@@ -7,7 +7,8 @@ namespace Microsoft.ServiceFabric.TelemetryLib
 {
     internal static class TelemetryConstants
     {
-        internal const string AppInsightsInstrumentationKey = "$Token$"; 
+        internal const string AppInsightsInstrumentationKey = "$Token$";
+        internal const string TelemetryEndpoint = "https://vortex.data.microsoft.com/collect/v1";
         internal const string Undefined = "undefined";
         internal const string ClusterTypeStandalone = "standalone";
         internal const string ClusterTypeSfrp = "SFRP";
