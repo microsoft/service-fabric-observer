@@ -262,13 +262,13 @@ namespace FabricObserver
 
                         if (n.ToLower().Contains("bootuptime"))
                         {
-                            v = ManagementDateTimeConverter.ToDateTime(v).ToString();
+                            v = ManagementDateTimeConverter.ToDateTime(v).ToUniversalTime().ToString("o");
                             lastBootTime = v;
                         }
 
                         if (n.ToLower().Contains("date"))
                         {
-                            v = ManagementDateTimeConverter.ToDateTime(v).ToString();
+                            v = ManagementDateTimeConverter.ToDateTime(v).ToUniversalTime().ToString("o");
                             installDate = v;
                         }
 
