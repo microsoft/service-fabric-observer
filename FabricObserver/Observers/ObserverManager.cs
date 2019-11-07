@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
-using System.Fabric.Description;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -28,6 +27,7 @@ namespace FabricObserver
     public class ObserverManager : IDisposable
     {
         private readonly string nodeName = null;
+        private readonly List<ObserverBase> observers;
         private EventWaitHandle globalShutdownEventHandle = null;
         private volatile bool shutdownSignalled = false;
         private int shutdownGracePeriodInSeconds = 2;
@@ -36,7 +36,6 @@ namespace FabricObserver
         private CancellationTokenSource cts;
         private bool hasDisposed = false;
         private static bool etwEnabled = false;
-        private readonly List<ObserverBase> observers;
         private TelemetryEvents telemetryEvents;
 
         public string ApplicationName { get; set; }
@@ -133,19 +132,37 @@ namespace FabricObserver
             this.Logger = new Logger("ObserverManager", logFolderBasePath);
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertiesFromConfigurationParameters();
-            this.telemetryEvents = new TelemetryEvents(FabricClientInstance, ServiceEventSource.Current);
+            this.telemetryEvents = new TelemetryEvents(
+                FabricClientInstance,
+                FabricServiceContext,
+                ServiceEventSource.Current);
 
             // Populate the Observer list for the sequential run loop...
             this.observers = GetObservers();
 
             // FabricObserver Internal Diagnostic Telemetry (Non-PII)...
-            // Internally, TelemetryEvents determines current Cluster Id as uniquene identifier for transmitted events...
+            // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events...
             if (FabricObserverInternalTelemetryEnabled)
             {
-                this.telemetryEvents.FabricObserverRuntimeNodeEvent(
-                    FabricServiceContext.CodePackageActivationContext.CodePackageVersion,
-                    this.GetFabricObserverInternalConfiguration(),
-                    "HealthState.Initialized");
+                string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
+                string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
+                string filepath = Path.Combine(logFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}");
+#if !DEBUG
+                // If this has already been sent for this deployment version (code)
+                if (File.Exists(filepath))
+                {
+                    return;
+                }
+#endif
+                if (this.telemetryEvents.FabricObserverRuntimeNodeEvent(
+                        codePkgVersion,
+                        this.GetFabricObserverInternalConfiguration(),
+                        "HealthState.Initialized"))
+                {
+                    // Log a file to prevent re-sending this in case of process restart(s).
+                    // This non-PII FO/Cluster info should only be sent once.
+                    _ = this.Logger.TryWriteLogFile(filepath, "_");
+                }
             }
         }
 
