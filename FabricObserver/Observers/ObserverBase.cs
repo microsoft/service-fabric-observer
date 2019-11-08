@@ -213,12 +213,12 @@ namespace FabricObserver
         }
 
         /// <summary>
-        /// Gets a parameter value from the specified section
+        /// Gets a parameter value from the specified section.
         /// </summary>
-        /// <param name="sectionName">Name of the section</param>
-        /// <param name="parameterName">Name of the parameter</param>
+        /// <param name="sectionName">Name of the section.</param>
+        /// <param name="parameterName">Name of the parameter.</param>
         /// <param name="defaultValue">Default value.</param>
-        /// <returns>parameter value</returns>
+        /// <returns>parameter value.</returns>
         public string GetSettingParameterValue(string sectionName, string parameterName, string defaultValue = null)
         {
             if (string.IsNullOrEmpty(sectionName) || string.IsNullOrEmpty(parameterName))

@@ -22,10 +22,10 @@ namespace FabricObserver.Model
             string settingName,
             T defaultValue)
             : this(
-                                        configurationSectionName,
-                                        settingName,
-                                        defaultValue,
-                                        true)
+                configurationSectionName,
+                settingName,
+                defaultValue,
+                true)
         {
             this.ConfigurationSettings = configurationSettings;
         }
@@ -33,10 +33,10 @@ namespace FabricObserver.Model
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationSetting{T}"/> class.
         /// </summary>
-        /// <param name="configurationSectionName">name</param>
-        /// <param name="settingName"> Name of the setting </param>
-        /// <param name="defaultValue"> Default value of the setting if it does not exist in the ACS </param>
-        /// <param name="enableTracing"> Whether to log the value of the setting when it is read from the ACS </param>
+        /// <param name="configurationSectionName">name.</param>
+        /// <param name="settingName"> Name of the setting. </param>
+        /// <param name="defaultValue"> Default value of the setting if it does not exist in the ACS. </param>
+        /// <param name="enableTracing"> Whether to log the value of the setting when it is read from the ACS. </param>
         private ConfigurationSetting(
             string configurationSectionName,
             string settingName,
@@ -102,9 +102,9 @@ namespace FabricObserver.Model
         /// <summary>
         ///   Try to parse the string and return an object of the given type.
         /// </summary>
-        /// <param name="value"> String to be parsed </param>
-        /// <param name="type"> Type of result </param>
-        /// <returns> Result of parsing the string </returns>
+        /// <param name="value"> String to be parsed. </param>
+        /// <param name="type"> Type of result. </param>
+        /// <returns> Result of parsing the string. </returns>
         public object Parse(string value, Type type)
         {
             if (string.IsNullOrEmpty(value))
@@ -193,10 +193,10 @@ namespace FabricObserver.Model
         /// <summary>
         ///   Parse the string and return a typed value.
         /// </summary>
-        /// <typeparam name="U"> Value type </typeparam>
-        /// <param name="valueString"> Value in string format </param>
-        /// <param name="value"> Result of parsing </param>
-        /// <returns> True if succeeds </returns>
+        /// <typeparam name="U"> Value type. </typeparam>
+        /// <param name="valueString"> Value in string format. </param>
+        /// <param name="value"> Result of parsing. </param>
+        /// <returns> True if succeeds. </returns>
         public bool TryParse<TU>(string valueString, out TU value)
         {
             var result = this.Parse(valueString, typeof(TU));
@@ -213,7 +213,7 @@ namespace FabricObserver.Model
         /// <summary>
         /// Get Windows Fabric Settings from config.
         /// </summary>
-        /// <param name="parameterName">Return settings for the parameter name</param>
+        /// <param name="parameterName">Return settings for the parameter name.</param>
         protected string GetConfigurationSetting(string parameterName)
         {
             if (string.IsNullOrEmpty(parameterName) || this.ConfigurationSettings == null)
@@ -275,6 +275,7 @@ namespace FabricObserver.Model
             }
 
             var secureString = new SecureString();
+
             foreach (var c in value)
             {
                 secureString.AppendChar(c);

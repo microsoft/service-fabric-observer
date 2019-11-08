@@ -25,7 +25,7 @@ namespace FabricObserver
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class AppObserver : ObserverBase
     {
-        private readonly string dataPackagePath;
+        private readonly string configPackagePath;
         private List<ApplicationInfo> targetList = new List<ApplicationInfo>();
 
         // Health Report data containers - For use in analysis to determine health state...
@@ -48,7 +48,7 @@ namespace FabricObserver
         public AppObserver()
             : base(ObserverConstants.AppObserverName)
         {
-            this.dataPackagePath = ConfigSettings.ObserversDataPackagePath;
+            this.configPackagePath = ConfigSettings.ConfigPackagePath;
             this.allAppCpuData = new List<FabricResourceUsageData<int>>();
             this.allAppDiskReadsData = new List<FabricResourceUsageData<float>>();
             this.allAppDiskWritesData = new List<FabricResourceUsageData<float>>();
@@ -134,10 +134,10 @@ namespace FabricObserver
                 return true;
             }
 
-            ConfigSettings.Initialize(this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings, ObserverConstants.AppObserverConfigurationSectionName, "AppObserverDataFileName");
-            var appObserverDataFileName = Path.Combine(this.dataPackagePath, ConfigSettings.AppObserverDataFileName);
+            ConfigSettings.Initialize(this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Settings, ObserverConstants.AppObserverConfigurationSectionName, "AppObserverDataFileName");
+            var appObserverConfigFileName = Path.Combine(this.configPackagePath, ConfigSettings.AppObserverDataFileName);
 
-            if (!File.Exists(appObserverDataFileName))
+            if (!File.Exists(appObserverConfigFileName))
             {
                 this.WriteToLogWithLevel(
                     this.ObserverName,
@@ -155,10 +155,10 @@ namespace FabricObserver
                 this.replicaOrInstanceList.Clear();
             }
 
-            using (Stream stream = new FileStream(appObserverDataFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 if (stream.Length > 40
-                    && JsonHelper.IsJson<List<ApplicationInfo>>(File.ReadAllText(appObserverDataFileName)))
+                    && JsonHelper.IsJson<List<ApplicationInfo>>(File.ReadAllText(appObserverConfigFileName)))
                 {
                     this.targetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
                 }
