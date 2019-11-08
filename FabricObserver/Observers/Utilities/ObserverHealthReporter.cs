@@ -32,10 +32,10 @@ namespace FabricObserver.Utilities
         /// <summary>
         /// Report FabricObserver service health as log event (not to SF Health)...
         /// </summary>
-        /// <param name="serviceName">Name of the service</param>
-        /// <param name="propertyName">Name of the health property</param>
-        /// <param name="healthState">Health state (Ok, Error, etc)</param>
-        /// <param name="description">Description of the health condition</param>
+        /// <param name="serviceName">Name of the service.</param>
+        /// <param name="propertyName">Name of the health property.</param>
+        /// <param name="healthState">Health state (Ok, Error, etc).</param>
+        /// <param name="description">Description of the health condition.</param>
         public void ReportFabricObserverServiceHealth(
             string serviceName,
             string propertyName,

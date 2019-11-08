@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using FabricObserver.Interfaces;
 using FabricObserver.Utilities;
 using FabricObserver.Utilities.Telemetry;
+using Microsoft.ServiceFabric.TelemetryLib;
 
 namespace FabricObserver
 {
@@ -26,6 +27,7 @@ namespace FabricObserver
     public class ObserverManager : IDisposable
     {
         private readonly string nodeName = null;
+        private readonly List<ObserverBase> observers;
         private EventWaitHandle globalShutdownEventHandle = null;
         private volatile bool shutdownSignalled = false;
         private int shutdownGracePeriodInSeconds = 2;
@@ -34,7 +36,7 @@ namespace FabricObserver
         private CancellationTokenSource cts;
         private bool hasDisposed = false;
         private static bool etwEnabled = false;
-        private readonly List<ObserverBase> observers;
+        private TelemetryEvents telemetryEvents;
 
         public string ApplicationName { get; set; }
 
@@ -49,6 +51,8 @@ namespace FabricObserver
         public static IObserverTelemetryProvider TelemetryClient { get; set; }
 
         public static bool TelemetryEnabled { get; set; } = false;
+
+        public static bool FabricObserverInternalTelemetryEnabled { get; set; } = true;
 
         public static bool EtwEnabled
         {
@@ -131,6 +135,36 @@ namespace FabricObserver
 
             // Populate the Observer list for the sequential run loop...
             this.observers = GetObservers();
+
+            // FabricObserver Internal Diagnostic Telemetry (Non-PII)...
+            // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events...
+            if (FabricObserverInternalTelemetryEnabled)
+            {
+                string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
+                string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
+                string filepath = Path.Combine(logFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}");
+#if !DEBUG
+                // If this has already been sent for this activated version (code/config)
+                if (File.Exists(filepath))
+                {
+                    return;
+                }
+#endif
+                this.telemetryEvents = new TelemetryEvents(
+                    FabricClientInstance,
+                    FabricServiceContext,
+                    ServiceEventSource.Current);
+
+                if (this.telemetryEvents.FabricObserverRuntimeNodeEvent(
+                        codePkgVersion,
+                        this.GetFabricObserverInternalConfiguration(),
+                        "HealthState.Initialized"))
+                {
+                    // Log a file to prevent re-sending this in case of process restart(s).
+                    // This non-PII FO/Cluster info should only be sent once.
+                    _ = this.Logger.TryWriteLogFile(filepath, "_");
+                }
+            }
         }
 
         /// <summary>
@@ -242,6 +276,28 @@ namespace FabricObserver
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// This function gets FabricObserver's internal configuration for telemetry for Charles and company...
+        /// No PII. As you can see, this is generic information - number of enabled observer, observer names...
+        /// </summary>
+        private string GetFabricObserverInternalConfiguration()
+        {
+            int enabledObserverCount = this.observers.Where(obs => obs.IsEnabled).Count();
+            string observerList = "{ ";
+            string ret = string.Empty;
+
+            foreach (var obs in this.observers)
+            {
+                observerList += $"{obs.ObserverName} ";
+            }
+
+            observerList += "}";
+
+            ret = string.Format("EnabledObserverCount: {0}, EnabledObservers: {1}", enabledObserverCount, observerList);
+
+            return ret;
         }
 
         private void ShutdownHandler(object sender, ConsoleCancelEventArgs consoleEvent)
@@ -413,6 +469,12 @@ namespace FabricObserver
                     TelemetryClient = new AppInsightsTelemetry(key);
                 }
             }
+
+            // FabricObserver runtime telemetry (Non-PII)
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
+            {
+                FabricObserverInternalTelemetryEnabled = foTelemEnabled;
+            }
         }
 
         public void StartObservers()
@@ -536,6 +598,8 @@ namespace FabricObserver
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it...";
 
                         this.Logger.LogError(observerHealthWarning);
+
+                        // TODO: Add HealthReport (App Level)...
                         observer.IsUnhealthy = true;
 
                         // Telemetry...
