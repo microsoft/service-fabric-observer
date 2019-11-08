@@ -10,19 +10,12 @@ namespace FabricObserver.Model
 {
     public static class ConfigSettings
     {
-        public static string ObserversConfigPackagePath
+        public static string ConfigPackagePath
         {
             get
             {
-                return ObserverManager.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Path;
-            }
-        }
-
-        public static string ObserversDataPackagePath
-        {
-            get
-            {
-                return ObserverManager.FabricServiceContext.CodePackageActivationContext.GetDataPackageObject(ObserverConstants.ObserverDataPackageName)?.Path;
+                return ObserverManager.FabricServiceContext.CodePackageActivationContext.
+                    GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
             }
         }
 

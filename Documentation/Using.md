@@ -13,7 +13,7 @@
 
 > A Service Fabric Application is a logical "container" of related services, an abstract encapsulation of versioned configuration and code.
 
-For an app named MyApp, you would simply add this to PackageRoot/Observer.Data/AppObserver.config.json:  
+For an app named MyApp, you would simply add this to PackageRoot/Config/AppObserver.config.json:  
 
 ```JSON 
 [
@@ -25,7 +25,7 @@ For an app named MyApp, you would simply add this to PackageRoot/Observer.Data/A
 ```
 
 Now, let's say you have more then one App deployed (a common scenario) and only want to watch one or more of the services in a specific set of apps. 
-You would add this to PackageRoot/Observer.Data/AppObserver.config.json:
+You would add this to PackageRoot/Config/AppObserver.config.json:
 
 ```JSON 
 [
@@ -191,7 +191,7 @@ Example Output in SFX:
 
 Let's say you have 3 critical endpoints that you want to monitor for availability and emit warnings when they are unreachable. 
 
-In NetworkObserver's configuration file (PackageRoot/Observers.Data/NetworkObserver.config.json), add this:  
+In NetworkObserver's configuration file (PackageRoot/Config/NetworkObserver.config.json), add this:  
 
 
 ```JSON
