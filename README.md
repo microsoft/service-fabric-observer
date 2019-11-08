@@ -12,6 +12,11 @@ FO is a Stateless Service Fabric Application composed of a single service that r
 
 [Read more about Service Fabric health monitoring](https://docs.microsoft.com/azure/service-fabric/service-fabric-health-introduction)
 
+## Using FabricObserver  
+
+To quickly learn how to use FO, please see the **[simple scenario-based examples](./Documentation/Using.md)**.  
+
+
 ## How it works 
 
 Application Level Warnings: 
@@ -44,11 +49,6 @@ For more information about **the design of FabricObserver**, please see the [Des
 2. Build (the required Nuget packages will be downloaded and installed automatically by Visual Studio). 
 
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app.  
-
-## Using FabricObserver  
-
-To quickly learn how to use FO, please see the **[simple scenario-based examples](./Documentation/Using.md)**.  
-
 
 ## Observer Model
 
