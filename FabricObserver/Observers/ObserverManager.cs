@@ -132,10 +132,6 @@ namespace FabricObserver
             this.Logger = new Logger("ObserverManager", logFolderBasePath);
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertiesFromConfigurationParameters();
-            this.telemetryEvents = new TelemetryEvents(
-                FabricClientInstance,
-                FabricServiceContext,
-                ServiceEventSource.Current);
 
             // Populate the Observer list for the sequential run loop...
             this.observers = GetObservers();
@@ -148,12 +144,17 @@ namespace FabricObserver
                 string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
                 string filepath = Path.Combine(logFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}");
 #if !DEBUG
-                // If this has already been sent for this deployment version (code)
+                // If this has already been sent for this activated version (code/config)
                 if (File.Exists(filepath))
                 {
                     return;
                 }
 #endif
+                this.telemetryEvents = new TelemetryEvents(
+                    FabricClientInstance,
+                    FabricServiceContext,
+                    ServiceEventSource.Current);
+
                 if (this.telemetryEvents.FabricObserverRuntimeNodeEvent(
                         codePkgVersion,
                         this.GetFabricObserverInternalConfiguration(),

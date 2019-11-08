@@ -48,7 +48,7 @@ will be ignored (they are not omitted below so you can see what a fully specifie
 We recommend you omit all Error thresholds until you become more 
 comfortable with the behavior of your services and the side effects they have on machine resources**.
 
-Example JSON config file located in **PackageRoot\\Observers.Data**
+Example JSON config file located in **PackageRoot\\Config**
 folder (AppObserver.config.json):
 ```JSON
 [
@@ -307,7 +307,7 @@ is logged per iteration.
 
 This observer checks outbound connection state for user-supplied endpoints (hostname/port pairs).
 
-**Input**: NetworkObserver.config.json in PackageRoot\\Observers.Data.
+**Input**: NetworkObserver.config.json in PackageRoot\\Config.
 Users should supply hostname/port pairs (if they only allow
 communication with an allowed list of endpoints, for example, or just
 want us to test the endpoints they care about...). If this list is not

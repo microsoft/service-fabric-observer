@@ -67,7 +67,7 @@ namespace FabricObserver
         public NetworkObserver()
             : base(ObserverConstants.NetworkObserverName)
         {
-            this.dataPackagePath = ConfigSettings.ObserversDataPackagePath;
+            this.dataPackagePath = ConfigSettings.ConfigPackagePath;
         }
 
         /// <inheritdoc/>
@@ -132,13 +132,13 @@ namespace FabricObserver
                 return true;
             }
 
-            var settings = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ConfigPackageName)?.Settings;
+            var settings = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Settings;
 
             ConfigSettings.Initialize(settings, ObserverConstants.NetworkObserverConfigurationSectionName, "NetworkObserverDataFileName");
 
-            var networkObserverDataFileName = Path.Combine(this.dataPackagePath, ConfigSettings.NetworkObserverDataFileName);
+            var networkObserverConfigFileName = Path.Combine(this.dataPackagePath, ConfigSettings.NetworkObserverDataFileName);
 
-            if (string.IsNullOrWhiteSpace(networkObserverDataFileName))
+            if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {
                 this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored...");
 
@@ -146,7 +146,7 @@ namespace FabricObserver
             }
 
             this.token.ThrowIfCancellationRequested();
-            if (!File.Exists(networkObserverDataFileName))
+            if (!File.Exists(networkObserverConfigFileName))
             {
                 this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored. Using default endpoints for connection testing...");
 
@@ -155,14 +155,14 @@ namespace FabricObserver
 
             this.token.ThrowIfCancellationRequested();
 
-            if (this.userEndpoints.Count < 1)
+            if (this.userEndpoints.Count == 0)
             {
-                using (Stream stream = new FileStream(networkObserverDataFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (Stream stream = new FileStream(networkObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     this.userEndpoints.AddRange(JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream));
                 }
 
-                if (this.userEndpoints.Count < 1)
+                if (this.userEndpoints.Count == 0)
                 {
                     this.HealthReporter.ReportFabricObserverServiceHealth(
                         this.FabricServiceContext.ServiceName.ToString(),
