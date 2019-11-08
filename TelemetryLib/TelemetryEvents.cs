@@ -71,6 +71,8 @@ namespace Microsoft.ServiceFabric.TelemetryLib
 
             IDictionary<string, string> eventProperties = new Dictionary<string, string>
             {
+                { "EventName", $"{EventName}" },
+                { "TaskName", $"{TaskName}" },
                 { "ClusterId", $"{this.clusterId}" ?? "" },
                 { "ClusterType", $"{this.clusterType}" ?? "" },
                 { "FabricObserverVersion", applicationVersion ?? "" },

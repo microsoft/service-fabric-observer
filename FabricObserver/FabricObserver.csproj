@@ -289,8 +289,8 @@
     <None Include="PackageRoot\Config\Settings.xml">
       <SubType>Designer</SubType>
     </None>
-    <None Include="PackageRoot\Observers.Data\AppObserver.config.json" />
-    <None Include="PackageRoot\Observers.Data\NetworkObserver.config.json" />
+    <None Include="PackageRoot\Config\AppObserver.config.json" />
+    <None Include="PackageRoot\Config\NetworkObserver.config.json" />
     <None Include="PackageRoot\ServiceManifest.xml" />
     <None Include="App.config" />
     <None Include="packages.config" />
@@ -326,6 +326,7 @@
       <Name>TelemetryLib</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
