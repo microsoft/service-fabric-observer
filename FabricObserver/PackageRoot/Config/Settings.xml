@@ -32,6 +32,14 @@
     <!-- Optional: EventSource Tracing. -->
     <Parameter Name="EnableEventSourceProvider" Value="True" />
     <Parameter Name="EventSourceProviderName" Value="FabricObserverETWProvider" />
+    <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII. 
+         Please enable so we can learn how FO is being used. Nothing more.
+         True by default as this is how the authors of FO can see how it's doing
+         in the real world, especially if an observer (or the service itself) fails for some reason. 
+         We just want to know if FO is running somewhere and that it is healthy. We collect no personal identifiable information, 
+         as you can see in the source code. See ObserverManager.cs for examples of a collected data for FO.
+         See TelemetryLib project for SF info that is collected. -->
+    <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="True" />
   </Section>
   <!-- Observer Configuration Settings -->
   <Section Name="AppObserverConfiguration">

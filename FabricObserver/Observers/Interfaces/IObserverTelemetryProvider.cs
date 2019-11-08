@@ -74,7 +74,7 @@ namespace FabricObserver.Interfaces
         /// <param name="value">Value of the property.</param>
         /// <param name="properties">IDictionary&lt;string&gt;,&lt;string&gt; containing name/value pairs of additional properties.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>A completed task</returns>
+        /// <returns>A completed task.</returns>
         Task ReportMetricAsync(
             string name,
             long value,
@@ -89,7 +89,7 @@ namespace FabricObserver.Interfaces
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value if the metric.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>A completed task</returns>
+        /// <returns>A completed task.</returns>
         Task ReportMetricAsync(
             string service,
             Guid partition,
@@ -105,7 +105,7 @@ namespace FabricObserver.Interfaces
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value if the metric.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>A completed task</returns>
+        /// <returns>A completed task.</returns>
         Task ReportMetricAsync(
             string role,
             long id,
@@ -127,7 +127,7 @@ namespace FabricObserver.Interfaces
         /// <param name="deviation">Standard deviation of the sample set.</param>
         /// <param name="properties">IDictionary&lt;string&gt;,&lt;string&gt; containing name/value pairs of additional properties.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>A completed task</returns>
+        /// <returns>A completed task.</returns>
         Task ReportMetricAsync(
             string roleName,
             string instance,

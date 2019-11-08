@@ -21,14 +21,6 @@ namespace FabricObserver.Utilities
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
         public const string EventSourceProviderName = "EventSourceProviderName";
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
-        public const string ConfigPackageName = "Config";
-        public const string ObserversDataPackageName = "Observers.Data";
-
-        // The service Manifest name for Observers in the configuration file
-        public const string ObserversSectionName = "Observers";
-
-        // The name of the package that contains this Observer's data
-        public const string ObserverDataPackageName = "Observers.Data";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";
