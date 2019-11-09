@@ -5,7 +5,8 @@ pool:
   - visualstudio
   - vstest
 
-#Your build pipeline references an undefined variable named ‘Parameters.testAssemblyVer2’. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
+#Create or edit the build pipeline for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
+#Note that this yml does not contain the MS binary signing tasks for hopefully obvious reasons...
 
 steps:
 - task: NuGetToolInstaller@1
