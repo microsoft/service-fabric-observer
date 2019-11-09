@@ -29,7 +29,6 @@ steps:
   displayName: 'Build FabricObserver.sln'
   inputs:
     solution: FabricObserver.sln
-    msbuildArgs: '/property:AppInsightsKey="58ef8eab-a250-4b11-aea8-36435e5be1a7"'
     platform: x64
     configuration: Release
     msbuildArchitecture: x64
