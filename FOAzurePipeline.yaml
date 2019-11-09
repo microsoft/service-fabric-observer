@@ -1,0 +1,113 @@
+pool:
+  name: Hosted Windows 2019 with VS2019
+  demands:
+  - msbuild
+  - visualstudio
+  - vstest
+
+steps:
+- task: NuGetToolInstaller@1
+  displayName: 'Use NuGet 5.2.x'
+  inputs:
+    versionSpec: 5.2.x
+
+- task: NuGetCommand@2
+  displayName: 'NuGet restore (.NET Desktop)'
+  inputs:
+    restoreSolution: FabricObserver.sln
+
+- task: VSBuild@1
+  displayName: 'Build - RESTORE ONLY (ObsWeb)'
+  inputs:
+    solution: FabricObserver.sln
+    msbuildArgs: '/t:Restore'
+    platform: x64
+    configuration: Release
+    msbuildArchitecture: x64
+
+- task: VSBuild@1
+  displayName: 'Build FabricObserver.sln'
+  inputs:
+    solution: FabricObserver.sln
+    platform: x64
+    configuration: Release
+    msbuildArchitecture: x64
+
+- task: VSTest@2
+  displayName: 'VsTest - FabricObserver Unit Tests'
+  inputs:
+    testAssemblyVer2: '$(Parameters.testAssemblyVer2)'
+    vsTestVersion: 16.0
+    runTestsInIsolation: false
+    publishRunAttachments: false
+    rerunFailedTests: true
+
+- task: VSBuild@1
+  displayName: 'Build FO sfpkg'
+  inputs:
+    solution: FabricObserverApp/FabricObserverApp.sfproj
+    msbuildArgs: '/t:Package'
+    platform: x64
+    configuration: Release
+
+- task: VSBuild@1
+  displayName: 'Build FOW sfpkg'
+  inputs:
+    solution: FabricObserverWebApp/FabricObserverWebApi.sfproj
+    msbuildArgs: '/t:Package'
+    platform: x64
+    configuration: Release
+
+- powershell: |
+   # Write your PowerShell commands here.
+   
+   Compress-Archive -U -Path "*"  -DestinationPath SignedFO.zip
+   Rename-Item SignedFO.zip  SignedFO.sfpkg
+  errorActionPreference: continue
+  workingDirectory: '$(Build.SourcesDirectory)/FabricObserverApp/pkg/Release'
+  displayName: 'PowerShell Script FO zip -> sfpkg'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: SignedFO sfpkg'
+  inputs:
+    PathtoPublish: '$(Build.SourcesDirectory)/FabricObserverApp/pkg/Release/SignedFO.sfpkg'
+    ArtifactName: SignedFO
+
+- powershell: |
+   # Write your PowerShell commands here.
+   
+   Compress-Archive -U -Path "*"  -DestinationPath SignedFOW.zip
+   Rename-Item SignedFOW.zip  SignedFOW.sfpkg
+  errorActionPreference: continue
+  workingDirectory: '$(Build.SourcesDirectory)/FabricObserverWebApp/pkg/Release'
+  displayName: 'PowerShell Script FOW zip -> sfpkg'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: SignedFOW sfpkg'
+  inputs:
+    PathtoPublish: '$(Build.SourcesDirectory)/FabricObserverWebApp/pkg/Release/SignedFOW.sfpkg'
+    ArtifactName: SignedFOW
+
+- task: DownloadBuildArtifacts@0
+  displayName: 'Download Build Artifacts - FO'
+  inputs:
+    artifactName: SignedFO
+
+- task: DownloadBuildArtifacts@0
+  displayName: 'Download Build Artifacts - FOW'
+  inputs:
+    artifactName: SignedFOW
+
+- task: GitHubRelease@0
+  displayName: 'GitHub release (create)'
+  inputs:
+    gitHubConnection: FOConnection
+    tagSource: manual
+    tag: '$(build.buildNumber)'
+    title: FabricObserver
+    releaseNotesSource: input
+    releaseNotes: 'Fabric Observer V1'
+    assets: |
+     $(Build.SourcesDirectory)/FabricObserverApp/pkg/Release/*.sfpkg
+     $(Build.SourcesDirectory)/FabricObserverWebApp/pkg/Release/*.sfpkg
+  continueOnError: true
