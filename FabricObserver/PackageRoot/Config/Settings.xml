@@ -118,11 +118,11 @@
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="CpuErrorLimitPercent" Value="" />
-    <Parameter Name="CpuWarningLimitPercent" Value="90" />
+    <Parameter Name="CpuWarningLimitPercent" Value="80" />
     <Parameter Name="MemoryErrorLimitMB" Value="" />
     <Parameter Name="MemoryWarningLimitMB" Value ="" />
     <Parameter Name="MemoryErrorLimitPercent" Value="" />
-    <Parameter Name="MemoryWarningLimitPercent" Value ="90" />
+    <Parameter Name="MemoryWarningLimitPercent" Value ="80" />
     <Parameter Name="NetworkErrorActivePorts" Value="" />
     <Parameter Name="NetworkWarningActivePorts" Value="55000" />
     <Parameter Name="NetworkErrorFirewallRules" Value="" />
