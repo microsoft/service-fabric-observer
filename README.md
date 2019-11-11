@@ -51,7 +51,7 @@ For more information about **the design of FabricObserver**, please see the [Des
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks.  
 
-If you deploy via ARM, then simply add a path to the FO SFPKG you generate from your build after updating
+If you deploy via ARM, then simply add a path to the FO SFPKG you generate (create pkg folder, zip it, rename the file to whatever you want plus a .sfpkg extension...) from your build after updating
 the configs to make sense for your applications/services/nodes (store the sfpkg in some blob store you trust): 
 
 ```JSON
