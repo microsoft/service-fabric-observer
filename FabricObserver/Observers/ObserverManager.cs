@@ -142,9 +142,9 @@ namespace FabricObserver
             {
                 string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
                 string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
-                string filepath = Path.Combine(logFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}");
+                string filepath = Path.Combine(logFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.txt");
 #if !DEBUG
-                // If this has already been sent for this activated version (code/config)
+                // If this has already been sent for this activated version (code/config) of nodetype x
                 if (File.Exists(filepath))
                 {
                     return;
