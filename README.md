@@ -51,6 +51,19 @@ For more information about **the design of FabricObserver**, please see the [Des
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks.  
 
+If you deploy via ARM, then simply add a path to the FO SFPKG you generate (create pkg folder (in VS, right-click FabricObserverApp project, select Package), zip it, rename the file to whatever you want, replace .zip with .sfpkg file extension...) from your build after updating
+the configs to make sense for your applications/services/nodes (store the sfpkg in some blob store you trust): 
+
+```JSON
+    "appPackageUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "The URL to the FO sfpkg file you generated."
+      }
+    },
+```  
+
+
 ## Observer Model
 
 FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows VM (node) of a Service Fabric cluster. It is an isolated, node-only service. 
