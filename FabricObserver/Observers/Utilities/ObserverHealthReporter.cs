@@ -60,25 +60,14 @@ namespace FabricObserver.Utilities
                 return;
             }
 
+            // There is no real need to change Immediate to true here. This only adds unecessary stress to the
+            // Health subsystem...
             var sendOptions = new HealthReportSendOptions { Immediate = false };
-            var timeToLive = TimeSpan.FromMinutes(1);
+            var timeToLive = TimeSpan.FromMinutes(5);
 
             if (healthReport.HealthReportTimeToLive != default(TimeSpan))
             {
                 timeToLive = healthReport.HealthReportTimeToLive;
-            }
-
-            // Errors will block SF infra from doing things like upgrades...
-            // We probably should be careful here and limit health events
-            // to warnings only (we'll dump on Error state if the user specifies this...)
-            // OR we Error on Error... -CT
-            if (healthReport.State == HealthState.Error || healthReport.State == HealthState.Ok)
-            {
-                sendOptions.Immediate = true;
-                if (healthReport.HealthReportTimeToLive == default(TimeSpan))
-                {
-                    timeToLive = TimeSpan.FromMinutes(10);
-                }
             }
 
             string kind = string.Empty;
@@ -88,35 +77,59 @@ namespace FabricObserver.Utilities
                 kind = healthReport.Code + ": ";
             }
 
-            string property;
+            string property = null, source = healthReport.Observer;
 
             switch (healthReport.Observer)
             {
                 case ObserverConstants.AppObserverName:
-                    property = "App";
+                    property = "AppHealth";
                     break;
                 case ObserverConstants.CertificateObserverName:
-                    property = "Security";
+                    property = "SecurityHealth";
                     break;
                 case ObserverConstants.DiskObserverName:
-                    property = "Disk";
+                    property = "DiskHealth";
                     break;
                 case ObserverConstants.FabricSystemObserverName:
-                    property = "FabricSystem";
+                    property = "FabricSystemHealth";
                     break;
                 case ObserverConstants.NetworkObserverName:
-                    property = "Networking";
+                    property = "NetworkingHealth";
                     break;
                 case ObserverConstants.OSObserverName:
+                    property = "MachineInformation";
+                    break;
                 case ObserverConstants.NodeObserverName:
-                    property = "VirtualMachine";
+                    property = "MachineResourceHealth";
+
+                    if (healthReport.Code == ErrorWarningCode.WarningCpuTime)
+                    {
+                        source += "(CPU)";
+                    }
+
+                    if (healthReport.Code == ErrorWarningCode.WarningTooManyFirewallRules)
+                    {
+                        source += "(FirewallRules)";
+                    }
+
+                    if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
+                        || healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed)
+                    {
+                        source += "(Memory)";
+                    }
+
+                    if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts)
+                    {
+                        source += "(Ports)";
+                    }
+
                     break;
                 default:
-                    property = "Generic";
+                    property = "FOGenericHealth";
                     break;
             }
 
-            var healthInformation = new HealthInformation(healthReport.Observer, property, healthReport.State)
+            var healthInformation = new HealthInformation(source, property, healthReport.State)
             {
                 Description = kind + healthReport.HealthMessage,
                 TimeToLive = timeToLive,

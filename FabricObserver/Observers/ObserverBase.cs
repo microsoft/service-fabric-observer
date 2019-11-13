@@ -688,7 +688,7 @@ namespace FabricObserver
                     {
                         AppName = appName,
                         EmitLogEvent = true,
-                        HealthMessage = $"{data.Id}: {data.Property} is now within normal/expected range.",
+                        HealthMessage = $"{data.Property} is now within normal/expected range.",
                         HealthReportTimeToLive = default(TimeSpan),
                         ReportType = healthReportType,
                         State = HealthState.Ok,
