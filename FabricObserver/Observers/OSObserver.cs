@@ -148,7 +148,7 @@ namespace FabricObserver
             }
         }
 
-        private static string GetWindowsHotFixes(CancellationToken token)
+        private static string GetWindowsHotFixes(CancellationToken token, bool generateUrl = true)
         {
             ManagementObjectSearcher searcher = null;
             ManagementObjectCollection results = null;
@@ -174,7 +174,15 @@ namespace FabricObserver
                 {
                     token.ThrowIfCancellationRequested();
 
-                    sb.AppendFormat("{0}", obj["HotFixID"]);
+                    if (generateUrl)
+                    {
+                        sb.AppendFormat("<a href=\"{0}\" target=\"_blank\">{1}</a>", obj["Caption"], obj["HotFixID"]);
+                    }
+                    else
+                    {
+                        sb.AppendFormat("{0}", obj["HotFixID"]);
+                    }
+
                     sb.AppendLine();
                 }
 
@@ -394,7 +402,7 @@ namespace FabricObserver
                             ActiveEphemeralPorts = activeEphemeralPorts,
                             WindowsDynamicPortRange = osEphemeralPortRange,
                             FabricAppPortRange = fabricAppPortRange,
-                            HotFixes = osHotFixes.Replace("\r\n", ", ").TrimEnd(','),
+                            HotFixes = GetWindowsHotFixes(token, false).Replace("\r\n", ", ").TrimEnd(','),
                         });
                 }
             }
