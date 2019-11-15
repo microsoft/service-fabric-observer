@@ -136,7 +136,6 @@
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
   </Section>
-  <!-- *** It is highly recommended that you do not disable the following observers ***-->
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
