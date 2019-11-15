@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Globalization;
@@ -576,13 +575,17 @@ namespace FabricObserver
             {
                 string errorWarningKind = null;
 
-                if (data.Property.ToLower().Contains("cpu"))
+                if (data.Property.Contains("CPU"))
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorCpuTime : ErrorWarningCode.WarningCpuTime;
                 }
-                else if (data.Property.ToLower().Contains("disk space"))
+                else if (data.Property.Contains("Disk Space Consumption %"))
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpace : ErrorWarningCode.WarningDiskSpace;
+                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpacePercentUsed : ErrorWarningCode.WarningDiskSpacePercentUsed;
+                }
+                else if (data.Property.Contains("Disk Space Consumption MB"))
+                {
+                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpaceMB : ErrorWarningCode.WarningDiskSpaceMB;
                 }
                 else if (data.Property == "Memory Consumption MB")
                 {
@@ -623,12 +626,6 @@ namespace FabricObserver
                 healthMessage.Append($"{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
                 healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
 
-                // Set internal fabric health states...
-                data.ActiveErrorOrWarning = true;
-
-                // This means this observer created a Warning or Error SF Health Report
-                this.HasActiveFabricErrorOrWarning = true;
-
                 var healthReport = new Utilities.HealthReport
                 {
                     AppName = appName,
@@ -644,6 +641,12 @@ namespace FabricObserver
 
                 // Emit a Fabric Health Report and optionally a local log write...
                 this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                // Set internal fabric health states...
+                data.ActiveErrorOrWarning = true;
+
+                // This means this observer created a Warning or Error SF Health Report
+                this.HasActiveFabricErrorOrWarning = true;
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example...)...
                 if (this.IsTelemetryEnabled)
@@ -684,7 +687,7 @@ namespace FabricObserver
             {
                 if (data.ActiveErrorOrWarning)
                 {
-                    Utilities.HealthReport report = new Utilities.HealthReport
+                    var report = new Utilities.HealthReport
                     {
                         AppName = appName,
                         EmitLogEvent = true,
@@ -751,23 +754,11 @@ namespace FabricObserver
             }
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~ObserverBase()
-        // {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
-        // This code added to correctly implement the disposable pattern.
-
         /// <inheritdoc/>
         public virtual void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             this.Dispose(true);
-
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
         }
     }
 

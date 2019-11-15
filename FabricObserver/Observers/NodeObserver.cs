@@ -273,6 +273,7 @@ namespace FabricObserver
                     int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
                     this.firewallData.Data.Add(firewalls);
 
+                    // CPU and Memory...
                     for (int i = 0; i < 30; i++)
                     {
                         token.ThrowIfCancellationRequested();
