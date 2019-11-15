@@ -157,7 +157,7 @@ namespace FabricObserver
 
             using (Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                if (stream.Length > 40
+                if (stream.Length > 42
                     && JsonHelper.IsJson<List<ApplicationInfo>>(File.ReadAllText(appObserverConfigFileName)))
                 {
                     this.targetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
