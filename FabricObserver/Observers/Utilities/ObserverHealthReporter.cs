@@ -63,6 +63,13 @@ namespace FabricObserver.Utilities
             // There is no real need to change Immediate to true here. This only adds unecessary stress to the
             // Health subsystem...
             var sendOptions = new HealthReportSendOptions { Immediate = false };
+
+            // Quickly clear any existing Health Warning or Error...
+            if (healthReport.State == HealthState.Ok)
+            {
+                sendOptions.Immediate = true;
+            }
+
             var timeToLive = TimeSpan.FromMinutes(5);
 
             if (healthReport.HealthReportTimeToLive != default(TimeSpan))
@@ -89,6 +96,23 @@ namespace FabricObserver.Utilities
                     break;
                 case ObserverConstants.DiskObserverName:
                     property = "DiskHealth";
+
+                    if (healthReport.Code == ErrorWarningCode.WarningDiskAverageQueueLength
+                        && healthReport.HealthMessage.Contains("Queue"))
+                    {
+                        source += "(DiskQueueLength)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningDiskSpace
+                        && healthReport.HealthMessage.Contains("%"))
+                    {
+                        source += "(DiskSpace%)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningDiskSpace
+                        && healthReport.HealthMessage.Contains("MB"))
+                    {
+                        source += "(DiskSpaceMB)";
+                    }
+
                     break;
                 case ObserverConstants.FabricSystemObserverName:
                     property = "FabricSystemHealth";
@@ -106,19 +130,19 @@ namespace FabricObserver.Utilities
                     {
                         source += "(CPU)";
                     }
-
-                    if (healthReport.Code == ErrorWarningCode.WarningTooManyFirewallRules)
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyFirewallRules)
                     {
                         source += "(FirewallRules)";
                     }
-
-                    if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                        || healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed)
+                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed)
                     {
-                        source += "(Memory)";
+                        source += "(Memory%)";
                     }
-
-                    if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts)
+                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted)
+                    {
+                        source += "(MemoryMB)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts)
                     {
                         source += "(Ports)";
                     }
@@ -136,8 +160,9 @@ namespace FabricObserver.Utilities
                 RemoveWhenExpired = true,
             };
 
-            // Log event...
-            if (healthReport.EmitLogEvent)
+            // Log event only if ObserverWebApi (REST Log reader...) app is deployed...
+            if (ObserverManager.ObserverWebAppDeployed
+                && healthReport.EmitLogEvent)
             {
                 if (healthReport.State == HealthState.Error)
                 {

@@ -40,6 +40,12 @@
          as you can see in the source code. See ObserverManager.cs for examples of a collected data for FO.
          See TelemetryLib project for SF info that is collected. -->
     <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="True" />
+    <!-- Optional: If you deploy the FabricObserverWebApi app, set this to True...
+         If set to True or False, ObserverManager won't check to see if "fabric:/FabricObserverWebApi" app is deployed 
+         so you can rename the FO API app to whatever you want... The point here is that 
+         if the web API app is not present, then FO will not run code that the app needs (like files written to disk and 
+         some aspects of observer log management)...-->
+    <Parameter Name="ObserverWebApiEnabled" Value="False" />
   </Section>
   <!-- Observer Configuration Settings -->
   <Section Name="AppObserverConfiguration">

@@ -54,6 +54,8 @@ namespace FabricObserver
 
         public static bool FabricObserverInternalTelemetryEnabled { get; set; } = true;
 
+        public static bool ObserverWebAppDeployed { get; set; }
+
         public static bool EtwEnabled
         {
             get
@@ -177,6 +179,7 @@ namespace FabricObserver
             this.token.Register(() => { this.ShutdownHandler(this, null); });
             this.Logger = new Logger("ObserverManagerSingleObserverRun");
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
+            ObserverWebAppDeployed = true;
             this.observers = new List<ObserverBase>(new ObserverBase[]
             {
                 observer,
@@ -267,6 +270,9 @@ namespace FabricObserver
                 }
 
                 return parameter.Value;
+            }
+            catch (KeyNotFoundException)
+            {
             }
             catch (FabricElementNotFoundException)
             {
@@ -379,9 +385,8 @@ namespace FabricObserver
                 // Observes, records and reports on CPU/Mem usage, established port count, Disk IO (r/w) for Service Fabric System services
                 // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc...). Long-running data is stored in app-specific CSVs (optional)
                 // or sent to diagnostic/telemetry service, for use in upstream analysis, etc...
-                // ***NOTE***: It is not a good idea to run this observer with Warning thresholds unless you understand how your
-                // service code impacts the resource usage behavior of the underlying fabric system services.
-                // This is here for example only.
+                // ***NOTE***: Use this observer (like all observers that focus on resource usage) to help you arrive at the thresholds you're looking for - in test, under load and other chaos
+                // experiments you run. It's not possible to reliably predict the early signs of real misbehavior of unknown workloads.
                 new FabricSystemObserver(),
 
                 // User-configurable, App-level (app service processes) machine resource observer that records and reports on service-level resource usage...
@@ -474,6 +479,16 @@ namespace FabricObserver
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
             {
                 FabricObserverInternalTelemetryEnabled = foTelemEnabled;
+            }
+
+            // ObserverWebApi...
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiAppDeployed), out bool obsWeb))
+            {
+                ObserverWebAppDeployed = obsWeb;
+            }
+            else
+            {
+                ObserverWebAppDeployed = this.IsObserverWebApiAppInstalled();
             }
         }
 
@@ -611,41 +626,48 @@ namespace FabricObserver
                         continue;
                     }
 
-                    string errWarnMsg = "No errors or warnings detected.";
-
-                    if (observer.HasActiveFabricErrorOrWarning)
+                    if (ObserverWebAppDeployed)
                     {
-                        if (!string.IsNullOrEmpty(this.Fqdn))
+                        string errWarnMsg = "No errors or warnings detected.";
+
+                        if (observer.HasActiveFabricErrorOrWarning)
                         {
-                            errWarnMsg = $"<a style=\"font-weight: bold; color: red;\" href=\"http://{this.Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>.";
+                            if (!string.IsNullOrEmpty(this.Fqdn))
+                            {
+                                errWarnMsg = $"<a style=\"font-weight: bold; color: red;\" href=\"http://{this.Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>.";
+                            }
+                            else
+                            {
+                                errWarnMsg = $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
+                            }
+
+                            this.Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
                         }
                         else
                         {
-                            errWarnMsg = $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
-                        }
-
-                        this.Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
-                    }
-                    else
-                    {
-                        // Delete the observer's instance log (local file with Warn/Error details per run)..
-                        _ = observer.ObserverLogger.TryDeleteInstanceLog();
-                        try
-                        {
-                            if (File.Exists(this.Logger.FilePath))
+                            if (ObserverWebAppDeployed)
                             {
-                                // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s)...
-                                File.WriteAllLines(
-                                    this.Logger.FilePath,
-                                    File.ReadLines(this.Logger.FilePath)
-                                                   .Where(line => !line.Contains(observer.ObserverName)).ToList());
+                                // Delete the observer's instance log (local file with Warn/Error details per run)..
+                                _ = observer.ObserverLogger.TryDeleteInstanceLog();
                             }
-                        }
-                        catch
-                        {
-                        }
 
-                        this.Logger.LogInfo($"Successfully ran {observer.ObserverName}. " + errWarnMsg);
+                            try
+                            {
+                                if (File.Exists(this.Logger.FilePath))
+                                {
+                                    // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s)...
+                                    File.WriteAllLines(
+                                        this.Logger.FilePath,
+                                        File.ReadLines(this.Logger.FilePath)
+                                                       .Where(line => !line.Contains(observer.ObserverName)).ToList());
+                                }
+                            }
+                            catch
+                            {
+                            }
+
+                            this.Logger.LogInfo($"Successfully ran {observer.ObserverName}.");
+                        }
                     }
                 }
                 catch (AggregateException ex)
@@ -756,6 +778,23 @@ namespace FabricObserver
         {
             this.Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        private bool IsObserverWebApiAppInstalled()
+        {
+            try
+            {
+                var deployedObsWebApps = FabricClientInstance.QueryManager.GetApplicationListAsync(new Uri("fabric:/FabricObserverWebApi")).GetAwaiter().GetResult();
+                return deployedObsWebApps?.Count > 0;
+            }
+            catch (FabricException)
+            {
+            }
+            catch (TimeoutException)
+            {
+            }
+
+            return false;
         }
     }
 }

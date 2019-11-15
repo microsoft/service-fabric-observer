@@ -112,16 +112,19 @@ namespace FabricObserver
                     this.HasActiveFabricErrorOrWarning = false;
                 }
 
-                var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SysInfo.txt");
-
-                // This file is used by the web application (log reader...)...
-                if (!this.ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{this.osReport}"))
+                if (ObserverManager.ObserverWebAppDeployed)
                 {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        this.ObserverName,
-                        HealthState.Warning,
-                        "Unable to create SysInfo.txt file...");
+                    var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SysInfo.txt");
+
+                    // This file is used by the web application (log reader...)...
+                    if (!this.ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{this.osReport}"))
+                    {
+                        this.HealthReporter.ReportFabricObserverServiceHealth(
+                            this.FabricServiceContext.ServiceName.OriginalString,
+                            this.ObserverName,
+                            HealthState.Warning,
+                            "Unable to create SysInfo.txt file...");
+                    }
                 }
 
                 var osReport = new Utilities.HealthReport
