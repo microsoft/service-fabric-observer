@@ -9,6 +9,7 @@ namespace FabricObserver.Utilities
     {
         public const string ObserverManangerName = "ObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
+        public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string EnableLongRunningCSVLogging = "EnableLongRunningCSVLogging";
         public const string ObserverLogPath = "ObserverLogPath";

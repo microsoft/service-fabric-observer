@@ -89,22 +89,6 @@ namespace FabricObserver
             this.token = token;
             token.ThrowIfCancellationRequested();
 
-            // This only needs to be logged once...
-            if (!this.hasRun)
-            {
-                var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "NetInfo.txt");
-
-                // This file is used by the web application (log reader...)...
-                if (!this.ObserverLogger.TryWriteLogFile(logPath, this.GetNetworkInterfaceInfo()))
-                {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        this.ObserverName,
-                        HealthState.Warning,
-                        "Unable to create NetInfo.txt file...");
-                }
-            }
-
             // Run conn tests...
             Retry.Do(
                 this.InternetConnectionStateIsConnected,
@@ -125,6 +109,22 @@ namespace FabricObserver
                 LogLevel.Information);
 
             this.token.ThrowIfCancellationRequested();
+
+            // This only needs to be logged once...
+            // This file is used by the ObserverWebApi application.
+            if (ObserverManager.ObserverWebAppDeployed && !this.hasRun)
+            {
+                var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "NetInfo.txt");
+
+                if (!this.ObserverLogger.TryWriteLogFile(logPath, this.GetNetworkInterfaceInfo()))
+                {
+                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                        this.FabricServiceContext.ServiceName.OriginalString,
+                        this.ObserverName,
+                        HealthState.Warning,
+                        "Unable to create NetInfo.txt file...");
+                }
+            }
 
             // Is this a unit test run?
             if (this.IsTestRun)
