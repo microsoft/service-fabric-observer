@@ -193,7 +193,7 @@ namespace FabricObserver.Model
         /// <summary>
         ///   Parse the string and return a typed value.
         /// </summary>
-        /// <typeparam name="U"> Value type. </typeparam>
+        /// <typeparam name="TU"> Value type. </typeparam>
         /// <param name="valueString"> Value in string format. </param>
         /// <param name="value"> Result of parsing. </param>
         /// <returns> True if succeeds. </returns>
@@ -214,6 +214,7 @@ namespace FabricObserver.Model
         /// Get Windows Fabric Settings from config.
         /// </summary>
         /// <param name="parameterName">Return settings for the parameter name.</param>
+        /// <returns>string.</returns>
         protected string GetConfigurationSetting(string parameterName)
         {
             if (string.IsNullOrEmpty(parameterName) || this.ConfigurationSettings == null)

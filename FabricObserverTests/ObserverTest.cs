@@ -148,6 +148,7 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new DiskObserver();
 
@@ -186,6 +187,7 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new NetworkObserver
             {
@@ -246,6 +248,7 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new SFConfigurationObserver();
 
@@ -983,6 +986,7 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new DiskObserver();
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1027,6 +1031,7 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new DiskObserver
             {
@@ -1083,7 +1088,50 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // Observer ran to completion with no errors...
+            // The supplied config does not include deployed app network configs, so
+            // ObserveAsync will return in milliseconds...
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions...
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run...
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            ObserverManager.FabricClientInstance.Dispose();
+        }
+
+        /// <summary>
+        /// ...
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task NetworkObserver_ObserveAsync_Successful_Observer_WritesLocalFile_ObsWebDeployed()
+        {
+            if (!this.isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+
+            var obs = new NetworkObserver
+            {
+                IsTestRun = true,
+            };
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // Observer ran to completion with no errors...
+            // The supplied config does not include deployed app network configs, so
+            // ObserveAsync will return in milliseconds...
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             // observer detected no error conditions...
@@ -1105,6 +1153,7 @@ namespace FabricObserverTests
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
         }
+
 
         /// <summary>
         /// ...
@@ -1161,6 +1210,7 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new SFConfigurationObserver
             {
