@@ -77,8 +77,11 @@ namespace FabricObserver
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
-            if (this.RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            // This observer is only useful if you enable the web api for producing
+            // an html page with a bunch of information that's easy to read in one go.
+            if (!ObserverManager.ObserverWebAppDeployed
+                || (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval))
             {
                 return;
             }
@@ -220,7 +223,6 @@ namespace FabricObserver
                 }
 
                 // Application Info...
-                // TODO: Emit ETW event for App and Service info...
                 if (appList != null)
                 {
                     sb.AppendLine("\nDeployed Apps:\n");

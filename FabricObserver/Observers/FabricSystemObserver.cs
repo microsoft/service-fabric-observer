@@ -358,7 +358,8 @@ namespace FabricObserver
 
             try
             {
-                if (this.monitorWinEventLog)
+                if (ObserverManager.ObserverWebAppDeployed
+                    && this.monitorWinEventLog)
                 {
                     this.ReadServiceFabricWindowsEventLog();
                 }
@@ -609,7 +610,8 @@ namespace FabricObserver
                 this.DiskWarnIOWritesThresholdMS);
 
             // Windows Event Log
-            if (this.monitorWinEventLog)
+            if (ObserverManager.ObserverWebAppDeployed
+                && this.monitorWinEventLog)
             {
                 // SF Eventlog Errors?
                 // Write this out to a new file, for use by the web front end log viewer...

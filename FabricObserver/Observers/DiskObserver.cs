@@ -81,7 +81,11 @@ namespace FabricObserver
 
             DriveInfo[] allDrives = DriveInfo.GetDrives();
             var diskUsage = new DiskUsage();
-            this.diskInfo = new StringBuilder();
+
+            if (ObserverManager.ObserverWebAppDeployed)
+            {
+                this.diskInfo = new StringBuilder();
+            }
 
             try
             {
@@ -95,18 +99,20 @@ namespace FabricObserver
                         readyCount++;
 
                         // This section only needs to run if you have the FabricObserverWebApi app installed...
-                        // Always log since these are the identifiers of each detected drive...
-                        this.diskInfo.AppendFormat("\n\nDrive Name: {0}\n", d.Name);
+                        if (ObserverManager.ObserverWebAppDeployed)
+                        {
+                            this.diskInfo.AppendFormat("\n\nDrive Name: {0}\n", d.Name);
 
-                        // Logging...
-                        this.diskInfo.AppendFormat("Drive Type: {0}\n", d.DriveType);
-                        this.diskInfo.AppendFormat("  Volume Label   : {0}\n", d.VolumeLabel);
-                        this.diskInfo.AppendFormat("  Filesystem     : {0}\n", d.DriveFormat);
-                        this.diskInfo.AppendFormat("  Total Disk Size: {0} GB\n", d.TotalSize / 1024 / 1024 / 1024);
-                        this.diskInfo.AppendFormat("  Root Directory : {0}\n", d.RootDirectory);
-                        this.diskInfo.AppendFormat("  Free User : {0} GB\n", d.AvailableFreeSpace / 1024 / 1024 / 1024);
-                        this.diskInfo.AppendFormat("  Free Total: {0} GB\n", d.TotalFreeSpace / 1024 / 1024 / 1024);
-                        this.diskInfo.AppendFormat("  % Used    : {0}%\n", diskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
+                            // Logging...
+                            this.diskInfo.AppendFormat("Drive Type: {0}\n", d.DriveType);
+                            this.diskInfo.AppendFormat("  Volume Label   : {0}\n", d.VolumeLabel);
+                            this.diskInfo.AppendFormat("  Filesystem     : {0}\n", d.DriveFormat);
+                            this.diskInfo.AppendFormat("  Total Disk Size: {0} GB\n", d.TotalSize / 1024 / 1024 / 1024);
+                            this.diskInfo.AppendFormat("  Root Directory : {0}\n", d.RootDirectory);
+                            this.diskInfo.AppendFormat("  Free User : {0} GB\n", d.AvailableFreeSpace / 1024 / 1024 / 1024);
+                            this.diskInfo.AppendFormat("  Free Total: {0} GB\n", d.TotalFreeSpace / 1024 / 1024 / 1024);
+                            this.diskInfo.AppendFormat("  % Used    : {0}%\n", diskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
+                        }
 
                         // Setup monitoring data structures...
                         string id = d.Name.Substring(0, 1);
@@ -188,25 +194,28 @@ namespace FabricObserver
                         }
 
                         // This section only needs to run if you have the FabricObserverWebApi app installed...
-                        this.diskInfo.AppendFormat(
-                            "{0}",
-                            this.GetWindowsPerfCounterDetailsText(
-                                                        this.diskIOReadsData.FirstOrDefault(
-                                                                                        x => x.Id == d.Name.Substring(0, 1)).Data,
-                                                        "Avg. Disk sec/Read"));
-                        this.diskInfo.AppendFormat(
-                            "{0}",
-                            this.GetWindowsPerfCounterDetailsText(
-                                                        this.diskIOWritesData.FirstOrDefault(
-                                                                                        x => x.Id == d.Name.Substring(0, 1)).Data,
-                                                        "Avg. Disk sec/Write"));
+                        if (ObserverManager.ObserverWebAppDeployed)
+                        {
+                            this.diskInfo.AppendFormat(
+                                "{0}",
+                                this.GetWindowsPerfCounterDetailsText(
+                                                            this.diskIOReadsData.FirstOrDefault(
+                                                                                            x => x.Id == d.Name.Substring(0, 1)).Data,
+                                                            "Avg. Disk sec/Read"));
+                            this.diskInfo.AppendFormat(
+                                "{0}",
+                                this.GetWindowsPerfCounterDetailsText(
+                                                            this.diskIOWritesData.FirstOrDefault(
+                                                                                            x => x.Id == d.Name.Substring(0, 1)).Data,
+                                                            "Avg. Disk sec/Write"));
 
-                        this.diskInfo.AppendFormat(
-                            "{0}",
-                            this.GetWindowsPerfCounterDetailsText(
-                                                        this.diskAverageQueueLengthData.FirstOrDefault(
-                                                                                        x => x.Id == d.Name.Substring(0, 1)).Data,
-                                                        "Avg. Disk Queue Length"));
+                            this.diskInfo.AppendFormat(
+                                "{0}",
+                                this.GetWindowsPerfCounterDetailsText(
+                                                            this.diskAverageQueueLengthData.FirstOrDefault(
+                                                                                            x => x.Id == d.Name.Substring(0, 1)).Data,
+                                                            "Avg. Disk Queue Length"));
+                        }
 
                         this.stopWatch.Stop();
                         this.stopWatch.Reset();
@@ -410,11 +419,14 @@ namespace FabricObserver
                 token.ThrowIfCancellationRequested();
 
                 // This section only needs to run if you have the FabricObserverWebApi app installed...
-                var diskInfoPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "disks.txt");
+                if (ObserverManager.ObserverWebAppDeployed)
+                {
+                    var diskInfoPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "disks.txt");
 
-                this.ObserverLogger.TryWriteLogFile(diskInfoPath, this.diskInfo.ToString());
+                    this.ObserverLogger.TryWriteLogFile(diskInfoPath, this.diskInfo.ToString());
 
-                this.diskInfo.Clear();
+                    this.diskInfo.Clear();
+                }
 
                 return Task.CompletedTask;
             }
