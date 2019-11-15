@@ -86,10 +86,34 @@ namespace FabricObserver.Utilities
 
             string property = null, source = healthReport.Observer;
 
+            // In order for multiple Warning shots fired from single observers to show up in SFX Details view,
+            // SourceIds must be unique, thus the conditionals inside the cases below that set source...
             switch (healthReport.Observer)
             {
                 case ObserverConstants.AppObserverName:
                     property = "AppHealth";
+
+                    if (healthReport.Code == ErrorWarningCode.WarningCpuTime
+                        && healthReport.HealthMessage.Contains("CPU"))
+                    {
+                        source += "(CPU)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
+                             && healthReport.HealthMessage.Contains("Memory%"))
+                    {
+                        source += "(Memory%)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
+                             && healthReport.HealthMessage.Contains("MemoryMB"))
+                    {
+                        source += "(MemoryMB)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
+                             && healthReport.HealthMessage.Contains("Ports"))
+                    {
+                        source += "(Ports)";
+                    }
+
                     break;
                 case ObserverConstants.CertificateObserverName:
                     property = "SecurityHealth";
@@ -115,7 +139,29 @@ namespace FabricObserver.Utilities
 
                     break;
                 case ObserverConstants.FabricSystemObserverName:
-                    property = "FabricSystemHealth";
+                    property = "FabricSystemServiceHealth";
+
+                    if (healthReport.Code == ErrorWarningCode.WarningCpuTime
+                        && healthReport.HealthMessage.Contains("CPU"))
+                    {
+                        source += "(CPU)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
+                             && healthReport.HealthMessage.Contains("Memory%"))
+                    {
+                        source += "(Memory%)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
+                             && healthReport.HealthMessage.Contains("MemoryMB"))
+                    {
+                        source += "(MemoryMB)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
+                             && healthReport.HealthMessage.Contains("Ports"))
+                    {
+                        source += "(Ports)";
+                    }
+
                     break;
                 case ObserverConstants.NetworkObserverName:
                     property = "NetworkingHealth";
@@ -126,23 +172,28 @@ namespace FabricObserver.Utilities
                 case ObserverConstants.NodeObserverName:
                     property = "MachineResourceHealth";
 
-                    if (healthReport.Code == ErrorWarningCode.WarningCpuTime)
+                    if (healthReport.Code == ErrorWarningCode.WarningCpuTime
+                        && healthReport.HealthMessage.Contains("CPU"))
                     {
                         source += "(CPU)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyFirewallRules)
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyFirewallRules
+                             && healthReport.HealthMessage.Contains("FirewallRules"))
                     {
                         source += "(FirewallRules)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed)
+                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
+                             && healthReport.HealthMessage.Contains("Memory%"))
                     {
                         source += "(Memory%)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted)
+                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
+                             && healthReport.HealthMessage.Contains("MemoryMB"))
                     {
                         source += "(MemoryMB)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts)
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
+                             && healthReport.HealthMessage.Contains("Ports"))
                     {
                         source += "(Ports)";
                     }
