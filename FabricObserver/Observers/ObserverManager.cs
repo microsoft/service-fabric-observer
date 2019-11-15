@@ -645,12 +645,9 @@ namespace FabricObserver
                         }
                         else
                         {
-                            if (ObserverWebAppDeployed)
-                            {
-                                // Delete the observer's instance log (local file with Warn/Error details per run)..
-                                _ = observer.ObserverLogger.TryDeleteInstanceLog();
-                            }
-
+                            // Delete the observer's instance log (local file with Warn/Error details per run)..
+                            _ = observer.ObserverLogger.TryDeleteInstanceLog();
+                            
                             try
                             {
                                 if (File.Exists(this.Logger.FilePath))
