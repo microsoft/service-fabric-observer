@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Fabric;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
@@ -100,6 +101,20 @@ namespace FabricObserverTests
             finally
             {
                 store?.Dispose();
+            }
+
+            // Remove any files generated...
+            try
+            {
+                var outputFolder = $@"{Environment.CurrentDirectory}\observer_logs\";
+
+                if (Directory.Exists(outputFolder))
+                {
+                    Directory.Delete(outputFolder, true);
+                }
+            }
+            catch
+            {
             }
         }
 
@@ -297,6 +312,7 @@ namespace FabricObserverTests
 
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
         [TestMethod]
+        [SuppressMessage("Code Quality", "IDE0067:Dispose objects before losing scope", Justification = "Noise...")]
         public void Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
         {
             ObserverManager.FabricServiceContext = this.context;
@@ -320,6 +336,7 @@ namespace FabricObserverTests
             var objReady = new ManualResetEventSlim(false);
 
             stopWatch.Start();
+
             var t = Task.Factory.StartNew(() =>
             {
                 objReady.Set();
@@ -1153,7 +1170,6 @@ namespace FabricObserverTests
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
         }
-
 
         /// <summary>
         /// ...
