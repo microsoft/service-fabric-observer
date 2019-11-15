@@ -84,32 +84,33 @@ namespace FabricObserver.Utilities
                 kind = healthReport.Code + ": ";
             }
 
-            string property = null, source = healthReport.Observer;
+            string source = healthReport.Observer;
+            string property;
 
-            // In order for multiple Warning shots fired from single observers to show up in SFX Details view,
-            // SourceIds must be unique, thus the conditionals inside the cases below that set source...
+            // In order for multiple Error/Warning/Ok events to show up in SFX Details view from observer instances,
+            // Event Source Ids must be unique, thus the seemingly strange conditionals inside the cases below...
             switch (healthReport.Observer)
             {
                 case ObserverConstants.AppObserverName:
                     property = "AppHealth";
 
                     if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        && healthReport.HealthMessage.Contains("CPU"))
+                        || healthReport.HealthMessage.Contains("CPU"))
                     {
                         source += "(CPU)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             && healthReport.HealthMessage.Contains("Memory%"))
+                             || healthReport.HealthMessage.ToLower().Contains("Memory Consumption %"))
                     {
                         source += "(Memory%)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             && healthReport.HealthMessage.Contains("MemoryMB"))
+                             || healthReport.HealthMessage.Contains("Memory Consumption MB"))
                     {
                         source += "(MemoryMB)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
-                             && healthReport.HealthMessage.Contains("Ports"))
+                             || healthReport.HealthMessage.Contains("Ports"))
                     {
                         source += "(Ports)";
                     }
@@ -122,17 +123,17 @@ namespace FabricObserver.Utilities
                     property = "DiskHealth";
 
                     if (healthReport.Code == ErrorWarningCode.WarningDiskAverageQueueLength
-                        && healthReport.HealthMessage.Contains("Queue"))
+                        || healthReport.HealthMessage.Contains("Queue Length"))
                     {
                         source += "(DiskQueueLength)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningDiskSpace
-                        && healthReport.HealthMessage.Contains("%"))
+                    else if (healthReport.Code == ErrorWarningCode.WarningDiskSpacePercentUsed
+                             || healthReport.HealthMessage.Contains("Disk Space Consumption %"))
                     {
                         source += "(DiskSpace%)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningDiskSpace
-                        && healthReport.HealthMessage.Contains("MB"))
+                    else if (healthReport.Code == ErrorWarningCode.WarningDiskSpaceMB
+                             || healthReport.HealthMessage.Contains("Disk Space Consumption MB"))
                     {
                         source += "(DiskSpaceMB)";
                     }
@@ -142,22 +143,22 @@ namespace FabricObserver.Utilities
                     property = "FabricSystemServiceHealth";
 
                     if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        && healthReport.HealthMessage.Contains("CPU"))
+                        || healthReport.HealthMessage.Contains("CPU"))
                     {
                         source += "(CPU)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             && healthReport.HealthMessage.Contains("Memory%"))
+                             || healthReport.HealthMessage.Contains("Memory Consumption %"))
                     {
                         source += "(Memory%)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             && healthReport.HealthMessage.Contains("MemoryMB"))
+                             || healthReport.HealthMessage.Contains("Memory Consumption MB"))
                     {
                         source += "(MemoryMB)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
-                             && healthReport.HealthMessage.Contains("Ports"))
+                             || healthReport.HealthMessage.Contains("Ports"))
                     {
                         source += "(Ports)";
                     }
@@ -173,27 +174,27 @@ namespace FabricObserver.Utilities
                     property = "MachineResourceHealth";
 
                     if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        && healthReport.HealthMessage.Contains("CPU"))
+                        || healthReport.HealthMessage.Contains("CPU"))
                     {
                         source += "(CPU)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningTooManyFirewallRules
-                             && healthReport.HealthMessage.Contains("FirewallRules"))
+                             || healthReport.HealthMessage.Contains("Firewall"))
                     {
                         source += "(FirewallRules)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             && healthReport.HealthMessage.Contains("Memory%"))
+                             || healthReport.HealthMessage.Contains("Memory Consumption %"))
                     {
                         source += "(Memory%)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             && healthReport.HealthMessage.Contains("MemoryMB"))
+                             || healthReport.HealthMessage.Contains("Memory Consumption MB"))
                     {
                         source += "(MemoryMB)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
-                             && healthReport.HealthMessage.Contains("Ports"))
+                             || healthReport.HealthMessage.Contains("Ports"))
                     {
                         source += "(Ports)";
                     }
