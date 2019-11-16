@@ -240,13 +240,11 @@ namespace FabricObserver
 
                     if (!this.allAppCpuData.Any(list => list.Id == id))
                     {
-                        this.allAppCpuData.Add(new FabricResourceUsageData<int>("CPU Time", id));
-                        this.allAppDiskReadsData.Add(new FabricResourceUsageData<float>("IO Read Bytes/sec", id));
-                        this.allAppDiskWritesData.Add(new FabricResourceUsageData<float>("IO Write Bytes/sec", id));
-                        this.allAppMemDataMB.Add(new FabricResourceUsageData<long>("Memory Consumption MB", id));
-                        this.allAppMemDataPercent.Add(new FabricResourceUsageData<double>("Memory Consumption %", id));
-                        this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>("Total Active Ports", id));
-                        this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>("Ephemeral Ports", id));
+                        this.allAppCpuData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, id));
+                        this.allAppMemDataMB.Add(new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionMB, id));
+                        this.allAppMemDataPercent.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id));
+                        this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id));
+                        this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id));
                     }
 
                     // CPU (all cores)...
@@ -277,18 +275,6 @@ namespace FabricObserver
                             this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(usedPct);
                         }
 
-                        // Disk/Network/Etc... IO (per-process bytes read/write per sec)
-                        this.allAppDiskReadsData.FirstOrDefault(x => x.Id == id)
-                            .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(
-                                currentProcess.ProcessName,
-                                "Process",
-                                "IO Read Bytes/sec") / 1000);
-
-                        this.allAppDiskWritesData.FirstOrDefault(x => x.Id == id)
-                            .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(
-                                currentProcess.ProcessName,
-                                "Process",
-                                "IO Write Bytes/sec") / 1000);
                         --i;
 
                         Thread.Sleep(250);
@@ -498,25 +484,6 @@ namespace FabricObserver
                             app.Target,
                             replicaOrInstance,
                             app.DumpProcessOnError);
-
-                        // DiskIO
-                        this.ProcessResourceDataReportHealth(
-                            this.allAppDiskReadsData.Where(x => x.Id == id).FirstOrDefault(),
-                            app.DiskIOErrorReadsPerSecMS,
-                            app.DiskIOWarningReadsPerSecMS,
-                            timeToLiveWarning,
-                            HealthReportType.Application,
-                            app.Target,
-                            replicaOrInstance);
-
-                        this.ProcessResourceDataReportHealth(
-                            this.allAppDiskWritesData.Where(x => x.Id == id).FirstOrDefault(),
-                            app.DiskIOErrorWritesPerSecMS,
-                            app.DiskIOWarningWritesPerSecMS,
-                            timeToLiveWarning,
-                            HealthReportType.Application,
-                            app.Target,
-                            replicaOrInstance);
 
                         // Ports
                         this.ProcessResourceDataReportHealth(

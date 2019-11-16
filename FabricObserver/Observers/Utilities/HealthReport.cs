@@ -27,5 +27,7 @@ namespace FabricObserver.Utilities
         public string NodeName { get; set; }
 
         public string Observer { get; set; }
+
+        public string ResourceUsageDataProperty { get; set; }
     }
 }

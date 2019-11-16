@@ -106,32 +106,32 @@ namespace FabricObserver
         {
             if (this.allCpuDataPrivTime == null)
             {
-                this.allCpuDataPrivTime = new FabricResourceUsageData<float>("Total CPU Time", "SysCpuTimePct");
+                this.allCpuDataPrivTime = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime");
             }
 
             if (this.allMemDataCommittedBytes == null)
             {
-                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>("Memory Consumption MB", "SysMemoryCommittedMb");
-            }
-
-            if (this.firewallData == null)
-            {
-                this.firewallData = new FabricResourceUsageData<int>("Active Firewall Rules", "ActiveFirewallRules");
-            }
-
-            if (this.activePortsData == null)
-            {
-                this.activePortsData = new FabricResourceUsageData<int>("All Active Ports", "AllPortsInUse");
-            }
-
-            if (this.ephemeralPortsData == null)
-            {
-                this.ephemeralPortsData = new FabricResourceUsageData<int>("Ephemeral Active Ports", "EphemeralPortsInUse");
+                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMB, "MemoryConsumedMb");
             }
 
             if (this.allMemDataPercentUsed == null)
             {
-                this.allMemDataPercentUsed = new FabricResourceUsageData<int>("Memory Consumption %", "SysMemoryPercentUsed");
+                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage");
+            }
+
+            if (this.firewallData == null)
+            {
+                this.firewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActiveFirewallRules, "ActiveFirewallRules");
+            }
+
+            if (this.activePortsData == null)
+            {
+                this.activePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, "AllPortsInUse");
+            }
+
+            if (this.ephemeralPortsData == null)
+            {
+                this.ephemeralPortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUse");
             }
         }
 

@@ -23,8 +23,6 @@ namespace FabricObserver
     public class DiskObserver : ObserverBase
     {
         // Data storage containers for post run analysis...
-        private List<FabricResourceUsageData<float>> diskIOReadsData;
-        private List<FabricResourceUsageData<float>> diskIOWritesData;
         private List<FabricResourceUsageData<float>> diskAverageQueueLengthData;
         private List<FabricResourceUsageData<double>> diskSpacePercentageUsageData;
         private List<FabricResourceUsageData<double>> diskSpaceUsageData;
@@ -56,8 +54,6 @@ namespace FabricObserver
         public DiskObserver()
             : base(ObserverConstants.DiskObserverName)
         {
-            this.diskIOReadsData = new List<FabricResourceUsageData<float>>();
-            this.diskIOWritesData = new List<FabricResourceUsageData<float>>();
             this.diskSpacePercentageUsageData = new List<FabricResourceUsageData<double>>();
             this.diskSpaceUsageData = new List<FabricResourceUsageData<double>>();
             this.diskSpaceAvailableData = new List<FabricResourceUsageData<double>>();
@@ -118,41 +114,31 @@ namespace FabricObserver
                         string id = d.Name.Substring(0, 1);
 
                         // Since these live across iterations, do not duplicate them in the containing list...
-                        if (!this.diskIOReadsData.Any(data => data.Id == id))
-                        {
-                            this.diskIOReadsData.Add(new FabricResourceUsageData<float>("Disk sec/Read (ms)", id));
-                        }
-
-                        if (!this.diskIOWritesData.Any(data => data.Id == id))
-                        {
-                            this.diskIOWritesData.Add(new FabricResourceUsageData<float>("Disk sec/Write (ms)", id));
-                        }
-
                         // Disk space %...
                         if (!this.diskSpacePercentageUsageData.Any(data => data.Id == id))
                         {
-                            this.diskSpacePercentageUsageData.Add(new FabricResourceUsageData<double>("Disk Space Consumption %", id));
+                            this.diskSpacePercentageUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id));
                         }
 
                         if (!this.diskSpaceUsageData.Any(data => data.Id == id))
                         {
-                            this.diskSpaceUsageData.Add(new FabricResourceUsageData<double>("Disk Space Consumption MB", id));
+                            this.diskSpaceUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsageMB, id));
                         }
 
                         if (!this.diskSpaceAvailableData.Any(data => data.Id == id))
                         {
-                            this.diskSpaceAvailableData.Add(new FabricResourceUsageData<double>("Disk Space Available MB", id));
+                            this.diskSpaceAvailableData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMB, id));
                         }
 
                         if (!this.diskSpaceTotalData.Any(data => data.Id == id))
                         {
-                            this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>("Disk Space Total MB", id));
+                            this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMB, id));
                         }
 
                         // Current disk queue length...
                         if (!this.diskAverageQueueLengthData.Any(data => data.Id == id))
                         {
-                            this.diskAverageQueueLengthData.Add(new FabricResourceUsageData<float>("Average Disk Queue Length", id));
+                            this.diskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id));
                         }
 
                         // Generate data over time (_monitorDuration...) for use in ReportAsync health analysis...
@@ -161,14 +147,6 @@ namespace FabricObserver
                         while (this.stopWatch?.Elapsed <= this.monitorDuration)
                         {
                             token.ThrowIfCancellationRequested();
-
-                            this.diskIOReadsData.FirstOrDefault(
-                                                    x => x.Id == id)
-                                                    .Data.Add(diskUsage.PerfCounterGetDiskIOInfo(d.Name.Substring(0, 2), "LogicalDisk", "Avg. Disk sec/Read") * 1000);
-
-                            this.diskIOWritesData.FirstOrDefault(
-                                                    x => x.Id == id)
-                                                    .Data.Add(diskUsage.PerfCounterGetDiskIOInfo(d.Name.Substring(0, 2), "LogicalDisk", "Avg. Disk sec/Write") * 1000);
 
                             this.diskSpacePercentageUsageData.FirstOrDefault(
                                                      x => x.Id == id)
@@ -196,19 +174,6 @@ namespace FabricObserver
                         // This section only needs to run if you have the FabricObserverWebApi app installed...
                         if (ObserverManager.ObserverWebAppDeployed)
                         {
-                            this.diskInfo.AppendFormat(
-                                "{0}",
-                                this.GetWindowsPerfCounterDetailsText(
-                                                            this.diskIOReadsData.FirstOrDefault(
-                                                                                            x => x.Id == d.Name.Substring(0, 1)).Data,
-                                                            "Avg. Disk sec/Read"));
-                            this.diskInfo.AppendFormat(
-                                "{0}",
-                                this.GetWindowsPerfCounterDetailsText(
-                                                            this.diskIOWritesData.FirstOrDefault(
-                                                                                            x => x.Id == d.Name.Substring(0, 1)).Data,
-                                                            "Avg. Disk sec/Write"));
-
                             this.diskInfo.AppendFormat(
                                 "{0}",
                                 this.GetWindowsPerfCounterDetailsText(
@@ -338,28 +303,6 @@ namespace FabricObserver
             try
             {
                 var timeToLiveWarning = this.SetTimeToLiveWarning(this.monitorDuration.Seconds);
-
-                // Reads...
-                foreach (var data in this.diskIOReadsData)
-                {
-                    token.ThrowIfCancellationRequested();
-                    this.ProcessResourceDataReportHealth(
-                        data,
-                        this.IOReadsErrorThreshold,
-                        this.IOReadsWarningThreshold,
-                        timeToLiveWarning);
-                }
-
-                // Writes...
-                foreach (var data in this.diskIOWritesData)
-                {
-                    token.ThrowIfCancellationRequested();
-                    this.ProcessResourceDataReportHealth(
-                        data,
-                        this.IOWritesErrorThreshold,
-                        this.IOWritesWarningThreshold,
-                        timeToLiveWarning);
-                }
 
                 // Disk Space Usage % from Settings.xml...
                 foreach (var data in this.diskSpacePercentageUsageData)

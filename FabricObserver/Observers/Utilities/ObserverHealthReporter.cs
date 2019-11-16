@@ -60,11 +60,11 @@ namespace FabricObserver.Utilities
                 return;
             }
 
-            // There is no real need to change Immediate to true here. This only adds unecessary stress to the
+            // There is no real need to change Immediate to true here for errors/warnings. This only adds unecessary stress to the
             // Health subsystem...
             var sendOptions = new HealthReportSendOptions { Immediate = false };
 
-            // Quickly clear any existing Health Warning or Error...
+            // Quickly send OK (clears warning/errors states)...
             if (healthReport.State == HealthState.Ok)
             {
                 sendOptions.Immediate = true;
@@ -88,31 +88,33 @@ namespace FabricObserver.Utilities
             string property;
 
             // In order for multiple Error/Warning/Ok events to show up in SFX Details view from observer instances,
-            // Event Source Ids must be unique, thus the seemingly strange conditionals inside the cases below...
+            // Event Source Ids must be unique, thus the seemingly strange conditionals inside the cases below:
+            // The apparent duplicity in OR checks is for the case when the incoming report is an OK report, where there is 
+            // no error code, but the specific ErrorWarningProperty is known...
             switch (healthReport.Observer)
             {
                 case ObserverConstants.AppObserverName:
                     property = "AppHealth";
 
                     if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        || healthReport.HealthMessage.Contains("CPU"))
+                        || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalCpuTime)
                     {
                         source += "(CPU)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             || healthReport.HealthMessage.ToLower().Contains("Memory Consumption %"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionPct)
                     {
                         source += "(Memory%)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             || healthReport.HealthMessage.Contains("Memory Consumption MB"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionMB)
                     {
                         source += "(MemoryMB)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
-                             || healthReport.HealthMessage.Contains("Ports"))
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveEphemeralPorts
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalEphemeralPorts)
                     {
-                        source += "(Ports)";
+                        source += "(ActiveEphemeralPorts)";
                     }
 
                     break;
@@ -123,17 +125,17 @@ namespace FabricObserver.Utilities
                     property = "DiskHealth";
 
                     if (healthReport.Code == ErrorWarningCode.WarningDiskAverageQueueLength
-                        || healthReport.HealthMessage.Contains("Queue Length"))
+                        || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.DiskAverageQueueLength)
                     {
                         source += "(DiskQueueLength)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningDiskSpacePercentUsed
-                             || healthReport.HealthMessage.Contains("Disk Space Consumption %"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.DiskSpaceUsagePercentage)
                     {
                         source += "(DiskSpace%)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningDiskSpaceMB
-                             || healthReport.HealthMessage.Contains("Disk Space Consumption MB"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.DiskSpaceUsageMB)
                     {
                         source += "(DiskSpaceMB)";
                     }
@@ -143,24 +145,29 @@ namespace FabricObserver.Utilities
                     property = "FabricSystemServiceHealth";
 
                     if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        || healthReport.HealthMessage.Contains("CPU"))
+                        || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalCpuTime)
                     {
                         source += "(CPU)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             || healthReport.HealthMessage.Contains("Memory Consumption %"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionPct)
                     {
                         source += "(Memory%)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             || healthReport.HealthMessage.Contains("Memory Consumption MB"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionMB)
                     {
                         source += "(MemoryMB)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
-                             || healthReport.HealthMessage.Contains("Ports"))
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveTcpPorts
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalActivePorts)
                     {
-                        source += "(Ports)";
+                        source += "(ActivePorts)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveEphemeralPorts
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalEphemeralPorts)
+                    {
+                        source += "(ActiveEphemeralPorts)";
                     }
 
                     break;
@@ -174,29 +181,34 @@ namespace FabricObserver.Utilities
                     property = "MachineResourceHealth";
 
                     if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        || healthReport.HealthMessage.Contains("CPU"))
+                        || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalCpuTime)
                     {
                         source += "(CPU)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningTooManyFirewallRules
-                             || healthReport.HealthMessage.Contains("Firewall"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalActiveFirewallRules)
                     {
                         source += "(FirewallRules)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             || healthReport.HealthMessage.Contains("Memory Consumption %"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionPct)
                     {
                         source += "(Memory%)";
                     }
                     else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             || healthReport.HealthMessage.Contains("Memory Consumption MB"))
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionMB)
                     {
                         source += "(MemoryMB)";
                     }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActivePorts
-                             || healthReport.HealthMessage.Contains("Ports"))
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveTcpPorts
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalActivePorts)
                     {
-                        source += "(Ports)";
+                        source += "(ActivePorts)";
+                    }
+                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveEphemeralPorts
+                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalEphemeralPorts)
+                    {
+                        source += "(ActiveEphemeralPorts)";
                     }
 
                     break;
