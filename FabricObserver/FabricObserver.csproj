@@ -243,6 +243,7 @@
     <Compile Include="Observers\MachineInfoModel\NetworkObserverConfig.cs" />
     <Compile Include="Observers\NetworkObserver.cs" />
     <Compile Include="Observers\NodeObserver.cs" />
+    <Compile Include="Observers\Utilities\ErrorWarningProperty.cs" />
     <Compile Include="Observers\Utilities\SecurityConfiguration.cs" />
     <Compile Include="Observers\Utilities\SecurityType.cs" />
     <Compile Include="Observers\Utilities\HealthReport.cs" />
