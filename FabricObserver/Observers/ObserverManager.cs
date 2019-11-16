@@ -488,7 +488,7 @@ namespace FabricObserver
             }
             else
             {
-                ObserverWebAppDeployed = this.IsObserverWebApiAppInstalled();
+                ObserverWebAppDeployed = IsObserverWebApiAppInstalled();
             }
         }
 
@@ -647,7 +647,7 @@ namespace FabricObserver
                         {
                             // Delete the observer's instance log (local file with Warn/Error details per run)..
                             _ = observer.ObserverLogger.TryDeleteInstanceLog();
-                            
+
                             try
                             {
                                 if (File.Exists(this.Logger.FilePath))
@@ -777,7 +777,7 @@ namespace FabricObserver
             GC.SuppressFinalize(this);
         }
 
-        private bool IsObserverWebApiAppInstalled()
+        private static bool IsObserverWebApiAppInstalled()
         {
             try
             {
