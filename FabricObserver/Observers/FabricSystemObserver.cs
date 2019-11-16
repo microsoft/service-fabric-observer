@@ -357,7 +357,7 @@ namespace FabricObserver
         private void GetProcessInfo(string procName)
         {
             var processes = Process.GetProcessesByName(procName);
-            
+
             if (processes?.Length == 0)
             {
                 return;

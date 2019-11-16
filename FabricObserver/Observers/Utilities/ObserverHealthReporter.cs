@@ -89,7 +89,7 @@ namespace FabricObserver.Utilities
 
             // In order for multiple Error/Warning/Ok events to show up in SFX Details view from observer instances,
             // Event Source Ids must be unique, thus the seemingly strange conditionals inside the cases below:
-            // The apparent duplicity in OR checks is for the case when the incoming report is an OK report, where there is 
+            // The apparent duplicity in OR checks is for the case when the incoming report is an OK report, where there is
             // no error code, but the specific ErrorWarningProperty is known...
             switch (healthReport.Observer)
             {
