@@ -426,6 +426,7 @@ namespace FabricObserver
                             NodeName = this.NodeName,
                             Observer = this.ObserverName,
                             ReportType = HealthReportType.Application,
+                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: connStatus.HostName",
                         };
 
                         // Send health report Warning and log event locally...

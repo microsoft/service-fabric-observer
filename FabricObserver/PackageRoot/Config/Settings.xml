@@ -51,8 +51,9 @@
   <Section Name="AppObserverConfiguration">
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question...-->
     <Parameter Name="Enabled" Value="True" />
-    <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. -->
+    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo... -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <!-- Required: The thresholds are held in a json file... Note that these thresholds apply to any service that is part 
          of the Target Application, which is the logical container for service processes in Service Fabric parlance...-->
@@ -82,11 +83,6 @@
     <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
     <Parameter Name="AverageQueueLengthWarningThreshold" Value ="8" />
-    <!-- These may or may not be useful to you. Depends on your IO-bound workload... -->
-    <Parameter Name="IOReadsErrorThreshold" Value="" />
-    <Parameter Name="IOReadsWarningThreshold" Value="" />
-    <Parameter Name="IOWritesErrorThreshold" Value="" />
-    <Parameter Name="IOWritesWarningThreshold" Value="" />
   </Section>
   <!-- Only enable FabricSystemObserver after you get a sense of what impact your services have on the SF runtime... 
        This is very important because there is no "one threshold fits all" across warning/error thresholds for any of the SF system services. 

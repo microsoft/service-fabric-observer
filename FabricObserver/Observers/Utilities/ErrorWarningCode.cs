@@ -35,11 +35,34 @@ namespace FabricObserver.Utilities
         public const string ErrorNetworkEndpointUnreachable = "FO019";
         public const string WarningNetworkEndpointUnreachable = "FO020";
         public const string ErrorTooManyActivePorts = "FO021";
-        public const string WarningTooManyActivePorts = "FO022";
+        public const string WarningTooManyActiveTcpPorts = "FO022";
         public const string ErrorTooManyFirewallRules = "FO023";
         public const string WarningTooManyFirewallRules = "FO024";
+        public const string ErrorTooManyActiveEphemeralPorts = "FO025";
+        public const string WarningTooManyActiveEphemeralPorts = "FO026";
 
         // Unknown
         public const string Unknown = "FO000";
+    }
+
+    public sealed class ErrorWarningProperty
+    {
+        // CPU/Memory
+        public const string TotalCpuTime = "Total CPU Time";
+        public const string TotalMemoryConsumptionMB = "Memory Consumption MB";
+        public const string TotalMemoryConsumptionPct = "Memory Consumption %";
+
+        // Disk...
+        public const string DiskAverageQueueLength = "Average Disk Queue Length";
+        public const string DiskSpaceUsagePercentage = "Disk Space Consumption %";
+        public const string DiskSpaceUsageMB = "Disk Space Consumption MB";
+        public const string DiskSpaceAvailableMB = "Disk Space Available MB";
+        public const string DiskSpaceTotalMB = "Disk Space Total MB";
+
+        // Network
+        public const string InternetConnectionFailure = "Outbound Internet Connection Failure";
+        public const string TotalActiveFirewallRules = "Total Active Firewall Rules";
+        public const string TotalActivePorts = "Total Active Ports";
+        public const string TotalEphemeralPorts = "Total Ephemeral Active Ports";
     }
 }
