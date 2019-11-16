@@ -575,45 +575,41 @@ namespace FabricObserver
             {
                 string errorWarningKind = null;
 
-                if (data.Property.Contains("CPU"))
+                if (data.Property == ErrorWarningProperty.TotalCpuTime)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorCpuTime : ErrorWarningCode.WarningCpuTime;
                 }
-                else if (data.Property.Contains("Disk Space Consumption %"))
+                else if (data.Property == ErrorWarningProperty.DiskSpaceUsagePercentage)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpacePercentUsed : ErrorWarningCode.WarningDiskSpacePercentUsed;
                 }
-                else if (data.Property.Contains("Disk Space Consumption MB"))
+                else if (data.Property == ErrorWarningProperty.DiskSpaceUsageMB)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpaceMB : ErrorWarningCode.WarningDiskSpaceMB;
                 }
-                else if (data.Property == "Memory Consumption MB")
+                else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionMB)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryCommitted : ErrorWarningCode.WarningMemoryCommitted;
                 }
-                else if (data.Property == "Memory Consumption %")
+                else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionPct)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryPercentUsed : ErrorWarningCode.WarningMemoryPercentUsed;
                 }
-                else if (data.Property.Contains("Read"))
-                {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskIoReads : ErrorWarningCode.WarningDiskIoReads;
-                }
-                else if (data.Property.Contains("Write"))
-                {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskIoWrites : ErrorWarningCode.WarningDiskIoWrites;
-                }
-                else if (data.Property.Contains("Queue"))
+                else if (data.Property == ErrorWarningProperty.DiskAverageQueueLength)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskAverageQueueLength : ErrorWarningCode.WarningDiskAverageQueueLength;
                 }
-                else if (data.Property.Contains("Firewall"))
+                else if (data.Property == ErrorWarningProperty.TotalActiveFirewallRules)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyFirewallRules : ErrorWarningCode.WarningTooManyFirewallRules;
                 }
-                else if (data.Property.Contains("Ports"))
+                else if (data.Property == ErrorWarningProperty.TotalActivePorts)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyActivePorts : ErrorWarningCode.WarningTooManyActivePorts;
+                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyActivePorts : ErrorWarningCode.WarningTooManyActiveTcpPorts;
+                }
+                else if (data.Property == ErrorWarningProperty.TotalEphemeralPorts)
+                {
+                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyActiveEphemeralPorts : ErrorWarningCode.WarningTooManyActiveEphemeralPorts;
                 }
 
                 var healthMessage = new StringBuilder();
@@ -637,6 +633,7 @@ namespace FabricObserver
                     State = healthState,
                     NodeName = this.NodeName,
                     Observer = this.ObserverName,
+                    ResourceUsageDataProperty = data.Property,
                 };
 
                 // Emit a Fabric Health Report and optionally a local log write...
@@ -697,6 +694,7 @@ namespace FabricObserver
                         State = HealthState.Ok,
                         NodeName = this.NodeName,
                         Observer = this.ObserverName,
+                        ResourceUsageDataProperty = data.Property,
                     };
 
                     // Emit an Ok Health Report to clear Fabric Health warning...

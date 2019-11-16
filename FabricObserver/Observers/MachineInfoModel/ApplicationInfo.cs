@@ -25,14 +25,6 @@ namespace FabricObserver.Model
 
         public int CpuWarningLimitPct { get; set; }
 
-        public int DiskIOErrorReadsPerSecMS { get; set; }
-
-        public int DiskIOErrorWritesPerSecMS { get; set; }
-
-        public int DiskIOWarningReadsPerSecMS { get; set; }
-
-        public int DiskIOWarningWritesPerSecMS { get; set; }
-
         public int NetworkErrorActivePorts { get; set; }
 
         public int NetworkWarningActivePorts { get; set; }
@@ -57,10 +49,6 @@ namespace FabricObserver.Model
                                              $"MemoryErrorLimitPercent: {this.MemoryErrorLimitPercent}\n" +
                                              $"CpuWarningLimit: {this.CpuWarningLimitPct}\n" +
                                              $"CpuErrorLimit: {this.CpuErrorLimitPct}\n" +
-                                             $"DiskErrorIOReadsPerSecMS: {this.DiskIOErrorReadsPerSecMS}\n" +
-                                             $"DiskIOErrorWritesPerSecMS: {this.DiskIOErrorWritesPerSecMS}\n" +
-                                             $"DiskIOWarningReadsPerSecMS: {this.DiskIOWarningReadsPerSecMS}\n" +
-                                             $"DiskIOWarningWritesPerSecMS: {this.DiskIOWarningWritesPerSecMS}\n" +
                                              $"NetworkErrorActivePorts: {this.NetworkErrorActivePorts}\n" +
                                              $"NetworkWarningActivePorts: {this.NetworkWarningActivePorts}\n" +
                                              $"NetworkErrorEphemeralPorts: {this.NetworkErrorEphemeralPorts}\n" +

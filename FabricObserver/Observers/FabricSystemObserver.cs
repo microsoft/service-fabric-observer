@@ -52,8 +52,6 @@ namespace FabricObserver
         // Health Report data container - For use in analysis to deterWarne health state...
         private List<FabricResourceUsageData<int>> allCpuData;
         private List<FabricResourceUsageData<long>> allMemData;
-        private List<FabricResourceUsageData<float>> allAppDiskReadsData;
-        private List<FabricResourceUsageData<float>> allAppDiskWritesData;
 
         // Windows only... (EventLog)...
         private List<EventRecord> evtRecordList = null;
@@ -115,16 +113,16 @@ namespace FabricObserver
                 this.allMemData = new List<FabricResourceUsageData<long>>
                 {
                     // Mem data...
-                    new FabricResourceUsageData<long>("Memory", "Fabric"),
-                    new FabricResourceUsageData<long>("Memory", "FabricApplicationGateway"),
-                    new FabricResourceUsageData<long>("Memory", "FabricCAS"),
-                    new FabricResourceUsageData<long>("Memory", "FabricDCA"),
-                    new FabricResourceUsageData<long>("Memory", "FabricDnsService"),
-                    new FabricResourceUsageData<long>("Memory", "FabricGateway"),
-                    new FabricResourceUsageData<long>("Memory", "FabricHost"),
-                    new FabricResourceUsageData<long>("Memory", "FabricIS"),
-                    new FabricResourceUsageData<long>("Memory", "FabricRM"),
-                    new FabricResourceUsageData<long>("Memory", "FabricUS"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "Fabric"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricApplicationGateway"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricCAS"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricDCA"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricDnsService"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricGateway"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricHost"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricIS"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricRM"),
+                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricUS"),
                 };
             }
 
@@ -133,52 +131,16 @@ namespace FabricObserver
                 this.allCpuData = new List<FabricResourceUsageData<int>>
                 {
                     // Cpu data...
-                    new FabricResourceUsageData<int>("CPU", "Fabric"),
-                    new FabricResourceUsageData<int>("CPU", "FabricApplicationGateway"),
-                    new FabricResourceUsageData<int>("CPU", "FabricCAS"),
-                    new FabricResourceUsageData<int>("CPU", "FabricDCA"),
-                    new FabricResourceUsageData<int>("CPU", "FabricDnsService"),
-                    new FabricResourceUsageData<int>("CPU", "FabricGateway"),
-                    new FabricResourceUsageData<int>("CPU", "FabricHost"),
-                    new FabricResourceUsageData<int>("CPU", "FabricIS"),
-                    new FabricResourceUsageData<int>("CPU", "FabricRM"),
-                    new FabricResourceUsageData<int>("CPU", "FabricUS"),
-                };
-            }
-
-            if (this.allAppDiskReadsData == null)
-            {
-                this.allAppDiskReadsData = new List<FabricResourceUsageData<float>>
-                {
-                    // Disk IO Reads data...
-                    new FabricResourceUsageData<float>("Disk IO Reads", "Fabric"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricApplicationGateway"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricCAS"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricDCA"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricDnsService"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricGateway"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricHost"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricIS"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricRM"),
-                    new FabricResourceUsageData<float>("Disk IO Reads", "FabricUS"),
-                };
-            }
-
-            if (this.allAppDiskWritesData == null)
-            {
-                this.allAppDiskWritesData = new List<FabricResourceUsageData<float>>
-                {
-                    // Disk IO Writes data...
-                    new FabricResourceUsageData<float>("Disk IO Writes", "Fabric"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricApplicationGateway"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricCAS"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricDCA"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricDnsService"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricGateway"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricHost"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricIS"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricRM"),
-                    new FabricResourceUsageData<float>("Disk IO Writes", "FabricUS"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "Fabric"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricApplicationGateway"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricCAS"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricDCA"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricDnsService"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricGateway"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricHost"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricIS"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricRM"),
+                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricUS"),
                 };
             }
 
@@ -374,12 +336,6 @@ namespace FabricObserver
                 if (!this.HasActiveFabricErrorOrWarning)
                 {
                     // Clear out/null list objects...
-                    this.allAppDiskReadsData.Clear();
-                    this.allAppDiskReadsData = null;
-
-                    this.allAppDiskWritesData.Clear();
-                    this.allAppDiskWritesData = null;
-
                     this.allCpuData.Clear();
                     this.allCpuData = null;
 
@@ -401,6 +357,7 @@ namespace FabricObserver
         private void GetProcessInfo(string procName)
         {
             var processes = Process.GetProcessesByName(procName);
+            
             if (processes?.Length == 0)
             {
                 return;
@@ -427,19 +384,6 @@ namespace FabricObserver
                             int cpu = (int)this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
 
                             this.allCpuData.FirstOrDefault(x => x.Id == procName).Data.Add(cpu);
-
-                            // Disk IO (per-process disk reads/writes per sec)
-                            this.allAppDiskReadsData.FirstOrDefault(x => x.Id == procName)
-                                 .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(
-                                     process.ProcessName,
-                                     "Process",
-                                     "IO Read Operations/sec"));
-
-                            this.allAppDiskWritesData.FirstOrDefault(x => x.Id == procName)
-                                 .Data.Add(this.diskUsage.PerfCounterGetDiskIOInfo(
-                                     process.ProcessName,
-                                     "Process",
-                                     "IO Write Operations/sec"));
 
                             // Memory - Private WS for proc...
                             var workingset = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(process.ProcessName);
@@ -597,18 +541,6 @@ namespace FabricObserver
                 this.MemErrorUsageThresholdMB,
                 this.MemWarnUsageThresholdMB);
 
-            // Disk IO - Reads
-            this.ProcessResourceDataList(
-                this.allAppDiskReadsData,
-                this.DiskErrorIOReadsThresholdMS,
-                this.DiskWarnIOReadsThresholdMS);
-
-            // Disk IO - Writes
-            this.ProcessResourceDataList(
-                this.allAppDiskWritesData,
-                this.DiskErrorIOWritesThresholdMS,
-                this.DiskWarnIOWritesThresholdMS);
-
             // Windows Event Log
             if (ObserverManager.ObserverWebAppDeployed
                 && this.monitorWinEventLog)
@@ -739,12 +671,12 @@ namespace FabricObserver
                     // Log file output...
                     string resourceProp = propertyName + " use";
 
-                    if (propertyName == "Memory")
+                    if (propertyName == ErrorWarningProperty.TotalMemoryConsumptionPct)
                     {
                         dataLogMonitorType = "Working Set (MB)";
                     }
 
-                    if (propertyName == "CPU")
+                    if (propertyName == ErrorWarningProperty.TotalCpuTime)
                     {
                         dataLogMonitorType = "% CPU Time";
                     }

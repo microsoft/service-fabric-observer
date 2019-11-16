@@ -55,11 +55,6 @@ folder (AppObserver.config.json):
   {
     "target": "fabric:/MyApp",
     "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 30,
-    "diskIOErrorReadsPerSecMS": 0,
-    "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 0,
-    "diskIOWarningWritesPerSecMS": 0,
     "dumpProcessOnError": false,
     "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 60,
@@ -73,10 +68,6 @@ folder (AppObserver.config.json):
     "serviceIncludeList": "MyService42, MyOtherService42",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 8,
-    "diskIOErrorReadsPerSecMS": 0,
-    "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 0,
-    "diskIOWarningWritesPerSecMS": 0,
     "dumpProcessOnError": false,
     "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 60,
@@ -89,10 +80,6 @@ folder (AppObserver.config.json):
     "target": "fabric:/FabricObserver",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
-    "diskIOErrorReadsPerSecMS": 0,
-    "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 0,
-    "diskIOWarningWritesPerSecMS": 0,
     "dumpProcessOnError": false,
     "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 30,
@@ -105,10 +92,6 @@ folder (AppObserver.config.json):
     "target": "fabric:/FabricObserverWebApi",
     "cpuErrorLimitPct": 0,
     "cpuWarningLimitPct": 30,
-    "diskIOErrorReadsPerSecMS": 0,
-    "diskIOErrorWritesPerSecMS": 0,
-    "diskIOWarningReadsPerSecMS": 0,
-    "diskIOWarningWritesPerSecMS": 0,
     "dumpProcessOnError": false,
     "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 30,
@@ -134,10 +117,6 @@ All settings are optional, ***except target***, and can be omitted if you don't 
 | **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) | 
 | **cpuErrorLimitPct** | Maximum CPU percentage that should generate a Fabric Error |
 | **cpuWarningLimitPct** | Minimum CPU percentage that should generate a Fabric Warning |
-| **diskIOErrorReadsPerSecMS** | Maximum number of milliseconds for average sec/Read IO on system logical disk that will generate a Fabric Error. |
-| **diskIOWarningReadsPerSecMS** | Minimum number of milliseconds for average sec/Read IO on system logical disk that will generate a Fabric warning. |
-| **diskIOErrorWritesPerSecMS** | Maximum number of milliseconds for average sec/Write IO on system logical disk that will generate a Fabric Error. |
-| **diskIOWarningWritesPerSecMS** | Minimum number of milliseconds for average sec/Write IO on system logical disk that will generate a Fabric Warning. |
 | **dumpProcessOnError** | Instructs whether or not FabricObserver should   dump your service process when service health is detected to be in an  Error (critical) state... |  
 | **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate a Fabric Error. |
 | **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning. |
@@ -194,10 +173,6 @@ don't plan you using... You can either omit the XML node or leave the value blan
     <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthWarningThreshold" Value="7" />
-    <Parameter Name="IOReadsErrorThreshold" Value="" />
-    <Parameter Name="IOReadsWarningThreshold" Value="" />
-    <Parameter Name="IOWritesErrorThreshold" Value="" />
-    <Parameter Name="IOWritesWarningThreshold" Value="" />
   </Section>
 ```
 
@@ -218,8 +193,6 @@ Drive Type: Fixed \
   Free User : 98 GB \
   Free Total: 98 GB \
   % Used    : 22% \
-  Avg. Disk sec/Read: 0 ms \
-  Avg. Disk sec/Write: 1.36 ms \
   Avg. Disk Queue Length: 0.017 
 
 Drive Name: D:\  
@@ -231,8 +204,6 @@ Drive Type: Fixed
   Free User : 52 GB  
   Free Total: 52 GB  
   % Used    : 47%  
-  Avg. Disk sec/Read: 0 ms  
-  Avg. Disk sec/Write: 0.014 ms  
   Avg. Disk Queue Length: 0   
 
 **This observer also optionally outputs a CSV file containing all resource usage
@@ -386,9 +357,9 @@ until the observer runs again...
     <Parameter Name="CpuErrorLimitPercent" Value="" />
     <Parameter Name="CpuWarningLimitPercent" Value="90" />
     <Parameter Name="MemoryErrorLimitMB" Value="" />
-    <Parameter Name="MemoryWarningLimitMB" Value ="" />
+    <Parameter Name="MemoryWarningLimitMB" Value="" />
     <Parameter Name="MemoryErrorLimitPercent" Value="" />
-    <Parameter Name="MemoryWarningLimitPercent" Value ="90" />
+    <Parameter Name="MemoryWarningLimitPercent" Value="90" />
     <Parameter Name="NetworkErrorActivePorts" Value="" />
     <Parameter Name="NetworkWarningActivePorts" Value="55000" />
     <Parameter Name="NetworkErrorFirewallRules" Value="" />
