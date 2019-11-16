@@ -10,8 +10,6 @@ namespace FabricObserver.Utilities
 {
     public class WindowsPerfCounters : IDisposable
     {
-        private PerformanceCounter diskReadsPerfCounter;
-        private PerformanceCounter diskWritesPerfCounter;
         private PerformanceCounter diskAverageQueueLengthCounter;
         private PerformanceCounter cpuTimePerfCounter;
         private PerformanceCounter memCommittedBytesPerfCounter;
@@ -34,8 +32,6 @@ namespace FabricObserver.Utilities
         {
             try
             {
-                this.diskReadsPerfCounter = new PerformanceCounter();
-                this.diskWritesPerfCounter = new PerformanceCounter();
                 this.diskAverageQueueLengthCounter = new PerformanceCounter();
                 this.cpuTimePerfCounter = new PerformanceCounter();
                 this.memCommittedBytesPerfCounter = new PerformanceCounter();
@@ -53,95 +49,6 @@ namespace FabricObserver.Utilities
             }
 
             return true;
-        }
-
-        internal float PerfCounterGetIOReadInfo(
-            string instance,
-            string category = null,
-            string countername = null)
-        {
-            string cat = "LogicalDisk";
-            string counter = "% Disk Read Time";
-
-            try
-            {
-                if (!string.IsNullOrEmpty(category))
-                {
-                    cat = category;
-                }
-
-                if (!string.IsNullOrEmpty(countername))
-                {
-                    counter = countername;
-                }
-
-                this.diskReadsPerfCounter.CategoryName = cat;
-                this.diskReadsPerfCounter.CounterName = counter;
-                this.diskReadsPerfCounter.InstanceName = instance;
-
-                return this.diskReadsPerfCounter.NextValue();
-            }
-            catch (Exception e)
-            {
-                if (e is ArgumentNullException || e is PlatformNotSupportedException
-                    || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e.ToString());
-
-                    // Don't throw...
-                    return 0F;
-                }
-                else
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e.ToString());
-                    throw;
-                }
-            }
-        }
-
-        internal float PerfCounterGetIOWriteInfo(
-            string instance,
-            string category = null,
-            string countername = null)
-        {
-            string cat = "LogicalDisk";
-            string counter = "% Disk Write Time";
-
-            try
-            {
-                if (!string.IsNullOrEmpty(category))
-                {
-                    cat = category;
-                }
-
-                if (!string.IsNullOrEmpty(countername))
-                {
-                    counter = countername;
-                }
-
-                this.diskWritesPerfCounter.CategoryName = cat;
-                this.diskWritesPerfCounter.CounterName = counter;
-                this.diskWritesPerfCounter.InstanceName = instance;
-
-                return this.diskWritesPerfCounter.NextValue();
-            }
-            catch (Exception e)
-            {
-                if (e is ArgumentNullException || e is PlatformNotSupportedException
-                    || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e.ToString());
-
-                    // Don't throw...
-                    return 0F;
-                }
-                else
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e.ToString());
-
-                    throw;
-                }
-            }
         }
 
         internal float PerfCounterGetAverageDiskQueueLength(string instance)
@@ -308,18 +215,6 @@ namespace FabricObserver.Utilities
             {
                 if (disposing)
                 {
-                    if (this.diskReadsPerfCounter != null)
-                    {
-                        this.diskReadsPerfCounter.Dispose();
-                        this.diskReadsPerfCounter = null;
-                    }
-
-                    if (this.diskWritesPerfCounter != null)
-                    {
-                        this.diskWritesPerfCounter.Dispose();
-                        this.diskWritesPerfCounter = null;
-                    }
-
                     if (this.diskAverageQueueLengthCounter != null)
                     {
                         this.diskAverageQueueLengthCounter.Dispose();

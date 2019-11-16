@@ -102,6 +102,28 @@ namespace FabricObserver.Utilities
             return ConvertToSizeUnits(total, sizeUnit);
         }
 
+        internal float GetAverageDiskQueueLength(string instance)
+        {
+            return this.winPerfCounters.PerfCounterGetAverageDiskQueueLength(instance);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.isDisposed)
+            {
+                if (disposing)
+                {
+                    if (this.winPerfCounters != null)
+                    {
+                        this.winPerfCounters.Dispose();
+                        this.winPerfCounters = null;
+                    }
+                }
+
+                this.isDisposed = true;
+            }
+        }
+
         private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)
         {
             switch (sizeUnit)
@@ -123,43 +145,6 @@ namespace FabricObserver.Utilities
 
                 default:
                     return amount;
-            }
-        }
-
-        internal float PerfCounterGetDiskIOInfo(
-            string instance,
-            string category,
-            string countername)
-        {
-            if (countername.Contains("Read"))
-            {
-                return this.winPerfCounters.PerfCounterGetIOReadInfo(instance, category, countername);
-            }
-            else
-            {
-                return this.winPerfCounters.PerfCounterGetIOWriteInfo(instance, category, countername);
-            }
-        }
-
-        internal float GetAverageDiskQueueLength(string instance)
-        {
-            return this.winPerfCounters.PerfCounterGetAverageDiskQueueLength(instance);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this.isDisposed)
-            {
-                if (disposing)
-                {
-                    if (this.winPerfCounters != null)
-                    {
-                        this.winPerfCounters.Dispose();
-                        this.winPerfCounters = null;
-                    }
-                }
-
-                this.isDisposed = true;
             }
         }
 
