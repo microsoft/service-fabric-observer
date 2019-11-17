@@ -169,7 +169,7 @@ namespace FabricObserver
                 }
 
                 var resultsOrdered = results.Cast<ManagementObject>()
-                                            .OrderByDescending(obj => obj["InstalledOn"]);
+                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"]?.ToString()));
 
                 var sb = new StringBuilder();
 
@@ -179,7 +179,7 @@ namespace FabricObserver
 
                     if (generateUrl)
                     {
-                        sb.AppendFormat("<a href=\"{0}\" target=\"_blank\">{1}</a>", obj["Caption"], obj["HotFixID"]);
+                        sb.AppendFormat("<a href=\"{0}\" target=\"_blank\">{1}</a>   {2}", obj["Caption"], obj["HotFixID"], obj["InstalledOn"]);
                     }
                     else
                     {
@@ -195,7 +195,16 @@ namespace FabricObserver
             catch (ArgumentException)
             {
             }
+            catch (FormatException)
+            {
+            }
+            catch (InvalidCastException)
+            {
+            }
             catch (ManagementException)
+            {
+            }
+            catch (NullReferenceException)
             {
             }
             finally

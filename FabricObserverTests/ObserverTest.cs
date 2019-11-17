@@ -706,6 +706,10 @@ namespace FabricObserverTests
             objReady?.Dispose();
         }
 
+
+        /****** These tests do NOT work without a running local SF cluster
+                or in an Azure DevOps VSTest Pipeline ******/
+
         /// <summary>
         /// Incorrect/meaningless config properties tests. Ensure that bad values do not
         /// crash observers OR they do, which is your design decision...
@@ -746,9 +750,6 @@ namespace FabricObserverTests
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
         }
-
-        /****** These tests do NOT work without a running local SF cluster
-                or in an Azure DevOps VSTest Pipeline ******/
 
         [TestMethod]
         public async Task CertificateObserver_validCerts()
