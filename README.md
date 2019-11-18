@@ -27,7 +27,11 @@ Application Level Warnings:
 Node Level Warnings: 
 
 ![alt text](/Documentation/Images/Chaos3.jpg "")  
-![alt text](/Documentation/Images/ChaosNode.jpg "")  
+![alt text](/Documentation/Images/MultipleWarningsSFX.jpg "")  
+
+Node Level Machine Info:  
+
+![alt text](/Documentation/Images/OSObsKBLinks.jpg "")  
 
 
 FabricObserver comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
