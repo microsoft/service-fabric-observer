@@ -236,9 +236,7 @@ namespace FabricObserver
             int activePorts = 0;
             int activeEphemeralPorts = 0;
             int totalVirtMem = 0;
-            string windowsDynamicPortRange = string.Empty;
             string fabricAppPortRange = string.Empty;
-            string hotFixes = string.Empty;
             string osLang = string.Empty;
             double freePhysicalMem = 0;
             double freeVirtualMem = 0;
@@ -386,7 +384,9 @@ namespace FabricObserver
 
                 // Disk
                 var drivesInformation = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
-                sb.AppendLine($"LogicalDriveCount: {drivesInformation.Count}");
+                logicalDriveCount = drivesInformation.Count;
+
+                sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
 
                 foreach (var tuple in drivesInformation)
                 {
