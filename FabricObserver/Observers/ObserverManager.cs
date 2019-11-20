@@ -573,9 +573,7 @@ namespace FabricObserver
 
         private bool RunObservers()
         {
-            // Continue to run the next Observer if current one fails while initializing or running
             var exceptionBuilder = new StringBuilder();
-            var exceptionStackTraceBuilder = new StringBuilder();
             bool allExecuted = true;
 
             foreach (var observer in this.observers)
@@ -602,11 +600,8 @@ namespace FabricObserver
                     var isCompleted = observer.ObserveAsync(this.cts.Token).Wait(this.observerExecTimeout);
                     this.IsObserverRunning = false;
 
-                    // The observer is taking too long (hung?), move on to next observer...
+                    // The observer is taking too long (hung?), move on to next observer.
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
-                    // So, application will need a restart...
-                    // TODO: Be less restrictive, but do fix the broken observer if/when this happens, as it means there is probably
-                    // a bug in your code...
                     if (!isCompleted)
                     {
                         string observerHealthWarning = observer.ObserverName + $" has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
@@ -617,7 +612,6 @@ namespace FabricObserver
                         // TODO: Add HealthReport (App Level)...
                         observer.IsUnhealthy = true;
 
-                        // Telemetry...
                         if (TelemetryEnabled)
                         {
                             _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", $"{observer.ObserverName} on node {this.nodeName} has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds.", this.token);
@@ -673,13 +667,7 @@ namespace FabricObserver
 
                     if (!(ex.InnerException is OperationCanceledException) && !(ex.InnerException is TaskCanceledException))
                     {
-                        this.Logger.LogError($"Exception while running {observer.ObserverName}");
-                        this.Logger.LogError($"Exception: {ex.InnerException.Message}");
-                        this.Logger.LogError($"StackTrace: {ex.InnerException.StackTrace}");
-
-                        exceptionBuilder.AppendLine($"{observer.ObserverName} - Exception: {ex.InnerException.Message}");
-                        exceptionStackTraceBuilder.AppendLine($"{observer.ObserverName} - StackTrace: {ex.InnerException.StackTrace}");
-
+                        exceptionBuilder.AppendLine($"Exception from {observer.ObserverName}:\r\n{ex.InnerException.ToString()}");
                         allExecuted = false;
                     }
                 }
@@ -710,12 +698,13 @@ namespace FabricObserver
             else
             {
                 this.Logger.LogError(exceptionBuilder.ToString());
-                this.Logger.LogError(exceptionStackTraceBuilder.ToString());
                 this.HealthReporter.ReportFabricObserverServiceHealth(
                     ObserverConstants.ObserverManangerName,
                     this.ApplicationName,
                     HealthState.Error,
                     exceptionBuilder.ToString());
+
+                exceptionBuilder.Clear();
             }
 
             return allExecuted;

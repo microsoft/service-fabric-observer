@@ -228,16 +228,23 @@ namespace FabricObserver
 
             string osName = string.Empty;
             string osVersion = string.Empty;
-            string numProcs = "-1";
+            int numProcs = 0;
             string lastBootTime = string.Empty;
             string installDate = string.Empty;
-            int driveCount = 0;
+            int logicalProcessorCount = Environment.ProcessorCount;
+            int logicalDriveCount = 0;
+            int activePorts = 0;
+            int activeEphemeralPorts = 0;
+            int totalVirtMem = 0;
+            string windowsDynamicPortRange = string.Empty;
+            string fabricAppPortRange = string.Empty;
+            string hotFixes = string.Empty;
+            string osLang = string.Empty;
 
             try
             {
                 win32OSInfo = new ManagementObjectSearcher("SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory,TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
                 results = win32OSInfo.Get();
-                sb.AppendLine($"\nOS Info:\n");
 
                 foreach (var prop in results)
                 {
@@ -247,79 +254,73 @@ namespace FabricObserver
                     {
                         token.ThrowIfCancellationRequested();
 
-                        string n = p.Name;
-                        string v = p.Value.ToString();
+                        string name = p.Name;
+                        string value = p.Value.ToString();
 
-                        if (string.IsNullOrEmpty(n) || string.IsNullOrEmpty(v))
+                        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
                         {
                             continue;
                         }
 
-                        if (n.ToLower() == "caption")
+                        if (name.ToLower() == "caption")
                         {
-                            n = "OS";
-                            osName = v;
+                            osName = value;
                         }
-
-                        if (n.ToLower() == "numberofprocesses")
+                        else if (name.ToLower() == "numberofprocesses")
                         {
                             // Number of running processes
-                            numProcs = v;
-
-                            // Also show number of processors on machine (logical cores)...
-                            sb.AppendLine($"LogicalProcessorCount: {Environment.ProcessorCount}");
+                            _ = int.TryParse(value, out numProcs);
                         }
-
-                        if (n.ToLower() == "status")
+                        else if (name.ToLower() == "status")
                         {
-                            this.osStatus = v;
+                            this.osStatus = value;
                         }
-
-                        if (n.ToLower() == "version")
+                        else if (name.ToLower() == "oslanguage")
                         {
-                            osVersion = v;
+                            osLang = value;
                         }
-
-                        if (n.ToLower().Contains("bootuptime"))
+                        else if (name.ToLower() == "version")
                         {
-                            v = ManagementDateTimeConverter.ToDateTime(v).ToUniversalTime().ToString("o");
-                            lastBootTime = v;
+                            osVersion = value;
                         }
-
-                        if (n.ToLower().Contains("date"))
+                        else if (name.ToLower().Contains("bootuptime"))
                         {
-                            v = ManagementDateTimeConverter.ToDateTime(v).ToUniversalTime().ToString("o");
-                            installDate = v;
+                            value = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
+                            lastBootTime = value;
                         }
-
-                        if (n.ToLower().Contains("memory"))
+                        else if (name.ToLower().Contains("date"))
                         {
-                            if (n.ToLower().Contains("freephysical") ||
-                                n.ToLower().Contains("freevirtual"))
+                            value = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
+                            installDate = value;
+                        }
+                        else if (name.ToLower().Contains("memory"))
+                        {
+                            if (name.ToLower().Contains("freephysical") ||
+                                name.ToLower().Contains("freevirtual"))
                             {
                                 continue;
                             }
 
                             // For output...
-                            int i = int.Parse(v) / 1024 / 1024;
-                            v = i.ToString() + " GB";
+                            int i = int.Parse(value) / 1024 / 1024;
 
                             // TotalVisible only needs to be set once...
-                            if (n.ToLower().Contains("totalvisible"))
+                            if (name.ToLower().Contains("totalvisible"))
                             {
                                 this.totalVisibleMemoryGB = i;
                             }
+                            else if (name.ToLower().Contains("totalvirtual"))
+                            {
+                                totalVirtMem = i;
+                            }
                         }
-
-                        sb.AppendLine($"{n}: {v}");
                     }
                 }
 
                 try
                 {
                     // We only care about ready drives (so, things like an empty DVD drive are not interesting...)
-                    driveCount = DriveInfo.GetDrives().Where(d => d.IsReady).Count();
-                    sb.AppendLine($"LogicalDriveCount: {driveCount}");
+                    logicalDriveCount = DriveInfo.GetDrives().Where(d => d.IsReady).Count();
                 }
                 catch (ArgumentException)
                 {
@@ -331,17 +332,15 @@ namespace FabricObserver
                 {
                 }
 
-                this.osReport = sb.ToString();
-
                 // Active, bound ports...
-                int activePorts = NetworkUsage.GetActivePortCount();
+                activePorts = NetworkUsage.GetActivePortCount();
 
                 // Active, ephemeral ports...
-                int activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
+                activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
                 var dynamicPortRange = NetworkUsage.TupleGetDynamicPortRange();
                 string clusterManifestXml = null;
                 string osEphemeralPortRange = string.Empty;
-                string fabricAppPortRange = string.Empty;
+                fabricAppPortRange = string.Empty;
 
                 if (this.IsTestRun)
                 {
@@ -353,43 +352,72 @@ namespace FabricObserver
                 }
 
                 var appPortRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
-
-                // Enabled Firewall rules...
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
-                if (firewalls > -1)
-                {
-                    this.osReport += $"EnabledFireWallRules: {firewalls}\r\n";
-                }
-
-                if (activePorts > -1)
-                {
-                    this.osReport += $"TotalActiveTCPPorts: {activePorts}\r\n";
-                }
+                // OS info...
+                sb.AppendLine("OS Information:\r\n");
+                sb.AppendLine($"Name: {osName}");
+                sb.AppendLine($"Version: {osVersion}");
+                sb.AppendLine($"InstallDate: {installDate}");
+                sb.AppendLine($"LastBootUpTime*: {lastBootTime}");
+                sb.AppendLine($"OSLanguage: {osLang}");
+                sb.AppendLine($"OSHealthStatus*: {this.osStatus}");
+                sb.AppendLine($"NumberOfProcesses*: {numProcs}");
 
                 if (dynamicPortRange.Item1 > -1)
                 {
                     osEphemeralPortRange = $"{dynamicPortRange.Item1} - {dynamicPortRange.Item2}";
-                    this.osReport += $"WindowsEphemeralTCPPortRange: {osEphemeralPortRange}\r\n";
+                    sb.AppendLine($"WindowsEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
                 }
 
                 if (appPortRange.Item1 > -1)
                 {
                     fabricAppPortRange = $"{appPortRange.Item1} - {appPortRange.Item2}";
-                    this.osReport += $"FabricApplicationTCPPortRange: {fabricAppPortRange}\r\n";
+                    sb.AppendLine($"FabricApplicationTCPPortRange: {fabricAppPortRange}");
                 }
 
-                if (activeEphemeralPorts > -1)
+                if (firewalls > -1)
                 {
-                    this.osReport += $"ActiveEphemeralTCPPorts: {activeEphemeralPorts}\r\n";
+                    sb.AppendLine($"ActiveFirewallRules*: {firewalls}");
+                }
+
+                if (activePorts > -1)
+                {
+                    sb.AppendLine($"TotalActiveTCPPorts*: {activePorts}");
+                }
+
+                // Hardware info...
+                sb.AppendLine("\r\nHardware Information:\r\n");
+                sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
+                sb.AppendLine($"TotalVirtualMemorySize: {totalVirtMem} GB");
+                sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGB} GB");
+                sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
+                var drivesInformation = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
+
+                foreach (var tuple in drivesInformation)
+                {
+                    string systemDrv = "Ephemeral";
+
+                    if (Environment.SystemDirectory.Substring(0, 1) == tuple.Item1)
+                    {
+                        systemDrv = "System";
+                    }
+
+                    sb.AppendLine($"Drive {tuple.Item1}({systemDrv}) Size: {tuple.Item2} GB");
+                    sb.AppendLine($"Drive {tuple.Item1}({systemDrv}) Consumed*: {tuple.Item3}%");
                 }
 
                 string osHotFixes = GetWindowsHotFixes(token);
 
                 if (!string.IsNullOrEmpty(osHotFixes))
                 {
-                    this.osReport += $"\nOS Patches/Hot Fixes:\n\n{osHotFixes}\r\n";
+                    sb.AppendLine($"\nWindows Patches/Hot Fixes*:\n\n{osHotFixes}");
                 }
+
+                // Dynamic info qualifier (*)
+                sb.AppendLine($"\n* Dynamic data.");
+
+                this.osReport = sb.ToString();
 
                 // ETW...
                 if (this.IsEtwEnabled)
@@ -406,9 +434,9 @@ namespace FabricObserver
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
                             TotalMemorySizeGB = this.totalVisibleMemoryGB,
-                            LogicalProcessorCount = Environment.ProcessorCount,
-                            LogicalDriveCount = driveCount,
-                            NumberOfRunningProcesses = int.Parse(numProcs),
+                            LogicalProcessorCount = logicalProcessorCount,
+                            LogicalDriveCount = logicalDriveCount,
+                            NumberOfRunningProcesses = numProcs,
                             ActiveFirewallRules = firewalls,
                             ActivePorts = activePorts,
                             ActiveEphemeralPorts = activeEphemeralPorts,

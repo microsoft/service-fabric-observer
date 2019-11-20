@@ -228,7 +228,18 @@ namespace FabricObserver
             try
             {
                 var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
-                string setting = serviceConfiguration.Settings.Sections[sectionName].Parameters[parameterName].Value;
+
+                if (!serviceConfiguration.Settings.Sections.Any(sec => sec.Name == sectionName))
+                {
+                    return null;
+                }
+
+                if (!serviceConfiguration.Settings.Sections[sectionName].Parameters.Any(param => param.Name == parameterName))
+                {
+                    return null;
+                }
+
+                string setting = serviceConfiguration.Settings.Sections[sectionName].Parameters[parameterName]?.Value;
 
                 if (string.IsNullOrEmpty(setting) && defaultValue != null)
                 {
@@ -236,6 +247,10 @@ namespace FabricObserver
                 }
 
                 return setting;
+            }
+            catch (ArgumentException)
+            {
+                return null;
             }
             catch (KeyNotFoundException)
             {
