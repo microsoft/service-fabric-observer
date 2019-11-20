@@ -73,10 +73,6 @@ namespace FabricObserver
 
         public int MemErrorUsageThresholdMB { get; set; } = 15000;
 
-        public int DiskErrorIOReadsThresholdMS { get; set; } = 0;
-
-        public int DiskErrorIOWritesThresholdMS { get; set; } = 0;
-
         public int TotalActivePortCount { get; set; } = 0;
 
         public int TotalActiveEphemeralPortCount { get; set; } = 0;
@@ -89,13 +85,9 @@ namespace FabricObserver
 
         public int MemWarnUsageThresholdMB { get; set; } = 14000;
 
-        public int DiskWarnIOReadsThresholdMS { get; set; } = 20000;
-
-        public int DiskWarnIOWritesThresholdMS { get; set; } = 20000;
-
         public string ErorrOrWarningKind { get; set; } = null;
 
-        private bool Initialize()
+        private void Initialize()
         {
             if (this.stopWatch == null)
             {
@@ -148,8 +140,6 @@ namespace FabricObserver
             {
                 this.evtRecordList = new List<EventRecord>();
             }
-
-            return true;
         }
 
         private void SetThresholdsFromConfiguration()
@@ -164,7 +154,14 @@ namespace FabricObserver
 
             if (!string.IsNullOrEmpty(cpuError))
             {
-                this.CpuErrorUsageThresholdPct = int.Parse(cpuError);
+                _ = int.TryParse(cpuError, out int threshold);
+
+                if (threshold > 100 || threshold < 0)
+                {
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorCpu}...");
+                }
+
+                this.CpuErrorUsageThresholdPct = threshold;
             }
 
             var memError = this.GetSettingParameterValue(
@@ -173,25 +170,14 @@ namespace FabricObserver
 
             if (!string.IsNullOrEmpty(memError))
             {
-                this.MemErrorUsageThresholdMB = int.Parse(memError);
-            }
+                _ = int.TryParse(memError, out int threshold);
 
-            var diskIOReadsError = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverErrorDiskIOReads);
+                if (threshold < 0)
+                {
+                    throw new ArgumentException($"{threshold} is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorMemory}...");
+                }
 
-            if (!string.IsNullOrEmpty(diskIOReadsError))
-            {
-                this.DiskErrorIOReadsThresholdMS = int.Parse(diskIOReadsError);
-            }
-
-            var diskIOWritesError = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverErrorDiskIOWrites);
-
-            if (!string.IsNullOrEmpty(diskIOWritesError))
-            {
-                this.DiskErrorIOWritesThresholdMS = int.Parse(diskIOWritesError);
+                this.MemErrorUsageThresholdMB = threshold;
             }
 
             var percentErrorUnhealthyNodes = this.GetSettingParameterValue(
@@ -200,7 +186,14 @@ namespace FabricObserver
 
             if (!string.IsNullOrEmpty(percentErrorUnhealthyNodes))
             {
-                this.unhealthyNodesErrorThreshold = int.Parse(percentErrorUnhealthyNodes);
+                _ = int.TryParse(percentErrorUnhealthyNodes, out int threshold);
+
+                if (threshold > 100 || threshold < 0)
+                {
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorPercentUnhealthyNodes}...");
+                }
+
+                this.unhealthyNodesErrorThreshold = threshold;
             }
 
             /* Warning thresholds */
@@ -213,7 +206,14 @@ namespace FabricObserver
 
             if (!string.IsNullOrEmpty(cpuWarn))
             {
-                this.CpuWarnUsageThresholdPct = int.Parse(cpuWarn);
+                _ = int.TryParse(cpuWarn, out int threshold);
+
+                if (threshold > 100 || threshold < 0)
+                {
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnCpu}...");
+                }
+
+                this.CpuWarnUsageThresholdPct = threshold;
             }
 
             var memWarn = this.GetSettingParameterValue(
@@ -222,25 +222,14 @@ namespace FabricObserver
 
             if (!string.IsNullOrEmpty(memWarn))
             {
-                this.MemWarnUsageThresholdMB = int.Parse(memWarn);
-            }
+                _ = int.TryParse(memWarn, out int threshold);
 
-            var diskIOReadsWarn = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverWarnDiskIOReads);
+                if (threshold < 0)
+                {
+                    throw new ArgumentException($"{threshold} MB is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnMemory}...");
+                }
 
-            if (!string.IsNullOrEmpty(diskIOReadsWarn))
-            {
-                this.DiskWarnIOReadsThresholdMS = int.Parse(diskIOReadsWarn);
-            }
-
-            var diskIOWritesWarn = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverWarnDiskIOWrites);
-
-            if (!string.IsNullOrEmpty(diskIOWritesWarn))
-            {
-                this.DiskWarnIOWritesThresholdMS = int.Parse(diskIOWritesWarn);
+                this.MemWarnUsageThresholdMB = threshold;
             }
 
             var percentWarnUnhealthyNodes = this.GetSettingParameterValue(
@@ -249,10 +238,18 @@ namespace FabricObserver
 
             if (!string.IsNullOrEmpty(percentWarnUnhealthyNodes))
             {
-                this.unhealthyNodesWarnThreshold = int.Parse(percentWarnUnhealthyNodes);
+                _ = int.TryParse(percentWarnUnhealthyNodes, out int threshold);
+
+                if (threshold > 100 || threshold < 0)
+                {
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold for a {ObserverConstants.FabricSystemObserverWarnPercentUnhealthyNodes}...");
+                }
+
+                this.unhealthyNodesWarnThreshold = threshold;
             }
 
             // Monitor Windows event log for SF and System Error/Critical events?
+            // This can be noisy... Use wisely...
             var watchEvtLog = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
@@ -281,8 +278,6 @@ namespace FabricObserver
                 return;
             }
 
-            this.Initialize();
-
             if (this.FabricClientInstance.QueryManager.GetNodeListAsync().GetAwaiter().GetResult()?.Count > 3
                 && await this.CheckClusterHealthStateAsync(
                     this.unhealthyNodesWarnThreshold,
@@ -290,6 +285,8 @@ namespace FabricObserver
             {
                 return;
             }
+
+            this.Initialize();
 
             this.perfCounters = new WindowsPerfCounters();
             this.diskUsage = new DiskUsage();
@@ -660,10 +657,10 @@ namespace FabricObserver
                     continue;
                 }
 
-                var propertyName = data.First().Property;
                 if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryEnabled)
                 {
                     var fileName = "FabricSystemServices_" + this.NodeName;
+                    var propertyName = data.First().Property;
 
                     // Log average data value to long-running store (CSV)...
                     string dataLogMonitorType = propertyName;
@@ -673,18 +670,12 @@ namespace FabricObserver
 
                     if (propertyName == ErrorWarningProperty.TotalMemoryConsumptionPct)
                     {
-                        dataLogMonitorType = "Working Set (MB)";
+                        dataLogMonitorType = "Working Set %";
                     }
 
                     if (propertyName == ErrorWarningProperty.TotalCpuTime)
                     {
                         dataLogMonitorType = "% CPU Time";
-                    }
-
-                    if (propertyName.Contains("Disk IO"))
-                    {
-                        dataLogMonitorType += "/ms";
-                        resourceProp = propertyName;
                     }
 
                     this.CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));

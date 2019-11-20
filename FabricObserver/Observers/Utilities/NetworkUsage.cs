@@ -88,8 +88,8 @@ namespace FabricObserver.Utilities
         /// <param name="protocol">Optional Protocol (defaults to TCP. Cannot be None...)</param>
         /// <returns></returns>
         internal static List<Tuple<int, int>> TupleGetEphemeralPortProcessCount(
-            int procId = -1,
-            Protocol protocol = Protocol.TCP)
+                                                int procId = -1,
+                                                Protocol protocol = Protocol.TCP)
         {
             try
             {
@@ -259,8 +259,8 @@ namespace FabricObserver.Utilities
         }
 
         internal static int GetActiveEphemeralPortCount(
-            int procId = -1,
-            Protocol protocol = Protocol.TCP)
+                                int procId = -1,
+                                Protocol protocol = Protocol.TCP)
         {
             try
             {
