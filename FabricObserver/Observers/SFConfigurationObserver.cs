@@ -18,7 +18,7 @@ namespace FabricObserver
 {
     // This observer doesn't monitor or report health status.
     // It provides information about the currently installed Service Fabric runtime environment, apps, and services.
-    // The output (a local file) is used by the API service that outputs HTML (http://localhost:5000/api/ObserverManager).
+    // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
     public class SFConfigurationObserver : ObserverBase
     {
         // SF Reg Key Path...
