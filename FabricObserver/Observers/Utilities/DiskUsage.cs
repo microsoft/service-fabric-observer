@@ -42,6 +42,14 @@ namespace FabricObserver.Utilities
         /// </summary>
         internal int PercentUsedSpace => this.GetCurrentDiskSpaceUsedPercent(this.Drive);
 
+        internal static double GetTotalDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
+        {
+            var driveInfo = new DriveInfo(driveLetter);
+            long total = driveInfo.TotalSize;
+
+            return Math.Round(ConvertToSizeUnits(total, sizeUnit), 2);
+        }
+
         internal int GetCurrentDiskSpaceUsedPercent(string drive)
         {
             if (string.IsNullOrEmpty(drive))
@@ -57,11 +65,11 @@ namespace FabricObserver.Utilities
             return (int)(usedPct * 100);
         }
 
-        internal List<Tuple<string, int>> GetCurrentDiskSpaceUsedPercentAllDrives()
+        internal List<Tuple<string, double, int>> GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
 
-            var tuples = new List<Tuple<string, int>>();
+            var tuples = new List<Tuple<string, double, int>>();
 
             for (int i = 0; i < allDrives.Length; i++)
             {
@@ -71,8 +79,9 @@ namespace FabricObserver.Utilities
                 }
 
                 var drivename = allDrives[i].Name;
+                var totalSize = GetTotalDiskSpace(drivename, sizeUnit);
                 var pctUsed = this.GetCurrentDiskSpaceUsedPercent(drivename);
-                tuples.Add(Tuple.Create(drivename.Substring(0, 1), pctUsed));
+                tuples.Add(Tuple.Create(drivename.Substring(0, 1), totalSize, pctUsed));
             }
 
             return tuples;
@@ -83,7 +92,7 @@ namespace FabricObserver.Utilities
             var driveInfo = new DriveInfo(driveLetter);
             long available = driveInfo.AvailableFreeSpace;
 
-            return ConvertToSizeUnits(available, sizeUnit);
+            return Math.Round(ConvertToSizeUnits(available, sizeUnit), 2);
         }
 
         internal double GetUsedDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
@@ -91,15 +100,7 @@ namespace FabricObserver.Utilities
             var driveInfo = new DriveInfo(driveLetter);
             long used = driveInfo.TotalSize - driveInfo.AvailableFreeSpace;
 
-            return ConvertToSizeUnits(used, sizeUnit);
-        }
-
-        internal double GetTotalDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
-        {
-            var driveInfo = new DriveInfo(driveLetter);
-            long total = driveInfo.TotalSize;
-
-            return ConvertToSizeUnits(total, sizeUnit);
+            return Math.Round(ConvertToSizeUnits(used, sizeUnit), 2);
         }
 
         internal float GetAverageDiskQueueLength(string instance)

@@ -706,7 +706,6 @@ namespace FabricObserverTests
             objReady?.Dispose();
         }
 
-
         /****** These tests do NOT work without a running local SF cluster
                 or in an Azure DevOps VSTest Pipeline ******/
 
