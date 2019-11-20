@@ -217,7 +217,9 @@ namespace FabricObserver
 
             return ret;
         }
-
+        
+        // TODO: Dom't keep computing static info...
+        // Create a static piece of the osReport text. Only recompute the dynamic data (in another sb...)...
         private void GetComputerInfo(CancellationToken token)
         {
             ManagementObjectSearcher win32OSInfo = null;
@@ -240,6 +242,7 @@ namespace FabricObserver
             string fabricAppPortRange = string.Empty;
             string hotFixes = string.Empty;
             string osLang = string.Empty;
+            double freePhysicalMem = 0;
 
             try
             {
@@ -295,8 +298,7 @@ namespace FabricObserver
                         }
                         else if (name.ToLower().Contains("memory"))
                         {
-                            if (name.ToLower().Contains("freephysical") ||
-                                name.ToLower().Contains("freevirtual"))
+                            if (name.ToLower().Contains("freevirtual"))
                             {
                                 continue;
                             }
@@ -312,6 +314,10 @@ namespace FabricObserver
                             else if (name.ToLower().Contains("totalvirtual"))
                             {
                                 totalVirtMem = i;
+                            }
+                            else if (name.ToLower().Contains("freephysical"))
+                            {
+                                _ = double.TryParse(value, out freePhysicalMem);
                             }
                         }
                     }
@@ -391,6 +397,7 @@ namespace FabricObserver
                 sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
                 sb.AppendLine($"TotalVirtualMemorySize: {totalVirtMem} GB");
                 sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGB} GB");
+                sb.AppendLine($"TotalFreeMemory*: {Math.Round(freePhysicalMem / 1024 / 1024, 2)} GB");
                 sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
                 var drivesInformation = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
 
