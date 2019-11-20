@@ -217,9 +217,7 @@ namespace FabricObserver
 
             return ret;
         }
-        
-        // TODO: Dom't keep computing static info...
-        // Create a static piece of the osReport text. Only recompute the dynamic data (in another sb...)...
+
         private void GetComputerInfo(CancellationToken token)
         {
             ManagementObjectSearcher win32OSInfo = null;
@@ -243,6 +241,7 @@ namespace FabricObserver
             string hotFixes = string.Empty;
             string osLang = string.Empty;
             double freePhysicalMem = 0;
+            double freeVirtualMem = 0;
 
             try
             {
@@ -298,11 +297,6 @@ namespace FabricObserver
                         }
                         else if (name.ToLower().Contains("memory"))
                         {
-                            if (name.ToLower().Contains("freevirtual"))
-                            {
-                                continue;
-                            }
-
                             // For output...
                             int i = int.Parse(value) / 1024 / 1024;
 
@@ -319,23 +313,12 @@ namespace FabricObserver
                             {
                                 _ = double.TryParse(value, out freePhysicalMem);
                             }
+                            else if (name.ToLower().Contains("freevirtual"))
+                            {
+                                _ = double.TryParse(value, out freeVirtualMem);
+                            }
                         }
                     }
-                }
-
-                try
-                {
-                    // We only care about ready drives (so, things like an empty DVD drive are not interesting...)
-                    logicalDriveCount = DriveInfo.GetDrives().Where(d => d.IsReady).Count();
-                }
-                catch (ArgumentException)
-                {
-                }
-                catch (IOException)
-                {
-                }
-                catch (UnauthorizedAccessException)
-                {
                 }
 
                 // Active, bound ports...
@@ -393,25 +376,29 @@ namespace FabricObserver
                 }
 
                 // Hardware info...
+                // Proc/Mem
                 sb.AppendLine("\r\nHardware Information:\r\n");
                 sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
                 sb.AppendLine($"TotalVirtualMemorySize: {totalVirtMem} GB");
                 sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGB} GB");
-                sb.AppendLine($"TotalFreeMemory*: {Math.Round(freePhysicalMem / 1024 / 1024, 2)} GB");
-                sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
+                sb.AppendLine($"FreePhysicalMemory*: {Math.Round(freePhysicalMem / 1024 / 1024, 2)} GB");
+                sb.AppendLine($"FreeVirtualMemory*: {Math.Round(freeVirtualMem / 1024 / 1024, 2)} GB");
+
+                // Disk
                 var drivesInformation = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
+                sb.AppendLine($"LogicalDriveCount: {drivesInformation.Count}");
 
                 foreach (var tuple in drivesInformation)
                 {
-                    string systemDrv = "Ephemeral";
+                    string systemDrv = "Data";
 
                     if (Environment.SystemDirectory.Substring(0, 1) == tuple.Item1)
                     {
                         systemDrv = "System";
                     }
 
-                    sb.AppendLine($"Drive {tuple.Item1}({systemDrv}) Size: {tuple.Item2} GB");
-                    sb.AppendLine($"Drive {tuple.Item1}({systemDrv}) Consumed*: {tuple.Item3}%");
+                    sb.AppendLine($"Drive {tuple.Item1} ({systemDrv}) Size: {tuple.Item2} GB");
+                    sb.AppendLine($"Drive {tuple.Item1} ({systemDrv}) Consumed*: {tuple.Item3}%");
                 }
 
                 string osHotFixes = GetWindowsHotFixes(token);
