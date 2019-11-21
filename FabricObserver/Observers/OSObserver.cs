@@ -18,8 +18,9 @@ namespace FabricObserver
 {
     // This observer monitors OS health state and provides static and dynamic OS level information.
     // This observer is not configurable. It will signal infinte TTL Ok Health Reports that will show up
-    // under node details in SFX as well as emit ETW events. It is best to *not* disable this observer...
-    // The output (a local file) is used by the API service and returns HTML output (http://localhost:5000/api/ObserverManager).
+    // under node details in SFX as well as emit ETW events.
+    // If FabricObserverWebApi is installed, the output includes a local file that is used
+    // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OSObserver : ObserverBase
     {
         private string osReport;
