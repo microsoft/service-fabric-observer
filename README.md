@@ -28,6 +28,7 @@ Node Level Warnings:
 
 ![alt text](/Documentation/Images/Chaos3.jpg "")  
 ![alt text](/Documentation/Images/MultipleWarningsSFX.jpg "")  
+![alt text](/Documentation/Images/MultipleWarningsOKClearSFX.jpg "")  
 
 Node Level Machine Info:  
 
