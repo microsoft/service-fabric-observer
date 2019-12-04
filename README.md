@@ -1,6 +1,6 @@
 # FabricObserver
 
-**FabricObserver (FO)** is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric application that 
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric application that 
 1. Monitors a broad range of resources that tend to be important to all Service Fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
 2. Provides a simple model in which new observers can be built and configured and run automatically through a .NET development model.
 
