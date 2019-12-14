@@ -28,7 +28,7 @@ namespace FabricObserver
         // SF Infra...
         private const string SFWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
         private const string SFInfrastructureLogRootRegistryName = "FabricLogRoot";
-        private const int TTLAddMinutes = 10;
+        private const int TTLAddMinutes = 60;
         private string sFLogRoot = null;
 
         // Dump...
@@ -498,13 +498,33 @@ namespace FabricObserver
             {
                 repPartitionId = $"Partition: {replicaOrInstance.Partitionid}";
                 repOrInstanceId = $"Replica: {replicaOrInstance.ReplicaOrInstanceId}";
-                procName = Process.GetProcessById((int)replicaOrInstance.ReplicaHostProcessId)?.ProcessName;
+
+                try
+                {
+                    procName = Process.GetProcessById((int)replicaOrInstance.ReplicaHostProcessId)?.ProcessName;
+                }
+                catch (ArgumentException)
+                {
+                    return;
+                }
+                catch (InvalidOperationException)
+                {
+                    return;
+                }
             }
 
             // Create a unique node id which may be used in the case of warnings or OK clears...
             if (app != null)
             {
-                appName = new Uri(app);
+                if (app.Contains("fabric:/"))
+                {
+                    appName = new Uri(app);
+                }
+                else if (replicaOrInstance != null)
+                {
+                    appName = replicaOrInstance.ApplicationName;
+                }
+
                 name = app.Replace("fabric:/", string.Empty);
                 id = name + "_" + data.Property.Replace(" ", string.Empty);
             }
@@ -542,7 +562,7 @@ namespace FabricObserver
 
                 // This is primarily useful for AppObserver, but makes sense to be
                 // part of the base class for future use, like for FSO...
-                if (replicaOrInstance != null && procName != null && dumpOnError)
+                if (replicaOrInstance != null && dumpOnError)
                 {
                     try
                     {

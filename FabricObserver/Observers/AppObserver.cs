@@ -205,7 +205,16 @@ namespace FabricObserver
 
         private async Task MonitorAppAsync(ApplicationInfo application)
         {
-            var repOrInstList = await this.GetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.Target)).ConfigureAwait(true);
+            List<ReplicaMonitoringInfo> repOrInstList = null;
+
+            if (!string.IsNullOrEmpty(application.TargetType))
+            {
+                repOrInstList = await this.GetDeployedApplicationReplicaOrInstanceListAsync(null, application.TargetType).ConfigureAwait(true);
+            }
+            else
+            {
+                repOrInstList = await this.GetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.Target)).ConfigureAwait(true);
+            }
 
             if (repOrInstList.Count == 0)
             {
@@ -228,16 +237,12 @@ namespace FabricObserver
 
                     this.Token.ThrowIfCancellationRequested();
 
-                    if (currentProcess == null)
-                    {
-                        continue;
-                    }
-
                     var procName = currentProcess.ProcessName;
+                    string appNameOrType = GetAppNameOrType(application, repOrInst);
+
+                    var id = $"{appNameOrType}:{procName}";
 
                     // Add new resource data structures for each app service process...
-                    var id = $"{application.Target.Replace("fabric:/", string.Empty)}:{procName}";
-
                     if (!this.allAppCpuData.Any(list => list.Id == id))
                     {
                         this.allAppCpuData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, id));
@@ -289,12 +294,14 @@ namespace FabricObserver
                 }
                 catch (Exception e)
                 {
-                    if (e is Win32Exception)
+                    if (e is Win32Exception || e is ArgumentException || e is InvalidOperationException)
                     {
                         this.WriteToLogWithLevel(
                             this.ObserverName,
-                            $"MonitorAsync failed to find current service process for {application.Target}",
+                            $"MonitorAsync failed to find current service process for {application.Target}/n{e.ToString()}",
                             LogLevel.Information);
+
+                        continue;
                     }
                     else
                     {
@@ -317,9 +324,54 @@ namespace FabricObserver
             }
         }
 
-        private async Task<List<ReplicaMonitoringInfo>> GetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter)
+        private string GetAppNameOrType(ApplicationInfo application, ReplicaMonitoringInfo repOrInst)
         {
-            var deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(this.NodeName, applicationNameFilter).ConfigureAwait(true);
+            // target specified as app URI string... (generally the case)
+            string appNameOrType = repOrInst.ApplicationName.OriginalString.Replace("fabric:/", string.Empty);
+
+            // target specified as "All" meaning monitor all apps on node...
+            if (application.Target.ToLower() == "all"
+                && string.IsNullOrEmpty(repOrInst.ApplicationTypeName))
+            {
+                appNameOrType = repOrInst.ApplicationName.OriginalString;
+            }
+            else if (!string.IsNullOrEmpty(repOrInst.ApplicationTypeName))
+            {
+                // targetType specified as AppTargetType name, which means monitor all apps of specified type...
+                appNameOrType = repOrInst.ApplicationTypeName;
+            }
+
+            return appNameOrType;
+        }
+
+        private async Task<List<ReplicaMonitoringInfo>> GetDeployedApplicationReplicaOrInstanceListAsync(
+            Uri applicationNameFilter = null,
+            string applicationType = null)
+        {
+            DeployedApplicationList deployedApps = null;
+
+            if (applicationNameFilter != null)
+            {
+                deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(this.NodeName, applicationNameFilter).ConfigureAwait(true);
+            }
+            else
+            {
+                deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(this.NodeName).ConfigureAwait(true);
+
+                if (deployedApps.Count > 0 && !string.IsNullOrEmpty(applicationType))
+                {
+                    for (int i = 0; i < deployedApps.Count; i++)
+                    {
+                        var app = deployedApps[i];
+
+                        if (app.ApplicationTypeName.ToLower() != applicationType.ToLower())
+                        {
+                            deployedApps.Remove(app);
+                        }
+                    }
+                }
+            }
+
             var currentReplicaInfoList = new List<ReplicaMonitoringInfo>();
 
             foreach (var deployedApp in deployedApps)
@@ -362,7 +414,7 @@ namespace FabricObserver
                     }
                 }
 
-                var replicasOrInstances = await this.GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList ?? serviceList).ConfigureAwait(true);
+                var replicasOrInstances = await this.GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList ?? serviceList, applicationType).ConfigureAwait(true);
 
                 currentReplicaInfoList.AddRange(replicasOrInstances);
 
@@ -373,7 +425,7 @@ namespace FabricObserver
             return currentReplicaInfoList;
         }
 
-        private async Task<List<ReplicaMonitoringInfo>> GetDeployedPrimaryReplicaAsync(Uri appName, ServiceList services)
+        private async Task<List<ReplicaMonitoringInfo>> GetDeployedPrimaryReplicaAsync(Uri appName, ServiceList services, string appTypeName = null)
         {
             var deployedReplicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, appName).ConfigureAwait(true);
             var replicaMonitoringList = new List<ReplicaMonitoringInfo>();
@@ -388,6 +440,7 @@ namespace FabricObserver
                         var replicaInfo = new ReplicaMonitoringInfo()
                         {
                             ApplicationName = appName,
+                            ApplicationTypeName = appTypeName,
                             ReplicaHostProcessId = statefulReplica.HostProcessId,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             Partitionid = statefulReplica.Partitionid,
@@ -405,6 +458,7 @@ namespace FabricObserver
                     var replicaInfo = new ReplicaMonitoringInfo()
                     {
                         ApplicationName = appName,
+                        ApplicationTypeName = appTypeName,
                         ReplicaHostProcessId = statelessReplica.HostProcessId,
                         ReplicaOrInstanceId = statelessReplica.InstanceId,
                         Partitionid = statelessReplica.Partitionid,
@@ -433,19 +487,35 @@ namespace FabricObserver
                     this.Token.ThrowIfCancellationRequested();
 
                     // Process data for reporting...
-                    foreach (var replicaOrInstance in this.replicaOrInstanceList.Where(x => x.ApplicationName.OriginalString == app.Target))
+                    foreach (var repOrInst in this.replicaOrInstanceList.Where(x => x.ApplicationName.OriginalString == app.Target
+                                                                                    || (app.TargetType != null && x.ApplicationTypeName == app.TargetType)))
                     {
                         this.Token.ThrowIfCancellationRequested();
 
-                        Process p = Process.GetProcessById((int)replicaOrInstance.ReplicaHostProcessId);
+                        Process p = null;
 
-                        // If the process is no longer running, then don't report on it...
-                        if (p == null)
+                        try
+                        {
+                            p = Process.GetProcessById((int)repOrInst.ReplicaHostProcessId);
+                        }
+                        catch (ArgumentException)
+                        {
+                            continue;
+                        }
+                        catch (InvalidOperationException)
                         {
                             continue;
                         }
 
-                        var id = $"{app.Target.Replace("fabric:/", string.Empty)}:{p.ProcessName}";
+                        // If the process is no longer running, then don't report on it...
+                        if (p != null && p.HasExited)
+                        {
+                            continue;
+                        }
+
+                        string appNameOrType = GetAppNameOrType(app, repOrInst);
+
+                        var id = $"{appNameOrType}:{p.ProcessName}";
 
                         // Log (csv) CPU/Mem/DiskIO per app...
                         if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryEnabled)
@@ -460,8 +530,8 @@ namespace FabricObserver
                             app.CpuWarningLimitPct,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            app.Target,
-                            replicaOrInstance,
+                            repOrInst.ApplicationName.OriginalString,
+                            repOrInst,
                             app.DumpProcessOnError);
 
                         // Memory
@@ -471,8 +541,8 @@ namespace FabricObserver
                             app.MemoryWarningLimitMB,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            app.Target,
-                            replicaOrInstance,
+                            repOrInst.ApplicationName.OriginalString,
+                            repOrInst,
                             app.DumpProcessOnError);
 
                         this.ProcessResourceDataReportHealth(
@@ -481,8 +551,8 @@ namespace FabricObserver
                             app.MemoryWarningLimitPercent,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            app.Target,
-                            replicaOrInstance,
+                            repOrInst.ApplicationName.OriginalString,
+                            repOrInst,
                             app.DumpProcessOnError);
 
                         // Ports
@@ -492,8 +562,8 @@ namespace FabricObserver
                             app.NetworkWarningActivePorts,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            app.Target,
-                            replicaOrInstance);
+                            repOrInst.ApplicationName.OriginalString,
+                            repOrInst);
 
                         // Ports
                         this.ProcessResourceDataReportHealth(
@@ -502,8 +572,8 @@ namespace FabricObserver
                             app.NetworkWarningEphemeralPorts,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            app.Target,
-                            replicaOrInstance);
+                            repOrInst.ApplicationName.OriginalString,
+                            repOrInst);
                     }
                 }
 
