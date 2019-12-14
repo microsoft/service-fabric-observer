@@ -9,6 +9,8 @@ namespace FabricObserver.Model
     {
         public string Target { get; set; }
 
+        public string TargetType { get; set; }
+
         public string ServiceExcludeList { get; set; }
 
         public string ServiceIncludeList { get; set; }
@@ -41,6 +43,7 @@ namespace FabricObserver.Model
 
         /// <inheritdoc/>
         public override string ToString() => $"ApplicationName: {this.Target ?? string.Empty}\n" +
+                                             $"ApplicationTypeName: {this.TargetType ?? string.Empty}\n" +
                                              $"ServiceExcludeList: {this.ServiceExcludeList ?? string.Empty}\n" +
                                              $"ServiceIncludeList: {this.ServiceIncludeList ?? string.Empty}\n" +
                                              $"MemoryWarningLimitMB: {this.MemoryWarningLimitMB}\n" +
