@@ -94,6 +94,12 @@ namespace FabricObserver
                 {
                     this.Token.ThrowIfCancellationRequested();
 
+                    if (string.IsNullOrWhiteSpace(app.Target) 
+                        && string.IsNullOrWhiteSpace(app.TargetType))
+                    {
+                        continue;
+                    }
+
                     await this.MonitorAppAsync(app).ConfigureAwait(true);
                 }
 
@@ -108,6 +114,24 @@ namespace FabricObserver
                 this.perfCounters?.Dispose();
                 this.perfCounters = null;
             }
+        }
+
+        private static string GetAppNameOrType(ReplicaMonitoringInfo repOrInst)
+        {
+            string appNameOrType = null;
+
+            // targetType specified as AppTargetType name, which means monitor all apps of specified type...
+            if (!string.IsNullOrWhiteSpace(repOrInst.ApplicationTypeName))
+            {
+                appNameOrType = repOrInst.ApplicationTypeName;
+            }
+            else
+            {
+                // target specified as app URI string... (generally the case)
+                appNameOrType = repOrInst.ApplicationName.OriginalString.Replace("fabric:/", string.Empty);
+            }
+
+            return appNameOrType;
         }
 
         // Initialize() runs each time ObserveAsync is run to ensure
@@ -179,14 +203,17 @@ namespace FabricObserver
 
             foreach (var application in this.targetList)
             {
-                if (string.IsNullOrWhiteSpace(application.Target))
+                if (string.IsNullOrWhiteSpace(application.Target) 
+                    && string.IsNullOrWhiteSpace(application.TargetType))
                 {
                     this.HealthReporter.ReportFabricObserverServiceHealth(
                         this.FabricServiceContext.ServiceName.ToString(),
                         this.ObserverName,
                         HealthState.Warning,
                         $"Initialize() | {application.Target}: Required setting, target, is not set...");
+                    
                     settingsFail++;
+                    
                     continue;
                 }
 
@@ -218,6 +245,7 @@ namespace FabricObserver
 
             if (repOrInstList.Count == 0)
             {
+                this.ObserverLogger.LogInfo("No target or targetType specified.");
                 return;
             }
 
@@ -238,7 +266,7 @@ namespace FabricObserver
                     this.Token.ThrowIfCancellationRequested();
 
                     var procName = currentProcess.ProcessName;
-                    string appNameOrType = GetAppNameOrType(application, repOrInst);
+                    string appNameOrType = GetAppNameOrType(repOrInst);
 
                     var id = $"{appNameOrType}:{procName}";
 
@@ -324,26 +352,6 @@ namespace FabricObserver
             }
         }
 
-        private string GetAppNameOrType(ApplicationInfo application, ReplicaMonitoringInfo repOrInst)
-        {
-            // target specified as app URI string... (generally the case)
-            string appNameOrType = repOrInst.ApplicationName.OriginalString.Replace("fabric:/", string.Empty);
-
-            // target specified as "All" meaning monitor all apps on node...
-            if (application.Target.ToLower() == "all"
-                && string.IsNullOrEmpty(repOrInst.ApplicationTypeName))
-            {
-                appNameOrType = repOrInst.ApplicationName.OriginalString;
-            }
-            else if (!string.IsNullOrEmpty(repOrInst.ApplicationTypeName))
-            {
-                // targetType specified as AppTargetType name, which means monitor all apps of specified type...
-                appNameOrType = repOrInst.ApplicationTypeName;
-            }
-
-            return appNameOrType;
-        }
-
         private async Task<List<ReplicaMonitoringInfo>> GetDeployedApplicationReplicaOrInstanceListAsync(
             Uri applicationNameFilter = null,
             string applicationType = null)
@@ -364,7 +372,7 @@ namespace FabricObserver
                     {
                         var app = deployedApps[i];
 
-                        if (app.ApplicationTypeName.ToLower() != applicationType.ToLower())
+                        if (app.ApplicationTypeName?.ToLower() != applicationType.ToLower())
                         {
                             deployedApps.Remove(app);
                         }
@@ -379,7 +387,8 @@ namespace FabricObserver
                 var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(deployedApp.ApplicationName).ConfigureAwait(true);
                 ServiceList filteredServiceList = null;
 
-                var app = this.targetList.Where(x => x.Target.ToLower() == deployedApp.ApplicationName.OriginalString.ToLower()
+                var app = this.targetList.Where(x => x.Target != null 
+                                                     && x.Target.ToLower() == deployedApp.ApplicationName.OriginalString.ToLower()
                                                      && (!string.IsNullOrEmpty(x.ServiceExcludeList)
                                                      || !string.IsNullOrEmpty(x.ServiceIncludeList)))?.FirstOrDefault();
                 if (app != null)
@@ -482,13 +491,14 @@ namespace FabricObserver
                 var timeToLiveWarning = this.SetTimeToLiveWarning();
 
                 // App-specific reporting...
-                foreach (var app in this.targetList)
+                foreach (var app in this.targetList.Where(x => !string.IsNullOrWhiteSpace(x.Target) 
+                                                               || !string.IsNullOrWhiteSpace(x.TargetType)))
                 {
                     this.Token.ThrowIfCancellationRequested();
 
                     // Process data for reporting...
-                    foreach (var repOrInst in this.replicaOrInstanceList.Where(x => x.ApplicationName.OriginalString == app.Target
-                                                                                    || (app.TargetType != null && x.ApplicationTypeName == app.TargetType)))
+                    foreach (var repOrInst in this.replicaOrInstanceList.Where(x => (!string.IsNullOrWhiteSpace(app.Target) && x.ApplicationName.OriginalString == app.Target)
+                                                                                    || (!string.IsNullOrWhiteSpace(app.TargetType) && x.ApplicationTypeName == app.TargetType)))
                     {
                         this.Token.ThrowIfCancellationRequested();
 
@@ -513,7 +523,7 @@ namespace FabricObserver
                             continue;
                         }
 
-                        string appNameOrType = GetAppNameOrType(app, repOrInst);
+                        string appNameOrType = GetAppNameOrType(repOrInst);
 
                         var id = $"{appNameOrType}:{p.ProcessName}";
 
