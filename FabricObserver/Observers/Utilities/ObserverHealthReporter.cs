@@ -245,13 +245,13 @@ namespace FabricObserver.Utilities
             // To SFX and Telemetry provider...
             if (healthReport.ReportType == HealthReportType.Application && healthReport.AppName != null)
             {
-                var report = new ApplicationHealthReport(healthReport.AppName, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(report, sendOptions);
+                var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
+                this.fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
             }
             else
             {
-                var report = new NodeHealthReport(healthReport.NodeName, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(report, sendOptions);
+                var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
+                this.fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
             }
         }
     }

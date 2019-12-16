@@ -13,6 +13,8 @@ namespace FabricObserver.Model
 
         public Uri ApplicationName { get; set; }
 
+        public string ApplicationTypeName { get; set; }
+
         public long ReplicaOrInstanceId { get; set; }
 
         public Guid Partitionid { get; set; }
