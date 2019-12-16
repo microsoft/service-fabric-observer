@@ -31,7 +31,7 @@ namespace FabricObserver
         private EventWaitHandle globalShutdownEventHandle = null;
         private volatile bool shutdownSignalled = false;
         private int shutdownGracePeriodInSeconds = 2;
-        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(5);
+        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(30);
         private CancellationToken token;
         private CancellationTokenSource cts;
         private bool hasDisposed = false;
