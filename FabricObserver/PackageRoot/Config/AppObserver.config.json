@@ -1,14 +1,7 @@
 ﻿[
   {
-    "target": "fabric:/MyApp0",
-    "cpuWarningLimitPct": 20,
-    "memoryWarningLimitPercent": 20,
-    "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40
-  },
-  {
-    "targetType": "XApplicationType",
-    "cpuWarningLimitPct": 30,
+    "targetType": "CpuStressType",
+    "cpuWarningLimitPct": 10,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40

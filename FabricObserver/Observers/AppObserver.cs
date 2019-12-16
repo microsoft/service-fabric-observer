@@ -94,7 +94,7 @@ namespace FabricObserver
                 {
                     this.Token.ThrowIfCancellationRequested();
 
-                    if (string.IsNullOrWhiteSpace(app.Target) 
+                    if (string.IsNullOrWhiteSpace(app.Target)
                         && string.IsNullOrWhiteSpace(app.TargetType))
                     {
                         continue;
@@ -203,7 +203,7 @@ namespace FabricObserver
 
             foreach (var application in this.targetList)
             {
-                if (string.IsNullOrWhiteSpace(application.Target) 
+                if (string.IsNullOrWhiteSpace(application.Target)
                     && string.IsNullOrWhiteSpace(application.TargetType))
                 {
                     this.HealthReporter.ReportFabricObserverServiceHealth(
@@ -211,9 +211,9 @@ namespace FabricObserver
                         this.ObserverName,
                         HealthState.Warning,
                         $"Initialize() | {application.Target}: Required setting, target, is not set...");
-                    
+
                     settingsFail++;
-                    
+
                     continue;
                 }
 
@@ -387,7 +387,7 @@ namespace FabricObserver
                 var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(deployedApp.ApplicationName).ConfigureAwait(true);
                 ServiceList filteredServiceList = null;
 
-                var app = this.targetList.Where(x => x.Target != null 
+                var app = this.targetList.Where(x => x.Target != null
                                                      && x.Target.ToLower() == deployedApp.ApplicationName.OriginalString.ToLower()
                                                      && (!string.IsNullOrEmpty(x.ServiceExcludeList)
                                                      || !string.IsNullOrEmpty(x.ServiceIncludeList)))?.FirstOrDefault();
@@ -491,7 +491,7 @@ namespace FabricObserver
                 var timeToLiveWarning = this.SetTimeToLiveWarning();
 
                 // App-specific reporting...
-                foreach (var app in this.targetList.Where(x => !string.IsNullOrWhiteSpace(x.Target) 
+                foreach (var app in this.targetList.Where(x => !string.IsNullOrWhiteSpace(x.Target)
                                                                || !string.IsNullOrWhiteSpace(x.TargetType)))
                 {
                     this.Token.ThrowIfCancellationRequested();
@@ -507,6 +507,12 @@ namespace FabricObserver
                         try
                         {
                             p = Process.GetProcessById((int)repOrInst.ReplicaHostProcessId);
+
+                            // If the process is no longer running, then don't report on it...
+                            if (p != null && p.HasExited)
+                            {
+                                continue;
+                            }
                         }
                         catch (ArgumentException)
                         {
@@ -516,9 +522,7 @@ namespace FabricObserver
                         {
                             continue;
                         }
-
-                        // If the process is no longer running, then don't report on it...
-                        if (p != null && p.HasExited)
+                        catch (Win32Exception)
                         {
                             continue;
                         }
@@ -540,7 +544,6 @@ namespace FabricObserver
                             app.CpuWarningLimitPct,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            repOrInst.ApplicationName.OriginalString,
                             repOrInst,
                             app.DumpProcessOnError);
 
@@ -551,7 +554,6 @@ namespace FabricObserver
                             app.MemoryWarningLimitMB,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            repOrInst.ApplicationName.OriginalString,
                             repOrInst,
                             app.DumpProcessOnError);
 
@@ -561,7 +563,6 @@ namespace FabricObserver
                             app.MemoryWarningLimitPercent,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            repOrInst.ApplicationName.OriginalString,
                             repOrInst,
                             app.DumpProcessOnError);
 
@@ -572,7 +573,6 @@ namespace FabricObserver
                             app.NetworkWarningActivePorts,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            repOrInst.ApplicationName.OriginalString,
                             repOrInst);
 
                         // Ports
@@ -582,7 +582,6 @@ namespace FabricObserver
                             app.NetworkWarningEphemeralPorts,
                             timeToLiveWarning,
                             HealthReportType.Application,
-                            repOrInst.ApplicationName.OriginalString,
                             repOrInst);
                     }
                 }

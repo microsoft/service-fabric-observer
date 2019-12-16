@@ -109,7 +109,7 @@ namespace FabricObserver.Utilities.Telemetry
         /// <param name="property">Name of the health property.</param>
         /// <param name="state">HealthState.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
             string applicationName,
             string serviceName,
