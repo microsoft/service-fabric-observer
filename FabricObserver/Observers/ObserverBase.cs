@@ -472,13 +472,12 @@ namespace FabricObserver
             return false;
         }
 
-        public void ProcessResourceDataReportHealth<T>(
+        internal void ProcessResourceDataReportHealth<T>(
             FabricResourceUsageData<T> data,
             T thresholdError,
             T thresholdWarning,
             TimeSpan healthReportTtl,
             HealthReportType healthReportType = HealthReportType.Node,
-            string app = null,
             ReplicaMonitoringInfo replicaOrInstance = null,
             bool dumpOnError = false)
         {
@@ -499,6 +498,17 @@ namespace FabricObserver
                 repPartitionId = $"Partition: {replicaOrInstance.Partitionid}";
                 repOrInstanceId = $"Replica: {replicaOrInstance.ReplicaOrInstanceId}";
 
+                // Create a unique id which may be used in the case of warnings or OK clears...
+                appName = replicaOrInstance.ApplicationName;
+                name = appName.OriginalString.Replace("fabric:/", string.Empty);
+                id = name + "_" + data.Property.Replace(" ", string.Empty);
+
+                // Telemetry...
+                if (this.IsTelemetryEnabled)
+                {
+                    _ = this.ObserverTelemetryClient?.ReportMetricAsync($"{this.NodeName}-{name}-{data.Id}-{data.Property}", data.AverageDataValue, this.Token);
+                }
+
                 try
                 {
                     procName = Process.GetProcessById((int)replicaOrInstance.ReplicaHostProcessId)?.ProcessName;
@@ -512,27 +522,13 @@ namespace FabricObserver
                     return;
                 }
             }
-
-            // Create a unique node id which may be used in the case of warnings or OK clears...
-            if (app != null)
+            else
             {
-                if (app.Contains("fabric:/"))
+                // Telemetry...
+                if (this.IsTelemetryEnabled)
                 {
-                    appName = new Uri(app);
+                    _ = this.ObserverTelemetryClient?.ReportMetricAsync($"{this.NodeName}-{data.Id}-{data.Property}", data.AverageDataValue, this.Token);
                 }
-                else if (replicaOrInstance != null)
-                {
-                    appName = replicaOrInstance.ApplicationName;
-                }
-
-                name = app.Replace("fabric:/", string.Empty);
-                id = name + "_" + data.Property.Replace(" ", string.Empty);
-            }
-
-            // Telemetry...
-            if (this.IsTelemetryEnabled)
-            {
-                _ = this.ObserverTelemetryClient?.ReportMetricAsync($"{this.NodeName}-{app}-{data.Id}-{data.Property}", data.AverageDataValue, this.Token);
             }
 
             // ETW...
@@ -684,7 +680,7 @@ namespace FabricObserver
                 if (this.IsTelemetryEnabled)
                 {
                     _ = this.ObserverTelemetryClient?.ReportHealthAsync(
-                        id,
+                        id ?? string.Empty,
                         this.FabricServiceContext.ServiceName.OriginalString,
                         "FabricObserver",
                         this.ObserverName,
@@ -746,7 +742,7 @@ namespace FabricObserver
             data.Data.TrimExcess();
         }
 
-        public TimeSpan SetTimeToLiveWarning(int runDuration = 0)
+        internal TimeSpan SetTimeToLiveWarning(int runDuration = 0)
         {
             // First run...
             if (this.LastRunDateTime == DateTime.MinValue)
