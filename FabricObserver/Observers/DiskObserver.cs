@@ -162,7 +162,7 @@ namespace FabricObserver
 
                             this.diskSpaceTotalData.FirstOrDefault(
                                                      x => x.Id == id)
-                                                     .Data.Add(diskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
+                                                     .Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
 
                             this.diskAverageQueueLengthData.FirstOrDefault(
                                                              x => x.Id == id)

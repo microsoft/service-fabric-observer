@@ -108,7 +108,8 @@ All settings are optional, ***except target***, and can be omitted if you don't 
 
 | Setting | Description |
 | :--- | :--- |
-| **target** | App URI string to observe. Required. | 
+| **target** | App URI string to observe. Optional (Required if targetType not specified). | 
+| **targetType** | ApplicationType name. FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
 | **memoryErrorLimitMB** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log) |  
