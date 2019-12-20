@@ -387,10 +387,13 @@ namespace FabricObserver
                 var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(deployedApp.ApplicationName).ConfigureAwait(true);
                 ServiceList filteredServiceList = null;
 
-                var app = this.targetList.Where(x => x.Target != null
-                                                     && x.Target.ToLower() == deployedApp.ApplicationName.OriginalString.ToLower()
+                var app = this.targetList.Where(x => (x.Target != null || x.TargetType != null)
+                                                     && (x.Target?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
+                                                         || x.TargetType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
                                                      && (!string.IsNullOrEmpty(x.ServiceExcludeList)
                                                      || !string.IsNullOrEmpty(x.ServiceIncludeList)))?.FirstOrDefault();
+
+                // Filter service list if include/exclude service(s) setting supplied...
                 if (app != null)
                 {
                     filteredServiceList = new ServiceList();

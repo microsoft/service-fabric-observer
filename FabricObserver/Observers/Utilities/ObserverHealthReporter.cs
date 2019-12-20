@@ -44,12 +44,12 @@ namespace FabricObserver.Utilities
         {
             if (healthState == HealthState.Error)
             {
-                this.logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + "{0}", description);
+                this.logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + " | {0}", description);
             }
 
             if (healthState == HealthState.Warning)
             {
-                this.logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + "{0}", description);
+                this.logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + " | {0}", description);
             }
         }
 
