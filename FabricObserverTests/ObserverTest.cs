@@ -1052,7 +1052,7 @@ namespace FabricObserverTests
 
             var obs = new DiskObserver
             {
-                DiskSpacePercentWarningThreshold = 20, // This should cause a Warning on most dev machines...
+                DiskSpacePercentWarningThreshold = 10, // This should cause a Warning on most dev machines...
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);

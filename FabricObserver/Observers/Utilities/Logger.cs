@@ -96,7 +96,12 @@ namespace FabricObserver.Utilities
 
             var targetName = this.loggerName + "LogFile";
 
-            if ((FileTarget)LogManager.Configuration.FindTargetByName(targetName) == null)
+            if (LogManager.Configuration == null)
+            {
+                LogManager.Configuration = new LoggingConfiguration();
+            }
+
+            if ((FileTarget)LogManager.Configuration?.FindTargetByName(targetName) == null)
             {
                 var target = new FileTarget
                 {
