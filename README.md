@@ -15,6 +15,7 @@ FO is a Stateless Service Fabric Application composed of a single service that r
 ## Using FabricObserver  
 
 To quickly learn how to use FO, please see the **[simple scenario-based examples](./Documentation/Using.md)**.  
+You can clone the repo, build, and deploy or simply grab latest tested [SFPKG with Microsoft signed binaries](https://github.com/microsoft/service-fabric-observer/releases/latest) from Releases section, modify configs, and deploy.
 
 
 ## How it works 
