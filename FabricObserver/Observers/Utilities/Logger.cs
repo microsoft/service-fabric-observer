@@ -17,14 +17,12 @@ namespace FabricObserver.Utilities
 {
     public sealed class Logger : IObserverLogger<ILogger>
     {
-        private const int RetriesValue = 5;
+        private const int Retries = 5;
 
         // Text file logger for observers - info/warn/error...
         private ILogger OLogger { get; set; }
 
         private string loggerName = null;
-
-        private static int Retries => RetriesValue;
 
         internal string Foldername { get; }
 
