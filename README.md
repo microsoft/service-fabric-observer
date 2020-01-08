@@ -48,7 +48,9 @@ FO ships with an AppInsights telemetry implementation, other providers can be us
 
 For more information about **the design of FabricObserver**, please see the [Design readme](./Documentation/Design.md). 
 
-## Build and run
+## Build and run  
+
+## Note that the current version of code can target either 6.4, 6.5, or 7.0 SF runtimes and their respective SDK versions... The current Nuget packages.config targets 7.0, so downgrade your nuget package version to whatever version of SF is running in your cluster if it's not 7.0...
 
 1. Clone the repo.
 2. If you want to use the optional [FabricObserver API Service](/FabricObserverWeb) and you are using VS 2019, you must install [.NET Core 2.2 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.2). If you are using VS 2017, then install [.NET Core 2.1 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.1), as VS2017 does not support 2.2.
