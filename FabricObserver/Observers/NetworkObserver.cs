@@ -196,6 +196,7 @@ namespace FabricObserver
             }
 
             this.token.ThrowIfCancellationRequested();
+
             if (!File.Exists(networkObserverConfigFileName))
             {
                 this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored. Using default endpoints for connection testing...");
@@ -225,14 +226,20 @@ namespace FabricObserver
 
             int configCount = 0;
 
-            foreach (var config in this.userEndpoints)
+            for (int i = 0; i < this.userEndpoints.Count; i++)
             {
                 this.token.ThrowIfCancellationRequested();
 
-                var deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(this.NodeName, new Uri(config.AppTarget)).ConfigureAwait(true);
+                var config = this.userEndpoints[i];
+
+                var deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
+                    this.NodeName,
+                    new Uri(config.AppTarget)).ConfigureAwait(true);
 
                 if (deployedApps == null || deployedApps.Count < 1)
                 {
+                    this.userEndpoints.RemoveAt(i);
+
                     continue;
                 }
 

@@ -163,7 +163,7 @@ namespace FabricObserver
                         "HealthState.Initialized"))
                 {
                     // Log a file to prevent re-sending this in case of process restart(s).
-                    // This non-PII FO/Cluster info should only be sent once.
+                    // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates...).
                     _ = this.Logger.TryWriteLogFile(filepath, "_");
                 }
             }
