@@ -223,8 +223,9 @@ namespace FabricObserver
                     return false;
                 }
 
-                this.ObserverLogger.LogInfo($"Will observe resource consumption by {application.Target} " +
-                                       $"on Node {this.NodeName}.");
+                this.ObserverLogger.LogInfo(
+                    $"Will observe resource consumption by {application.Target ?? application.TargetType} " +
+                    $"on Node {this.NodeName}.");
             }
 
             return true;

@@ -28,7 +28,7 @@ namespace FabricObserver
         // SF Infra...
         private const string SFWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
         private const string SFInfrastructureLogRootRegistryName = "FabricLogRoot";
-        private const int TTLAddMinutes = 60;
+        private const int TTLAddMinutes = 1;
         private string sFLogRoot = null;
 
         // Dump...
