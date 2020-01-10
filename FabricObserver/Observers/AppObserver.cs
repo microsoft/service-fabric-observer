@@ -33,8 +33,6 @@ namespace FabricObserver
         private List<FabricResourceUsageData<int>> allAppCpuData;
         private List<FabricResourceUsageData<long>> allAppMemDataMB;
         private List<FabricResourceUsageData<double>> allAppMemDataPercent;
-        private List<FabricResourceUsageData<float>> allAppDiskReadsData;
-        private List<FabricResourceUsageData<float>> allAppDiskWritesData;
         private List<FabricResourceUsageData<int>> allAppTotalActivePortsData;
         private List<FabricResourceUsageData<int>> allAppEphemeralPortsData;
         private List<ReplicaMonitoringInfo> replicaOrInstanceList;
@@ -50,8 +48,6 @@ namespace FabricObserver
         {
             this.configPackagePath = ConfigSettings.ConfigPackagePath;
             this.allAppCpuData = new List<FabricResourceUsageData<int>>();
-            this.allAppDiskReadsData = new List<FabricResourceUsageData<float>>();
-            this.allAppDiskWritesData = new List<FabricResourceUsageData<float>>();
             this.allAppMemDataMB = new List<FabricResourceUsageData<long>>();
             this.allAppMemDataPercent = new List<FabricResourceUsageData<double>>();
             this.allAppTotalActivePortsData = new List<FabricResourceUsageData<int>>();
@@ -683,38 +679,6 @@ namespace FabricObserver
                 "Peak",
                 Math.Round(Convert.ToDouble(this.allAppMemDataPercent.Where(x => x.Id == appName)
                                                                      .FirstOrDefault().MaxDataValue)));
-
-            // IO Read Bytes/s
-            this.CsvFileLogger.LogData(
-                fileName,
-                appName,
-                "IO Read Bytes/sec",
-                "Average",
-                Math.Round(this.allAppDiskReadsData.Where(x => x.Id == appName)
-                                                    .FirstOrDefault().AverageDataValue));
-            this.CsvFileLogger.LogData(
-                fileName,
-                appName,
-                "IO Read Bytes/sec",
-                "Peak",
-                Math.Round(Convert.ToDouble(this.allAppDiskReadsData.Where(x => x.Id == appName)
-                                                                     .FirstOrDefault().MaxDataValue)));
-
-            // IO Write Bytes/s
-            this.CsvFileLogger.LogData(
-                fileName,
-                appName,
-                "IO Write Bytes/sec",
-                "Average",
-                Math.Round(this.allAppDiskWritesData.Where(x => x.Id == appName)
-                                                    .FirstOrDefault().AverageDataValue));
-            this.CsvFileLogger.LogData(
-                fileName,
-                appName,
-                "IO Write Bytes/sec",
-                "Peak",
-                Math.Round(Convert.ToDouble(this.allAppDiskWritesData.Where(x => x.Id == appName)
-                                                                    .FirstOrDefault().MaxDataValue)));
 
             // Network
             this.CsvFileLogger.LogData(
