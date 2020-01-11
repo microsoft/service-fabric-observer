@@ -22,6 +22,7 @@ namespace FabricObserver.Utilities
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
         public const string EventSourceProviderName = "EventSourceProviderName";
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
+        public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";
