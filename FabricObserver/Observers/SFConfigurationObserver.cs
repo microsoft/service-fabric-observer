@@ -141,7 +141,7 @@ namespace FabricObserver
 
             ApplicationList appList = null;
             var sb = new StringBuilder();
-            string clusterManifestXml;
+            string clusterManifestXml = null;
 
             if (this.IsTestRun)
             {
@@ -149,37 +149,51 @@ namespace FabricObserver
             }
             else
             {
-                appList = await this.FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
-                clusterManifestXml = await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync().ConfigureAwait(true);
+                try
+                {
+                    appList = await this.FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
+                    clusterManifestXml = await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(true);
+                }
+                catch (System.Fabric.FabricException)
+                {
+                }
+                catch (TimeoutException)
+                {
+                }
             }
 
             token.ThrowIfCancellationRequested();
 
             XmlReader xreader = null;
+            XmlDocument xdoc = null;
+            XmlNamespaceManager nsmgr = null;
             StringReader sreader = null;
             string ret = null;
 
             try
             {
-                // Safe XML pattern - *Do not use LoadXml*...
-                var xdoc = new XmlDocument { XmlResolver = null };
-                sreader = new StringReader(clusterManifestXml);
-                xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
-                xdoc.Load(xreader);
-
-                // Cluster Information...
-                var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
-                nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
-
-                // Failover Manager...
-                var fMparameterNodes = xdoc.SelectNodes("//sf:Section[@Name='FailoverManager']//sf:Parameter", nsmgr);
-                sb.AppendLine("\nCluster Information:\n");
-
-                foreach (XmlNode node in fMparameterNodes)
+                if (clusterManifestXml != null)
                 {
-                    token.ThrowIfCancellationRequested();
+                    // Safe XML pattern - *Do not use LoadXml*...
+                    xdoc = new XmlDocument { XmlResolver = null };
+                    sreader = new StringReader(clusterManifestXml);
+                    xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                    xdoc.Load(xreader);
 
-                    sb.AppendLine(node.Attributes.Item(0).Value + ": " + node.Attributes.Item(1).Value);
+                    // Cluster Information...
+                    nsmgr = new XmlNamespaceManager(xdoc.NameTable);
+                    nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
+
+                    // Failover Manager...
+                    var fMparameterNodes = xdoc.SelectNodes("//sf:Section[@Name='FailoverManager']//sf:Parameter", nsmgr);
+                    sb.AppendLine("\nCluster Information:\n");
+
+                    foreach (XmlNode node in fMparameterNodes)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        sb.AppendLine(node.Attributes.Item(0).Value + ": " + node.Attributes.Item(1).Value);
+                    }
                 }
 
                 token.ThrowIfCancellationRequested();
@@ -197,7 +211,7 @@ namespace FabricObserver
                     sb.AppendLine($"Application Port Range: {portRange.Item1} - {portRange.Item2}");
                 }
 
-                var infraNode = xdoc.SelectSingleNode("//sf:Node", nsmgr);
+                var infraNode = xdoc?.SelectSingleNode("//sf:Node", nsmgr);
 
                 if (infraNode != null)
                 {
@@ -328,8 +342,8 @@ namespace FabricObserver
             }
             finally
             {
-                sreader.Dispose();
-                xreader.Dispose();
+                sreader?.Dispose();
+                xreader?.Dispose();
             }
 
             return ret;
