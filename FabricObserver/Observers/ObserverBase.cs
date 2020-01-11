@@ -478,7 +478,7 @@ namespace FabricObserver
             T thresholdWarning,
             TimeSpan healthReportTtl,
             HealthReportType healthReportType = HealthReportType.Node,
-            ReplicaMonitoringInfo replicaOrInstance = null,
+            ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
             bool dumpOnError = false)
         {
             if (data == null)
@@ -511,7 +511,7 @@ namespace FabricObserver
 
                 try
                 {
-                    procName = Process.GetProcessById((int)replicaOrInstance.ReplicaHostProcessId)?.ProcessName;
+                    procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId)?.ProcessName;
                 }
                 catch (ArgumentException)
                 {
@@ -562,7 +562,7 @@ namespace FabricObserver
                 {
                     try
                     {
-                        int procId = (int)replicaOrInstance.ReplicaHostProcessId;
+                        int procId = (int)replicaOrInstance.HostProcessId;
 
                         if (!this.serviceDumpCountDictionary.ContainsKey(procName))
                         {
