@@ -61,6 +61,8 @@
     <!-- Required: The thresholds are held in a json file... Note that these thresholds apply to any service that is part 
          of the Target Application, which is the logical container for service processes in Service Fabric parlance...-->
     <Parameter Name="AppObserverDataFileName" Value="AppObserver.config.json" />
+    <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
@@ -138,9 +140,11 @@
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="SFConfigurationObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
 </Settings>

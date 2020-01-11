@@ -89,6 +89,8 @@ namespace FabricObserver
         /// <inheritdoc/>
         public TimeSpan RunInterval { get; set; } = TimeSpan.MinValue;
 
+        public TimeSpan AsyncClusterOperationTimeoutSeconds { get; set; } = TimeSpan.FromSeconds(60);
+
         public List<string> Settings { get; } = null;
 
         /// <inheritdoc/>
@@ -166,6 +168,16 @@ namespace FabricObserver
                 out TimeSpan runInterval))
             {
                 this.RunInterval = runInterval;
+            }
+
+            // Async cluster operation timeout setting..
+            if (int.TryParse(
+                this.GetSettingParameterValue(
+                observerName + "Configuration",
+                ObserverConstants.AsyncClusterOperationTimeoutSeconds),
+                out int asyncOpTimeoutSeconds))
+            {
+                this.AsyncClusterOperationTimeoutSeconds = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
             }
 
             // DataLogger setup...
