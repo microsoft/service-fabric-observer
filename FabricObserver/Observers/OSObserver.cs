@@ -336,7 +336,7 @@ namespace FabricObserver
                 }
                 else
                 {
-                    clusterManifestXml = this.FabricClientInstance.ClusterManager.GetClusterManifestAsync().GetAwaiter().GetResult();
+                    clusterManifestXml = this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).GetAwaiter().GetResult();
                 }
 
                 var appPortRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
