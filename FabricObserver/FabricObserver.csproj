@@ -249,6 +249,7 @@
     <Compile Include="Observers\Utilities\HealthReport.cs" />
     <Compile Include="Observers\Utilities\Logger.cs" />
     <Compile Include="Observers\Utilities\NativeMethods.cs" />
+    <Compile Include="Observers\Utilities\ServiceFilterType.cs" />
     <Compile Include="Observers\Utilities\Telemetry\AppInsightsTelemetry.cs" />
     <Compile Include="Observers\Utilities\DataTableFileLogger.cs" />
     <Compile Include="Observers\Utilities\FabricResourceUsageData.cs" />
@@ -259,7 +260,7 @@
     <Compile Include="Observers\MachineInfoModel\ApplicationInfo.cs" />
     <Compile Include="Observers\MachineInfoModel\ConfigSettings.cs" />
     <Compile Include="Observers\MachineInfoModel\ConfigurationSetting.cs" />
-    <Compile Include="Observers\MachineInfoModel\ReplicaMonitoringInfo.cs" />
+    <Compile Include="Observers\MachineInfoModel\ReplicaOrInstanceMonitoringInfo.cs" />
     <Compile Include="Observers\OSObserver.cs" />
     <Compile Include="Observers\Utilities\ErrorWarningCode.cs" />
     <Compile Include="Observers\Utilities\JsonHelper.cs" />

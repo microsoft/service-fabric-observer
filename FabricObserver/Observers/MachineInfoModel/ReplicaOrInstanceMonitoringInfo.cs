@@ -7,9 +7,9 @@ using System;
 
 namespace FabricObserver.Model
 {
-    public class ReplicaMonitoringInfo
+    public class ReplicaOrInstanceMonitoringInfo
     {
-        public long ReplicaHostProcessId { get; set; }
+        public long HostProcessId { get; set; }
 
         public Uri ApplicationName { get; set; }
 
