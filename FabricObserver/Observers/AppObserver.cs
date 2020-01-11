@@ -16,6 +16,7 @@ using System.Runtime.Remoting.Channels;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Model;
+using FabricObserver.Observers.Utilities;
 using FabricObserver.Utilities;
 
 namespace FabricObserver
@@ -36,7 +37,7 @@ namespace FabricObserver
         private List<FabricResourceUsageData<double>> allAppMemDataPercent;
         private List<FabricResourceUsageData<int>> allAppTotalActivePortsData;
         private List<FabricResourceUsageData<int>> allAppEphemeralPortsData;
-        private List<ReplicaMonitoringInfo> replicaOrInstanceList;
+        private List<ReplicaOrInstanceMonitoringInfo> replicaOrInstanceList;
         private WindowsPerfCounters perfCounters = null;
         private DiskUsage diskUsage = null;
         private bool disposed = false;
@@ -113,7 +114,7 @@ namespace FabricObserver
             }
         }
 
-        private static string GetAppNameOrType(ReplicaMonitoringInfo repOrInst)
+        private static string GetAppNameOrType(ReplicaOrInstanceMonitoringInfo repOrInst)
         {
             string appNameOrType = null;
 
@@ -138,17 +139,17 @@ namespace FabricObserver
         {
             if (this.replicaOrInstanceList == null)
             {
-                this.replicaOrInstanceList = new List<ReplicaMonitoringInfo>();
+                this.replicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             }
 
             // Is this a unit test run?
             if (this.IsTestRun)
             {
-                this.replicaOrInstanceList.Add(new ReplicaMonitoringInfo
+                this.replicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
                 {
                     ApplicationName = new Uri("fabric:/TestApp"),
                     Partitionid = Guid.NewGuid(),
-                    ReplicaHostProcessId = 0,
+                    HostProcessId = 0,
                     ReplicaOrInstanceId = default(long),
                 });
 
@@ -230,7 +231,7 @@ namespace FabricObserver
 
         private async Task MonitorAppAsync(ApplicationInfo application)
         {
-            List<ReplicaMonitoringInfo> repOrInstList = null;
+            List<ReplicaOrInstanceMonitoringInfo> repOrInstList = null;
 
             if (!string.IsNullOrEmpty(application.TargetType))
             {
@@ -253,7 +254,7 @@ namespace FabricObserver
             {
                 this.Token.ThrowIfCancellationRequested();
 
-                int processid = (int)repOrInst.ReplicaHostProcessId;
+                int processid = (int)repOrInst.HostProcessId;
                 var cpuUsage = new CpuUsage();
 
                 try
@@ -350,7 +351,7 @@ namespace FabricObserver
             }
         }
 
-        private async Task<List<ReplicaMonitoringInfo>> GetDeployedApplicationReplicaOrInstanceListAsync(
+        private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedApplicationReplicaOrInstanceListAsync(
             Uri applicationNameFilter = null,
             string applicationType = null)
         {
@@ -378,7 +379,7 @@ namespace FabricObserver
                 }
             }
 
-            var currentReplicaInfoList = new List<ReplicaMonitoringInfo>();
+            var currentReplicaInfoList = new List<ReplicaOrInstanceMonitoringInfo>();
 
             foreach (var deployedApp in deployedApps)
             {
@@ -391,25 +392,26 @@ namespace FabricObserver
                                                      || !string.IsNullOrEmpty(x.ServiceIncludeList)))?.FirstOrDefault();
 
                 // Filter service list if include/exclude service(s) config setting is supplied...
-                bool isExcludeList = false;
+                var filterType = ServiceFilterType.None;
 
                 if (appFilter != null)
                 {
                     if (!string.IsNullOrEmpty(appFilter.ServiceExcludeList))
                     {
                         filteredServiceList = appFilter.ServiceExcludeList.Split(',').ToList();
-                        isExcludeList = true;
+                        filterType = ServiceFilterType.Exclude;
                     }
                     else if (!string.IsNullOrEmpty(appFilter.ServiceIncludeList))
                     {
                         filteredServiceList = appFilter.ServiceIncludeList.Split(',').ToList();
+                        filterType = ServiceFilterType.Include;
                     }
                 }
 
                 var replicasOrInstances = await this.GetDeployedPrimaryReplicaAsync(
                     deployedApp.ApplicationName,
                     filteredServiceList,
-                    isExcludeList,
+                    filterType,
                     applicationType).ConfigureAwait(true);
 
                 currentReplicaInfoList.AddRange(replicasOrInstances);
@@ -421,86 +423,76 @@ namespace FabricObserver
             return currentReplicaInfoList;
         }
 
-        private async Task<List<ReplicaMonitoringInfo>> GetDeployedPrimaryReplicaAsync(
+        private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedPrimaryReplicaAsync(
             Uri appName,
             List<string> serviceFilterList = null,
-            bool isExcludeList = false,
+            ServiceFilterType filterType = ServiceFilterType.None,
             string appTypeName = null)
         {
             var deployedReplicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, appName).ConfigureAwait(true);
-            var replicaMonitoringList = new List<ReplicaMonitoringInfo>();
+            var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>();
 
             foreach (var deployedReplica in deployedReplicaList)
             {
                 if (deployedReplica is DeployedStatefulServiceReplica statefulReplica
                     && statefulReplica.ReplicaRole == ReplicaRole.Primary)
                 {
-                    var replicaInfo = new ReplicaMonitoringInfo()
+                    var replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                     {
                         ApplicationName = appName,
                         ApplicationTypeName = appTypeName,
-                        ReplicaHostProcessId = statefulReplica.HostProcessId,
+                        HostProcessId = statefulReplica.HostProcessId,
                         ReplicaOrInstanceId = statefulReplica.ReplicaId,
                         Partitionid = statefulReplica.Partitionid,
                     };
 
-                    bool isFiltered = serviceFilterList != null;
-
-                    if (!isFiltered)
+                    if (serviceFilterList == null
+                        || filterType == ServiceFilterType.None)
                     {
                         replicaMonitoringList.Add(replicaInfo);
                         continue;
                     }
 
-                    // Exclude services
-                    if (isExcludeList
+                    // Service filtering?...
+                    if (filterType == ServiceFilterType.Exclude
                         && !serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
                     {
                         replicaMonitoringList.Add(replicaInfo);
-                        continue;
                     }
-
-                    // Include services
-                    if (!isExcludeList
+                    else if (filterType == ServiceFilterType.Include
                         && serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
                     {
                         replicaMonitoringList.Add(replicaInfo);
-                        continue;
                     }
                 }
-                else if (deployedReplica is DeployedStatelessServiceInstance statelessReplica)
+                else if (deployedReplica is DeployedStatelessServiceInstance statelessInstance)
                 {
-                    var replicaInfo = new ReplicaMonitoringInfo()
+                    var replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                     {
                         ApplicationName = appName,
                         ApplicationTypeName = appTypeName,
-                        ReplicaHostProcessId = statelessReplica.HostProcessId,
-                        ReplicaOrInstanceId = statelessReplica.InstanceId,
-                        Partitionid = statelessReplica.Partitionid,
+                        HostProcessId = statelessInstance.HostProcessId,
+                        ReplicaOrInstanceId = statelessInstance.InstanceId,
+                        Partitionid = statelessInstance.Partitionid,
                     };
 
-                    bool isFiltered = serviceFilterList != null;
-                    
-                    if (!isFiltered)
+                    if (serviceFilterList == null
+                        || filterType == ServiceFilterType.None)
                     {
                         replicaMonitoringList.Add(replicaInfo);
                         continue;
                     }
 
-                    // Exclude services
-                    if (isExcludeList 
-                        && !serviceFilterList.Any(s => statelessReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+                    // Service filtering?...
+                    if (filterType == ServiceFilterType.Exclude
+                        && !serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
                     {
                         replicaMonitoringList.Add(replicaInfo);
-                        continue;
                     }
-                    
-                    // Include services
-                    if (!isExcludeList
-                        && serviceFilterList.Any(s => statelessReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+                    else if (filterType == ServiceFilterType.Include
+                             && serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
                     {
                         replicaMonitoringList.Add(replicaInfo);
-                        continue;
                     }
                 }
             }
@@ -532,7 +524,7 @@ namespace FabricObserver
 
                         try
                         {
-                            p = Process.GetProcessById((int)repOrInst.ReplicaHostProcessId);
+                            p = Process.GetProcessById((int)repOrInst.HostProcessId);
 
                             // If the process is no longer running, then don't report on it...
                             if (p != null && p.HasExited)
