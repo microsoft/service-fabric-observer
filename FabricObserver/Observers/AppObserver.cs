@@ -445,24 +445,21 @@ namespace FabricObserver
                         Partitionid = statefulReplica.Partitionid,
                     };
 
-                    if (serviceFilterList == null
-                        || filterType == ServiceFilterType.None)
+                    if (serviceFilterList != null
+                        && filterType != ServiceFilterType.None)
                     {
-                        replicaMonitoringList.Add(replicaInfo);
-                        continue;
+                        if (filterType == ServiceFilterType.Include
+                            && !serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+                        {
+                            continue;
+                        }
+                        else if (serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+                        {
+                            continue;
+                        }
                     }
 
-                    // Service filtering?...
-                    if (filterType == ServiceFilterType.Exclude
-                        && !serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
-                    {
-                        replicaMonitoringList.Add(replicaInfo);
-                    }
-                    else if (filterType == ServiceFilterType.Include
-                        && serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
-                    {
-                        replicaMonitoringList.Add(replicaInfo);
-                    }
+                    replicaMonitoringList.Add(replicaInfo);
                 }
                 else if (deployedReplica is DeployedStatelessServiceInstance statelessInstance)
                 {
@@ -475,24 +472,21 @@ namespace FabricObserver
                         Partitionid = statelessInstance.Partitionid,
                     };
 
-                    if (serviceFilterList == null
-                        || filterType == ServiceFilterType.None)
+                    if (serviceFilterList != null
+                        && filterType != ServiceFilterType.None)
                     {
-                        replicaMonitoringList.Add(replicaInfo);
-                        continue;
+                        if (filterType == ServiceFilterType.Include
+                            && !serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+                        {
+                            continue;
+                        }
+                        else if (serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+                        {
+                            continue;
+                        }
                     }
 
-                    // Service filtering?...
-                    if (filterType == ServiceFilterType.Exclude
-                        && !serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
-                    {
-                        replicaMonitoringList.Add(replicaInfo);
-                    }
-                    else if (filterType == ServiceFilterType.Include
-                             && serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
-                    {
-                        replicaMonitoringList.Add(replicaInfo);
-                    }
+                    replicaMonitoringList.Add(replicaInfo);
                 }
             }
 
