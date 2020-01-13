@@ -431,12 +431,33 @@ namespace FabricObserver
             var deployedReplicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, appName).ConfigureAwait(true);
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>();
 
+            this.SetInstanceOrReplicaMonitoringList(
+                appName,
+                serviceFilterList,
+                filterType,
+                appTypeName,
+                deployedReplicaList,
+                ref replicaMonitoringList);
+
+            return replicaMonitoringList;
+        }
+
+        private void SetInstanceOrReplicaMonitoringList(
+            Uri appName,
+            List<string> serviceFilterList,
+            ServiceFilterType filterType,
+            string appTypeName,
+            DeployedServiceReplicaList deployedReplicaList,
+            ref List<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
+        {
             foreach (var deployedReplica in deployedReplicaList)
             {
+                ReplicaOrInstanceMonitoringInfo replicaInfo = null;
+
                 if (deployedReplica is DeployedStatefulServiceReplica statefulReplica
                     && statefulReplica.ReplicaRole == ReplicaRole.Primary)
                 {
-                    var replicaInfo = new ReplicaOrInstanceMonitoringInfo()
+                    replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                     {
                         ApplicationName = appName,
                         ApplicationTypeName = appTypeName,
@@ -463,12 +484,10 @@ namespace FabricObserver
                             continue;
                         }
                     }
-
-                    replicaMonitoringList.Add(replicaInfo);
                 }
                 else if (deployedReplica is DeployedStatelessServiceInstance statelessInstance)
                 {
-                    var replicaInfo = new ReplicaOrInstanceMonitoringInfo()
+                    replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                     {
                         ApplicationName = appName,
                         ApplicationTypeName = appTypeName,
@@ -495,12 +514,13 @@ namespace FabricObserver
                             continue;
                         }
                     }
+                }
 
+                if (replicaInfo != null)
+                {
                     replicaMonitoringList.Add(replicaInfo);
                 }
             }
-
-            return replicaMonitoringList;
         }
 
         /// <inheritdoc/>
