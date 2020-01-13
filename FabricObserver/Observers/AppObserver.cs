@@ -448,12 +448,17 @@ namespace FabricObserver
                     if (serviceFilterList != null
                         && filterType != ServiceFilterType.None)
                     {
+                        bool isInFilterList = serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                        // Include
                         if (filterType == ServiceFilterType.Include
-                            && !serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+                            && !isInFilterList)
                         {
                             continue;
                         }
-                        else if (serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+
+                        // Exclude
+                        else if (isInFilterList)
                         {
                             continue;
                         }
@@ -475,12 +480,17 @@ namespace FabricObserver
                     if (serviceFilterList != null
                         && filterType != ServiceFilterType.None)
                     {
+                        bool isInFilterList = serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                        // Include
                         if (filterType == ServiceFilterType.Include
-                            && !serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+                            && !isInFilterList)
                         {
                             continue;
                         }
-                        else if (serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
+
+                        // Exclude
+                        else if (isInFilterList)
                         {
                             continue;
                         }
