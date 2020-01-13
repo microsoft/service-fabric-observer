@@ -431,12 +431,33 @@ namespace FabricObserver
             var deployedReplicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, appName).ConfigureAwait(true);
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>();
 
+            this.SetInstanceOrReplicaMonitoringList(
+                appName,
+                serviceFilterList,
+                filterType,
+                appTypeName,
+                deployedReplicaList,
+                ref replicaMonitoringList);
+
+            return replicaMonitoringList;
+        }
+
+        private void SetInstanceOrReplicaMonitoringList(
+            Uri appName,
+            List<string> serviceFilterList,
+            ServiceFilterType filterType,
+            string appTypeName,
+            DeployedServiceReplicaList deployedReplicaList,
+            ref List<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
+        {
             foreach (var deployedReplica in deployedReplicaList)
             {
+                ReplicaOrInstanceMonitoringInfo replicaInfo = null;
+
                 if (deployedReplica is DeployedStatefulServiceReplica statefulReplica
                     && statefulReplica.ReplicaRole == ReplicaRole.Primary)
                 {
-                    var replicaInfo = new ReplicaOrInstanceMonitoringInfo()
+                    replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                     {
                         ApplicationName = appName,
                         ApplicationTypeName = appTypeName,
@@ -445,28 +466,29 @@ namespace FabricObserver
                         Partitionid = statefulReplica.Partitionid,
                     };
 
-                    if (serviceFilterList == null
-                        || filterType == ServiceFilterType.None)
+                    if (serviceFilterList != null
+                        && filterType != ServiceFilterType.None)
                     {
-                        replicaMonitoringList.Add(replicaInfo);
-                        continue;
-                    }
+                        bool isInFilterList = serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
-                    // Service filtering?...
-                    if (filterType == ServiceFilterType.Exclude
-                        && !serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
-                    {
-                        replicaMonitoringList.Add(replicaInfo);
-                    }
-                    else if (filterType == ServiceFilterType.Include
-                        && serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
-                    {
-                        replicaMonitoringList.Add(replicaInfo);
+                        // Include
+                        if (filterType == ServiceFilterType.Include
+                            && !isInFilterList)
+                        {
+                            continue;
+                        }
+
+                        // Exclude
+                        else if (filterType == ServiceFilterType.Exclude
+                                 && isInFilterList)
+                        {
+                            continue;
+                        }
                     }
                 }
                 else if (deployedReplica is DeployedStatelessServiceInstance statelessInstance)
                 {
-                    var replicaInfo = new ReplicaOrInstanceMonitoringInfo()
+                    replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                     {
                         ApplicationName = appName,
                         ApplicationTypeName = appTypeName,
@@ -475,28 +497,32 @@ namespace FabricObserver
                         Partitionid = statelessInstance.Partitionid,
                     };
 
-                    if (serviceFilterList == null
-                        || filterType == ServiceFilterType.None)
+                    if (serviceFilterList != null
+                        && filterType != ServiceFilterType.None)
                     {
-                        replicaMonitoringList.Add(replicaInfo);
-                        continue;
-                    }
+                        bool isInFilterList = serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
-                    // Service filtering?...
-                    if (filterType == ServiceFilterType.Exclude
-                        && !serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
-                    {
-                        replicaMonitoringList.Add(replicaInfo);
-                    }
-                    else if (filterType == ServiceFilterType.Include
-                             && serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower())))
-                    {
-                        replicaMonitoringList.Add(replicaInfo);
+                        // Include
+                        if (filterType == ServiceFilterType.Include
+                            && !isInFilterList)
+                        {
+                            continue;
+                        }
+
+                        // Exclude
+                        else if (filterType == ServiceFilterType.Exclude
+                                 && isInFilterList)
+                        {
+                            continue;
+                        }
                     }
                 }
-            }
 
-            return replicaMonitoringList;
+                if (replicaInfo != null)
+                {
+                    replicaMonitoringList.Add(replicaInfo);
+                }
+            }
         }
 
         /// <inheritdoc/>
