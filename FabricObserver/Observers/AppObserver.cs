@@ -479,7 +479,8 @@ namespace FabricObserver
                         }
 
                         // Exclude
-                        else if (isInFilterList)
+                        else if (filterType == ServiceFilterType.Exclude
+                                 && isInFilterList)
                         {
                             continue;
                         }
@@ -509,7 +510,8 @@ namespace FabricObserver
                         }
 
                         // Exclude
-                        else if (isInFilterList)
+                        else if (filterType == ServiceFilterType.Exclude
+                                 && isInFilterList)
                         {
                             continue;
                         }
