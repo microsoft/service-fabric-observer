@@ -47,7 +47,7 @@ namespace FabricObserver.Utilities.Telemetry
         }
 
         /// <summary>
-        /// Gets an indicator if the telemetry is enabled or not.
+        /// Gets a value indicating whether or not telemetry is enabled.
         /// </summary>
         public bool IsEnabled => this.telemetryClient.IsEnabled() && ObserverManager.TelemetryEnabled;
 
