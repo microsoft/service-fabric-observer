@@ -103,7 +103,7 @@ folder (AppObserver.config.json):
 ```
 Settings descriptions: 
 
-All settings are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer).
+All settings are optional, ***except target OR targetType***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer).
 
 | Setting | Description |
 | :--- | :--- |
