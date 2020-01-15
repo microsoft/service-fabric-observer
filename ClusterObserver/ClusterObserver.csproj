@@ -7,8 +7,8 @@
     <ProjectGuid>{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ClusterObserver</RootNamespace>
-    <AssemblyName>ClusterObserver</AssemblyName>
+    <RootNamespace>FabricClusterObserver</RootNamespace>
+    <AssemblyName>FabricClusterObserver</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -108,7 +108,6 @@
   <ItemGroup>
     <Compile Include="Interfaces\IObserver.cs" />
     <Compile Include="Interfaces\IObserverBase.cs" />
-    <Compile Include="Interfaces\IObserverLogger.cs" />
     <Compile Include="Interfaces\IObserverTelemetryProvider.cs" />
     <Compile Include="Observers\ClusterObserver.cs" />
     <Compile Include="Observers\ObserverBase.cs" />
@@ -120,7 +119,6 @@
     <Compile Include="Utilities\Logger.cs" />
     <Compile Include="Utilities\LogLevel.cs" />
     <Compile Include="Utilities\ObserverConstants.cs" />
-    <Compile Include="Utilities\Retry.cs" />
     <Compile Include="Utilities\Telemetry\AppInsightsTelemetry.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -4,21 +4,16 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Tracing;
 using System.IO;
-using System.Threading;
-using FabricObserver.Interfaces;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
 using NLog.Time;
 
-namespace FabricObserver.Utilities
+namespace FabricClusterObserver.Utilities
 {
-    public sealed class Logger : IObserverLogger<ILogger>
+    public sealed class Logger
     {
-        private const int Retries = 5;
-
         // Text file logger for observers - info/warn/error...
         private ILogger OLogger { get; set; }
 
@@ -35,21 +30,6 @@ namespace FabricObserver.Utilities
         public string LogFolderBasePath { get; set; } = null;
 
         public string FilePath { get; set; } = null;
-
-        public static EventSource EtwLogger { get; private set; }
-
-        static Logger()
-        {
-            if (!ObserverManager.EtwEnabled || string.IsNullOrEmpty(ObserverManager.EtwProviderName))
-            {
-                return;
-            }
-
-            if (EtwLogger == null)
-            {
-                EtwLogger = new EventSource(ObserverManager.EtwProviderName);
-            }
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.
@@ -151,67 +131,6 @@ namespace FabricObserver.Utilities
         public void LogWarning(string format, params object[] parameters)
         {
             this.OLogger.Warn(format, parameters);
-        }
-
-        /// <inheritdoc/>
-        public bool TryWriteLogFile(string path, string content)
-        {
-            if (string.IsNullOrEmpty(content))
-            {
-                return false;
-            }
-
-            for (var i = 0; i < Retries; i++)
-            {
-                try
-                {
-                    string directory = Path.GetDirectoryName(path);
-                    if (!Directory.Exists(directory))
-                    {
-                        Directory.CreateDirectory(directory);
-                    }
-
-                    File.WriteAllText(path, content);
-                    return true;
-                }
-                catch (IOException)
-                {
-                }
-                catch (UnauthorizedAccessException)
-                {
-                }
-
-                Thread.Sleep(1000);
-            }
-
-            return false;
-        }
-
-        public bool TryDeleteInstanceLog()
-        {
-            if (string.IsNullOrEmpty(this.FilePath) || !File.Exists(this.FilePath))
-            {
-                return false;
-            }
-
-            for (var i = 0; i < Retries; i++)
-            {
-                try
-                {
-                    File.Delete(this.FilePath);
-                    return true;
-                }
-                catch (IOException)
-                {
-                }
-                catch (UnauthorizedAccessException)
-                {
-                }
-
-                Thread.Sleep(1000);
-            }
-
-            return false;
         }
 
         public static void ShutDown()

@@ -7,16 +7,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Interfaces;
-using FabricObserver.Utilities;
-using FabricObserver.Utilities.Telemetry;
+using FabricClusterObserver.Interfaces;
+using FabricClusterObserver.Utilities;
+using FabricClusterObserver.Utilities.Telemetry;
 
-namespace FabricObserver
+namespace FabricClusterObserver
 {
     // This class manages the lifetime of all observers from instantiation to "destruction",
     // and sequentially runs all observer instances in a never-ending while loop,
@@ -32,7 +31,6 @@ namespace FabricObserver
         private CancellationToken token;
         private CancellationTokenSource cts;
         private bool hasDisposed = false;
-        private static bool etwEnabled = false;
 
         public string ApplicationName { get; set; }
 
@@ -47,45 +45,6 @@ namespace FabricObserver
         public static IObserverTelemetryProvider TelemetryClient { get; set; }
 
         public static bool TelemetryEnabled { get; set; } = false;
-
-        public static bool FabricObserverInternalTelemetryEnabled { get; set; } = true;
-
-        public static bool ObserverWebAppDeployed { get; set; }
-
-        public static bool EtwEnabled
-        {
-            get
-            {
-                return bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) ? etwEnabled : false;
-            }
-
-            set
-            {
-                etwEnabled = value;
-            }
-        }
-
-        public static string EtwProviderName
-        {
-            get
-            {
-                if (EtwEnabled)
-                {
-                    string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
-
-                    if (!string.IsNullOrEmpty(key))
-                    {
-                        return key;
-                    }
-
-                    return null;
-                }
-
-                return null;
-            }
-        }
-
-        private string Fqdn { get; set; }
 
         private Logger Logger { get; set; }
 
@@ -118,7 +77,7 @@ namespace FabricObserver
             }
 
             // this logs error/warning/info messages for ObserverManager...
-            this.Logger = new Logger("ClusterObserverManager", logFolderBasePath);
+            this.Logger = new Logger(ObserverConstants.ObserverManangerName, logFolderBasePath);
            
             this.SetPropertiesFromConfigurationParameters();
 
@@ -264,14 +223,6 @@ namespace FabricObserver
                 this.shutdownGracePeriodInSeconds = shutdownGracePeriodInSeconds;
             }
 
-            // FQDN for use in warning or error hyperlinks in HTML output
-            // This only makes sense when you have the FabricObserverWebApi app installed...
-            string fqdn = GetConfigSettingValue(ObserverConstants.FQDN);
-            if (!string.IsNullOrEmpty(fqdn))
-            {
-                this.Fqdn = fqdn;
-            }
-
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry...
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
@@ -286,22 +237,6 @@ namespace FabricObserver
                 {
                     TelemetryClient = new AppInsightsTelemetry(key);
                 }
-            }
-
-            // FabricObserver runtime telemetry (Non-PII)
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
-            {
-                FabricObserverInternalTelemetryEnabled = foTelemEnabled;
-            }
-
-            // ObserverWebApi...
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiAppDeployed), out bool obsWeb))
-            {
-                ObserverWebAppDeployed = obsWeb;
-            }
-            else
-            {
-                ObserverWebAppDeployed = IsObserverWebApiAppInstalled();
             }
         }
 
@@ -431,47 +366,6 @@ namespace FabricObserver
                         }
 
                         continue;
-                    }
-
-                    if (ObserverWebAppDeployed)
-                    {
-                        string errWarnMsg = "No errors or warnings detected.";
-
-                        if (observer.HasActiveFabricErrorOrWarning)
-                        {
-                            if (!string.IsNullOrEmpty(this.Fqdn))
-                            {
-                                errWarnMsg = $"<a style=\"font-weight: bold; color: red;\" href=\"http://{this.Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>.";
-                            }
-                            else
-                            {
-                                errWarnMsg = $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
-                            }
-
-                            this.Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
-                        }
-                        else
-                        {
-                            // Delete the observer's instance log (local file with Warn/Error details per run)..
-                            _ = observer.ObserverLogger.TryDeleteInstanceLog();
-
-                            try
-                            {
-                                if (File.Exists(this.Logger.FilePath))
-                                {
-                                    // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s)...
-                                    File.WriteAllLines(
-                                        this.Logger.FilePath,
-                                        File.ReadLines(this.Logger.FilePath)
-                                                       .Where(line => !line.Contains(observer.ObserverName)).ToList());
-                                }
-                            }
-                            catch
-                            {
-                            }
-
-                            this.Logger.LogInfo($"Successfully ran {observer.ObserverName}.");
-                        }
                     }
                 }
                 catch (AggregateException ex)

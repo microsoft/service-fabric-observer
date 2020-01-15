@@ -8,12 +8,12 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Interfaces;
+using FabricClusterObserver.Interfaces;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 
-namespace FabricObserver.Utilities.Telemetry
+namespace FabricClusterObserver.Utilities.Telemetry
 {
     /// <summary>
     /// Abstracts the ApplicationInsights telemetry API calls allowing
@@ -140,7 +140,7 @@ namespace FabricObserver.Utilities.Telemetry
                     healthInfo += "\n" + unhealthyEvaluations;
                 }
 
-                var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
+                var tt = new TraceTelemetry($"Service Fabric Health Report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
          

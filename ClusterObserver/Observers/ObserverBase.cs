@@ -10,18 +10,14 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Interfaces;
-using FabricObserver.Utilities;
+using FabricClusterObserver.Interfaces;
+using FabricClusterObserver.Utilities;
 
-namespace FabricObserver
+namespace FabricClusterObserver
 {
     public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
     {
-        private const int TTLAddMinutes = 1;
-
         protected bool IsTelemetryEnabled { get; set; } = ObserverManager.TelemetryEnabled;
-
-        protected bool IsEtwEnabled { get; set; } = ObserverManager.EtwEnabled;
 
         protected IObserverTelemetryProvider ObserverTelemetryClient { get; set; } = null;
 

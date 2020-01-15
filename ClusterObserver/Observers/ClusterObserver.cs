@@ -8,10 +8,10 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Utilities.Telemetry;
-using FabricObserver.Utilities;
+using FabricClusterObserver.Utilities.Telemetry;
+using FabricClusterObserver.Utilities;
 
-namespace FabricObserver
+namespace FabricClusterObserver
 {
     class ClusterObserver : ObserverBase
     {
@@ -29,7 +29,7 @@ namespace FabricObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            // See Settings.xml
             if (this.RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
@@ -54,23 +54,18 @@ namespace FabricObserver
 
         private async Task ProbeClusterHealthAsync(CancellationToken token)
         {
-            if (this.FabricClientInstance == null)
-            {
-                throw new ArgumentException("fabricClient cannot be null...");
-            }
-
             token.ThrowIfCancellationRequested();
 
             _ = bool.TryParse(
                     this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitHealthWarningEvaluationConfigurationSetting), out bool emitWarningDetails);
-
+            
             try
             {
                 var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
-                                        this.AsyncClusterOperationTimeoutSeconds,
-                                        token).ConfigureAwait(true);
+                                                    this.AsyncClusterOperationTimeoutSeconds,
+                                                    token).ConfigureAwait(true);
 
                 string unhealthEvaluationsDescription = string.Empty;
 
