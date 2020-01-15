@@ -264,7 +264,9 @@ namespace FabricObserver
 
             this.SecurityConfiguration = new SecurityConfiguration();
 
-            string clusterManifestXml = await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync().ConfigureAwait(true);
+            string clusterManifestXml = await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(
+                                                this.AsyncClusterOperationTimeoutSeconds,
+                                                this.Token).ConfigureAwait(true);
 
             XmlReader xreader = null;
             StringReader sreader = null;
@@ -281,6 +283,7 @@ namespace FabricObserver
                 nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
 
                 var certificateNode = xdoc.SelectNodes($"//sf:NodeType[@Name='{this.NodeType}']//sf:Certificates", nsmgr);
+
                 if (certificateNode.Count == 0)
                 {
                     this.SecurityConfiguration.SecurityType = SecurityType.None;
@@ -315,11 +318,11 @@ namespace FabricObserver
                     }
                 }
             }
-            catch
+            catch (Exception e)
             {
                 this.WriteToLogWithLevel(
                 this.ObserverName,
-                $"There was an issue parsing the cluster manifest. Observer cannot run.",
+                $"There was an issue parsing the cluster manifest. Observer cannot run.\nError Details:\n{e.ToString()}",
                 LogLevel.Error);
 
                 throw;
