@@ -99,12 +99,21 @@ namespace FabricObserver
                     }
                 }
             }
-            catch (ArgumentException ae) { this.ObserverLogger.LogError("Handled Exception in IsClusterHealthyAsync(): \n {0}", ae.ToString()); }
-            catch (FabricException fe) { this.ObserverLogger.LogError("Handled Exception in IsClusterHealthyAsync(): \n {0}", fe.ToString()); }
-            catch (TimeoutException te) { this.ObserverLogger.LogError("Handled Exception in IsClusterHealthyAsync(): \n {0}", te.ToString()); }
+            catch (ArgumentException ae) 
+            { 
+                this.ObserverLogger.LogError("Unable to determine cluster health:\n {0}", ae.ToString()); 
+            }
+            catch (FabricException fe) 
+            { 
+                this.ObserverLogger.LogError("Unable to determine cluster health:\n {0}", fe.ToString()); 
+            }
+            catch (TimeoutException te) 
+            { 
+                this.ObserverLogger.LogError("Unable to determine cluster health:\n {0}", te.ToString()); 
+            }
             catch (Exception e)
             {
-                this.ObserverLogger.LogError("Unhandled Exception in IsClusterHealthyAsync(): \n {0}", e.ToString());
+                this.ObserverLogger.LogError("Unable to determine cluster health:\n {0}", e.ToString());
 
                 throw;
             }
