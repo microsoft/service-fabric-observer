@@ -32,9 +32,8 @@ You can quickly get started by reading [this](/Documentation/Using.md).
 
   
 ## AppObserver  
-Observer that monitors CPU usage, Memory use, and Disk space
-availability for Service Fabric Application services (processes). This
-observer will alert when user-supplied thresholds are reached.
+Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application services (processes). This
+observer will alert (SF Health event) when user-supplied thresholds are reached.
 
 ### Input
 JSON config file supplied by user, stored in
@@ -104,7 +103,7 @@ folder (AppObserver.config.json):
 ```
 Settings descriptions: 
 
-All settings are optional, ***except target***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer).
+All settings are optional, ***except target OR targetType***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer).
 
 | Setting | Description |
 | :--- | :--- |

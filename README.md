@@ -85,7 +85,7 @@ Since observers live in their own application, they monitor other applications t
 | Disk (local storage disk health/availability, space usage, IO) | DiskObserver |
 | Service Fabric Sysytem Services resource usage health monitoring across CPU, Memory, Ports (TCP) | FabricSystemObserver |
 | Networking (general health and monitoring of availability of user-specified, per-app endpoints) | NetworkObserver |
-| CPU/Memory (per process across Apps and Fabric system services) | NodeObserver |
+| CPU/Memory/Firewalls/Ports resource usage at machine level | NodeObserver |
 | OS properties (install date, health status, list of hot fixes, hardware configuration, etc., ephemeral port range and real-time OS health status) | OSObserver |
 | Service Fabric Configuration information | SFConfigurationObserver |
 | **Another resource you find important** | **Observer you implement** |
