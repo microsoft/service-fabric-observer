@@ -83,13 +83,12 @@ namespace FabricObserver
                     if (this.IsTelemetryEnabled)
                     {
                         _ = this.ObserverTelemetryClient?.ReportHealthAsync(
-                                FabricRuntime.GetActivationContext().ApplicationName,
-                                this.FabricServiceContext.ServiceName.OriginalString,
-                                "FabricObserver",
-                                this.ObserverName,
-                                $"{this.NodeName}/OS reporting unhealthy: {this.osStatus}",
-                                HealthState.Error,
-                                token);
+                        Utilities.Telemetry.HealthScope.Application,
+                        FabricRuntime.GetActivationContext().ApplicationName,
+                        HealthState.Error,
+                        $"{this.NodeName} - OS reporting unhealthy: {this.osStatus}",
+                        this.ObserverName,
+                        this.Token);
                     }
                 }
                 else if (this.HasActiveFabricErrorOrWarning &&
