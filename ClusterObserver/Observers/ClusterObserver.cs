@@ -85,18 +85,18 @@ namespace FabricObserver
 
                         unhealthEvaluationsDescription += $"{evaluation.AggregatedHealthState}: {evaluation.Description}\n";
                     }
-                }
 
-                // Telemetry...
-                if (this.IsTelemetryEnabled)
-                {
-                    await this.ObserverTelemetryClient?.ReportHealthAsync(
-                        HealthScope.Cluster,
-                        "AggregatedClusterHealth",
-                        clusterHealth.AggregatedHealthState,
-                        unhealthEvaluationsDescription,
-                        this.ObserverName,
-                        this.Token);
+                    // Telemetry...
+                    if (this.IsTelemetryEnabled)
+                    {
+                        await this.ObserverTelemetryClient?.ReportHealthAsync(
+                            HealthScope.Cluster,
+                            "AggregatedClusterHealth",
+                            clusterHealth.AggregatedHealthState,
+                            unhealthEvaluationsDescription,
+                            this.ObserverName,
+                            this.Token);
+                    }
                 }
             }
             catch (ArgumentException ae) { this.ObserverLogger.LogError("Handled Exception in IsClusterHealthyAsync(): \n {0}", ae.ToString()); }
