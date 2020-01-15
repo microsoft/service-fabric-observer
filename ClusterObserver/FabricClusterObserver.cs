@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 
-namespace FabricObserver
+namespace FabricClusterObserver
 {
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.

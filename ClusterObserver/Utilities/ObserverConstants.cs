@@ -3,27 +3,20 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System.Security.Permissions;
-
-namespace FabricObserver.Utilities
+namespace FabricClusterObserver.Utilities
 {
     public sealed class ObserverConstants
     {
-        public const string ObserverManangerName = "ObserverManager";
+        public const string ObserverManangerName = "ClusterObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
         public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string EnableLongRunningCSVLogging = "EnableLongRunningCSVLogging";
         public const string ObserverLogPath = "ObserverLogPath";
-        public const string DataLogPath = "DataLogPath";
-        public const string FQDN = "FQDN";
         public const string ObserverRunIntervalParameterName = "RunInterval";
         public const string ObserverEnabled = "Enabled";
         public const string AIKey = "AppInsightsInstrumentationKey";
         public const string TelemetryEnabled = "EnableTelemetryProvider";
-        public const string EnableEventSourceProvider = "EnableEventSourceProvider";
-        public const string EventSourceProviderName = "EventSourceProviderName";
-        public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
 
         // The name of the package that contains this Observer's configuration

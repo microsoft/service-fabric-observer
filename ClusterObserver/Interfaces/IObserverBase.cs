@@ -5,9 +5,9 @@
 
 using System;
 using System.Collections.Generic;
-using FabricObserver.Utilities;
+using FabricClusterObserver.Utilities;
 
-namespace FabricObserver.Interfaces
+namespace FabricClusterObserver.Interfaces
 {
     public interface IObserverBase<TServiceContext> : IObserver
     {
