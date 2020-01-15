@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using FabricObserver.Interfaces;
 using FabricObserver.Model;
 using FabricObserver.Utilities;
+using FabricObserver.Utilities.Telemetry;
 using Microsoft.Win32;
 
 namespace FabricObserver
@@ -692,12 +693,11 @@ namespace FabricObserver
                 if (this.IsTelemetryEnabled)
                 {
                     _ = this.ObserverTelemetryClient?.ReportHealthAsync(
-                        id ?? string.Empty,
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        "FabricObserver",
-                        this.ObserverName,
-                        $"{this.NodeName}/{errorWarningKind}/{data.Property}/{Math.Round(data.AverageDataValue)}",
+                        !string.IsNullOrEmpty(id) ? HealthScope.Application : HealthScope.Node,
+                        $"{(appName != null ? appName.OriginalString : this.NodeName)}",
                         healthState,
+                        $"{this.NodeName}/{errorWarningKind}/{data.Property}/{Math.Round(data.AverageDataValue)}",
+                        this.ObserverName,
                         this.Token);
                 }
 

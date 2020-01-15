@@ -446,13 +446,12 @@ namespace FabricObserver
                         if (this.IsTelemetryEnabled)
                         {
                             _ = this.ObserverTelemetryClient?.ReportHealthAsync(
+                                Utilities.Telemetry.HealthScope.Application,
                                 this.userEndpoints[j].AppTarget,
-                                this.FabricServiceContext.ServiceName.OriginalString,
-                                "FabricObserver",
-                                this.ObserverName,
-                                $"{this.NodeName}/{ErrorWarningCode.WarningNetworkEndpointUnreachable}: {healthMessage}",
                                 HealthState.Warning,
-                                token);
+                                $"{this.NodeName}/{ErrorWarningCode.WarningNetworkEndpointUnreachable}: {healthMessage}",
+                                this.ObserverName,
+                                this.Token);
                         }
                     }
                     else
