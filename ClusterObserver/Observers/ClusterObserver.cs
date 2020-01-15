@@ -67,7 +67,7 @@ namespace FabricClusterObserver
                                                     this.AsyncClusterOperationTimeoutSeconds,
                                                     token).ConfigureAwait(true);
 
-                string unhealthEvaluationsDescription = string.Empty;
+                string unhealthyEvaluationsDescription = string.Empty;
 
                 if (clusterHealth.AggregatedHealthState == HealthState.Error
                     || (emitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning))
@@ -78,7 +78,7 @@ namespace FabricClusterObserver
                     {
                         token.ThrowIfCancellationRequested();
 
-                        unhealthEvaluationsDescription += $"{evaluation.AggregatedHealthState}: {evaluation.Description}\n";
+                        unhealthyEvaluationsDescription += $"{evaluation.AggregatedHealthState}: {evaluation.Description}\n";
                     }
 
                     // Telemetry...
@@ -88,7 +88,7 @@ namespace FabricClusterObserver
                             HealthScope.Cluster,
                             "AggregatedClusterHealth",
                             clusterHealth.AggregatedHealthState,
-                            unhealthEvaluationsDescription,
+                            unhealthyEvaluationsDescription,
                             this.ObserverName,
                             this.Token);
                     }
