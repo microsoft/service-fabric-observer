@@ -102,13 +102,14 @@ namespace FabricObserver.Utilities.Telemetry
         /// <summary>
         /// Calls AI to report health.
         /// </summary>
-        /// <param name="applicationName">Application name.</param>
-        /// <param name="serviceName">Service name.</param>
-        /// <param name="instance">Instance identifier.</param>
-        /// <param name="source">Name of the health source.</param>
-        /// <param name="property">Name of the health property.</param>
-        /// <param name="state">HealthState.</param>
+        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc...).</param>
+        /// <param name="propertyName">Value of the property.</param>
+        /// <param name="state">Health state.</param>
+        /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
+        /// <param name="source">Source of emission.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <param name="serviceName">Optional: TraceTelemetry context cloud service name.</param>
+        /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
             HealthScope scope,
@@ -118,7 +119,7 @@ namespace FabricObserver.Utilities.Telemetry
             string source,
             CancellationToken cancellationToken,
             string serviceName = null,
-            string instance = null)
+            string instanceName = null)
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -141,7 +142,7 @@ namespace FabricObserver.Utilities.Telemetry
 
                 var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
                 tt.Context.Cloud.RoleName = serviceName;
-                tt.Context.Cloud.RoleInstance = instance;
+                tt.Context.Cloud.RoleInstance = instanceName;
          
                 this.telemetryClient.TrackTrace(tt);
             }

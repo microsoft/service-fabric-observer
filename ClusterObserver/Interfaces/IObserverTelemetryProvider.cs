@@ -49,6 +49,14 @@ namespace FabricObserver.Interfaces
         /// <summary>
         /// Calls telemetry provider to report health.
         /// </summary>
+        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc...).</param>
+        /// <param name="propertyName">Value of the property.</param>
+        /// <param name="state">Health state.</param>
+        /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
+        /// <param name="source">Source of emission.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <param name="serviceName">Optional: TraceTelemetry context cloud service name.</param>
+        /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>a Task...</returns>
         Task ReportHealthAsync(
             HealthScope scope,
@@ -58,7 +66,7 @@ namespace FabricObserver.Interfaces
             string source,
             CancellationToken cancellationToken,
             string serviceName = null,
-            string instance = null);
+            string instanceName = null);
 
         /// <summary>
         /// Calls telemetry provider to report a metric.
