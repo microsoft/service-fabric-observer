@@ -26,6 +26,8 @@ namespace FabricClusterObserver
         {
         }
 
+        private HealthState ClusterHealthState { get; set; } = HealthState.Unknown;
+
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -54,6 +56,11 @@ namespace FabricClusterObserver
 
         private async Task ProbeClusterHealthAsync(CancellationToken token)
         {
+            if (!this.IsTelemetryEnabled)
+            {
+                return;
+            }
+
             token.ThrowIfCancellationRequested();
 
             _ = bool.TryParse(
@@ -61,52 +68,73 @@ namespace FabricClusterObserver
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitHealthWarningEvaluationConfigurationSetting), out bool emitWarningDetails);
             
+            _ = bool.TryParse(
+                    this.GetSettingParameterValue(
+                    ObserverConstants.ClusterObserverConfigurationSectionName,
+                    ObserverConstants.EmitOkHealthState), out bool emitOkHealthState);
+
             try
             {
                 var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
                                                 this.AsyncClusterOperationTimeoutSeconds,
                                                 token).ConfigureAwait(true);
 
-                if (clusterHealth.AggregatedHealthState == HealthState.Ok
-                    || (emitWarningDetails && clusterHealth.AggregatedHealthState != HealthState.Warning))
+                string telemetryDescription = string.Empty;
+
+                // Previous run generated unhealthy evaluation report... Clear it (send Ok) .
+                if (emitOkHealthState && clusterHealth.AggregatedHealthState == HealthState.Ok
+                    && (this.ClusterHealthState == HealthState.Error
+                    || (emitWarningDetails && this.ClusterHealthState == HealthState.Warning)))
+                {
+                    telemetryDescription += "Cluster has recovered from previous Error/Warning state.";
+                }
+                else // Construct unhealthy state information...
+                {
+                    // If in Warning and you are not sending Warning state reports, then end here...
+                    if (!emitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning)
+                    {
+                        return;
+                    }
+
+                    var unhealthyEvaluations = clusterHealth.UnhealthyEvaluations;
+
+                    foreach (var evaluation in unhealthyEvaluations)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}\n";
+
+                        // Application in error/warning?...
+                        foreach (var app in clusterHealth.ApplicationHealthStates)
+                        {
+                            if (app.AggregatedHealthState == HealthState.Ok
+                                || (emitWarningDetails && app.AggregatedHealthState != HealthState.Warning))
+                            {
+                                continue;
+                            }
+
+                            telemetryDescription += $"Application in Error or Warning: {app.ApplicationName}\n";
+                        }
+                    }
+                }
+
+                // Track current health state for use in next run...
+                this.ClusterHealthState = clusterHealth.AggregatedHealthState;
+
+                // This means there is no unhealthy report to send...
+                if (string.IsNullOrEmpty(telemetryDescription))
                 {
                     return;
                 }
 
-                string unhealthyEvaluationsDescription = string.Empty;
-                var unhealthyEvaluations = clusterHealth.UnhealthyEvaluations;
-
-                // Unhealthy evaluation descriptions...
-                foreach (var evaluation in unhealthyEvaluations)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    unhealthyEvaluationsDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}\n";
-
-                    // Application in error/warning?...
-                    foreach (var app in clusterHealth.ApplicationHealthStates)
-                    {
-                        if (app.AggregatedHealthState == HealthState.Ok
-                            || (emitWarningDetails && app.AggregatedHealthState != HealthState.Warning))
-                        {
-                            continue;
-                        }
-
-                        unhealthyEvaluationsDescription += $"Application in Error or Warning: {app.ApplicationName}\n";
-                    }
-                }
-
                 // Telemetry...
-                if (this.IsTelemetryEnabled)
-                {
-                    await this.ObserverTelemetryClient?.ReportHealthAsync(
+                await this.ObserverTelemetryClient?.ReportHealthAsync(
                         HealthScope.Cluster,
                         "AggregatedClusterHealth",
                         clusterHealth.AggregatedHealthState,
-                        unhealthyEvaluationsDescription,
+                        telemetryDescription,
                         this.ObserverName,
                         this.Token);
-                }
             }
             catch (ArgumentException ae) 
             { 

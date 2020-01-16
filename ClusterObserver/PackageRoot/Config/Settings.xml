@@ -35,6 +35,8 @@
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <!-- Emit health details for both Warning and Error for aggregated cluster health? Error details will
     always be transmitted...-->
-    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="False" />
+    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
+    <!-- Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
+    <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
   </Section>
 </Settings>
