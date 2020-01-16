@@ -64,34 +64,48 @@ namespace FabricClusterObserver
             try
             {
                 var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
-                                                    this.AsyncClusterOperationTimeoutSeconds,
-                                                    token).ConfigureAwait(true);
+                                                this.AsyncClusterOperationTimeoutSeconds,
+                                                token).ConfigureAwait(true);
+
+                if (clusterHealth.AggregatedHealthState == HealthState.Ok
+                    || (emitWarningDetails && clusterHealth.AggregatedHealthState != HealthState.Warning))
+                {
+                    return;
+                }
 
                 string unhealthyEvaluationsDescription = string.Empty;
+                var unhealthyEvaluations = clusterHealth.UnhealthyEvaluations;
 
-                if (clusterHealth.AggregatedHealthState == HealthState.Error
-                    || (emitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning))
+                // Unhealthy evaluation descriptions...
+                foreach (var evaluation in unhealthyEvaluations)
                 {
-                    var unhealthEvaluations = clusterHealth.UnhealthyEvaluations;
+                    token.ThrowIfCancellationRequested();
 
-                    foreach (var evaluation in unhealthEvaluations)
+                    unhealthyEvaluationsDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}\n";
+
+                    // Application in error/warning?...
+                    foreach (var app in clusterHealth.ApplicationHealthStates)
                     {
-                        token.ThrowIfCancellationRequested();
+                        if (app.AggregatedHealthState == HealthState.Ok
+                            || (emitWarningDetails && app.AggregatedHealthState != HealthState.Warning))
+                        {
+                            continue;
+                        }
 
-                        unhealthyEvaluationsDescription += $"{evaluation.AggregatedHealthState}: {evaluation.Description}\n";
+                        unhealthyEvaluationsDescription += $"Application in Error or Warning: {app.ApplicationName}\n";
                     }
+                }
 
-                    // Telemetry...
-                    if (this.IsTelemetryEnabled)
-                    {
-                        await this.ObserverTelemetryClient?.ReportHealthAsync(
-                            HealthScope.Cluster,
-                            "AggregatedClusterHealth",
-                            clusterHealth.AggregatedHealthState,
-                            unhealthyEvaluationsDescription,
-                            this.ObserverName,
-                            this.Token);
-                    }
+                // Telemetry...
+                if (this.IsTelemetryEnabled)
+                {
+                    await this.ObserverTelemetryClient?.ReportHealthAsync(
+                        HealthScope.Cluster,
+                        "AggregatedClusterHealth",
+                        clusterHealth.AggregatedHealthState,
+                        unhealthyEvaluationsDescription,
+                        this.ObserverName,
+                        this.Token);
                 }
             }
             catch (ArgumentException ae) 
