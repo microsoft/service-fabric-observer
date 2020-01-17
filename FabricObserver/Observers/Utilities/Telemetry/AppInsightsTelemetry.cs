@@ -137,7 +137,7 @@ namespace FabricObserver.Utilities.Telemetry
 
                 if (!string.IsNullOrEmpty(unhealthyEvaluations))
                 {
-                    healthInfo += "\n" + unhealthyEvaluations;
+                    healthInfo += $"{Environment.NewLine}{unhealthyEvaluations}";
                 }
 
                 var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
@@ -148,7 +148,7 @@ namespace FabricObserver.Utilities.Telemetry
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:\n{e.ToString()}");
+                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.ToString()}");
                 throw;
             }
 

@@ -102,7 +102,7 @@ namespace FabricClusterObserver
                     {
                         token.ThrowIfCancellationRequested();
 
-                        telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}\n";
+                        telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}";
 
                         // Application in error/warning?...
                         foreach (var app in clusterHealth.ApplicationHealthStates)
@@ -113,7 +113,7 @@ namespace FabricClusterObserver
                                 continue;
                             }
 
-                            telemetryDescription += $"Application in Error or Warning: {app.ApplicationName}\n";
+                            telemetryDescription += $"Application in Error or Warning: {app.ApplicationName}{Environment.NewLine}";
                         }
                     }
                 }
@@ -121,7 +121,7 @@ namespace FabricClusterObserver
                 // Track current health state for use in next run...
                 this.ClusterHealthState = clusterHealth.AggregatedHealthState;
 
-                // This means there is no unhealthy report to send...
+                // This means there is no cluster health state data to emit...
                 if (string.IsNullOrEmpty(telemetryDescription))
                 {
                     return;
@@ -138,19 +138,31 @@ namespace FabricClusterObserver
             }
             catch (ArgumentException ae) 
             { 
-                this.ObserverLogger.LogError("Unable to determine cluster health:\n {0}", ae.ToString()); 
+                this.ObserverLogger.LogError(
+                    "Unable to determine cluster health:{0}{1}",
+                    Environment.NewLine,
+                    ae.ToString()); 
             }
             catch (FabricException fe) 
             { 
-                this.ObserverLogger.LogError("Unable to determine cluster health:\n {0}", fe.ToString()); 
+                this.ObserverLogger.LogError(
+                    "Unable to determine cluster health:{0}{1}",
+                    Environment.NewLine,
+                    fe.ToString()); 
             }
             catch (TimeoutException te) 
             { 
-                this.ObserverLogger.LogError("Unable to determine cluster health:\n {0}", te.ToString()); 
+                this.ObserverLogger.LogError(
+                    "Unable to determine cluster health:{0}{1}",
+                    Environment.NewLine,
+                    te.ToString()); 
             }
             catch (Exception e)
             {
-                this.ObserverLogger.LogError("Unable to determine cluster health:\n {0}", e.ToString());
+                this.ObserverLogger.LogError(
+                    "Unable to determine cluster health:{0}{1}",
+                    Environment.NewLine,
+                    e.ToString());
 
                 throw;
             }
