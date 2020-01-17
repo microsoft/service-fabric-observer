@@ -43,16 +43,16 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverLogController"/> class.
         /// </summary>
-        /// <param name="serviceContext">service context...</param>
-        /// <param name="fabricClient">FabricClient instance...</param>
+        /// <param name="serviceContext">service context.</param>
+        /// <param name="fabricClient">FabricClient instance.</param>
         public ObserverLogController(StatelessServiceContext serviceContext, FabricClient fabricClient)
         {
             this.serviceContext = serviceContext;
             this.fabricClient = fabricClient;
         }
 
-        // GET: api/ObserverLog/DiskObserver/html returns html output...
-        // GET: api/ObserverLog/DiskObserver returns json output...
+        // GET: api/ObserverLog/DiskObserver/html returns html output.
+        // GET: api/ObserverLog/DiskObserver returns json output.
         [HttpGet("{name}/{format?}", Name = "GetObserverLogFormatted")]
         public ActionResult Get(string name, string format = "json")
         {
@@ -103,7 +103,7 @@
             {
                 try
                 {
-                    // Observer log paths...
+                    // Observer log paths.
                     var appObserverLogPath = observerLogFilePath.Replace("ObserverManager", "AppObserver");
                     var osObserverLogPath = observerLogFilePath.Replace("ObserverManager", "OSObserver");
                     var diskObserverLogPath = observerLogFilePath.Replace("ObserverManager", "DiskObserver");
@@ -111,7 +111,7 @@
                     var fabricSystemObserverLogPath = observerLogFilePath.Replace("ObserverManager", "FabricSystemObserver");
                     var nodeObserverLogPath = observerLogFilePath.Replace("ObserverManager", "NodeObserver");
 
-                    // Observer logs...
+                    // Observer logs.
                     if (System.IO.File.Exists(appObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(appObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
@@ -205,7 +205,7 @@
 
                             break;
                         default:
-                            ret = this.Json("Specified Observer, " + name + ", does not exist...");
+                            ret = this.Json("Specified Observer, " + name + ", does not exist.");
                             break;
                     }
 
@@ -215,7 +215,7 @@
                 {
                 }
 
-                // If we get here, let's wait a second before the next iteration...
+                // If we get here, let's wait a second before the next iteration.
                 Task.Delay(1000).Wait();
             }
 
@@ -223,7 +223,7 @@
         }
 
         // This only makes sense if you enable communication between nodes and/or over the Internet
-        // over a secure channel... By default, this API service is node-local (node-only) with no comms outside of VM...
+        // over a secure channel. By default, this API service is node-local (node-only) with no comms outside of VM.
         // GET: api/ObserverLog/DiskObserver/_SFRole_0
         // GET: api/ObserverLog/DiskObserver/_SFRole_0/html
         [HttpGet("{observername}/{nodename}/{format?}", Name = "GetObserverLogNode")]
@@ -237,7 +237,7 @@
                 {
                     var addr = node[0].IpAddressOrFQDN;
 
-                    // By default this service is node-local, http, port 5000...
+                    // By default this service is node-local, http, port 5000.
                     // If you modify the service to support Internet communication over a
                     // secure channel, then change this code to force https.
                     if (!addr.Contains("http://"))
@@ -248,7 +248,7 @@
                     string fqdn = "?fqdn=" + this.Request.Host;
 
                     // If you modify the service to support Internet communication over a
-                    // secure channel, then change this code to reflect the correct port...
+                    // secure channel, then change this code to reflect the correct port.
                     var req = WebRequest.Create(addr + $":5000/api/ObserverLog/{observername}/{format}{fqdn}");
                     req.Credentials = CredentialCache.DefaultCredentials;
                     var response = (HttpWebResponse)req.GetResponse();
@@ -259,7 +259,7 @@
                     string responseFromServer = reader.ReadToEnd();
                     var ret = responseFromServer;
 
-                    // Cleanup the streams and the response...
+                    // Cleanup the streams and the response.
                     reader.Close();
                     dataStream.Close();
                     response.Close();
@@ -268,7 +268,7 @@
                 }
                 else
                 {
-                    return this.Content("no node found with that name...");
+                    return this.Content("no node found with that name.");
                 }
             }
             catch (ArgumentException ae)
@@ -304,7 +304,7 @@
             {
                 try
                 {
-                    // Observer log paths...
+                    // Observer log paths.
                     var appObserverLogPath = observerLogFilePath.Replace("ObserverManager", "AppObserver");
                     var osObserverLogPath = observerLogFilePath.Replace("ObserverManager", "OSObserver");
                     var diskObserverLogPath = observerLogFilePath.Replace("ObserverManager", "DiskObserver");
@@ -312,7 +312,7 @@
                     var fabricSystemObserverLogPath = observerLogFilePath.Replace("ObserverManager", "FabricSystemObserver");
                     var nodeObserverLogPath = observerLogFilePath.Replace("ObserverManager", "NodeObserver");
 
-                    // Observer logs...
+                    // Observer logs.
                     if (System.IO.File.Exists(appObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(appObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
@@ -353,12 +353,12 @@
 
                     string nodeLinks = string.Empty;
 
-                    // Request originating from ObserverWeb node hyperlinks...
+                    // Request originating from ObserverWeb node hyperlinks.
                     if (this.Request.QueryString.HasValue && this.Request.Query.ContainsKey("fqdn"))
                     {
                         host = this.Request.Query["fqdn"];
 
-                        // Node links...
+                        // Node links.
                         var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
                         var ordered = nodeList.OrderBy(node => node.NodeName);
 
@@ -437,7 +437,7 @@
 
                             break;
                         default:
-                            this.sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist...");
+                            this.sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist.");
                             break;
                     }
 
@@ -453,7 +453,7 @@
                     html = ie.ToString();
                 }
 
-                // If we get here, let's wait a few seconds before the next iteration...
+                // If we get here, let's wait a few seconds before the next iteration.
                 Task.Delay(2000).Wait();
             }
 

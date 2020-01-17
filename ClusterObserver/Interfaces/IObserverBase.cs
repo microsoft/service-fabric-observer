@@ -15,7 +15,7 @@ namespace FabricClusterObserver.Interfaces
 
         string NodeName { get; set; }
 
-        // StatefulServiceContext or StatelessServiceContext...
+        // StatefulServiceContext or StatelessServiceContext.
         TServiceContext FabricServiceContext { get; }
 
         Logger ObserverLogger { get; set; }

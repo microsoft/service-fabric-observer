@@ -22,16 +22,16 @@ namespace FabricClusterObserver.Interfaces
         bool IsUnhealthy { get; set; }
 
         /// <summary>
-        /// The function where observers observe...
+        /// The function where observers observe.
         /// </summary>
-        /// <param name="token">Cancellation token used to stop observers...</param>
+        /// <param name="token">Cancellation token used to stop observers.</param>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         Task ObserveAsync(CancellationToken token);
 
         /// <summary>
-        /// The function where observes report...
+        /// The function where observes report.
         /// </summary>
-        /// <param name="token">Cancellation token used to stop observers...</param>
+        /// <param name="token">Cancellation token used to stop observers.</param>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         Task ReportAsync(CancellationToken token);
     }

@@ -45,8 +45,8 @@ namespace FabricObserver
         /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
-            // Only run once per specified time in Settings.xml... (default is already set to 1 day for CertificateObserver)
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter...
+            // Only run once per specified time in Settings.xml. (default is already set to 1 day for CertificateObserver)
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter.
             if (this.RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
@@ -180,7 +180,7 @@ namespace FabricObserver
         {
             X509Chain ch = null;
 
-            // This function is only passed well-formed certs, so no need error handling...
+            // This function is only passed well-formed certs, so no need error handling.
             try
             {
                 ch = new X509Chain();
@@ -273,7 +273,7 @@ namespace FabricObserver
 
             try
             {
-                // Safe XML pattern - *Do not use LoadXml*...
+                // Safe XML pattern - *Do not use LoadXml*.
                 var xdoc = new XmlDocument { XmlResolver = null };
                 sreader = new StringReader(clusterManifestXml);
                 xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });

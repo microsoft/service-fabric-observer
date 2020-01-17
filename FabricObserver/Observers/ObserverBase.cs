@@ -26,13 +26,13 @@ namespace FabricObserver
 {
     public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
     {
-        // SF Infra...
+        // SF Infra.
         private const string SFWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
         private const string SFInfrastructureLogRootRegistryName = "FabricLogRoot";
         private const int TTLAddMinutes = 1;
         private string sFLogRoot = null;
 
-        // Dump...
+        // Dump.
         private string dumpsPath = null;
         private int maxDumps = 5;
         private Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
@@ -70,10 +70,10 @@ namespace FabricObserver
         /// <inheritdoc/>
         public bool IsUnhealthy { get; set; } = false;
 
-        // Only set for unit test runs...
+        // Only set for unit test runs.
         public bool IsTestRun { get; set; } = false;
 
-        // Loggers...
+        // Loggers.
 
         /// <inheritdoc/>
         public Logger ObserverLogger { get; set; }
@@ -123,7 +123,7 @@ namespace FabricObserver
                 this.SetDefaultSFDumpPath();
             }
 
-            // Observer Logger setup...
+            // Observer Logger setup.
             string logFolderBasePath = null;
             string observerLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
@@ -181,7 +181,7 @@ namespace FabricObserver
                 this.AsyncClusterOperationTimeoutSeconds = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
             }
 
-            // DataLogger setup...
+            // DataLogger setup.
             this.CsvFileLogger = new DataTableFileLogger();
             string dataLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
@@ -276,10 +276,10 @@ namespace FabricObserver
         }
 
         /// <summary>
-        /// Gets a dictionary of Parameters of the specified section...
+        /// Gets a dictionary of Parameters of the specified section.
         /// </summary>
-        /// <param name="sectionName">Name of the section...</param>
-        /// <returns>A dictionary of Parameters key/value pairs (string, string) or null upon failure...</returns>
+        /// <param name="sectionName">Name of the section.</param>
+        /// <returns>A dictionary of Parameters key/value pairs (string, string) or null upon failure.</returns>
         public IDictionary<string, string> GetConfigSettingSectionParameters(string sectionName)
         {
             if (string.IsNullOrEmpty(sectionName))
@@ -307,12 +307,12 @@ namespace FabricObserver
         }
 
         /// <summary>
-        /// Gets the interval at which the Observer is to be run, i.e. "no more often than..."
-        /// This is useful for Observers that do not need to run very often (a la OSObserver, Certificate Observer, etc...)
+        /// Gets the interval at which the Observer is to be run, i.e. "no more often than."
+        /// This is useful for Observers that do not need to run very often (a la OSObserver, Certificate Observer, etc.)
         /// </summary>
-        /// <param name="configSectionName">Observer configuration section name...</param>
-        /// <param name="configParamName">Observer configuration parameter name...</param>
-        /// <param name="defaultTo">Specific an optional TimeSpan to default to if setting is not found in config...
+        /// <param name="configSectionName">Observer configuration section name.</param>
+        /// <param name="configParamName">Observer configuration parameter name.</param>
+        /// <param name="defaultTo">Specific an optional TimeSpan to default to if setting is not found in config.
         /// else, it defaults to 24 hours.</param>
         /// <returns>run interval.</returns>
         public TimeSpan GetObserverRunInterval(
@@ -389,7 +389,7 @@ namespace FabricObserver
             }
         }
 
-        // Windows process dmp creator...
+        // Windows process dmp creator.
         internal bool DumpServiceProcess(int processId, DumpType dumpType = DumpType.Full)
         {
             if (string.IsNullOrEmpty(this.dumpsPath))
@@ -426,7 +426,7 @@ namespace FabricObserver
 
             try
             {
-                // This is to ensure friendly-name of resulting dmp file...
+                // This is to ensure friendly-name of resulting dmp file.
                 processName = Process.GetProcessById(processId)?.ProcessName;
 
                 if (string.IsNullOrEmpty(processName))
@@ -438,7 +438,7 @@ namespace FabricObserver
 
                 processName += "_" + DateTime.Now.ToString("ddMMyyyyHHmmss") + ".dmp";
 
-                // Check disk space availability before writing dump file...
+                // Check disk space availability before writing dump file.
                 using (var diskUsage = new DiskUsage(this.dumpsPath.Substring(0, 1)))
                 {
                     if (diskUsage.PercentUsedSpace >= 90)
@@ -447,7 +447,7 @@ namespace FabricObserver
                             this.FabricServiceContext.ServiceName.OriginalString,
                             this.ObserverName,
                             HealthState.Warning,
-                            "Not enough disk space available for dump file creation...");
+                            "Not enough disk space available for dump file creation.");
                         return false;
                     }
                 }
@@ -496,7 +496,7 @@ namespace FabricObserver
         {
             if (data == null)
             {
-                throw new ArgumentException("Supply all required parameters with non-null value...");
+                throw new ArgumentException("Supply all required parameters with non-null value.");
             }
 
             var thresholdName = "Minimum";
@@ -511,12 +511,12 @@ namespace FabricObserver
                 repPartitionId = $"Partition: {replicaOrInstance.Partitionid}";
                 repOrInstanceId = $"Replica: {replicaOrInstance.ReplicaOrInstanceId}";
 
-                // Create a unique id which may be used in the case of warnings or OK clears...
+                // Create a unique id which may be used in the case of warnings or OK clears.
                 appName = replicaOrInstance.ApplicationName;
                 name = appName.OriginalString.Replace("fabric:/", string.Empty);
                 id = name + "_" + data.Property.Replace(" ", string.Empty);
 
-                // Telemetry...
+                // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
                     _ = this.ObserverTelemetryClient?.ReportMetricAsync($"{this.NodeName}-{name}-{data.Id}-{data.Property}", data.AverageDataValue, this.Token);
@@ -537,14 +537,14 @@ namespace FabricObserver
             }
             else
             {
-                // Telemetry...
+                // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
                     _ = this.ObserverTelemetryClient?.ReportMetricAsync($"{this.NodeName}-{data.Id}-{data.Property}", data.AverageDataValue, this.Token);
                 }
             }
 
-            // ETW...
+            // ETW.
             if (this.IsEtwEnabled)
             {
                 Logger.EtwLogger?.Write(
@@ -570,7 +570,7 @@ namespace FabricObserver
                 healthState = HealthState.Error;
 
                 // This is primarily useful for AppObserver, but makes sense to be
-                // part of the base class for future use, like for FSO...
+                // part of the base class for future use, like for FSO.
                 if (replicaOrInstance != null && dumpOnError)
                 {
                     try
@@ -585,7 +585,7 @@ namespace FabricObserver
                         if (this.serviceDumpCountDictionary[procName] < this.maxDumps)
                         {
                             // DumpServiceProcess defaults to a Full dump with
-                            // process memory, handles and thread data...
+                            // process memory, handles and thread data.
                             bool success = this.DumpServiceProcess(procId);
 
                             if (success)
@@ -596,7 +596,7 @@ namespace FabricObserver
                     }
 
                     // Ignore these, it just means no dmp will be created.This is not
-                    // critical to FO... Log as info, not warning...
+                    // critical to FO. Log as info, not warning.
                     catch (ArgumentException ae)
                     {
                         this.ObserverLogger.LogInfo($"Unable to generate dmp file:\n{ae.ToString()}");
@@ -680,16 +680,16 @@ namespace FabricObserver
                     ResourceUsageDataProperty = data.Property,
                 };
 
-                // Emit a Fabric Health Report and optionally a local log write...
+                // Emit a Fabric Health Report and optionally a local log write.
                 this.HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                // Set internal fabric health states...
+                // Set internal fabric health states.
                 data.ActiveErrorOrWarning = true;
 
                 // This means this observer created a Warning or Error SF Health Report
                 this.HasActiveFabricErrorOrWarning = true;
 
-                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example...)...
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (this.IsTelemetryEnabled)
                 {
                     _ = this.ObserverTelemetryClient?.ReportHealthAsync(
@@ -701,7 +701,7 @@ namespace FabricObserver
                         this.Token);
                 }
 
-                // ETW...
+                // ETW.
                 if (this.IsEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
@@ -720,7 +720,7 @@ namespace FabricObserver
                         });
                 }
 
-                // Clean up sb...
+                // Clean up sb.
                 healthMessage.Clear();
             }
             else
@@ -740,23 +740,23 @@ namespace FabricObserver
                         ResourceUsageDataProperty = data.Property,
                     };
 
-                    // Emit an Ok Health Report to clear Fabric Health warning...
+                    // Emit an Ok Health Report to clear Fabric Health warning.
                     this.HealthReporter.ReportHealthToServiceFabric(report);
 
-                    // Reset health states...
+                    // Reset health states.
                     data.ActiveErrorOrWarning = false;
                     this.HasActiveFabricErrorOrWarning = false;
                 }
             }
 
-            // No need to keep data in memory...
+            // No need to keep data in memory.
             data.Data.Clear();
             data.Data.TrimExcess();
         }
 
         internal TimeSpan SetTimeToLiveWarning(int runDuration = 0)
         {
-            // First run...
+            // First run.
             if (this.LastRunDateTime == DateTime.MinValue)
             {
                 return TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds)
@@ -768,14 +768,14 @@ namespace FabricObserver
                        .Add(TimeSpan.FromSeconds(runDuration))
                        .Add(TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds))
 
-                       // If a RunInterval is specified, it must be reflected in the TTL...
+                       // If a RunInterval is specified, it must be reflected in the TTL.
                        .Add(this.RunInterval > TimeSpan.MinValue ? this.RunInterval : TimeSpan.Zero)
                        .Add(TimeSpan.FromMinutes(TTLAddMinutes));
             }
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.
-        // If an Observer needs to dispose, then override this non-impl...
+        // If an Observer needs to dispose, then override this non-impl.
         private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)

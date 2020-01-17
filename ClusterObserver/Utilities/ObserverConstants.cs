@@ -19,13 +19,13 @@ namespace FabricClusterObserver.Utilities
         public const string TelemetryEnabled = "EnableTelemetryProvider";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
 
-        // The name of the package that contains this Observer's configuration
+        // The name of the package that contains this Observer's configuration.
         public const string ObserverConfigurationPackageName = "Config";
 
         // Setting name for Runtime frequency of the Observer
         public const string ObserverLoopSleepTimeSeconds = "ObserverLoopSleepTimeSeconds";
 
-        // Default to 1 minute if frequency is not supplied in config
+        // Default to 1 minute if frequency is not supplied in config.
         public const int ObserverRunLoopSleepTimeSeconds = 60;
 
         public const string AllObserversExecutedMessage = "All Observers have been executed.";
@@ -33,16 +33,16 @@ namespace FabricClusterObserver.Utilities
         // Setting name for Grace period of shutdown in seconds.
         public const string ObserverShutdownGracePeriodInSeconds = "ObserverShutdownGracePeriodInSeconds";
 
-        // Setting name for Maximum time an observer should run before being considered hung or in some failure state...
+        // Setting name for Maximum time an observer should run before being considered hung or in some failure state.
         public const string ObserverExecutionTimeout = "ObserverExecutionTimeout";
 
-        // EmitHealthWarningEvaluationDetails
+        // EmitHealthWarningEvaluationDetails.
         public const string EmitHealthWarningEvaluationConfigurationSetting = "EmitHealthWarningEvaluationDetails";
 
-        // ClusterObserver...
+        // ClusterObserver.
         public const string ClusterObserverName = "ClusterObserver";
 
-        // Settings...
+        // Settings.
         public const string ClusterObserverConfigurationSectionName = "ClusterObserverConfiguration";
         public const string EmitOkHealthState = "EmitOkHealthStateTelemetry";
     }

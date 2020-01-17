@@ -21,10 +21,10 @@ namespace FabricObserver
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
     public class SFConfigurationObserver : ObserverBase
     {
-        // SF Reg Key Path...
+        // SF Reg Key Path.
         private const string SFWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
 
-        // Keys...
+        // Keys.
         private const string SFInfrastructureCompatibilityJsonPathRegistryName = "CompatibilityJsonPath";
         private const string SFInfrastructureEnableCircularTraceSessionRegistryName = "EnableCircularTraceSession";
         private const string SFInfrastructureBinRootRegistryName = "FabricBinRoot";
@@ -37,28 +37,28 @@ namespace FabricObserver
         private const string SFInfrastructureEnableUnsupportedPreviewFeaturesName = "EnableUnsupportedPreviewFeatures";
         private const string SFInfrastructureNodeLastBootUpTime = "NodeLastBootUpTime";
 
-        // Values...
+        // Values.
         private string sFVersion;
 
-        // Values...
+        // Values.
         private string sFBinRoot;
 
-        // Values...
+        // Values.
         private string sFCodePath;
 
-        // Values...
+        // Values.
         private string sFDataRoot;
 
-        // Values...
+        // Values.
         private string sFLogRoot;
 
-        // Values...
+        // Values.
         private string sFRootDir;
 
-        // Values...
+        // Values.
         private string sFNodeLastBootTime;
 
-        // Values...
+        // Values.
         private string sFCompatibilityJsonPath;
         private bool? sFVolumeDiskServiceEnabled = null;
         private bool? unsupportedPreviewFeaturesEnabled = null;
@@ -76,7 +76,7 @@ namespace FabricObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
             // This observer is only useful if you enable the web api for producing
             // an html page with a bunch of information that's easy to read in one go.
             if (!ObserverManager.ObserverWebAppDeployed
@@ -174,17 +174,17 @@ namespace FabricObserver
             {
                 if (clusterManifestXml != null)
                 {
-                    // Safe XML pattern - *Do not use LoadXml*...
+                    // Safe XML pattern - *Do not use LoadXml*.
                     xdoc = new XmlDocument { XmlResolver = null };
                     sreader = new StringReader(clusterManifestXml);
                     xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
                     xdoc.Load(xreader);
 
-                    // Cluster Information...
+                    // Cluster Information.
                     nsmgr = new XmlNamespaceManager(xdoc.NameTable);
                     nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
 
-                    // Failover Manager...
+                    // Failover Manager.
                     var fMparameterNodes = xdoc.SelectNodes("//sf:Section[@Name='FailoverManager']//sf:Parameter", nsmgr);
                     sb.AppendLine("\nCluster Information:\n");
 
@@ -198,7 +198,7 @@ namespace FabricObserver
 
                 token.ThrowIfCancellationRequested();
 
-                // Node Information...
+                // Node Information.
                 sb.AppendLine($"\nNode Info:\n");
                 sb.AppendLine($"Node Name: {this.NodeName}");
                 sb.AppendLine($"Node Id: {this.FabricServiceContext.NodeContext.NodeId}");
@@ -227,7 +227,7 @@ namespace FabricObserver
                     sb.AppendLine("Last Rebooted: " + this.sFNodeLastBootTime);
                 }
 
-                // Stop here for unit testing...
+                // Stop here for unit testing.
                 if (this.IsTestRun)
                 {
                     ret = sb.ToString();
@@ -236,7 +236,7 @@ namespace FabricObserver
                     return ret;
                 }
 
-                // Application Info...
+                // Application Info.
                 if (appList != null)
                 {
                     sb.AppendLine("\nDeployed Apps:\n");
@@ -257,7 +257,7 @@ namespace FabricObserver
                         sb.AppendLine("Health state: " + healthState);
                         sb.AppendLine("Status: " + status);
 
-                        // App's Service(s)...
+                        // App's Service(s).
                         sb.AppendLine("\n\tServices:");
                         var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
                         var replicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, app.ApplicationName).ConfigureAwait(true);
@@ -278,7 +278,7 @@ namespace FabricObserver
                                     continue;
                                 }
 
-                                // Get established port count per service...
+                                // Get established port count per service.
                                 int procId = (int)rep.HostProcessId;
                                 int ports = -1, ephemeralPorts = -1;
 
@@ -306,7 +306,7 @@ namespace FabricObserver
 
                                 sb.AppendLine();
 
-                                // ETW...
+                                // ETW.
                                 if (this.IsEtwEnabled)
                                 {
                                     Logger.EtwLogger?.Write(
@@ -410,14 +410,14 @@ namespace FabricObserver
 
             var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SFInfraInfo.txt");
 
-            // This file is used by the web application (ObserverWebApi)...
+            // This file is used by the web application (ObserverWebApi).
             if (!this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
             {
                 this.HealthReporter.ReportFabricObserverServiceHealth(
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
                     HealthState.Warning,
-                    "Unable to create SFInfraInfo.txt file...");
+                    "Unable to create SFInfraInfo.txt file.");
             }
 
             sb.Clear();

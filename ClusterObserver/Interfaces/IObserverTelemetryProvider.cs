@@ -34,7 +34,7 @@ namespace FabricClusterObserver.Interfaces
         /// <param name="success">True if the availability test ran successfully.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <param name="message">Error message on availability test run failure.</param>
-        /// <returns>a completed task...</returns>
+        /// <returns>a completed task.</returns>
         Task ReportAvailabilityAsync(
             Uri serviceUri,
             string instance,
@@ -49,7 +49,7 @@ namespace FabricClusterObserver.Interfaces
         /// <summary>
         /// Calls telemetry provider to report health.
         /// </summary>
-        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc...).</param>
+        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc.).</param>
         /// <param name="propertyName">Value of the property.</param>
         /// <param name="state">Health state.</param>
         /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
@@ -57,7 +57,7 @@ namespace FabricClusterObserver.Interfaces
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <param name="serviceName">Optional: TraceTelemetry context cloud service name.</param>
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
-        /// <returns>a Task...</returns>
+        /// <returns>a Task.</returns>
         Task ReportHealthAsync(
             HealthScope scope,
             string propertyName,
@@ -74,7 +74,7 @@ namespace FabricClusterObserver.Interfaces
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>A completed task of bool...</returns>
+        /// <returns>A completed task of bool.</returns>
         Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken);
 
         /// <summary>

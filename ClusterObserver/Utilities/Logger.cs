@@ -14,7 +14,7 @@ namespace FabricClusterObserver.Utilities
 {
     public sealed class Logger
     {
-        // Text file logger for observers - info/warn/error...
+        // Text file logger for observers - info/warn/error.
         private ILogger OLogger { get; set; }
 
         private string loggerName = null;
@@ -34,8 +34,8 @@ namespace FabricClusterObserver.Utilities
         /// <summary>
         /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.
         /// </summary>
-        /// <param name="observerName">Name of observer...</param>
-        /// <param name="logFolderBasePath">Base folder path...</param>
+        /// <param name="observerName">Name of observer.</param>
+        /// <param name="logFolderBasePath">Base folder path.</param>
         public Logger(string observerName, string logFolderBasePath = null)
         {
             this.Foldername = observerName;
@@ -52,11 +52,11 @@ namespace FabricClusterObserver.Utilities
 
         internal void InitializeLoggers()
         {
-            // default log directory...
+            // default log directory.
             string windrive = Environment.SystemDirectory.Substring(0, 2);
             string logFolderBase = windrive + "\\observer_logs";
 
-            // log directory supplied in config... Set in ObserverManager.
+            // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrEmpty(this.LogFolderBasePath))
             {
                 logFolderBase = this.LogFolderBasePath;

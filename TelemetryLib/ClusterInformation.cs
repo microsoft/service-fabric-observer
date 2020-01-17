@@ -14,7 +14,7 @@ using Microsoft.Win32;
 namespace Microsoft.ServiceFabric.TelemetryLib
 {
     /// <summary>
-    /// Helper class to facilitate non-PII identification of cluster...
+    /// Helper class to facilitate non-PII identification of cluster.
     /// </summary>
     public class ClusterIdentificationUtility : IDisposable
     {
@@ -31,7 +31,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             task.Wait();
             string clusterManifest = task.Result;
 
-            // Safe XML pattern - *Do not use LoadXml*...
+            // Safe XML pattern - *Do not use LoadXml*.
             this.xdoc = new XmlDocument { XmlResolver = null };
             this.sreader = new StringReader(clusterManifest);
             this.xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
