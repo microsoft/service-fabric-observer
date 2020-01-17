@@ -284,7 +284,13 @@ namespace FabricClusterObserver
                 // Telemetry.
                 if (TelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, this.token);
+                    _ = TelemetryClient?.ReportHealthAsync(
+                        HealthScope.Application,
+                        "ClusterObserverServiceHealth",
+                        HealthState.Warning,
+                        message,
+                        ObserverConstants.ObserverManangerName,
+                        this.token);
                 }
 
                 // Take down FCO process. Fix the bugs this identifies. This code should never run if observers aren't buggy.
@@ -378,25 +384,6 @@ namespace FabricClusterObserver
                         exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:\r\n{ex.InnerException.ToString()}");
                         allExecuted = false;
                     }
-                }
-                catch (Exception e)
-                {
-                    var message = $"Unhandled Exception in ObserverManager on node {this.nodeName}: {e.ToString()}";
-                    this.Logger.LogError(message);
-
-                    // Telemetry.
-                    if (TelemetryEnabled)
-                    {
-                        _ = TelemetryClient?.ReportHealthAsync(
-                            HealthScope.Application,
-                            "ClusterObserverServiceHealth", 
-                            HealthState.Warning,
-                            message, 
-                            ObserverConstants.ObserverManangerName,
-                            this.token);
-                    }
-
-                    throw;
                 }
             }
 
