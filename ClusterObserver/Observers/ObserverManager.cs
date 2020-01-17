@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
+using System.Fabric.Health;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -76,7 +77,7 @@ namespace FabricClusterObserver
                 logFolderBasePath = logFolderBase;
             }
 
-            // this logs error/warning/info messages for ObserverManager.
+            // This logs error/warning/info messages for ObserverManager.
             this.Logger = new Logger(ObserverConstants.ObserverManangerName, logFolderBasePath);
            
             this.SetPropertiesFromConfigurationParameters();
@@ -137,7 +138,7 @@ namespace FabricClusterObserver
             }
         }
 
-        // This impl is to ensure FO exits if shutdown is requested while the over loop is sleeping
+        // This impl is to ensure FCO exits if shutdown is requested while the over loop is sleeping
         // So, instead of blocking with a Thread.Sleep, for example, ThreadSleep is used to ensure
         // we can receive signals and act accordingly during thread sleep state.
         private void ThreadSleep(EventWaitHandle ewh, TimeSpan timeout)
@@ -157,7 +158,7 @@ namespace FabricClusterObserver
             {
                 stopwatch.Start();
 
-                // the event can be signalled by CtrlC,
+                // The event can be signalled by CtrlC,
                 // Exit ASAP when the program terminates (i.e., shutdown/abort is signalled.)
                 ewh.WaitOne(timeout.Subtract(elapsedTime));
                 stopwatch.Stop();
@@ -286,7 +287,7 @@ namespace FabricClusterObserver
                     _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, this.token);
                 }
 
-                // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy.
+                // Take down FCO process. Fix the bugs this identifies. This code should never run if observers aren't buggy.
                 // Don't swallow the exception.
                 throw;
             }
@@ -374,19 +375,25 @@ namespace FabricClusterObserver
 
                     if (!(ex.InnerException is OperationCanceledException) && !(ex.InnerException is TaskCanceledException))
                     {
-                        exceptionBuilder.AppendLine($"Exception from {observer.ObserverName}:\r\n{ex.InnerException.ToString()}");
+                        exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:\r\n{ex.InnerException.ToString()}");
                         allExecuted = false;
                     }
                 }
                 catch (Exception e)
                 {
-                    var message = $"Unhandled Exception from {observer.ObserverName} on node {this.nodeName} rethrown from ObserverManager: {e.ToString()}";
+                    var message = $"Unhandled Exception in ObserverManager on node {this.nodeName}: {e.ToString()}";
                     this.Logger.LogError(message);
 
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", message, this.token);
+                        _ = TelemetryClient?.ReportHealthAsync(
+                            HealthScope.Application,
+                            "ClusterObserverServiceHealth", 
+                            HealthState.Warning,
+                            message, 
+                            ObserverConstants.ObserverManangerName,
+                            this.token);
                     }
 
                     throw;
@@ -461,23 +468,6 @@ namespace FabricClusterObserver
         {
             this.Dispose(true);
             GC.SuppressFinalize(this);
-        }
-
-        private static bool IsObserverWebApiAppInstalled()
-        {
-            try
-            {
-                var deployedObsWebApps = FabricClientInstance.QueryManager.GetApplicationListAsync(new Uri("fabric:/FabricObserverWebApi")).GetAwaiter().GetResult();
-                return deployedObsWebApps?.Count > 0;
-            }
-            catch (FabricException)
-            {
-            }
-            catch (TimeoutException)
-            {
-            }
-
-            return false;
         }
     }
 }

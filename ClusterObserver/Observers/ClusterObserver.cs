@@ -136,33 +136,22 @@ namespace FabricClusterObserver
                         this.ObserverName,
                         this.Token);
             }
-            catch (ArgumentException ae) 
-            { 
-                this.ObserverLogger.LogError(
-                    "Unable to determine cluster health:{0}{1}",
-                    Environment.NewLine,
-                    ae.ToString()); 
-            }
-            catch (FabricException fe) 
-            { 
-                this.ObserverLogger.LogError(
-                    "Unable to determine cluster health:{0}{1}",
-                    Environment.NewLine,
-                    fe.ToString()); 
-            }
-            catch (TimeoutException te) 
-            { 
-                this.ObserverLogger.LogError(
-                    "Unable to determine cluster health:{0}{1}",
-                    Environment.NewLine,
-                    te.ToString()); 
-            }
             catch (Exception e)
             {
                 this.ObserverLogger.LogError(
                     "Unable to determine cluster health:{0}{1}",
                     Environment.NewLine,
                     e.ToString());
+
+                // Telemetry.
+                await this.ObserverTelemetryClient?.ReportHealthAsync(
+                        HealthScope.Cluster,
+                        "AggregatedClusterHealth",
+                        HealthState.Unknown,
+                        $"ProbeClusterHealthAsync threw {e.Message}{Environment.NewLine}" +
+                        $"Unable to determine Cluster Health. Probing will continue.",
+                        this.ObserverName,
+                        this.Token);
 
                 throw;
             }
