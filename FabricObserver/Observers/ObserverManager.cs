@@ -535,7 +535,13 @@ namespace FabricObserver
                 // Telemetry.
                 if (TelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, this.token);
+                    _ = TelemetryClient?.ReportHealthAsync(
+                        HealthScope.Application,
+                        "FabricObserverServiceHealth",
+                        HealthState.Warning,
+                        message,
+                        ObserverConstants.ObserverManangerName,
+                        this.token);
                 }
 
                 // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy.
@@ -670,19 +676,6 @@ namespace FabricObserver
                         exceptionBuilder.AppendLine($"Exception from {observer.ObserverName}:\r\n{ex.InnerException.ToString()}");
                         allExecuted = false;
                     }
-                }
-                catch (Exception e)
-                {
-                    var message = $"Unhandled Exception from {observer.ObserverName} on node {this.nodeName} rethrown from ObserverManager: {e.ToString()}";
-                    this.Logger.LogError(message);
-
-                    // Telemetry.
-                    if (TelemetryEnabled)
-                    {
-                        _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", message, this.token);
-                    }
-
-                    throw;
                 }
             }
 
