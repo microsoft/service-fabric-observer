@@ -258,9 +258,9 @@ namespace FabricClusterObserver
         /// </summary>
         /// <param name="configSectionName">Observer configuration section name.</param>
         /// <param name="configParamName">Observer configuration parameter name.</param>
-        /// <param name="defaultTo">Specific an optional TimeSpan to default to if setting is not found in config.
-        /// else, it defaults to 24 hours.</param>
-        /// <returns>run interval.</returns>
+        /// <param name="defaultTo">Specify an optional default TimeSpan if the setting is not defined in config.
+        /// Otherwise, this defaults to 24 hours.</param>
+        /// <returns>Run interval as TimeSpan.</returns>
         public TimeSpan GetObserverRunInterval(
             string configSectionName,
             string configParamName,
