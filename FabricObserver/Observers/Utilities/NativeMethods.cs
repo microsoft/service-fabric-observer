@@ -78,7 +78,7 @@ namespace FabricObserver.Utilities
             char[] lpszVolumePathNames,
             uint cchBufferLength);
 
-        // Process dump support...
+        // Process dump support.
         [DllImport(
             "dbghelp.dll",
             EntryPoint = "MiniDumpWriteDump",

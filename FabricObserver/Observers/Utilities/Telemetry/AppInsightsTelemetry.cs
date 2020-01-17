@@ -47,7 +47,7 @@ namespace FabricObserver.Utilities.Telemetry
         }
 
         /// <summary>
-        /// Gets an indicator if the telemetry is enabled or not.
+        /// Gets a value indicating whether telemetry is enabled or not.
         /// </summary>
         public bool IsEnabled => this.telemetryClient.IsEnabled() && ObserverManager.TelemetryEnabled;
 
@@ -70,9 +70,9 @@ namespace FabricObserver.Utilities.Telemetry
         /// <param name="duration">The time taken for the availability test to run.</param>
         /// <param name="location">Name of the location the availability test was run from.</param>
         /// <param name="success">True if the availability test ran successfully.</param>
-        /// <param name="message">Error message on availability test run failure.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
+        /// <param name="message">Error message on availability test run failure.</param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportAvailabilityAsync(
             Uri serviceName,
             string instance,
@@ -102,22 +102,24 @@ namespace FabricObserver.Utilities.Telemetry
         /// <summary>
         /// Calls AI to report health.
         /// </summary>
-        /// <param name="applicationName">Application name.</param>
-        /// <param name="serviceName">Service name.</param>
-        /// <param name="instance">Instance identifier.</param>
-        /// <param name="source">Name of the health source.</param>
-        /// <param name="property">Name of the health property.</param>
-        /// <param name="state">HealthState.</param>
+        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc.).</param>
+        /// <param name="propertyName">Value of the property.</param>
+        /// <param name="state">Health state.</param>
+        /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
+        /// <param name="source">Source of emission.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <param name="serviceName">Optional: TraceTelemetry context cloud service name.</param>
+        /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
-            string applicationName,
-            string serviceName,
-            string instance,
-            string source,
-            string property,
+            HealthScope scope,
+            string propertyName,
             HealthState state,
-            CancellationToken cancellationToken)
+            string unhealthyEvaluations,
+            string source,
+            CancellationToken cancellationToken,
+            string serviceName = null,
+            string instanceName = null)
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -128,17 +130,25 @@ namespace FabricObserver.Utilities.Telemetry
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                SeverityLevel sev = (state == HealthState.Error) ? SeverityLevel.Error
+                var sev = (state == HealthState.Error) ? SeverityLevel.Error
                                     : (state == HealthState.Warning) ? SeverityLevel.Warning : SeverityLevel.Information;
 
-                var tt = new TraceTelemetry($"{applicationName}: Service Fabric Health report - {Enum.GetName(typeof(HealthState), state)} -> {source}:{property}", sev);
+                string healthInfo = string.Empty;
+
+                if (!string.IsNullOrEmpty(unhealthyEvaluations))
+                {
+                    healthInfo += $"{Environment.NewLine}{unhealthyEvaluations}";
+                }
+
+                var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
                 tt.Context.Cloud.RoleName = serviceName;
-                tt.Context.Cloud.RoleInstance = instance;
+                tt.Context.Cloud.RoleInstance = instanceName;
+
                 this.telemetryClient.TrackTrace(tt);
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:\n{e.ToString()}");
+                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.ToString()}");
                 throw;
             }
 
@@ -151,7 +161,7 @@ namespace FabricObserver.Utilities.Telemetry
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>Task of bool...</returns>
+        /// <returns>Task of bool.</returns>
         public Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken)
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
@@ -177,7 +187,7 @@ namespace FabricObserver.Utilities.Telemetry
         /// <param name="value">Value of the property.</param>
         /// <param name="properties">IDictionary&lt;string&gt;,&lt;string&gt; containing name/value pairs of additional properties.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(string name, long value, IDictionary<string, string> properties, CancellationToken cancellationToken)
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
@@ -198,7 +208,7 @@ namespace FabricObserver.Utilities.Telemetry
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value if the metric.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(string role, Guid partition, string name, long value, CancellationToken cancellationToken)
         {
             return this.ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
@@ -212,7 +222,7 @@ namespace FabricObserver.Utilities.Telemetry
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value if the metric.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task ReportMetricAsync(string role, long id, string name, long value, CancellationToken cancellationToken)
         {
             await this.ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
@@ -232,7 +242,7 @@ namespace FabricObserver.Utilities.Telemetry
         /// <param name="deviation">Standard deviation of the sample set.</param>
         /// <param name="properties">IDictionary&lt;string&gt;,&lt;string&gt; containing name/value pairs of additional properties.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(
             string roleName,
             string instance,
@@ -309,5 +319,15 @@ namespace FabricObserver.Utilities.Telemetry
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
         }
+    }
+
+    public enum HealthScope
+    {
+        Application,
+        Cluster,
+        Node,
+        Partition,
+        Replica,
+        Service,
     }
 }

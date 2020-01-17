@@ -251,3 +251,36 @@ Example Output in SFX:
 
 
 ![alt text](/Documentation/Images/NetworkEndpointWarningDesc.jpg "Logo Title Text 1")   
+
+Problem: I want to get telemetry that includes aggregated cluster health for use in alerting.  
+
+Solution: [ClusterObserver](/ClusterObserver) is your friend.  
+
+ClusterObserver is a stateless singleton service that runs on one node in your cluster. It can be
+configured to emit telemetry to your ApplicationInsights workspace out of the box. All you have to do
+is provide your instrumentation key in two files: Settings.xml and ApplicationInsights.config. You can 
+configure CO to emit Warning state signals in addition to the default Error signalling. It's up to you.  
+
+By design, CO will send an Ok health state report when a cluster goes from Warning or Error state to Ok.
+
+Example Configuration:  
+
+```XML
+  <Section Name="ClusterObserverConfiguration">
+    <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
+    <Parameter Name="Enabled" Value="True" />
+    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+    <Parameter Name="EnableVerboseLogging" Value="False" />
+    <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <!-- Emit health details for both Warning and Error for aggregated cluster health? Error details will
+    always be transmitted.-->
+    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
+    <!-- Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
+    <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
+  </Section>
+``` 
+
+You deploy CO into your cluster just as you would any other Service Fabric service.

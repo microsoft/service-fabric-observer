@@ -17,12 +17,12 @@ using FabricObserver.Utilities;
 namespace FabricObserver
 {
     // This observer monitors logical disk behavior and signals Service Fabric Warning or Error events based on user-supplied thresholds
-    // in Settings.xml...
+    // in Settings.xml.
     // The output (a local file) is used by the API service and the HTML frontend (http://localhost:5000/api/ObserverManager).
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class DiskObserver : ObserverBase
     {
-        // Data storage containers for post run analysis...
+        // Data storage containers for post run analysis.
         private List<FabricResourceUsageData<float>> diskAverageQueueLengthData;
         private List<FabricResourceUsageData<double>> diskSpacePercentageUsageData;
         private List<FabricResourceUsageData<double>> diskSpaceUsageData;
@@ -66,7 +66,7 @@ namespace FabricObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
             if (this.RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
@@ -94,12 +94,12 @@ namespace FabricObserver
                     {
                         readyCount++;
 
-                        // This section only needs to run if you have the FabricObserverWebApi app installed...
+                        // This section only needs to run if you have the FabricObserverWebApi app installed.
                         if (ObserverManager.ObserverWebAppDeployed)
                         {
                             this.diskInfo.AppendFormat("\n\nDrive Name: {0}\n", d.Name);
 
-                            // Logging...
+                            // Logging.
                             this.diskInfo.AppendFormat("Drive Type: {0}\n", d.DriveType);
                             this.diskInfo.AppendFormat("  Volume Label   : {0}\n", d.VolumeLabel);
                             this.diskInfo.AppendFormat("  Filesystem     : {0}\n", d.DriveFormat);
@@ -110,11 +110,11 @@ namespace FabricObserver
                             this.diskInfo.AppendFormat("  % Used    : {0}%\n", diskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
                         }
 
-                        // Setup monitoring data structures...
+                        // Setup monitoring data structures.
                         string id = d.Name.Substring(0, 1);
 
-                        // Since these live across iterations, do not duplicate them in the containing list...
-                        // Disk space %...
+                        // Since these live across iterations, do not duplicate them in the containing list.
+                        // Disk space %.
                         if (!this.diskSpacePercentageUsageData.Any(data => data.Id == id))
                         {
                             this.diskSpacePercentageUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id));
@@ -135,13 +135,13 @@ namespace FabricObserver
                             this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMB, id));
                         }
 
-                        // Current disk queue length...
+                        // Current disk queue length.
                         if (!this.diskAverageQueueLengthData.Any(data => data.Id == id))
                         {
                             this.diskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id));
                         }
 
-                        // Generate data over time (_monitorDuration...) for use in ReportAsync health analysis...
+                        // Generate data over time (_monitorDuration.) for use in ReportAsync health analysis.
                         this.stopWatch?.Start();
 
                         while (this.stopWatch?.Elapsed <= this.monitorDuration)
@@ -171,7 +171,7 @@ namespace FabricObserver
                             Thread.Sleep(250);
                         }
 
-                        // This section only needs to run if you have the FabricObserverWebApi app installed...
+                        // This section only needs to run if you have the FabricObserverWebApi app installed.
                         if (ObserverManager.ObserverWebAppDeployed)
                         {
                             this.diskInfo.AppendFormat(
@@ -304,7 +304,7 @@ namespace FabricObserver
             {
                 var timeToLiveWarning = this.SetTimeToLiveWarning(this.monitorDuration.Seconds);
 
-                // Disk Space Usage % from Settings.xml...
+                // Disk Space Usage % from Settings.xml.
                 foreach (var data in this.diskSpacePercentageUsageData)
                 {
                     token.ThrowIfCancellationRequested();
@@ -348,7 +348,7 @@ namespace FabricObserver
                         timeToLiveWarning);
                 }
 
-                // Average disk queue length...
+                // Average disk queue length.
                 foreach (var data in this.diskAverageQueueLengthData)
                 {
                     token.ThrowIfCancellationRequested();
@@ -361,7 +361,7 @@ namespace FabricObserver
 
                 token.ThrowIfCancellationRequested();
 
-                // This section only needs to run if you have the FabricObserverWebApi app installed...
+                // This section only needs to run if you have the FabricObserverWebApi app installed.
                 if (ObserverManager.ObserverWebAppDeployed)
                 {
                     var diskInfoPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "disks.txt");

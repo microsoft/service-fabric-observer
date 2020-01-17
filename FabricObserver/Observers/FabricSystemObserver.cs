@@ -27,7 +27,7 @@ namespace FabricObserver
     // ***FabricSystemObserver is disabled by default.***
     // You should not enable this observer unless you have spent some time analyzing how your services impact SF system services (like Fabric.exe)
     // If Fabric.exe is running at 70% CPU due to your service code, and this is normal for your workloads, then do not warn at this threshold.
-    // As with all of these observers, you must first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy ones...
+    // As with all of these observers, you must first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy ones.
     public class FabricSystemObserver : ObserverBase
     {
         private readonly List<string> processWatchList = new List<string>
@@ -44,16 +44,16 @@ namespace FabricObserver
             "FabricUS",
         };
 
-        // amount of time, in seconds, it took this observer to complete run run...
+        // amount of time, in seconds, it took this observer to complete run run.
         private TimeSpan runtime = TimeSpan.MinValue;
         private Stopwatch stopWatch;
         private bool disposed = false;
 
-        // Health Report data container - For use in analysis to deterWarne health state...
+        // Health Report data container - For use in analysis to deterWarne health state.
         private List<FabricResourceUsageData<int>> allCpuData;
         private List<FabricResourceUsageData<long>> allMemData;
 
-        // Windows only... (EventLog)...
+        // Windows only. (EventLog).
         private List<EventRecord> evtRecordList = null;
         private WindowsPerfCounters perfCounters = null;
         private DiskUsage diskUsage = null;
@@ -104,7 +104,7 @@ namespace FabricObserver
             {
                 this.allMemData = new List<FabricResourceUsageData<long>>
                 {
-                    // Mem data...
+                    // Mem data.
                     new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "Fabric"),
                     new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricApplicationGateway"),
                     new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricCAS"),
@@ -122,7 +122,7 @@ namespace FabricObserver
             {
                 this.allCpuData = new List<FabricResourceUsageData<int>>
                 {
-                    // Cpu data...
+                    // Cpu data.
                     new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "Fabric"),
                     new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricApplicationGateway"),
                     new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricCAS"),
@@ -158,7 +158,7 @@ namespace FabricObserver
 
                 if (threshold > 100 || threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorCpu}...");
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorCpu}.");
                 }
 
                 this.CpuErrorUsageThresholdPct = threshold;
@@ -174,7 +174,7 @@ namespace FabricObserver
 
                 if (threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold} is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorMemory}...");
+                    throw new ArgumentException($"{threshold} is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorMemory}.");
                 }
 
                 this.MemErrorUsageThresholdMB = threshold;
@@ -190,7 +190,7 @@ namespace FabricObserver
 
                 if (threshold > 100 || threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorPercentUnhealthyNodes}...");
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorPercentUnhealthyNodes}.");
                 }
 
                 this.unhealthyNodesErrorThreshold = threshold;
@@ -210,7 +210,7 @@ namespace FabricObserver
 
                 if (threshold > 100 || threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnCpu}...");
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnCpu}.");
                 }
 
                 this.CpuWarnUsageThresholdPct = threshold;
@@ -226,7 +226,7 @@ namespace FabricObserver
 
                 if (threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold} MB is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnMemory}...");
+                    throw new ArgumentException($"{threshold} MB is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnMemory}.");
                 }
 
                 this.MemWarnUsageThresholdMB = threshold;
@@ -242,14 +242,14 @@ namespace FabricObserver
 
                 if (threshold > 100 || threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold}% is not a meaningful threshold for a {ObserverConstants.FabricSystemObserverWarnPercentUnhealthyNodes}...");
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold for a {ObserverConstants.FabricSystemObserverWarnPercentUnhealthyNodes}.");
                 }
 
                 this.unhealthyNodesWarnThreshold = threshold;
             }
 
             // Monitor Windows event log for SF and System Error/Critical events?
-            // This can be noisy... Use wisely...
+            // This can be noisy. Use wisely.
             var watchEvtLog = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
@@ -264,7 +264,7 @@ namespace FabricObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
             if (this.RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
@@ -323,16 +323,16 @@ namespace FabricObserver
                     this.ReadServiceFabricWindowsEventLog();
                 }
 
-                // Set TTL...
+                // Set TTL.
                 this.stopWatch.Stop();
                 this.runtime = this.stopWatch.Elapsed;
                 this.stopWatch.Reset();
                 await this.ReportAsync(token).ConfigureAwait(true);
 
-                // No need to keep these objects in memory aross healthy iterations...
+                // No need to keep these objects in memory aross healthy iterations.
                 if (!this.HasActiveFabricErrorOrWarning)
                 {
-                    // Clear out/null list objects...
+                    // Clear out/null list objects.
                     this.allCpuData.Clear();
                     this.allCpuData = null;
 
@@ -366,7 +366,7 @@ namespace FabricObserver
                 {
                     this.Token.ThrowIfCancellationRequested();
 
-                    // ports in use by Fabric services...
+                    // ports in use by Fabric services.
                     this.TotalActivePortCount += NetworkUsage.GetActivePortCount(process.Id);
                     this.TotalActiveEphemeralPortCount += NetworkUsage.GetActiveEphemeralPortCount(process.Id);
 
@@ -382,7 +382,7 @@ namespace FabricObserver
 
                             this.allCpuData.FirstOrDefault(x => x.Id == procName).Data.Add(cpu);
 
-                            // Memory - Private WS for proc...
+                            // Memory - Private WS for proc.
                             var workingset = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(process.ProcessName);
                             this.allMemData.FirstOrDefault(x => x.Id == procName).Data.Add((long)workingset);
 
@@ -401,7 +401,7 @@ namespace FabricObserver
                 }
                 catch (Win32Exception)
                 {
-                    // This will always be the case if FabricObserver.exe is not running as Admin or LocalSystem...
+                    // This will always be the case if FabricObserver.exe is not running as Admin or LocalSystem.
                     // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed.
                     this.WriteToLogWithLevel(
                         this.ObserverName,
@@ -435,10 +435,10 @@ namespace FabricObserver
                              "*[System/TimeCreated/@SystemTime >='{0}']",
                              format);
 
-            // Critical and Errors only...
+            // Critical and Errors only.
             string xQuery = "*[System/Level <= 2] and " + datexQuery;
 
-            // SF Admin Event Store...
+            // SF Admin Event Store.
             var evtLogQuery = new EventLogQuery(sfAdminLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
@@ -451,7 +451,7 @@ namespace FabricObserver
                 }
             }
 
-            // SF Operational Event Store...
+            // SF Operational Event Store.
             evtLogQuery = new EventLogQuery(sfOperationalLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
@@ -464,7 +464,7 @@ namespace FabricObserver
                 }
             }
 
-            // SF Lease Admin Event Store...
+            // SF Lease Admin Event Store.
             evtLogQuery = new EventLogQuery(sfLeaseAdminLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
@@ -477,7 +477,7 @@ namespace FabricObserver
                 }
             }
 
-            // SF Lease Operational Event Store...
+            // SF Lease Operational Event Store.
             evtLogQuery = new EventLogQuery(sfLeaseOperationalLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
@@ -490,7 +490,7 @@ namespace FabricObserver
                 }
             }
 
-            // System Event Store...
+            // System Event Store.
             evtLogQuery = new EventLogQuery(systemLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
@@ -519,10 +519,10 @@ namespace FabricObserver
                 HealthReportTimeToLive = timeToLiveWarning,
             };
 
-            // TODO: Report on port count based on thresholds PortCountWarning/Error...
+            // TODO: Report on port count based on thresholds PortCountWarning/Error.
             this.HealthReporter.ReportHealthToServiceFabric(portInformationReport);
 
-            // Reset ports counters...
+            // Reset ports counters.
             this.TotalActivePortCount = 0;
             this.TotalActiveEphemeralPortCount = 0;
 
@@ -543,12 +543,12 @@ namespace FabricObserver
                 && this.monitorWinEventLog)
             {
                 // SF Eventlog Errors?
-                // Write this out to a new file, for use by the web front end log viewer...
-                // Format = HTML...
+                // Write this out to a new file, for use by the web front end log viewer.
+                // Format = HTML.
                 int count = this.evtRecordList.Count();
                 var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
 
-                // Remove existing file...
+                // Remove existing file.
                 if (File.Exists(logPath))
                 {
                     try
@@ -608,7 +608,7 @@ namespace FabricObserver
                     sb.Clear();
                 }
 
-                // Clean up...
+                // Clean up.
                 if (count > 0)
                 {
                     this.evtRecordList.Clear();
@@ -662,10 +662,10 @@ namespace FabricObserver
                     var fileName = "FabricSystemServices_" + this.NodeName;
                     var propertyName = data.First().Property;
 
-                    // Log average data value to long-running store (CSV)...
+                    // Log average data value to long-running store (CSV).
                     string dataLogMonitorType = propertyName;
 
-                    // Log file output...
+                    // Log file output.
                     string resourceProp = propertyName + " use";
 
                     if (propertyName == ErrorWarningProperty.TotalMemoryConsumptionPct)

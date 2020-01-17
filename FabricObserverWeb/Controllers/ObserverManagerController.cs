@@ -46,7 +46,7 @@ namespace FabricObserverWeb
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManagerController"/> class.
         /// </summary>
-        /// <param name="serviceContext">service context...</param>
+        /// <param name="serviceContext">service context.</param>
         /// <param name="fabricClient">FabricClient instance.</param>
         public ObserverManagerController(StatelessServiceContext serviceContext, FabricClient fabricClient)
         {
@@ -66,7 +66,7 @@ namespace FabricObserverWeb
             string logFolder = null;
             string logFileName = null;
 
-            // Windows only for now...
+            // Windows only for now.
             if (configSettings != null)
             {
                 string windrive = Environment.SystemDirectory.Substring(0, 3);
@@ -144,7 +144,7 @@ namespace FabricObserverWeb
                     var ordered = nodeList.OrderBy(node => node.NodeName);
                     var host = this.Request.Host.Value;
 
-                    // Request originating from ObserverWeb node hyperlinks...
+                    // Request originating from ObserverWeb node hyperlinks.
                     if (this.Request.QueryString.HasValue && this.Request.Query.ContainsKey("fqdn"))
                     {
                         host = this.Request.Query["fqdn"];
@@ -206,7 +206,7 @@ namespace FabricObserverWeb
                     html = e.ToString();
                 }
 
-                // If we get here, let's wait a few seconds before the next iteration...
+                // If we get here, let's wait a few seconds before the next iteration.
                 Task.Delay(2000).Wait();
             }
 
@@ -225,7 +225,7 @@ namespace FabricObserverWeb
                 {
                     var addr = node[0].IpAddressOrFQDN;
 
-                    // Only use this API over SSL, but not in LRC...
+                    // Only use this API over SSL, but not in LRC.
                     if (!addr.Contains("http://"))
                     {
                         addr = "http://" + addr;
@@ -242,7 +242,7 @@ namespace FabricObserverWeb
                     string responseFromServer = reader.ReadToEnd();
                     var ret = responseFromServer;
 
-                    // Cleanup the streams and the response...
+                    // Cleanup the streams and the response.
                     reader.Close();
                     dataStream.Close();
                     response.Close();
@@ -251,7 +251,7 @@ namespace FabricObserverWeb
                 }
                 else
                 {
-                    return "no node found with that name...";
+                    return "no node found with that name.";
                 }
             }
             catch (Exception e)

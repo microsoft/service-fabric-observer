@@ -71,7 +71,7 @@ namespace FabricObserver.Utilities
                 {
                     this.Logger.LogError($"{cat} {counter} PerfCounter handled exception: " + e.ToString());
 
-                    // Don't throw...
+                    // Don't throw.
                     return 0F;
                 }
                 else
@@ -122,7 +122,7 @@ namespace FabricObserver.Utilities
                 {
                     this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e.ToString());
 
-                    // Don't throw...
+                    // Don't throw.
                     return 0F;
                 }
                 else
@@ -134,7 +134,7 @@ namespace FabricObserver.Utilities
             }
         }
 
-        // Committed bytes...
+        // Committed bytes.
         internal float PerfCounterGetMemoryInfoMB(
             string category = null,
             string countername = null)
@@ -166,7 +166,7 @@ namespace FabricObserver.Utilities
                 {
                     this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e.ToString());
 
-                    // Don't throw...
+                    // Don't throw.
                     return 0F;
                 }
                 else
@@ -197,7 +197,7 @@ namespace FabricObserver.Utilities
                 {
                     this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e.ToString());
 
-                    // Don't throw...
+                    // Don't throw.
                     return 0F;
                 }
                 else

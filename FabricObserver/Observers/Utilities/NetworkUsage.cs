@@ -82,11 +82,11 @@ namespace FabricObserver.Utilities
         /// <returns>List of string,int Tuples.</returns>
         /// <summary>
         ///  Returns number of ephemeral ports (ports within a dynamic numerical range) in use by a process
-        ///  on node as a List.<Tuple<int, int>> (process id, port count in use by said process) ordered by port count, descending...
-        ///  On failure, for handled exceptions..., this function returns a list of one Tuple<int, int> of value (-1, -1)...
+        ///  on node as a List.<Tuple<int, int>> (process id, port count in use by said process) ordered by port count, descending.
+        ///  On failure, for handled exceptions., this function returns a list of one Tuple<int, int> of value (-1, -1).
         /// </summary>
         /// <param name="procId">Optional int process ID</param>
-        /// <param name="protocol">Optional Protocol (defaults to TCP. Cannot be None...)</param>
+        /// <param name="protocol">Optional Protocol (defaults to TCP. Cannot be None.)</param>
         /// <returns></returns>
         internal static List<Tuple<int, int>> TupleGetEphemeralPortProcessCount(
                                                 int procId = -1,
@@ -94,7 +94,7 @@ namespace FabricObserver.Utilities
         {
             try
             {
-                // Unsupported by underlying API. Could throw an ArgumentException here if that makes you happy...
+                // Unsupported by underlying API. Could throw an ArgumentException here if that makes you happy.
                 if (protocol == Protocol.None)
                 {
                     return new List<Tuple<int, int>> { Tuple.Create(-1, -1) };
@@ -133,7 +133,7 @@ namespace FabricObserver.Utilities
                         }
 
                         // caller supplied a proc id? It is always the last item in the netstat column output, thus
-                        // LastIndex is used to protect against selecting a port number of the same value...
+                        // LastIndex is used to protect against selecting a port number of the same value.
                         if (procId > -1 && portRow.LastIndexOf(procId.ToString()) < 0)
                         {
                             continue;
@@ -154,7 +154,7 @@ namespace FabricObserver.Utilities
                     int lowPortRange = portRange.Item1;
                     int highPortRange = portRange.Item2;
 
-                    // Add tuple {process id, count} to list for active ports in dynamic range...
+                    // Add tuple {process id, count} to list for active ports in dynamic range.
                     foreach (string line in ephemeralPortList)
                     {
                         int port = GetPortNumberFromConsoleOutputRow(line, protoParam);
@@ -265,7 +265,7 @@ namespace FabricObserver.Utilities
         {
             try
             {
-                // Unsupported by underlying API. Could throw an ArgumentException here if that makes you happy...
+                // Unsupported by underlying API. Could throw an ArgumentException here if that makes you happy.
                 if (protocol == Protocol.None)
                 {
                     return -1;
@@ -320,7 +320,7 @@ namespace FabricObserver.Utilities
                     int lowPortRange = portRange.Item1;
                     int highPortRange = portRange.Item2;
 
-                    // Compute count of active ports in dynamic range...
+                    // Compute count of active ports in dynamic range.
                     foreach (string line in ephemeralPortList)
                     {
                         int port = GetPortNumberFromConsoleOutputRow(line, protoParam);
@@ -356,17 +356,17 @@ namespace FabricObserver.Utilities
 
             try
             {
-                // Safe XML pattern - *Do not use LoadXml*...
+                // Safe XML pattern - *Do not use LoadXml*.
                 var xdoc = new XmlDocument { XmlResolver = null };
                 var sreader = new StringReader(clusterManifestXml);
                 var reader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
                 xdoc.Load(reader);
 
-                // Cluster Information...
+                // Cluster Information.
                 var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
                 nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
 
-                // Application Port Range...
+                // Application Port Range.
                 var endpointsNodeList = xdoc.SelectNodes($"//sf:NodeTypes//sf:NodeType[@Name='{nodeType}']//sf:Endpoints", nsmgr);
                 Tuple<int, int> ret = Tuple.Create(-1, -1);
 

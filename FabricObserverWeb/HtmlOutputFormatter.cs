@@ -7,7 +7,7 @@ namespace FabricObserverWeb
 {
     using Microsoft.AspNetCore.Mvc.Formatters;
 
-    // Added to support HTML output to callers...
+    // Added to support HTML output to callers.
     public class HtmlOutputFormatter : StringOutputFormatter
     {
         /// <summary>

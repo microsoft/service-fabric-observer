@@ -27,7 +27,7 @@ namespace FabricObserverWeb
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserverWeb"/> class.
         /// </summary>
-        /// <param name="context">service context...</param>
+        /// <param name="context">service context.</param>
         public FabricObserverWeb(StatelessServiceContext context)
             : base(context)
         {
@@ -68,7 +68,7 @@ namespace FabricObserverWeb
                                     .UseContentRoot(Directory.GetCurrentDirectory())
                                     .UseStartup<Startup>()
                                     .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
-                                    .UseUrls("http://localhost:5000") // localhost only, by default...
+                                    .UseUrls("http://localhost:5000") // localhost only, by default.
                                     .Build();
                     })),
             };
