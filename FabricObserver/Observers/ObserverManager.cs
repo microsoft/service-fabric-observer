@@ -111,7 +111,7 @@ namespace FabricObserver
             FabricServiceContext = context;
             this.nodeName = FabricServiceContext?.NodeContext.NodeName;
 
-            // Observer Logger setup...
+            // Observer Logger setup.
             string logFolderBasePath = null;
             string observerLogPath = GetConfigSettingValue(
                 ObserverConstants.ObserverLogPath);
@@ -127,19 +127,19 @@ namespace FabricObserver
             }
 
             // this logs metrics from observers, if enabled, and/or sends
-            // telemetry data to your implemented provider...
+            // telemetry data to your implemented provider.
             this.DataLogger = new DataTableFileLogger();
 
-            // this logs error/warning/info messages for ObserverManager...
+            // this logs error/warning/info messages for ObserverManager.
             this.Logger = new Logger("ObserverManager", logFolderBasePath);
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertiesFromConfigurationParameters();
 
-            // Populate the Observer list for the sequential run loop...
+            // Populate the Observer list for the sequential run loop.
             this.observers = GetObservers();
 
-            // FabricObserver Internal Diagnostic Telemetry (Non-PII)...
-            // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events...
+            // FabricObserver Internal Diagnostic Telemetry (Non-PII).
+            // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
             if (FabricObserverInternalTelemetryEnabled)
             {
                 string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
@@ -163,7 +163,7 @@ namespace FabricObserver
                         "HealthState.Initialized"))
                 {
                     // Log a file to prevent re-sending this in case of process restart(s).
-                    // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates...).
+                    // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates.).
                     _ = this.Logger.TryWriteLogFile(filepath, "_");
                 }
             }
@@ -285,8 +285,8 @@ namespace FabricObserver
         }
 
         /// <summary>
-        /// This function gets FabricObserver's internal configuration for telemetry for Charles and company...
-        /// No PII. As you can see, this is generic information - number of enabled observer, observer names...
+        /// This function gets FabricObserver's internal configuration for telemetry for Charles and company.
+        /// No PII. As you can see, this is generic information - number of enabled observer, observer names.
         /// </summary>
         private string GetFabricObserverInternalConfiguration()
         {
@@ -320,7 +320,7 @@ namespace FabricObserver
 
         // This impl is to ensure FO exits if shutdown is requested while the over loop is sleeping
         // So, instead of blocking with a Thread.Sleep, for example, ThreadSleep is used to ensure
-        // we can receive signals and act accordingly during thread sleep state...
+        // we can receive signals and act accordingly during thread sleep state.
         private void ThreadSleep(EventWaitHandle ewh, TimeSpan timeout)
         {
             // if timeout is <= 0, return. 0 is infinite, and negative is not valid
@@ -339,7 +339,7 @@ namespace FabricObserver
                 stopwatch.Start();
 
                 // the event can be signalled by CtrlC,
-                // Exit ASAP when the program terminates (i.e., shutdown/abort is signalled...)
+                // Exit ASAP when the program terminates (i.e., shutdown/abort is signalled.)
                 ewh.WaitOne(timeout.Subtract(elapsedTime));
                 stopwatch.Stop();
 
@@ -352,52 +352,52 @@ namespace FabricObserver
             }
         }
 
-        // Observers are instance types. Create them, store in persistent list...
-        // List order matters... These are cycled through sequentially, one observer at a time.
+        // Observers are instance types. Create them, store in persistent list.
+        // List order matters. These are cycled through sequentially, one observer at a time.
         private static List<ObserverBase> GetObservers()
         {
             // You can simply not create an instance of an observer you don't want to run. The list
-            // below is just for reference. GetObservers only returns enabled observers, anyway...
+            // below is just for reference. GetObservers only returns enabled observers, anyway.
             var observers = new List<ObserverBase>(new ObserverBase[]
             {
                 // CertificateObserver monitors Certificate health and will emit Warnings for expiring
                 // Cluster and App certificates that are housed in the LocalMachine/My Certificate Store
                 new CertificateObserver(),
 
-                // Observes, records and reports on general OS properties and state...
+                // Observes, records and reports on general OS properties and state.
                 // Run this first to get basic information about the VM state,
-                // Firewall rules in place, active ports, basic resource infomation...
+                // Firewall rules in place, active ports, basic resource infomation.
                 new OSObserver(),
 
-                // User-configurable observer that records and reports on local disk (node level, host level...) properties...
+                // User-configurable observer that records and reports on local disk (node level, host level.) properties.
                 // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service,
-                // for use in upstream analysis, etc...
+                // for use in upstream analysis, etc.
                 new DiskObserver(),
 
                 // User-configurable, VM-level machine resource observer that records and reports on node-level resource usage conditions,
                 // recording data in CSVs. Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service,
-                // for use in upstream analysis, etc...
+                // for use in upstream analysis, etc.
                 new NodeObserver(),
 
-                // This observer only collects basic SF information for use in reporting (from Windows Registry...) in user-configurable intervals...
+                // This observer only collects basic SF information for use in reporting (from Windows Registry.) in user-configurable intervals.
                 new SFConfigurationObserver(),
 
                 // Observes, records and reports on CPU/Mem usage, established port count, Disk IO (r/w) for Service Fabric System services
-                // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc...). Long-running data is stored in app-specific CSVs (optional)
-                // or sent to diagnostic/telemetry service, for use in upstream analysis, etc...
+                // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc.). Long-running data is stored in app-specific CSVs (optional)
+                // or sent to diagnostic/telemetry service, for use in upstream analysis, etc.
                 // ***NOTE***: Use this observer (like all observers that focus on resource usage) to help you arrive at the thresholds you're looking for - in test, under load and other chaos
                 // experiments you run. It's not possible to reliably predict the early signs of real misbehavior of unknown workloads.
                 new FabricSystemObserver(),
 
-                // User-configurable, App-level (app service processes) machine resource observer that records and reports on service-level resource usage...
-                // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service, for use in upstream analysis, etc...
+                // User-configurable, App-level (app service processes) machine resource observer that records and reports on service-level resource usage.
+                // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service, for use in upstream analysis, etc.
                 new AppObserver(),
 
-                // NetworkObserver for Internet connection state of user-supplied host/port pairs, active port and firewall rule count monitoring...
+                // NetworkObserver for Internet connection state of user-supplied host/port pairs, active port and firewall rule count monitoring.
                 new NetworkObserver(),
             });
 
-            // Only return a list with user-enabled observer instances...
+            // Only return a list with user-enabled observer instances.
             return observers.Where(obs => obs.IsEnabled)?.ToList();
         }
 
@@ -452,14 +452,14 @@ namespace FabricObserver
             }
 
             // FQDN for use in warning or error hyperlinks in HTML output
-            // This only makes sense when you have the FabricObserverWebApi app installed...
+            // This only makes sense when you have the FabricObserverWebApi app installed.
             string fqdn = GetConfigSettingValue(ObserverConstants.FQDN);
             if (!string.IsNullOrEmpty(fqdn))
             {
                 this.Fqdn = fqdn;
             }
 
-            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry...
+            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
@@ -481,7 +481,7 @@ namespace FabricObserver
                 FabricObserverInternalTelemetryEnabled = foTelemEnabled;
             }
 
-            // ObserverWebApi...
+            // ObserverWebApi.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiAppDeployed), out bool obsWeb))
             {
                 ObserverWebAppDeployed = obsWeb;
@@ -503,15 +503,15 @@ namespace FabricObserver
                 Console.CancelKeyPress += this.ShutdownHandler;
 
                 // Continue running until a shutdown signal is sent
-                this.Logger.LogInfo("Starting Observers loop...");
+                this.Logger.LogInfo("Starting Observers loop.");
 
-                // Observers run sequentially. See RunObservers impl...
+                // Observers run sequentially. See RunObservers impl.
                 while (true)
                 {
                     if (this.shutdownSignalled || this.token.IsCancellationRequested)
                     {
                         this.globalShutdownEventHandle.Set();
-                        this.Logger.LogInfo("Shutdown signalled. Stopping...");
+                        this.Logger.LogInfo("Shutdown signalled. Stopping.");
                         break;
                     }
 
@@ -519,7 +519,7 @@ namespace FabricObserver
                     {
                         if (ObserverExecutionLoopSleepSeconds > 0)
                         {
-                            this.Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again...");
+                            this.Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again.");
                             this.ThreadSleep(this.globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
                         }
 
@@ -532,14 +532,14 @@ namespace FabricObserver
                 var message = $"Unhanded Exception in ObserverManager on node {this.nodeName}. Taking down FO process. Error info: {ex.ToString()}";
                 this.Logger.LogError(message);
 
-                // Telemetry...
+                // Telemetry.
                 if (TelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, this.token);
                 }
 
-                // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy...
-                // Don't swallow the exception...
+                // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy.
+                // Don't swallow the exception.
                 throw;
             }
         }
@@ -566,9 +566,9 @@ namespace FabricObserver
 
         private void SignalAbortToRunningObserver()
         {
-            this.Logger.LogInfo("Signalling task cancellation to currently running Observer...");
+            this.Logger.LogInfo("Signalling task cancellation to currently running Observer.");
             this.cts.Cancel();
-            this.Logger.LogInfo("Successfully signalled cancellation to currently running Observer...");
+            this.Logger.LogInfo("Successfully signalled cancellation to currently running Observer.");
         }
 
         private bool RunObservers()
@@ -580,7 +580,7 @@ namespace FabricObserver
             {
                 try
                 {
-                    // Shutdown/cancellation signaled, so stop...
+                    // Shutdown/cancellation signaled, so stop.
                     if (this.token.IsCancellationRequested || this.shutdownSignalled)
                     {
                         return false;
@@ -596,7 +596,7 @@ namespace FabricObserver
 
                     this.IsObserverRunning = true;
 
-                    // Synchronous call...
+                    // Synchronous call.
                     var isCompleted = observer.ObserveAsync(this.cts.Token).Wait(this.observerExecTimeout);
                     this.IsObserverRunning = false;
 
@@ -605,11 +605,11 @@ namespace FabricObserver
                     if (!isCompleted)
                     {
                         string observerHealthWarning = observer.ObserverName + $" has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
-                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it...";
+                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it.";
 
                         this.Logger.LogError(observerHealthWarning);
 
-                        // TODO: Add HealthReport (App Level)...
+                        // TODO: Add HealthReport (App Level).
                         observer.IsUnhealthy = true;
 
                         if (TelemetryEnabled)
@@ -646,7 +646,7 @@ namespace FabricObserver
                             {
                                 if (File.Exists(this.Logger.FilePath))
                                 {
-                                    // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s)...
+                                    // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s).
                                     File.WriteAllLines(
                                         this.Logger.FilePath,
                                         File.ReadLines(this.Logger.FilePath)
@@ -676,7 +676,7 @@ namespace FabricObserver
                     var message = $"Unhandled Exception from {observer.ObserverName} on node {this.nodeName} rethrown from ObserverManager: {e.ToString()}";
                     this.Logger.LogError(message);
 
-                    // Telemetry...
+                    // Telemetry.
                     if (TelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", message, this.token);
@@ -748,7 +748,7 @@ namespace FabricObserver
                         this.cts = null;
                     }
 
-                    // Flush and Dispose all NLog targets. No more logging...
+                    // Flush and Dispose all NLog targets. No more logging.
                     Logger.Flush();
                     DataTableFileLogger.Flush();
                     Logger.ShutDown();

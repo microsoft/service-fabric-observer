@@ -29,7 +29,7 @@ namespace FabricObserver.Utilities
         /// <summary>
         /// Initializes a new instance of the <see cref="DiskUsage"/> class.
         /// </summary>
-        /// <param name="driveLetter">Drive letter...</param>
+        /// <param name="driveLetter">Drive letter.</param>
         public DiskUsage(string driveLetter)
         {
             this.Drive = driveLetter;
@@ -37,8 +37,8 @@ namespace FabricObserver.Utilities
         }
 
         /// <summary>
-        /// Gets the percent used space (as an integer value) of the current drive where this code is running from...
-        /// Or from whatever drive letter you supplied to DiskUsage(string driveLetter) ctor...
+        /// Gets the percent used space (as an integer value) of the current drive where this code is running from.
+        /// Or from whatever drive letter you supplied to DiskUsage(string driveLetter) ctor.
         /// </summary>
         internal int PercentUsedSpace => this.GetCurrentDiskSpaceUsedPercent(this.Drive);
 
@@ -54,7 +54,7 @@ namespace FabricObserver.Utilities
         {
             if (string.IsNullOrEmpty(drive))
             {
-                return -1; // Don't throw here...
+                return -1; // Don't throw here.
             }
 
             var driveInfo = new DriveInfo(drive);

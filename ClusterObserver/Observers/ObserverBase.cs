@@ -45,10 +45,10 @@ namespace FabricClusterObserver
         /// <inheritdoc/>
         public bool IsUnhealthy { get; set; } = false;
 
-        // Only set for unit test runs...
+        // Only set for unit test runs.
         public bool IsTestRun { get; set; } = false;
 
-        // Loggers...
+        // Loggers.
 
         /// <inheritdoc/>
         public Logger ObserverLogger { get; set; }
@@ -90,7 +90,7 @@ namespace FabricClusterObserver
             this.NodeName = this.FabricServiceContext.NodeContext.NodeName;
             this.NodeType = this.FabricServiceContext.NodeContext.NodeType;
 
-            // Observer Logger setup...
+            // Observer Logger setup.
             string logFolderBasePath = null;
             string observerLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
@@ -222,10 +222,10 @@ namespace FabricClusterObserver
         }
 
         /// <summary>
-        /// Gets a dictionary of Parameters of the specified section...
+        /// Gets a dictionary of Parameters of the specified section.
         /// </summary>
-        /// <param name="sectionName">Name of the section...</param>
-        /// <returns>A dictionary of Parameters key/value pairs (string, string) or null upon failure...</returns>
+        /// <param name="sectionName">Name of the section.</param>
+        /// <returns>A dictionary of Parameters key/value pairs (string, string) or null upon failure.</returns>
         public IDictionary<string, string> GetConfigSettingSectionParameters(string sectionName)
         {
             if (string.IsNullOrEmpty(sectionName))
@@ -253,12 +253,12 @@ namespace FabricClusterObserver
         }
 
         /// <summary>
-        /// Gets the interval at which the Observer is to be run, i.e. "no more often than..."
-        /// This is useful for Observers that do not need to run very often (a la OSObserver, Certificate Observer, etc...)
+        /// Gets the interval at which the Observer is to be run, i.e. "no more often than."
+        /// This is useful for Observers that do not need to run very often (a la OSObserver, Certificate Observer, etc.)
         /// </summary>
-        /// <param name="configSectionName">Observer configuration section name...</param>
-        /// <param name="configParamName">Observer configuration parameter name...</param>
-        /// <param name="defaultTo">Specific an optional TimeSpan to default to if setting is not found in config...
+        /// <param name="configSectionName">Observer configuration section name.</param>
+        /// <param name="configParamName">Observer configuration parameter name.</param>
+        /// <param name="defaultTo">Specific an optional TimeSpan to default to if setting is not found in config.
         /// else, it defaults to 24 hours.</param>
         /// <returns>run interval.</returns>
         public TimeSpan GetObserverRunInterval(
@@ -301,7 +301,7 @@ namespace FabricClusterObserver
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.
-        // If an Observer needs to dispose, then override this non-impl...
+        // If an Observer needs to dispose, then override this non-impl.
         private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)

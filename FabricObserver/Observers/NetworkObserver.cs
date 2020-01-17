@@ -21,7 +21,7 @@ namespace FabricObserver
     /// <summary>
     /// This observer monitors network conditions related to user-supplied configuration settings in
     /// networkobserver.json.config. This includes testing the connection state of supplied endpoint/port pairs,
-    /// and measuring network traffic (bytes/sec, up/down)...
+    /// and measuring network traffic (bytes/sec, up/down).
     /// The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
     /// Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     /// </summary>
@@ -74,7 +74,7 @@ namespace FabricObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
             if (this.RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
@@ -89,7 +89,7 @@ namespace FabricObserver
             this.token = token;
             token.ThrowIfCancellationRequested();
 
-            // Run conn tests...
+            // Run conn tests.
             Retry.Do(
                 this.InternetConnectionStateIsConnected,
                 TimeSpan.FromSeconds(10),
@@ -125,7 +125,7 @@ namespace FabricObserver
                     interfaceInfo.AppendFormat("  Interface type    : {0}\n", nic.NetworkInterfaceType);
                     interfaceInfo.AppendFormat("  Operational status: {0}\n", nic.OperationalStatus);
 
-                    // Traffic...
+                    // Traffic.
                     if (nic.OperationalStatus == OperationalStatus.Up)
                     {
                         interfaceInfo.AppendLine("  Traffic Info:");
@@ -155,12 +155,12 @@ namespace FabricObserver
         {
             this.WriteToLogWithLevel(
                 this.ObserverName,
-                $"Initializing {this.ObserverName} for network monitoring... | {this.NodeName}",
+                $"Initializing {this.ObserverName} for network monitoring. | {this.NodeName}",
                 LogLevel.Information);
 
             this.token.ThrowIfCancellationRequested();
 
-            // This only needs to be logged once...
+            // This only needs to be logged once.
             // This file is used by the ObserverWebApi application.
             if (ObserverManager.ObserverWebAppDeployed && !this.hasRun)
             {
@@ -172,7 +172,7 @@ namespace FabricObserver
                         this.FabricServiceContext.ServiceName.OriginalString,
                         this.ObserverName,
                         HealthState.Warning,
-                        "Unable to create NetInfo.txt file...");
+                        "Unable to create NetInfo.txt file.");
                 }
             }
 
@@ -190,7 +190,7 @@ namespace FabricObserver
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {
-                this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored...");
+                this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored.");
 
                 return false;
             }
@@ -199,7 +199,7 @@ namespace FabricObserver
 
             if (!File.Exists(networkObserverConfigFileName))
             {
-                this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored. Using default endpoints for connection testing...");
+                this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored. Using default endpoints for connection testing.");
 
                 return false;
             }
@@ -219,7 +219,7 @@ namespace FabricObserver
                         this.FabricServiceContext.ServiceName.ToString(),
                         this.ObserverName,
                         HealthState.Warning,
-                        "Missing required configuration data: endpoints...");
+                        "Missing required configuration data: endpoints.");
                     return false;
                 }
             }
@@ -255,7 +255,7 @@ namespace FabricObserver
                             this.FabricServiceContext.ServiceName.ToString(),
                             this.ObserverName,
                             HealthState.Warning,
-                            $"Initialize() | Required endpoint parameter not set. Nothing to test...");
+                            $"Initialize() | Required endpoint parameter not set. Nothing to test.");
                         continue;
                     }
 
@@ -266,7 +266,7 @@ namespace FabricObserver
                 }
             }
 
-            // This observer shouldn't run if there are no app-specific endpoint/port pairs provided...
+            // This observer shouldn't run if there are no app-specific endpoint/port pairs provided.
             if (configCount < 1)
             {
                 return false;
@@ -393,7 +393,7 @@ namespace FabricObserver
             string app;
             var timeToLiveWarning = this.SetTimeToLiveWarning();
 
-            // Report on connection state...
+            // Report on connection state.
             for (int j = 0; j < this.userEndpoints.Count; j++)
             {
                 token.ThrowIfCancellationRequested();
@@ -403,7 +403,7 @@ namespace FabricObserver
                                             this.NodeName,
                                             new Uri(this.userEndpoints[j].AppTarget)).ConfigureAwait(true);
 
-                // We only care about deployed apps...
+                // We only care about deployed apps.
                 if (deployedApps == null || deployedApps.Count < 1)
                 {
                     continue;
@@ -436,13 +436,13 @@ namespace FabricObserver
                             ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: connStatus.HostName",
                         };
 
-                        // Send health report Warning and log event locally...
+                        // Send health report Warning and log event locally.
                         this.HealthReporter.ReportHealthToServiceFabric(report);
 
                         // This means this observer created a Warning or Error SF Health Report
                         this.HasActiveFabricErrorOrWarning = true;
 
-                        // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example...)...
+                        // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
                         if (this.IsTelemetryEnabled)
                         {
                             _ = this.ObserverTelemetryClient?.ReportHealthAsync(
@@ -461,7 +461,7 @@ namespace FabricObserver
                             this.healthState = HealthState.Ok;
                             var healthMessage = "Outbound Internet connection test successful.";
 
-                            // Clear existing Health Warning...
+                            // Clear existing Health Warning.
                             Utilities.HealthReport report = new Utilities.HealthReport
                             {
                                 AppName = new Uri(this.userEndpoints[j].AppTarget),
@@ -476,7 +476,7 @@ namespace FabricObserver
 
                             this.HealthReporter.ReportHealthToServiceFabric(report);
 
-                            // Reset health state...
+                            // Reset health state.
                             this.HasActiveFabricErrorOrWarning = false;
                         }
                     }

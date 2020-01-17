@@ -14,18 +14,18 @@ namespace FabricObserver.Utilities
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricResourceUsageData{T}"/> class.
         /// </summary>
-        /// <param name="property">Metric string...</param>
-        /// <param name="id">Instance id...</param>
+        /// <param name="property">Metric string.</param>
+        /// <param name="id">Instance id.</param>
         public FabricResourceUsageData(string property, string id)
         {
             if (string.IsNullOrEmpty(property))
             {
-                throw new ArgumentException($"Must provide a non-empty {property}...");
+                throw new ArgumentException($"Must provide a non-empty {property}.");
             }
 
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentException($"Must provide a non-empty {id}...");
+                throw new ArgumentException($"Must provide a non-empty {id}.");
             }
 
             this.Data = new List<T>();
@@ -110,7 +110,7 @@ namespace FabricObserver.Utilities
 
         /// <summary>
         /// Gets or sets a value indicating whether there is an active warning state on this instance.
-        /// Set to false when warning state changes to Ok...
+        /// Set to false when warning state changes to Ok.
         /// </summary>
         public bool ActiveErrorOrWarning
         {

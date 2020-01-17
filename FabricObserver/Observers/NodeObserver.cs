@@ -61,7 +61,7 @@ namespace FabricObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
             if (this.RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
@@ -86,7 +86,7 @@ namespace FabricObserver
             }
             finally
             {
-                // Clean up...
+                // Clean up.
                 this.perfCounters?.Dispose();
                 this.perfCounters = null;
             }
@@ -263,17 +263,17 @@ namespace FabricObserver
 
                 try
                 {
-                    // Ports...
+                    // Ports.
                     int activePortCountTotal = NetworkUsage.GetActivePortCount();
                     int ephemeralPortCountTotal = NetworkUsage.GetActiveEphemeralPortCount();
                     this.activePortsData.Data.Add(activePortCountTotal);
                     this.ephemeralPortsData.Data.Add(ephemeralPortCountTotal);
 
-                    // Firewall rules...
+                    // Firewall rules.
                     int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
                     this.firewallData.Data.Add(firewalls);
 
-                    // CPU and Memory...
+                    // CPU and Memory.
                     for (int i = 0; i < 30; i++)
                     {
                         token.ThrowIfCancellationRequested();
@@ -324,7 +324,7 @@ namespace FabricObserver
                 {
                     var fileName = "CpuMemFirewallsPorts" + this.NodeName;
 
-                    // Log (csv) system-wide CPU/Mem data...
+                    // Log (csv) system-wide CPU/Mem data.
                     this.CsvFileLogger.LogData(
                         fileName,
                         this.NodeName,

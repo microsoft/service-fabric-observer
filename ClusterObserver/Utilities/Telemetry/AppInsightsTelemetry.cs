@@ -102,7 +102,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <summary>
         /// Calls AI to report health.
         /// </summary>
-        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc...).</param>
+        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc.).</param>
         /// <param name="propertyName">Value of the property.</param>
         /// <param name="state">Health state.</param>
         /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
@@ -161,7 +161,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>Task of bool...</returns>
+        /// <returns>Task of bool.</returns>
         public Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken)
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)

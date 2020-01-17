@@ -62,7 +62,7 @@ namespace FabricClusterObserver
             FabricServiceContext = context;
             this.nodeName = FabricServiceContext?.NodeContext.NodeName;
 
-            // Observer Logger setup...
+            // Observer Logger setup.
             string logFolderBasePath = null;
             string observerLogPath = GetConfigSettingValue(ObserverConstants.ObserverLogPath);
 
@@ -76,12 +76,12 @@ namespace FabricClusterObserver
                 logFolderBasePath = logFolderBase;
             }
 
-            // this logs error/warning/info messages for ObserverManager...
+            // this logs error/warning/info messages for ObserverManager.
             this.Logger = new Logger(ObserverConstants.ObserverManangerName, logFolderBasePath);
            
             this.SetPropertiesFromConfigurationParameters();
 
-            // Populate the Observer list for the sequential run loop...
+            // Populate the Observer list for the sequential run loop.
             this.observers = GetObservers();
         }
         
@@ -139,7 +139,7 @@ namespace FabricClusterObserver
 
         // This impl is to ensure FO exits if shutdown is requested while the over loop is sleeping
         // So, instead of blocking with a Thread.Sleep, for example, ThreadSleep is used to ensure
-        // we can receive signals and act accordingly during thread sleep state...
+        // we can receive signals and act accordingly during thread sleep state.
         private void ThreadSleep(EventWaitHandle ewh, TimeSpan timeout)
         {
             // if timeout is <= 0, return. 0 is infinite, and negative is not valid
@@ -158,7 +158,7 @@ namespace FabricClusterObserver
                 stopwatch.Start();
 
                 // the event can be signalled by CtrlC,
-                // Exit ASAP when the program terminates (i.e., shutdown/abort is signalled...)
+                // Exit ASAP when the program terminates (i.e., shutdown/abort is signalled.)
                 ewh.WaitOne(timeout.Subtract(elapsedTime));
                 stopwatch.Stop();
 
@@ -171,18 +171,18 @@ namespace FabricClusterObserver
             }
         }
 
-        // Observers are instance types. Create them, store in persistent list...
-        // List order matters... These are cycled through sequentially, one observer at a time.
+        // Observers are instance types. Create them, store in persistent list.
+        // List order matters. These are cycled through sequentially, one observer at a time.
         private static List<ObserverBase> GetObservers()
         {
             // You can simply not create an instance of an observer you don't want to run. The list
-            // below is just for reference. GetObservers only returns enabled observers, anyway...
+            // below is just for reference. GetObservers only returns enabled observers, anyway.
             var observers = new List<ObserverBase>(new ObserverBase[]
             {
                 new ClusterObserver(),
             });
 
-            // Only return a list with user-enabled observer instances...
+            // Only return a list with user-enabled observer instances.
             return observers.Where(obs => obs.IsEnabled)?.ToList();
         }
 
@@ -223,7 +223,7 @@ namespace FabricClusterObserver
                 this.shutdownGracePeriodInSeconds = shutdownGracePeriodInSeconds;
             }
 
-            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry...
+            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
@@ -251,15 +251,15 @@ namespace FabricClusterObserver
                 Console.CancelKeyPress += this.ShutdownHandler;
 
                 // Continue running until a shutdown signal is sent
-                this.Logger.LogInfo("Starting Observers loop...");
+                this.Logger.LogInfo("Starting Observers loop.");
 
-                // Observers run sequentially. See RunObservers impl...
+                // Observers run sequentially. See RunObservers impl.
                 while (true)
                 {
                     if (this.shutdownSignalled || this.token.IsCancellationRequested)
                     {
                         this.globalShutdownEventHandle.Set();
-                        this.Logger.LogInfo("Shutdown signalled. Stopping...");
+                        this.Logger.LogInfo("Shutdown signalled. Stopping.");
                         break;
                     }
 
@@ -267,7 +267,7 @@ namespace FabricClusterObserver
                     {
                         if (ObserverExecutionLoopSleepSeconds > 0)
                         {
-                            this.Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again...");
+                            this.Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again.");
                             this.ThreadSleep(this.globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
                         }
 
@@ -280,14 +280,14 @@ namespace FabricClusterObserver
                 var message = $"Unhanded Exception in ObserverManager on node {this.nodeName}. Taking down FO process. Error info: {ex.ToString()}";
                 this.Logger.LogError(message);
 
-                // Telemetry...
+                // Telemetry.
                 if (TelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportMetricAsync($"ObserverManagerHealthError", message, this.token);
                 }
 
-                // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy...
-                // Don't swallow the exception...
+                // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy.
+                // Don't swallow the exception.
                 throw;
             }
         }
@@ -314,9 +314,9 @@ namespace FabricClusterObserver
 
         private void SignalAbortToRunningObserver()
         {
-            this.Logger.LogInfo("Signalling task cancellation to currently running Observer...");
+            this.Logger.LogInfo("Signalling task cancellation to currently running Observer.");
             this.cts.Cancel();
-            this.Logger.LogInfo("Successfully signalled cancellation to currently running Observer...");
+            this.Logger.LogInfo("Successfully signalled cancellation to currently running Observer.");
         }
 
         private bool RunObservers()
@@ -328,7 +328,7 @@ namespace FabricClusterObserver
             {
                 try
                 {
-                    // Shutdown/cancellation signaled, so stop...
+                    // Shutdown/cancellation signaled, so stop.
                     if (this.token.IsCancellationRequested || this.shutdownSignalled)
                     {
                         return false;
@@ -344,7 +344,7 @@ namespace FabricClusterObserver
 
                     this.IsObserverRunning = true;
 
-                    // Synchronous call...
+                    // Synchronous call.
                     var isCompleted = observer.ObserveAsync(this.cts.Token).Wait(this.observerExecTimeout);
                     this.IsObserverRunning = false;
 
@@ -353,11 +353,11 @@ namespace FabricClusterObserver
                     if (!isCompleted)
                     {
                         string observerHealthWarning = observer.ObserverName + $" has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
-                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it...";
+                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it.";
 
                         this.Logger.LogError(observerHealthWarning);
 
-                        // TODO: Add HealthReport (App Level)...
+                        // TODO: Add HealthReport (App Level).
                         observer.IsUnhealthy = true;
 
                         if (TelemetryEnabled)
@@ -383,7 +383,7 @@ namespace FabricClusterObserver
                     var message = $"Unhandled Exception from {observer.ObserverName} on node {this.nodeName} rethrown from ObserverManager: {e.ToString()}";
                     this.Logger.LogError(message);
 
-                    // Telemetry...
+                    // Telemetry.
                     if (TelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", message, this.token);
@@ -447,7 +447,7 @@ namespace FabricClusterObserver
                         this.cts = null;
                     }
 
-                    // Flush and Dispose all NLog targets. No more logging...
+                    // Flush and Dispose all NLog targets. No more logging.
                     Logger.Flush();
                     Logger.ShutDown();
 

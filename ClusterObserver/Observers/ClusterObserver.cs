@@ -19,7 +19,7 @@ namespace FabricClusterObserver
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
         /// This observer runs on one node and as an independent service since FabricObserver 
         /// is a -1 singleton partition service (runs on every node). ClusterObserver and FabricObserver
-        /// can run in the same cluster as they are independent processes...
+        /// can run in the same cluster as they are independent processes.
         /// </summary>
         public ClusterObserver()
             : base(ObserverConstants.ClusterObserverName)
@@ -81,16 +81,16 @@ namespace FabricClusterObserver
 
                 string telemetryDescription = string.Empty;
 
-                // Previous run generated unhealthy evaluation report... Clear it (send Ok) .
+                // Previous run generated unhealthy evaluation report. Clear it (send Ok) .
                 if (emitOkHealthState && clusterHealth.AggregatedHealthState == HealthState.Ok
                     && (this.ClusterHealthState == HealthState.Error
                     || (emitWarningDetails && this.ClusterHealthState == HealthState.Warning)))
                 {
                     telemetryDescription += "Cluster has recovered from previous Error/Warning state.";
                 }
-                else // Construct unhealthy state information...
+                else // Construct unhealthy state information.
                 {
-                    // If in Warning and you are not sending Warning state reports, then end here...
+                    // If in Warning and you are not sending Warning state reports, then end here.
                     if (!emitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning)
                     {
                         return;
@@ -104,7 +104,7 @@ namespace FabricClusterObserver
 
                         telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}";
 
-                        // Application in error/warning?...
+                        // Application in error/warning?.
                         foreach (var app in clusterHealth.ApplicationHealthStates)
                         {
                             if (app.AggregatedHealthState == HealthState.Ok
@@ -118,16 +118,16 @@ namespace FabricClusterObserver
                     }
                 }
 
-                // Track current health state for use in next run...
+                // Track current health state for use in next run.
                 this.ClusterHealthState = clusterHealth.AggregatedHealthState;
 
-                // This means there is no cluster health state data to emit...
+                // This means there is no cluster health state data to emit.
                 if (string.IsNullOrEmpty(telemetryDescription))
                 {
                     return;
                 }
 
-                // Telemetry...
+                // Telemetry.
                 await this.ObserverTelemetryClient?.ReportHealthAsync(
                         HealthScope.Cluster,
                         "AggregatedClusterHealth",
