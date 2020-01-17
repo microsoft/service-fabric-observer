@@ -17,7 +17,7 @@ namespace FabricObserver.Interfaces
 
         ObserverHealthReporter HealthReporter { get; }
 
-        // StatefulServiceContext or StatelessServiceContext...
+        // StatefulServiceContext or StatelessServiceContext.
         TServiceContext FabricServiceContext { get; }
 
         Logger ObserverLogger { get; set; }

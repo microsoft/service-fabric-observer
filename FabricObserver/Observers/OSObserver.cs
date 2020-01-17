@@ -41,7 +41,7 @@ namespace FabricObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example...
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
             if (this.RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
@@ -60,7 +60,7 @@ namespace FabricObserver
             {
                 token.ThrowIfCancellationRequested();
 
-                // OS Health...
+                // OS Health.
                 if (this.osStatus != null &&
                     this.osStatus.ToUpper() != "OK")
                 {
@@ -79,24 +79,23 @@ namespace FabricObserver
                     // This means this observer created a Warning or Error SF Health Report
                     this.HasActiveFabricErrorOrWarning = true;
 
-                    // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example...)...
+                    // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
                     if (this.IsTelemetryEnabled)
                     {
                         _ = this.ObserverTelemetryClient?.ReportHealthAsync(
-                                FabricRuntime.GetActivationContext().ApplicationName,
-                                this.FabricServiceContext.ServiceName.OriginalString,
-                                "FabricObserver",
-                                this.ObserverName,
-                                $"{this.NodeName}/OS reporting unhealthy: {this.osStatus}",
-                                HealthState.Error,
-                                token);
+                        Utilities.Telemetry.HealthScope.Application,
+                        FabricRuntime.GetActivationContext().ApplicationName,
+                        HealthState.Error,
+                        $"{this.NodeName} - OS reporting unhealthy: {this.osStatus}",
+                        this.ObserverName,
+                        this.Token);
                     }
                 }
                 else if (this.HasActiveFabricErrorOrWarning &&
                          this.osStatus != null &&
                          this.osStatus.ToUpper() == "OK")
                 {
-                    // Clear Error or Warning with an OK Health Report...
+                    // Clear Error or Warning with an OK Health Report.
                     string healthMessage = $"OS reporting healthy: {this.osStatus}";
                     var healthReport = new Utilities.HealthReport
                     {
@@ -109,7 +108,7 @@ namespace FabricObserver
 
                     this.HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                    // Reset internal health state...
+                    // Reset internal health state.
                     this.HasActiveFabricErrorOrWarning = false;
                 }
 
@@ -117,14 +116,14 @@ namespace FabricObserver
                 {
                     var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SysInfo.txt");
 
-                    // This file is used by the web application (log reader...)...
+                    // This file is used by the web application (log reader.).
                     if (!this.ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{this.osReport}"))
                     {
                         this.HealthReporter.ReportFabricObserverServiceHealth(
                             this.FabricServiceContext.ServiceName.OriginalString,
                             this.ObserverName,
                             HealthState.Warning,
-                            "Unable to create SysInfo.txt file...");
+                            "Unable to create SysInfo.txt file.");
                     }
                 }
 
@@ -296,10 +295,10 @@ namespace FabricObserver
                         }
                         else if (name.ToLower().Contains("memory"))
                         {
-                            // For output...
+                            // For output.
                             int i = int.Parse(value) / 1024 / 1024;
 
-                            // TotalVisible only needs to be set once...
+                            // TotalVisible only needs to be set once.
                             if (name.ToLower().Contains("totalvisible"))
                             {
                                 this.totalVisibleMemoryGB = i;
@@ -320,10 +319,10 @@ namespace FabricObserver
                     }
                 }
 
-                // Active, bound ports...
+                // Active, bound ports.
                 activePorts = NetworkUsage.GetActivePortCount();
 
-                // Active, ephemeral ports...
+                // Active, ephemeral ports.
                 activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
                 var dynamicPortRange = NetworkUsage.TupleGetDynamicPortRange();
                 string clusterManifestXml = null;
@@ -342,7 +341,7 @@ namespace FabricObserver
                 var appPortRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
-                // OS info...
+                // OS info.
                 sb.AppendLine("OS Information:\r\n");
                 sb.AppendLine($"Name: {osName}");
                 sb.AppendLine($"Version: {osVersion}");
@@ -374,7 +373,7 @@ namespace FabricObserver
                     sb.AppendLine($"TotalActiveTCPPorts*: {activePorts}");
                 }
 
-                // Hardware info...
+                // Hardware info.
                 // Proc/Mem
                 sb.AppendLine("\r\nHardware Information:\r\n");
                 sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
@@ -414,7 +413,7 @@ namespace FabricObserver
 
                 this.osReport = sb.ToString();
 
-                // ETW...
+                // ETW.
                 if (this.IsEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(

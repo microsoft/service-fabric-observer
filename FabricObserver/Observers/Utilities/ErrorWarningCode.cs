@@ -7,7 +7,7 @@ namespace FabricObserver.Utilities
 {
     public sealed class ErrorWarningCode
     {
-        // CPU...
+        // CPU.
         public const string ErrorCpuTime = "FO001";
         public const string WarningCpuTime = "FO002";
 

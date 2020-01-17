@@ -10,7 +10,7 @@ using System.Fabric.Health;
 namespace FabricObserver.Utilities
 {
     /// <summary>
-    /// Reports health data to Service Fabric Health Manager and logs locally (optional)...
+    /// Reports health data to Service Fabric Health Manager and logs locally (optional).
     /// </summary>
     public class ObserverHealthReporter
     {
@@ -20,7 +20,7 @@ namespace FabricObserver.Utilities
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
         /// </summary>
-        /// <param name="logger">file logger instance...</param>
+        /// <param name="logger">file logger instance.</param>
         public ObserverHealthReporter(Logger logger)
         {
             this.fabricClient = ObserverManager.FabricClientInstance;
@@ -30,7 +30,7 @@ namespace FabricObserver.Utilities
         }
 
         /// <summary>
-        /// Report FabricObserver service health as log event (not to SF Health)...
+        /// Report FabricObserver service health as log event (not to SF Health).
         /// </summary>
         /// <param name="serviceName">Name of the service.</param>
         /// <param name="propertyName">Name of the health property.</param>
@@ -61,10 +61,10 @@ namespace FabricObserver.Utilities
             }
 
             // There is no real need to change Immediate to true here for errors/warnings. This only adds unecessary stress to the
-            // Health subsystem...
+            // Health subsystem.
             var sendOptions = new HealthReportSendOptions { Immediate = false };
 
-            // Quickly send OK (clears warning/errors states)...
+            // Quickly send OK (clears warning/errors states).
             if (healthReport.State == HealthState.Ok)
             {
                 sendOptions.Immediate = true;
@@ -90,7 +90,7 @@ namespace FabricObserver.Utilities
             // In order for multiple Error/Warning/Ok events to show up in SFX Details view from observer instances,
             // Event Source Ids must be unique, thus the seemingly strange conditionals inside the cases below:
             // The apparent duplicity in OR checks is for the case when the incoming report is an OK report, where there is
-            // no error code, but the specific ErrorWarningProperty is known...
+            // no error code, but the specific ErrorWarningProperty is known.
             switch (healthReport.Observer)
             {
                 case ObserverConstants.AppObserverName:
@@ -224,7 +224,7 @@ namespace FabricObserver.Utilities
                 RemoveWhenExpired = true,
             };
 
-            // Log event only if ObserverWebApi (REST Log reader...) app is deployed...
+            // Log event only if ObserverWebApi (REST Log reader.) app is deployed.
             if (ObserverManager.ObserverWebAppDeployed
                 && healthReport.EmitLogEvent)
             {
@@ -242,7 +242,7 @@ namespace FabricObserver.Utilities
                 }
             }
 
-            // To SFX and Telemetry provider...
+            // To SFX and Telemetry provider.
             if (healthReport.ReportType == HealthReportType.Application && healthReport.AppName != null)
             {
                 var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);

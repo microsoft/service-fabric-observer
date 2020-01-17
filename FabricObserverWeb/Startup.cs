@@ -16,7 +16,7 @@ namespace FabricObserverWeb
         /// <summary>
         /// Initializes a new instance of the <see cref="Startup"/> class.
         /// </summary>
-        /// <param name="configuration">configuration...</param>
+        /// <param name="configuration">configuration.</param>
         public Startup(IConfiguration configuration)
         {
             this.Configuration = configuration;
@@ -29,7 +29,7 @@ namespace FabricObserverWeb
         {
             services.AddMvc(options =>
             {
-                // Added to support HTML output to callers...
+                // Added to support HTML output to callers.
                 options.OutputFormatters.Add(new HtmlOutputFormatter());
             })
             .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)

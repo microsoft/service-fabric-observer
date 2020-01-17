@@ -38,10 +38,10 @@ namespace FabricObserver.Utilities
         // Setting name for Grace period of shutdown in seconds.
         public const string ObserverShutdownGracePeriodInSeconds = "ObserverShutdownGracePeriodInSeconds";
 
-        // Setting name for Maximum time an observer should run before being considered hung or in some failure state...
+        // Setting name for Maximum time an observer should run before being considered hung or in some failure state.
         public const string ObserverExecutionTimeout = "ObserverExecutionTimeout";
 
-        // AppObserver...
+        // AppObserver.
         public const string AppObserverName = "AppObserver";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
 
@@ -53,7 +53,7 @@ namespace FabricObserver.Utilities
         public const string CertificateObserverAppCertificateThumbprints = "AppCertThumbprintsToObserve";
         public const string CertificateObserverAppCertificateCommonNames = "AppCertCommonNamesToObserve";
 
-        // DiskObserver...
+        // DiskObserver.
         public const string DiskObserverName = "DiskObserver";
         public const string DiskObserverConfigurationSectionName = "DiskObserverConfiguration";
         public const string DiskObserverIntervalParameterName = "RunInterval";
@@ -66,7 +66,7 @@ namespace FabricObserver.Utilities
         public const string DiskObserverAverageQueueLengthError = "AverageQueueLengthErrorThreshold";
         public const string DiskObserverAverageQueueLengthWarning = "AverageQueueLengthWarningThreshold";
 
-        // FabricSystemObserver...
+        // FabricSystemObserver.
         public const string FabricSystemObserverName = "FabricSystemObserver";
         public const string FabricSystemObserverConfigurationSectionName = "FabricSystemObserverConfiguration";
         public const string FabricSystemObserverErrorCpu = "ErrorCpuThresholdPercent";
@@ -81,11 +81,11 @@ namespace FabricObserver.Utilities
         public const string FabricSystemObserverWarnPercentUnhealthyNodes = "PercentUnhealthyNodesWarnThreshold";
         public const string FabricSystemObserverMonitorWindowsEventLog = "MonitorWindowsEventLog";
 
-        // NetworkObserver...
+        // NetworkObserver.
         public const string NetworkObserverName = "NetworkObserver";
         public const string NetworkObserverConfigurationSectionName = "NetworkObserverConfiguration";
 
-        // NodeObserver...
+        // NodeObserver.
         public const string NodeObserverName = "NodeObserver";
         public const string NodeObserverConfigurationSectionName = "NodeObserverConfiguration";
         public const string NodeObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
@@ -101,11 +101,11 @@ namespace FabricObserver.Utilities
         public const string NodeObserverMemoryUsePercentError = "MemoryErrorLimitPercent";
         public const string NodeObserverMemoryUsePercentWarning = "MemoryWarningLimitPercent";
 
-        // OSObserver...
+        // OSObserver.
         public const string OSObserverName = "OSObserver";
         public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
 
-        // SFConfigurationObserver...
+        // SFConfigurationObserver.
         public const string SFConfigurationObserverName = "SFConfigurationObserver";
         public const string SFConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
         public const string SFConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";

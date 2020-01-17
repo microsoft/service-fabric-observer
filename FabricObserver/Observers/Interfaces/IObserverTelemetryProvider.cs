@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Utilities.Telemetry;
 
 namespace FabricObserver.Interfaces
 {
@@ -33,7 +34,7 @@ namespace FabricObserver.Interfaces
         /// <param name="success">True if the availability test ran successfully.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <param name="message">Error message on availability test run failure.</param>
-        /// <returns>a completed task...</returns>
+        /// <returns>a completed task.</returns>
         Task ReportAvailabilityAsync(
             Uri serviceUri,
             string instance,
@@ -48,15 +49,24 @@ namespace FabricObserver.Interfaces
         /// <summary>
         /// Calls telemetry provider to report health.
         /// </summary>
-        /// <returns>a Task...</returns>
+        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc.).</param>
+        /// <param name="propertyName">Value of the property.</param>
+        /// <param name="state">Health state.</param>
+        /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
+        /// <param name="source">Source of emission.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <param name="serviceName">Optional: TraceTelemetry context cloud service name.</param>
+        /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
+        /// <returns>a Task.</returns>
         Task ReportHealthAsync(
-            string applicationName,
-            string serviceName,
-            string instance,
-            string source,
+            HealthScope scope,
             string propertyName,
             HealthState state,
-            CancellationToken cancellationToken);
+            string unhealthyEvaluations,
+            string source,
+            CancellationToken cancellationToken,
+            string serviceName = null,
+            string instanceName = null);
 
         /// <summary>
         /// Calls telemetry provider to report a metric.
@@ -64,7 +74,7 @@ namespace FabricObserver.Interfaces
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>A completed task of bool...</returns>
+        /// <returns>A completed task of bool.</returns>
         Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken);
 
         /// <summary>

@@ -12,7 +12,7 @@ using NLog.Time;
 
 namespace FabricObserver.Utilities
 {
-    // CSV file logger for long-running monitoring data (memory/cpu/disk/network usage data)...
+    // CSV file logger for long-running monitoring data (memory/cpu/disk/network usage data).
     public class DataTableFileLogger : IDataTableFileLogger<ILogger>
     {
         /// <inheritdoc/>
@@ -26,11 +26,11 @@ namespace FabricObserver.Utilities
         /// <inheritdoc/>
         public void ConfigureLogger(string filename)
         {
-            // default log directory...
+            // default log directory.
             string windrive = Environment.SystemDirectory.Substring(0, 2);
             string logPath = windrive + "\\observer_logs\\fabric_observer_data";
 
-            // log directory supplied in config... Set in ObserverManager.
+            // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrEmpty(this.DataLogFolderPath))
             {
                 logPath = this.DataLogFolderPath;
@@ -52,7 +52,7 @@ namespace FabricObserver.Utilities
             LogManager.ReconfigExistingLoggers();
         }
 
-        /* NLog: For writing out to local CSV file...
+        /* NLog: For writing out to local CSV file.
            Format:
             <column name="date" layout="${longdate}" />
             <column name="target" layout="${event-properties:target}" />
@@ -88,7 +88,7 @@ namespace FabricObserver.Utilities
                 return;
             }
 
-            // Else, reconfigure logger to write to file on disk...
+            // Else, reconfigure logger to write to file on disk.
             this.ConfigureLogger(fileName);
 
             Logger.Info(

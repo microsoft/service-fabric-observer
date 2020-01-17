@@ -12,14 +12,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /*
 
- Many of these tests will work without the presence of a Fabric runtime (so, no running cluster)...
- Some of them can't because their is a need for things like an actual Fabric runtime instance...
+ Many of these tests will work without the presence of a Fabric runtime (so, no running cluster).
+ Some of them can't because their is a need for things like an actual Fabric runtime instance.
 
  ***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***
 
  Make sure that your observers can run as Network Service (e.g., FabricClientRole.User).
  There is seldom a real need to run FabricObserver as an Admin or System user. Currently, the only potential reason
- would be due to mitigation/healing actions, which are not currently implemented. As a rule, do not run with system level privileges unless you provably have to...
+ would be due to mitigation/healing actions, which are not currently implemented. As a rule, do not run with system level privileges unless you provably have to.
 
 */
 
@@ -103,7 +103,7 @@ namespace FabricObserverTests
                 store?.Dispose();
             }
 
-            // Remove any files generated...
+            // Remove any files generated.
             try
             {
                 var outputFolder = $@"{Environment.CurrentDirectory}\observer_logs\";
@@ -267,7 +267,7 @@ namespace FabricObserverTests
 
             var obs = new SFConfigurationObserver();
 
-            // These are set in derived ObserverBase...
+            // These are set in derived ObserverBase.
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.CsvFileLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -278,7 +278,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -297,13 +297,13 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -312,7 +312,7 @@ namespace FabricObserverTests
 
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
         [TestMethod]
-        [SuppressMessage("Code Quality", "IDE0067:Dispose objects before losing scope", Justification = "Noise...")]
+        [SuppressMessage("Code Quality", "IDE0067:Dispose objects before losing scope", Justification = "Noise.")]
         public void Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
         {
             ObserverManager.FabricServiceContext = this.context;
@@ -347,12 +347,12 @@ namespace FabricObserverTests
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
-                // wait...
+                // wait.
             }
 
             stopWatch.Stop();
 
-            // Observer is running. Stop it...
+            // Observer is running. Stop it.
             obsMgr.StopObservers();
             Thread.Sleep(5);
 
@@ -397,12 +397,12 @@ namespace FabricObserverTests
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
-                // wait...
+                // wait.
             }
 
             stopWatch.Stop();
 
-            // Observer is running. Stop it...
+            // Observer is running. Stop it.
             obsMgr.StopObservers();
             Thread.Sleep(5);
 
@@ -447,7 +447,7 @@ namespace FabricObserverTests
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
-                // wait...
+                // wait.
             }
 
             stopWatch.Stop();
@@ -496,7 +496,7 @@ namespace FabricObserverTests
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
-                // wait...
+                // wait.
             }
 
             stopWatch.Stop();
@@ -545,7 +545,7 @@ namespace FabricObserverTests
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
-                // wait...
+                // wait.
             }
 
             stopWatch.Stop();
@@ -594,7 +594,7 @@ namespace FabricObserverTests
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
-                // wait...
+                // wait.
             }
 
             stopWatch.Stop();
@@ -643,7 +643,7 @@ namespace FabricObserverTests
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
-                // wait...
+                // wait.
             }
 
             stopWatch.Stop();
@@ -692,7 +692,7 @@ namespace FabricObserverTests
 
             while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
             {
-                // wait...
+                // wait.
             }
 
             stopWatch.Stop();
@@ -711,8 +711,8 @@ namespace FabricObserverTests
 
         /// <summary>
         /// Incorrect/meaningless config properties tests. Ensure that bad values do not
-        /// crash observers OR they do, which is your design decision...
-        /// They should handle the case when unexpected config values are provided...
+        /// crash observers OR they do, which is your design decision.
+        /// They should handle the case when unexpected config values are provided.
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -737,13 +737,13 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -792,13 +792,13 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -847,13 +847,13 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected error conditions...
+            // observer detected error conditions.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -886,13 +886,13 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -900,7 +900,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -927,10 +927,10 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // Bad values don't crash Initialize...
+            // Bad values don't crash Initialize.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            // It ran (crashing in Initialize would not set LastRunDate, which is MinValue until set...)
+            // It ran (crashing in Initialize would not set LastRunDate, which is MinValue until set.)
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             obs.Dispose();
@@ -938,7 +938,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -963,23 +963,23 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\SysInfo.txt";
 
-            // Output log file was created successfully during test...
+            // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
                           && File.GetLastWriteTime(outputFilePath) > startDateTime
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
-            // Output file is not empty...
+            // Output file is not empty.
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
@@ -987,7 +987,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1008,23 +1008,23 @@ namespace FabricObserverTests
             var obs = new DiskObserver();
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\disks.txt";
 
-            // Output log file was created successfully during test...
+            // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
                           && File.GetLastWriteTime(outputFilePath) > startDateTime
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
-            // Output file is not empty...
+            // Output file is not empty.
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
@@ -1032,7 +1032,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1052,28 +1052,28 @@ namespace FabricObserverTests
 
             var obs = new DiskObserver
             {
-                DiskSpacePercentWarningThreshold = 10, // This should cause a Warning on most dev machines...
+                DiskSpacePercentWarningThreshold = 10, // This should cause a Warning on most dev machines.
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected error or warning disk health conditions...
+            // observer detected error or warning disk health conditions.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\disks.txt";
 
-            // Output log file was created successfully during test...
+            // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
                           && File.GetLastWriteTime(outputFilePath) > startDateTime
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
-            // Output file is not empty...
+            // Output file is not empty.
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
@@ -1081,7 +1081,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1105,15 +1105,15 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // Observer ran to completion with no errors...
+            // Observer ran to completion with no errors.
             // The supplied config does not include deployed app network configs, so
-            // ObserveAsync will return in milliseconds...
+            // ObserveAsync will return in milliseconds.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -1121,7 +1121,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1146,25 +1146,25 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // Observer ran to completion with no errors...
+            // Observer ran to completion with no errors.
             // The supplied config does not include deployed app network configs, so
-            // ObserveAsync will return in milliseconds...
+            // ObserveAsync will return in milliseconds.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\NetInfo.txt";
 
-            // Output log file was created successfully during test...
+            // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
                           && File.GetLastWriteTime(outputFilePath) > startDateTime
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
-            // Output file is not empty...
+            // Output file is not empty.
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
@@ -1172,7 +1172,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1192,17 +1192,17 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
-                MemWarningUsageThresholdMB = 1, // This will generate Warning for sure...
+                MemWarningUsageThresholdMB = 1, // This will generate Warning for sure.
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -1210,7 +1210,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1235,23 +1235,23 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\SFInfraInfo.txt";
 
-            // Output log file was created successfully during test...
+            // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
                           && File.GetLastWriteTime(outputFilePath) > startDateTime
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
-            // Output file is not empty...
+            // Output file is not empty.
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
@@ -1259,7 +1259,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1289,15 +1289,15 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             // Adjust defaults in FabricObserver project's Observers/FabricSystemObserver.cs
             // file to experiment with err/warn detection/reporting behavior.
-            // observer did not detect any errors or warnings for supplied thresholds...
+            // observer did not detect any errors or warnings for supplied thresholds.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -1305,7 +1305,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1331,19 +1331,19 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
-                MemWarnUsageThresholdMB = 20, // This will definitely cause Warning alerts...
+                MemWarnUsageThresholdMB = 20, // This will definitely cause Warning alerts.
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             // Experiment with err/warn detection/reporting behavior.
-            // observer detected errors or warnings for supplied threshold(s)...
+            // observer detected errors or warnings for supplied threshold(s).
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -1351,7 +1351,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1382,13 +1382,13 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
@@ -1396,7 +1396,7 @@ namespace FabricObserverTests
         }
 
         /// <summary>
-        /// ...
+        /// .
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
@@ -1427,20 +1427,20 @@ namespace FabricObserverTests
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
-            // observer ran to completion with no errors...
+            // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions...
+            // observer detected no error conditions.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
-            // observer did not have any internal errors during run...
+            // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
         }
 
-        /***** End Tests that require a currently running SF Cluster... *****/
+        /***** End Tests that require a currently running SF Cluster. *****/
 
         private bool IsLocalSFRuntimePresent()
         {
