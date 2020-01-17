@@ -529,7 +529,7 @@ namespace FabricObserver
             }
             catch (Exception ex)
             {
-                var message = $"Unhanded Exception in ObserverManager on node {this.nodeName}. Taking down FO process. Error info: {ex.ToString()}";
+                var message = $"Unhanded Exception in {ObserverConstants.ObserverManangerName} on node {this.nodeName}. Taking down FO process. Error info:{Environment.NewLine}{ex.ToString()}";
                 this.Logger.LogError(message);
 
                 // Telemetry.
@@ -544,8 +544,22 @@ namespace FabricObserver
                         this.token);
                 }
 
-                // Take down FO process. Fix the bugs this identifies. This code should never run if observers aren't buggy.
+                // ETW.
+                if (EtwEnabled)
+                {
+                    Logger.EtwLogger?.Write(
+                        $"FabricObserverServiceCriticalHealthEvent",
+                        new
+                        {
+                            Level = 2, // Error
+                            Node = this.nodeName,
+                            Observer = ObserverConstants.ObserverManangerName,
+                            Value = message,
+                        });
+                }
+
                 // Don't swallow the exception.
+                // Take down FO process. Fix the bugs in OM that this identifies.
                 throw;
             }
         }
@@ -620,7 +634,10 @@ namespace FabricObserver
 
                         if (TelemetryEnabled)
                         {
-                            _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", $"{observer.ObserverName} on node {this.nodeName} has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds.", this.token);
+                            _ = TelemetryClient?.ReportMetricAsync(
+                                $"ObserverHealthError",
+                                observerHealthWarning,
+                                this.token);
                         }
 
                         continue;
@@ -690,7 +707,6 @@ namespace FabricObserver
             }
             else
             {
-                this.Logger.LogError(exceptionBuilder.ToString());
                 this.HealthReporter.ReportFabricObserverServiceHealth(
                     ObserverConstants.ObserverManangerName,
                     this.ApplicationName,
