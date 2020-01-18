@@ -12,6 +12,8 @@ CO only sends telemetry when something is wrong or when something that was previ
 the amount of data sent to your log analytics service. Like FabricObserver, you can implement whatever analytics backend 
 you want by implementing the IObserverTelemetryProvider interface. As stated, this is already implemented for ApplicationInsights. 
 
+The core idea is that you use the aggregated cluster error/warning/Ok health state information from ClusterObserver to fire alerts and/or trigger some other action that gets your attention and/or some SF on-call's enagement via auto-creating a support incident (and an Ok signal would mean auto-mitigate the related incident/ticket).
+
 Example Configuration:  
 
 ```XML
