@@ -4,7 +4,7 @@ and sends telemetry when cluster is in Error (and optionally in Warning).
 CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
 but lives in this repo (and SLN) because it is very useful to have both services deployed, 
 especially for those who want cluster-level health observation and reporting in addition to 
-the node-level user-defined resource monitoring, health event creation, and health reporting done by FO.  
+the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
 
 By design, CO will send an Ok health state report when a cluster goes from Warning or Error state to Ok.
 
@@ -34,6 +34,4 @@ Example Configuration:
   </Section>
 ``` 
 
-Note that you can run ClusterObserver and FabricObserver in the same cluster or just run one or the other. It's up to you.
-These services run as independent, exclusive service processes. You could configure FabricObserver to monitor ClusterObserver, of course.
-Beyond this, there is no run time connection between these services.
+You should configure FabricObserver to monitor ClusterObserver, of course. :)
