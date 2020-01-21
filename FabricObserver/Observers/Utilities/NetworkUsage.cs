@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 namespace FabricObserver.Utilities
@@ -225,12 +226,12 @@ namespace FabricObserver.Utilities
 
                     var stdOutput = p.StandardOutput;
                     string output = stdOutput?.ReadToEnd();
-                    string startPort = output?.Substring(
-                        output.Trim().IndexOf(":") + 2,
-                        output.Substring(output.Trim().LastIndexOf(":") + 2).Length)
-                                                         .Trim(' ', '\r', '\n');
+                    Match match = Regex.Match(output,
+                        @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
+                        RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-                    string portCount = output?.Substring(output.Trim().LastIndexOf(":") + 2).Trim(' ', '\r', '\n');
+                    string startPort = match.Groups["startPort"].Value;
+                    string portCount = match.Groups["numberOfPorts"].Value;
                     string exitStatus = p.ExitCode.ToString();
                     stdOutput?.Close();
 
