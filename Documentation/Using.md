@@ -252,9 +252,9 @@ Example Output in SFX:
 
 ![alt text](/Documentation/Images/NetworkEndpointWarningDesc.jpg "Logo Title Text 1")   
 
-Problem: I want to get telemetry that includes aggregated cluster health for use in alerting.  
+***Problem***: I want to get telemetry that includes aggregated cluster health for use in alerting.  
 
-Solution: [ClusterObserver](/ClusterObserver) is your friend.  
+***Solution***: [ClusterObserver](/ClusterObserver) is your friend.  
 
 ClusterObserver is a stateless singleton service that runs on one node in your cluster. It can be
 configured to emit telemetry to your ApplicationInsights workspace out of the box. All you have to do
