@@ -31,7 +31,8 @@
     <!-- Optional: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="False" />
-    <Parameter Name="AppInsightsInstrumentationKey" Value="[your appinsights instrumentation key]" />
+    <!-- Optional: Your ApplicationInsights instrumentation key. -->
+    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Optional: EventSource Tracing. -->
     <Parameter Name="EnableEventSourceProvider" Value="True" />
     <Parameter Name="EventSourceProviderName" Value="FabricObserverETWProvider" />
