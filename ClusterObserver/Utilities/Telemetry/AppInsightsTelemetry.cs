@@ -320,14 +320,4 @@ namespace FabricClusterObserver.Utilities.Telemetry
             // GC.SuppressFinalize(this);
         }
     }
-
-    public enum HealthScope
-    {
-        Application,
-        Cluster,
-        Node,
-        Partition,
-        Replica,
-        Service,
-    }
 }
