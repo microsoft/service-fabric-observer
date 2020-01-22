@@ -263,16 +263,15 @@ namespace FabricObserver
             }
             catch (ArgumentException)
             {
-                return null;
             }
             catch (KeyNotFoundException)
             {
-                return null;
             }
             catch (NullReferenceException)
             {
-                return null;
             }
+
+            return null;
         }
 
         /// <summary>
@@ -350,7 +349,8 @@ namespace FabricObserver
                         this.FabricServiceContext.ServiceName.OriginalString,
                         this.ObserverName,
                         HealthState.Warning,
-                        "Unhandled exception running GetObserverRunInterval:\n" + e.ToString());
+                        $"Unhandled exception running GetObserverRunInterval:{Environment.NewLine}{e.ToString()}");
+
                     throw;
                 }
             }
@@ -383,7 +383,8 @@ namespace FabricObserver
                         this.FabricServiceContext.ServiceName.ToString(),
                         this.ObserverName,
                         HealthState.Warning,
-                        $"Unable to create dumps directory: {e.ToString()}");
+                        $"Unable to create dumps directory:{Environment.NewLine}{e.ToString()}");
+
                     this.dumpsPath = null;
                 }
             }
@@ -519,7 +520,10 @@ namespace FabricObserver
                 // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
-                    _ = this.ObserverTelemetryClient?.ReportMetricAsync($"{this.NodeName}-{name}-{data.Id}-{data.Property}", data.AverageDataValue, this.Token);
+                    _ = this.ObserverTelemetryClient?.ReportMetricAsync(
+                        $"{this.NodeName}-{name}-{data.Id}-{data.Property}",
+                        data.AverageDataValue,
+                        this.Token);
                 }
 
                 try
@@ -540,7 +544,10 @@ namespace FabricObserver
                 // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
-                    _ = this.ObserverTelemetryClient?.ReportMetricAsync($"{this.NodeName}-{data.Id}-{data.Property}", data.AverageDataValue, this.Token);
+                    _ = this.ObserverTelemetryClient?.ReportMetricAsync(
+                        $"{this.NodeName}-{data.Id}-{data.Property}",
+                        data.AverageDataValue,
+                        this.Token);
                 }
             }
 
