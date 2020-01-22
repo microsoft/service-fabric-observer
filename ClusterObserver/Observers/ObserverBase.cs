@@ -322,7 +322,7 @@ namespace FabricClusterObserver
         }
 
         /// <inheritdoc/>
-        public virtual void Dispose()
+        public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             this.Dispose(true);
