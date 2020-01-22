@@ -155,7 +155,8 @@ namespace FabricObserver
                 this.telemetryEvents = new TelemetryEvents(
                     FabricClientInstance,
                     FabricServiceContext,
-                    ServiceEventSource.Current);
+                    ServiceEventSource.Current,
+                    this.token);
 
                 if (this.telemetryEvents.FabricObserverRuntimeNodeEvent(
                         codePkgVersion,

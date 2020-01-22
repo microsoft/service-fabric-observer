@@ -8,6 +8,7 @@ using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using System;
 using System.Fabric;
+using System.Threading;
 
 namespace Microsoft.ServiceFabric.TelemetryLib
 {
@@ -26,7 +27,8 @@ namespace Microsoft.ServiceFabric.TelemetryLib
         public TelemetryEvents(
             FabricClient fabricClient,
             ServiceContext context,
-            ITelemetryEventSource eventSource)
+            ITelemetryEventSource eventSource,
+            CancellationToken token)
         {
             this.eventSource = eventSource;
             this.serviceContext = context;
@@ -34,21 +36,11 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey;
             appInsightsTelemetryConf.TelemetryChannel.EndpointAddress = TelemetryConstants.TelemetryEndpoint;
             this.telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
-            ClusterIdentificationUtility clusterIdentificationUtility = null;
 
-            try
-            {
-                clusterIdentificationUtility = new ClusterIdentificationUtility(fabricClient);
-                clusterIdentificationUtility.GetClusterIdAndType(
-                    out this.clusterId,
-                    out this.tenantId, 
-                    out this.clusterType);
-
-            }
-            finally
-            {
-                clusterIdentificationUtility?.Dispose();
-            }
+            var clusterInfoTuple = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
+            this.clusterId = clusterInfoTuple.Item1;
+            this.tenantId = clusterInfoTuple.Item2;
+            this.clusterType = clusterInfoTuple.Item3;
         }
 
         public bool FabricObserverRuntimeNodeEvent(
@@ -56,8 +48,8 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             string foConfigInfo,
             string foHealthInfo)
         {
-            // This means that the token replacement did not take place and this is not a 
-            // SFPKG signed Release build of FO. So, don't do anything, just return;
+            // This means that the token replacement did not take place and this is not an 
+            // SFPKG signed Release build of FO. So, don't do anything.
             if (TelemetryConstants.AppInsightsInstrumentationKey.Contains("Token"))
             {
                 return false;
@@ -75,6 +67,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
                 { "TaskName", $"{TaskName}" },
                 { "ClusterId", $"{this.clusterId}" ?? "" },
                 { "ClusterType", $"{this.clusterType}" ?? "" },
+                { "TenantId", $"{this.tenantId}" ?? "" },
                 { "FabricObserverVersion", applicationVersion ?? "" },
                 { "NodeNameHash", ((uint)this.serviceContext?.NodeContext?.NodeName.GetHashCode()).ToString() ?? "" },
                 { "FabricObserverHealthInfo", foHealthInfo ?? "" },
@@ -86,7 +79,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             this.telemetryClient?.Flush();
             
             // allow time for flushing
-            System.Threading.Thread.Sleep(1000);
+            Thread.Sleep(1000);
 
             return true;
         }

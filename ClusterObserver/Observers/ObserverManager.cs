@@ -85,7 +85,25 @@ namespace FabricClusterObserver
             // Populate the Observer list for the sequential run loop.
             this.observers = GetObservers();
         }
-        
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObserverManager"/> class.
+        /// This is for unit testing purposes.
+        /// </summary>
+        public ObserverManager(ObserverBase observer)
+        {
+            this.cts = new CancellationTokenSource();
+            this.token = this.cts.Token;
+            this.token.Register(() => { this.ShutdownHandler(this, null); });
+            this.Logger = new Logger("ObserverManagerSingleObserverRun");
+
+            this.observers = new List<ObserverBase>(new ObserverBase[]
+            {
+                observer,
+            });
+        }
+
+
         private static string GetConfigSettingValue(string parameterName)
         {
             try
