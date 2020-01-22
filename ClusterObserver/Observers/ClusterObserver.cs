@@ -12,7 +12,7 @@ using FabricClusterObserver.Utilities;
 
 namespace FabricClusterObserver
 {
-    class ClusterObserver : ObserverBase
+    public class ClusterObserver : ObserverBase
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
