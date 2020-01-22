@@ -278,8 +278,9 @@ namespace FabricObserver
                 return;
             }
 
+            // Don't run this observer if the aggregated health state of the cluster is Warning or Error.
             if (this.FabricClientInstance.QueryManager.GetNodeListAsync().GetAwaiter().GetResult()?.Count > 3
-                && await this.CheckClusterHealthStateAsync(
+                && await this.GetClusterHealthStateWithPercentErrorNodesAsync(
                     this.unhealthyNodesWarnThreshold,
                     this.unhealthyNodesErrorThreshold).ConfigureAwait(true) == HealthState.Error)
             {
@@ -639,6 +640,12 @@ namespace FabricObserver
                     this.diskUsage = null;
                 }
 
+                // Data lists.
+                this.processWatchList?.Clear();
+                this.allCpuData?.Clear();
+                this.allMemData?.Clear();
+                this.evtRecordList?.Clear();
+
                 this.disposed = true;
             }
         }
@@ -690,11 +697,21 @@ namespace FabricObserver
             }
         }
 
-        private async Task<HealthState> CheckClusterHealthStateAsync(int warningThreshold, int errorThreshold)
+        private async Task<HealthState> GetClusterHealthStateWithPercentErrorNodesAsync(int warningThreshold, int errorThreshold)
         {
             try
             {
-                var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync().ConfigureAwait(true);
+                var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
+                                            this.AsyncClusterOperationTimeoutSeconds,
+                                            this.Token).ConfigureAwait(true);
+
+                // It doesn't matter what the percentage of nodes in error is - the cluster is in an Error state.
+                if (clusterHealth.AggregatedHealthState == HealthState.Error)
+                {
+                    return clusterHealth.AggregatedHealthState;
+                }
+
+                // If you we here, then see if your supplied thresholds of sustainable nodes in error/warning have been reached or exceeded.
                 double errorNodesCount = clusterHealth.NodeHealthStates.Count(nodeHealthState => nodeHealthState.AggregatedHealthState == HealthState.Error);
                 int errorNodesCountPercentage = (int)((errorNodesCount / clusterHealth.NodeHealthStates.Count) * 100);
 
@@ -709,19 +726,15 @@ namespace FabricObserver
             }
             catch (TimeoutException te)
             {
-                this.ObserverLogger.LogInfo("Handled TimeoutException:\n {0}", te.ToString());
-
                 return HealthState.Unknown;
             }
             catch (FabricException fe)
             {
-                this.ObserverLogger.LogInfo("Handled FabricException:\n {0}", fe.ToString());
-
                 return HealthState.Unknown;
             }
             catch (Exception e)
             {
-                this.ObserverLogger.LogWarning("Unhandled Exception querying Cluster health:\n {0}", e.ToString());
+                this.ObserverLogger.LogWarning($"Unhandled Exception querying Cluster health:{Environment.NewLine}{e.ToString()}");
 
                 throw;
             }

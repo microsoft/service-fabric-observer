@@ -113,6 +113,7 @@
     <Parameter Name="WarnDiskIOWritesThreshold" Value="" />
     <Parameter Name="PercentUnhealthyNodesWarnThreshold" Value="" />
     <Parameter Name="PercentUnhealthyNodesErrorThreshold" Value="" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="NetworkObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
