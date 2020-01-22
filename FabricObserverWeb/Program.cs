@@ -23,7 +23,6 @@ namespace FabricObserverWeb
                 // Registering a service maps a service type name to a .NET type.
                 // When Service Fabric creates an instance of this service type,
                 // an instance of the class is created in this host process.
-
                 ServiceRuntime.RegisterServiceAsync(
                     "FabricObserverWebType",
                     context => new FabricObserverWeb(context))

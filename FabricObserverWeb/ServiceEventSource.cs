@@ -44,7 +44,6 @@ namespace FabricObserverWeb
         // The number and types of arguments passed to every event method must exactly match what is passed to WriteEvent().
         // Put [NonEvent] attribute on all methods that do not define an event.
         // For more information see https://msdn.microsoft.com/en-us/library/system.diagnostics.tracing.eventsource.aspx
-
         [NonEvent]
         public void Message(string message, params object[] args)
         {
