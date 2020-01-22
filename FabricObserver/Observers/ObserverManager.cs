@@ -172,6 +172,7 @@ namespace FabricObserver
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
+        /// This is for unit testing purposes.
         /// </summary>
         public ObserverManager(ObserverBase observer)
         {
@@ -180,7 +181,10 @@ namespace FabricObserver
             this.token.Register(() => { this.ShutdownHandler(this, null); });
             this.Logger = new Logger("ObserverManagerSingleObserverRun");
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
+
+            // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
+
             this.observers = new List<ObserverBase>(new ObserverBase[]
             {
                 observer,

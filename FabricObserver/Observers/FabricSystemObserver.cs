@@ -20,14 +20,14 @@ using FabricObserver.Utilities;
 
 namespace FabricObserver
 {
+    // ***FabricSystemObserver is disabled by default.***
     // This observer monitors all Fabric system service processes across various resource usage metrics.
     // It will signal Warnings or Errors based on settings supplied in Settings.xml.
-    // The output (a local file) is used by the API service and the HTML frontend (http://localhost:5000/api/ObserverManager).
-    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
-    // ***FabricSystemObserver is disabled by default.***
+    // If the FabricObserverWebApi service is deployed: The output (a local file) is created for and used by the API service (http://localhost:5000/api/ObserverManager).
+    // SF Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     // You should not enable this observer unless you have spent some time analyzing how your services impact SF system services (like Fabric.exe)
     // If Fabric.exe is running at 70% CPU due to your service code, and this is normal for your workloads, then do not warn at this threshold.
-    // As with all of these observers, you must first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy ones.
+    // As with all observers, you should first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy states.
     public class FabricSystemObserver : ObserverBase
     {
         private readonly List<string> processWatchList = new List<string>
@@ -705,13 +705,13 @@ namespace FabricObserver
                                             this.AsyncClusterOperationTimeoutSeconds,
                                             this.Token).ConfigureAwait(true);
 
-                // It doesn't matter what the percentage of nodes in error is - the cluster is in an Error state.
+                // The cluster is in an Error state.
                 if (clusterHealth.AggregatedHealthState == HealthState.Error)
                 {
                     return clusterHealth.AggregatedHealthState;
                 }
 
-                // If you we here, then see if your supplied thresholds of sustainable nodes in error/warning have been reached or exceeded.
+                // If you we get here, then see if your supplied (FSO configuration setting) thresholds of sustainable nodes in error/warning have been reached or exceeded.
                 double errorNodesCount = clusterHealth.NodeHealthStates.Count(nodeHealthState => nodeHealthState.AggregatedHealthState == HealthState.Error);
                 int errorNodesCountPercentage = (int)((errorNodesCount / clusterHealth.NodeHealthStates.Count) * 100);
 
@@ -724,11 +724,11 @@ namespace FabricObserver
                     return HealthState.Warning;
                 }
             }
-            catch (TimeoutException te)
+            catch (TimeoutException)
             {
                 return HealthState.Unknown;
             }
-            catch (FabricException fe)
+            catch (FabricException)
             {
                 return HealthState.Unknown;
             }
