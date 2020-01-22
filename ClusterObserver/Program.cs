@@ -20,11 +20,12 @@ namespace FabricClusterObserver
                 // Registering a service maps a service type name to a .NET type.
                 // When Service Fabric creates an instance of this service type,
                 // an instance of the class is created in this host process.
-
                 ServiceRuntime.RegisterServiceAsync("FabricClusterObserverType",
                     context => new FabricClusterObserver(context)).GetAwaiter().GetResult();
 
-                ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(FabricClusterObserver).Name);
+                ServiceEventSource.Current.ServiceTypeRegistered(
+                    Process.GetCurrentProcess().Id,
+                    typeof(FabricClusterObserver).Name);
 
                 // Prevents this host process from terminating so services keep running.
                 Thread.Sleep(Timeout.Infinite);

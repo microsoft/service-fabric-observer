@@ -19,9 +19,7 @@
         private const int MaxRetries = 3;
         private readonly FabricClient fabricClient;
         private readonly StatelessServiceContext serviceContext = null;
-        private StringBuilder sb = null;
-
-        private string script = @"
+        private readonly string script = @"
                 <script type='text/javascript'>
                 function toggle(e) {
                     var container = document.getElementById(e);
@@ -39,6 +37,8 @@
                     }
                 }
                 </script>";
+
+        private StringBuilder sb = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverLogController"/> class.
