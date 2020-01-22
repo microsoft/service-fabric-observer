@@ -403,19 +403,8 @@ namespace FabricObserver
                 new NetworkObserver(),
             });
 
-            // There is no need to keep an instance alive if it's not going to be used.
             // Only return a list with user-enabled observer instances.
-            for (var i = 0; i < observers.Count; i++)
-            {
-                if (!observers[i].IsEnabled)
-                {
-                    observers[i].Dispose();
-                    observers[i] = null;
-                    observers.RemoveAt(i);
-                }
-            }
-
-            return observers;
+            return observers.Where(obs => obs.IsEnabled).ToList();
         }
 
         private void SetPropertiesFromConfigurationParameters()
