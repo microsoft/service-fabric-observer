@@ -6,9 +6,12 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricClusterObserver;
 using FabricObserver;
 using FabricObserver.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ClusterObserverManager = FabricClusterObserver.ObserverManager;
+using ObserverManager = FabricObserver.ObserverManager;
 
 /*
 
@@ -154,6 +157,22 @@ namespace FabricObserverTests
 
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
+        }
+
+        [TestMethod]
+        public void ClusterObserver_Constructor_Test()
+        {
+            ClusterObserverManager.FabricServiceContext = this.context;
+            ClusterObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ClusterObserverManager.TelemetryEnabled = false;
+
+            var obs = new ClusterObserver();
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            Assert.IsTrue(obs.ObserverName == FabricClusterObserver.Utilities.ObserverConstants.ClusterObserverName);
+
+            obs.Dispose();
+            ClusterObserverManager.FabricClientInstance.Dispose();
         }
 
         [TestMethod]
@@ -308,6 +327,38 @@ namespace FabricObserverTests
 
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        {
+            var startDateTime = DateTime.Now;
+            ClusterObserverManager.FabricServiceContext = this.context;
+            ClusterObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ClusterObserverManager.TelemetryEnabled = false;
+
+            var obs = new ClusterObserver
+            {
+                IsTestRun = true,
+            };
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            ClusterObserverManager.FabricClientInstance.Dispose();
         }
 
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
@@ -700,6 +751,56 @@ namespace FabricObserverTests
             obsMgr.StopObservers();
 
             Thread.Sleep(5);
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+
+            obs.Dispose();
+            objReady?.Dispose();
+        }
+
+        [TestMethod]
+        [SuppressMessage("Code Quality", "IDE0067:Dispose objects before losing scope", Justification = "Noise.")]
+        public void Successful_ClusterObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            ClusterObserverManager.FabricServiceContext = this.context;
+            ClusterObserverManager.TelemetryEnabled = false;
+            ClusterObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+
+            var stopWatch = new Stopwatch();
+
+            var obs = new ClusterObserver
+            {
+                IsEnabled = true,
+                NodeName = "_Test_0",
+            };
+
+            var obsMgr = new ClusterObserverManager(obs)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            var objReady = new ManualResetEventSlim(false);
+
+            stopWatch.Start();
+
+            var t = Task.Factory.StartNew(() =>
+            {
+                objReady.Set();
+                obsMgr.StartObservers();
+            });
+
+            objReady?.Wait();
+
+            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
+            {
+                // wait.
+            }
+
+            stopWatch.Stop();
+
+            // Observer is running. Stop it.
+            obsMgr.StopObservers();
+            Thread.Sleep(5);
+
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();

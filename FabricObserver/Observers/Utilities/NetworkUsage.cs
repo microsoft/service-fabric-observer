@@ -226,7 +226,8 @@ namespace FabricObserver.Utilities
 
                     var stdOutput = p.StandardOutput;
                     string output = stdOutput?.ReadToEnd();
-                    Match match = Regex.Match(output,
+                    Match match = Regex.Match(
+                        output,
                         @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
                         RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
