@@ -36,7 +36,7 @@ namespace FabricObserver
         private CancellationTokenSource cts;
         private bool hasDisposed = false;
         private static bool etwEnabled = false;
-        private TelemetryEvents telemetryEvents;
+        private readonly TelemetryEvents telemetryEvents;
 
         public string ApplicationName { get; set; }
 
@@ -155,7 +155,8 @@ namespace FabricObserver
                 this.telemetryEvents = new TelemetryEvents(
                     FabricClientInstance,
                     FabricServiceContext,
-                    ServiceEventSource.Current);
+                    ServiceEventSource.Current,
+                    this.token);
 
                 if (this.telemetryEvents.FabricObserverRuntimeNodeEvent(
                         codePkgVersion,
@@ -171,6 +172,7 @@ namespace FabricObserver
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
+        /// This is for unit testing purposes.
         /// </summary>
         public ObserverManager(ObserverBase observer)
         {
@@ -179,7 +181,10 @@ namespace FabricObserver
             this.token.Register(() => { this.ShutdownHandler(this, null); });
             this.Logger = new Logger("ObserverManagerSingleObserverRun");
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
+
+            // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
+
             this.observers = new List<ObserverBase>(new ObserverBase[]
             {
                 observer,
@@ -354,6 +359,7 @@ namespace FabricObserver
 
         // Observers are instance types. Create them, store in persistent list.
         // List order matters. These are cycled through sequentially, one observer at a time.
+        // The enabled state of an observer instance is determined during type construction. See ObserverBase.
         private static List<ObserverBase> GetObservers()
         {
             // You can simply not create an instance of an observer you don't want to run. The list
@@ -398,7 +404,7 @@ namespace FabricObserver
             });
 
             // Only return a list with user-enabled observer instances.
-            return observers.Where(obs => obs.IsEnabled)?.ToList();
+            return observers.Where(obs => obs.IsEnabled).ToList();
         }
 
         private void SetPropertiesFromConfigurationParameters()
@@ -529,7 +535,10 @@ namespace FabricObserver
             }
             catch (Exception ex)
             {
-                var message = $"Unhanded Exception in {ObserverConstants.ObserverManangerName} on node {this.nodeName}. Taking down FO process. Error info:{Environment.NewLine}{ex.ToString()}";
+                var message = $"Unhanded Exception in {ObserverConstants.ObserverManangerName} on node " +
+                    $"{this.nodeName}. Taking down FO process. " +
+                    $"Error info:{Environment.NewLine}{ex.ToString()}";
+
                 this.Logger.LogError(message);
 
                 // Telemetry.

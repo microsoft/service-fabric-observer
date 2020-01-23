@@ -22,9 +22,7 @@ namespace FabricObserverWeb
         private const int MaxRetries = 3;
         private readonly StatelessServiceContext serviceContext = null;
         private readonly FabricClient fabricClient;
-        private StringBuilder sb = null;
-
-        private string script = @"
+        private readonly string script = @"
                 <script type='text/javascript'>
                 function toggle(e) {
                     var container = document.getElementById(e);
@@ -42,6 +40,8 @@ namespace FabricObserverWeb
                     }
                 }
                 </script>";
+
+        private StringBuilder sb = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManagerController"/> class.

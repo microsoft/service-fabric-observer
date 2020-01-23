@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Fabric;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +12,7 @@ using FabricClusterObserver.Utilities;
 
 namespace FabricClusterObserver
 {
-    class ClusterObserver : ObserverBase
+    public class ClusterObserver : ObserverBase
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
@@ -104,7 +103,7 @@ namespace FabricClusterObserver
 
                         telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}";
 
-                        // Application in error/warning?.
+                        // Application in error/warning?
                         foreach (var app in clusterHealth.ApplicationHealthStates)
                         {
                             if (app.AggregatedHealthState == HealthState.Ok
@@ -114,6 +113,19 @@ namespace FabricClusterObserver
                             }
 
                             telemetryDescription += $"Application in Error or Warning: {app.ApplicationName}{Environment.NewLine}";
+                        }
+
+                        // Custom Cluster Health Events: ClusterHealthReports you create (report to HM) become Cluster HealthEvents.
+                        foreach (var healthEvent in clusterHealth.HealthEvents)
+                        {
+                            if (healthEvent.HealthInformation.HealthState == HealthState.Ok
+                                || string.IsNullOrEmpty(healthEvent.HealthInformation.Description)
+                                || emitWarningDetails && healthEvent.HealthInformation.HealthState != HealthState.Warning)
+                            {
+                                continue;
+                            }
+
+                            telemetryDescription += $"Cluster HealthEvent Details: {healthEvent.HealthInformation.Description}{Environment.NewLine}";
                         }
                     }
                 }
@@ -139,9 +151,7 @@ namespace FabricClusterObserver
             catch (Exception e)
             {
                 this.ObserverLogger.LogError(
-                    "Unable to determine cluster health:{0}{1}",
-                    Environment.NewLine,
-                    e.ToString());
+                    $"Unable to determine cluster health:{Environment.NewLine}{e.ToString()}");
 
                 // Telemetry.
                 await this.ObserverTelemetryClient?.ReportHealthAsync(
