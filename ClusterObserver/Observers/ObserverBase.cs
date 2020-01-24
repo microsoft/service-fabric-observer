@@ -171,7 +171,8 @@ namespace FabricClusterObserver
         }
 
         /// <summary>
-        /// Gets a parameter value from the specified section.
+        /// Gets a parameter value from the specified config section or returns supplied default value if 
+        /// not specified in config.
         /// </summary>
         /// <param name="sectionName">Name of the section.</param>
         /// <param name="parameterName">Name of the parameter.</param>
@@ -190,11 +191,21 @@ namespace FabricClusterObserver
 
                 if (!serviceConfiguration.Settings.Sections.Any(sec => sec.Name == sectionName))
                 {
+                    if (!string.IsNullOrEmpty(defaultValue))
+                    {
+                        return defaultValue;
+                    }
+
                     return null;
                 }
 
                 if (!serviceConfiguration.Settings.Sections[sectionName].Parameters.Any(param => param.Name == parameterName))
                 {
+                    if (!string.IsNullOrEmpty(defaultValue))
+                    {
+                        return defaultValue;
+                    }
+
                     return null;
                 }
 
@@ -209,16 +220,15 @@ namespace FabricClusterObserver
             }
             catch (ArgumentException)
             {
-                return null;
             }
             catch (KeyNotFoundException)
-            {
-                return null;
+            { 
             }
             catch (NullReferenceException)
-            {
-                return null;
+            { 
             }
+
+            return null;
         }
 
         /// <summary>

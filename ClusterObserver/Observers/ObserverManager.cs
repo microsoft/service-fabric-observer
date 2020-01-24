@@ -311,8 +311,7 @@ namespace FabricClusterObserver
                         this.token);
                 }
 
-                // Take down FCO process. Fix the bugs this identifies. This code should never run if observers aren't buggy.
-                // Don't swallow the exception.
+                // Don't swallow the unhandled exception. Fix the bug.
                 throw;
             }
         }
@@ -377,17 +376,21 @@ namespace FabricClusterObserver
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
                     if (!isCompleted)
                     {
-                        string observerHealthWarning = observer.ObserverName + $" has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
+                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it.";
 
-                        this.Logger.LogError(observerHealthWarning);
-
-                        // TODO: Add HealthReport (App Level).
+                        this.Logger.LogWarning(observerHealthWarning);
                         observer.IsUnhealthy = true;
 
                         if (TelemetryEnabled)
                         {
-                            _ = TelemetryClient?.ReportMetricAsync($"ObserverHealthError", $"{observer.ObserverName} on node {this.nodeName} has exceeded its alloted run time of {this.observerExecTimeout.TotalSeconds} seconds.", this.token);
+                            _ = TelemetryClient?.ReportHealthAsync(
+                                HealthScope.Application,
+                                "ObserverHealthReport",
+                                HealthState.Warning,
+                                observerHealthWarning,
+                                ObserverConstants.ObserverManangerName,
+                                this.token);
                         }
 
                         continue;
@@ -413,8 +416,6 @@ namespace FabricClusterObserver
             else
             {
                 this.Logger.LogError(exceptionBuilder.ToString());
-
-
                 exceptionBuilder.Clear();
             }
 
