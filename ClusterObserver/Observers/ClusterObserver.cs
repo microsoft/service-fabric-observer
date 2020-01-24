@@ -16,9 +16,8 @@ namespace FabricClusterObserver
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
-        /// This observer runs on one node and as an independent service since FabricObserver 
-        /// is a -1 singleton partition service (runs on every node). ClusterObserver and FabricObserver
-        /// can run in the same cluster as they are independent processes.
+        /// This observer is a singleton (one partition) stateless service that runs on one node in an SF cluster.
+        /// ClusterObserver and FabricObserver are completely independent service processes.
         /// </summary>
         public ClusterObserver()
             : base(ObserverConstants.ClusterObserverName)
@@ -62,15 +61,24 @@ namespace FabricClusterObserver
 
             token.ThrowIfCancellationRequested();
 
+            // Get ClusterObserver settings (specified in PackageRoot/Config/Settings.xml).
             _ = bool.TryParse(
                     this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
-                    ObserverConstants.EmitHealthWarningEvaluationConfigurationSetting), out bool emitWarningDetails);
+                    ObserverConstants.EmitHealthWarningEvaluationConfigurationSetting,
+                    "false"), out bool emitWarningDetails);
             
             _ = bool.TryParse(
                     this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
-                    ObserverConstants.EmitOkHealthState), out bool emitOkHealthState);
+                    ObserverConstants.EmitOkHealthState,
+                    "false"), out bool emitOkHealthState);
+
+            _ = bool.TryParse(
+                    this.GetSettingParameterValue(
+                    ObserverConstants.ClusterObserverConfigurationSectionName,
+                    ObserverConstants.IgnoreSystemAppWarnings,
+                    "false"), out bool ignoreSystemAppWarnings);
 
             try
             {
@@ -103,11 +111,16 @@ namespace FabricClusterObserver
 
                         telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}";
 
-                        // Application in error/warning?
+                        // Application in Warning or Error?
+                        // Note: SF System app Warnings can be noisy, ephemeral (not Errors - you should generally not ignore Error states),
+                        // so check for them and ignore if specified in your config's IgnoreFabricSystemAppWarnings setting.
                         foreach (var app in clusterHealth.ApplicationHealthStates)
                         {
                             if (app.AggregatedHealthState == HealthState.Ok
-                                || (emitWarningDetails && app.AggregatedHealthState != HealthState.Warning))
+                                || (emitWarningDetails
+                                   && (app.AggregatedHealthState != HealthState.Warning
+                                      || (evaluation.Kind == HealthEvaluationKind.SystemApplication
+                                      && ignoreSystemAppWarnings))))
                             {
                                 continue;
                             }

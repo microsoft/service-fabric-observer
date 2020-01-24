@@ -2,42 +2,46 @@
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
     <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observers run loop. 
-         0 means run continuously with no pausing. 
-         Keep in mind that SF Error/Warning Reports have TTLs that are computed in part with this value. -->
+         0 means run continuously with no pausing. We recommend at least 60 seconds for ClusterObserver. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="60" />
-    <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
+    <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
-         Below setting represents 30 minutes. If you are monitoring several services, you should increase this if necessary.
-         Or decrease it if not. Measure and determine how long it takes for AppObserver, for example, to run to completion in 
-         your deployment and configuration (like if you watch all services of a single application type and there are hundreds of them. -->
+         Below setting represents 30 minutes. -->
     <Parameter Name="ObserverExecutionTimeout" Value="1800" />
-    <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
+    <!-- Required: Your ApplicationInsights instrumentation key. -->
+    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
-         Each observer will write to their own directory on this path.-->
+         ClusterObserver will write to its own directory on this path.-->
     <Parameter Name="ObserverLogPath" Value="C:\observer_logs" />
-    <!-- Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+    <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <!-- Optional: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
-         but you can implement whatever provider you want. See IObserverTelemetryProvider interface. -->
+         but you can implement whatever provider you want. See IObserverTelemetryProvider interface.
+         Disabling this would render ClusterObserver useless, as it is designed specifically to 
+         emit aggregated cluster health state telemetry to a log analytics service. -->
     <Parameter Name="EnableTelemetryProvider" Value="True" />
-    <!-- Optional: Your ApplicationInsights instrumentation key. -->
-    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
+    <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
+    <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
   </Section>
-  <!-- Observer Configuration Settings -->
+  <!-- ClusterObserver Configuration Settings -->
   <Section Name="ClusterObserverConfiguration">
-    <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
+    <!-- Required: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="True" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
+    <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large clusters. -->
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-    <!-- Emit health details for both Warning and Error for aggregated cluster health? Error details will
-    always be transmitted.-->
-    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
-    <!-- Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
+    <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
+         Agrregated Error evaluations will always be transmitted regardless of this setting. -->
+    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="False" />
+    <!-- Optional (and useful only if EmitHealthWarningEvaluationDetails is set to True): fabric:/System app warnings can be noisy and are often ephemeral. 
+         It's best to ignore Warning states for Fabric system services. You should focus on Warning state alerting for your own apps.
+         Agrregated Error evaluations will always be transmitted regardless of this setting. -->
+    <Parameter Name="IgnoreFabricSystemAppWarnings" Value="True"/>
+    <!-- Optional: Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
     <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
   </Section>
 </Settings>

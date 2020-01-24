@@ -45,5 +45,6 @@ namespace FabricClusterObserver.Utilities
         // Settings.
         public const string ClusterObserverConfigurationSectionName = "ClusterObserverConfiguration";
         public const string EmitOkHealthState = "EmitOkHealthStateTelemetry";
+        public const string IgnoreSystemAppWarnings = "IgnoreFabricSystemAppWarnings";
     }
 }
