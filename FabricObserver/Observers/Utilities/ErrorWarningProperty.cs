@@ -12,6 +12,9 @@ namespace FabricObserver.Utilities
         public const string TotalMemoryConsumptionMB = "Memory Consumption MB";
         public const string TotalMemoryConsumptionPct = "Memory Consumption %";
 
+        // Certificates
+        public const string CertificateExpiration = "Certificate Expiration";
+
         // Disk.
         public const string DiskAverageQueueLength = "Average Disk Queue Length";
         public const string DiskSpaceUsagePercentage = "Disk Space Consumption %";

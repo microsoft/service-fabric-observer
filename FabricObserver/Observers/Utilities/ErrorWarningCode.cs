@@ -7,9 +7,13 @@ namespace FabricObserver.Utilities
 {
     public sealed class ErrorWarningCode
     {
-        // CPU.
+        // CPU
         public const string ErrorCpuTime = "FO001";
         public const string WarningCpuTime = "FO002";
+
+        // Certificate
+        public const string ErrorCertificateExpiration = "FO027";
+        public const string WarningCertificateExpiration = "FO028";
 
         // Disk
         public const string ErrorDiskSpacePercentUsed = "FO003";
@@ -41,7 +45,7 @@ namespace FabricObserver.Utilities
         public const string ErrorTooManyActiveEphemeralPorts = "FO025";
         public const string WarningTooManyActiveEphemeralPorts = "FO026";
 
-        // Unknown
-        public const string Unknown = "FO000";
+        // Ok
+        public const string Ok = "FO000";
     }
 }

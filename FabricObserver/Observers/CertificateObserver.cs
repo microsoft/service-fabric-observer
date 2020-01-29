@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Security;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using FabricObserver.Utilities;
+using HealthReport = FabricObserver.Utilities.HealthReport;
 
 namespace FabricObserver
 {
@@ -128,7 +130,9 @@ namespace FabricObserver
 
             HealthReport healthReport;
 
-            if (this.ExpiringWarnings.Count == 0 && this.ExpiredWarnings.Count == 0 && this.NotFoundWarnings.Count == 0)
+            if (this.ExpiringWarnings.Count == 0
+                && this.ExpiredWarnings.Count == 0
+                && this.NotFoundWarnings.Count == 0)
             {
                 healthReport = new HealthReport
                 {
@@ -137,10 +141,8 @@ namespace FabricObserver
                     EmitLogEvent = true,
                     NodeName = this.NodeName,
                     HealthMessage = $"All cluster and monitored app certificates are healthy.",
-                    State = System.Fabric.Health.HealthState.Ok,
+                    State = HealthState.Ok,
                     HealthReportTimeToLive = this.RunInterval > TimeSpan.MinValue ? this.RunInterval : this.HealthReportTimeToLive,
-
-                    // RemoveWhenExpired = True; automatically
                 };
 
                 this.HasActiveFabricErrorOrWarning = false;
@@ -153,12 +155,13 @@ namespace FabricObserver
 
                 healthReport = new HealthReport
                 {
+                    Code = ErrorWarningCode.WarningCertificateExpiration,
                     Observer = this.ObserverName,
                     ReportType = HealthReportType.Node,
                     EmitLogEvent = true,
                     NodeName = this.NodeName,
                     HealthMessage = healthMessage,
-                    State = System.Fabric.Health.HealthState.Warning,
+                    State = HealthState.Warning,
                     HealthReportTimeToLive = this.RunInterval > TimeSpan.MinValue ? this.RunInterval : this.HealthReportTimeToLive,
                 };
 
