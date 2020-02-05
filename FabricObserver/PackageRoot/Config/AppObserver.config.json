@@ -19,12 +19,5 @@
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40
-  },
-  {
-    "target": "fabric:/CpuStress",
-    "cpuWarningLimitPct": 20,
-    "memoryWarningLimitPercent": 30,
-    "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40
   }
 ]
