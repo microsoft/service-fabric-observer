@@ -628,39 +628,88 @@ namespace FabricObserver
 
                 if (data.Property == ErrorWarningProperty.TotalCpuTime)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorCpuTime : ErrorWarningCode.WarningCpuTime;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            ErrorWarningCodes.AppErrorCpuTime : ErrorWarningCodes.AppWarningCpuTime;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            ErrorWarningCodes.NodeErrorCpuTime : ErrorWarningCodes.NodeWarningCpuTime;
+                    }
                 }
                 else if (data.Property == ErrorWarningProperty.DiskSpaceUsagePercentage)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpacePercentUsed : ErrorWarningCode.WarningDiskSpacePercentUsed;
+                    errorWarningKind = (healthState == HealthState.Error) ?
+                        ErrorWarningCodes.NodeErrorDiskSpacePercentUsed : ErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
                 }
                 else if (data.Property == ErrorWarningProperty.DiskSpaceUsageMB)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpaceMB : ErrorWarningCode.WarningDiskSpaceMB;
+                    errorWarningKind = (healthState == HealthState.Error) ?
+                        ErrorWarningCodes.NodeErrorDiskSpaceMB : ErrorWarningCodes.NodeWarningDiskSpaceMB;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionMB)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryCommitted : ErrorWarningCode.WarningMemoryCommitted;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            ErrorWarningCodes.AppErrorMemoryCommittedMB : ErrorWarningCodes.AppWarningMemoryCommittedMB;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                           ErrorWarningCodes.NodeErrorMemoryCommittedMB : ErrorWarningCodes.NodeWarningMemoryCommittedMB;
+                    }
                 }
                 else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionPct)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryPercentUsed : ErrorWarningCode.WarningMemoryPercentUsed;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            ErrorWarningCodes.AppErrorMemoryPercentUsed : ErrorWarningCodes.AppWarningMemoryPercentUsed;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            ErrorWarningCodes.NodeErrorMemoryPercentUsed : ErrorWarningCodes.NodeWarningMemoryPercentUsed;
+                    }
                 }
                 else if (data.Property == ErrorWarningProperty.DiskAverageQueueLength)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskAverageQueueLength : ErrorWarningCode.WarningDiskAverageQueueLength;
+                    errorWarningKind = (healthState == HealthState.Error) ?
+                        ErrorWarningCodes.NodeErrorDiskAverageQueueLength : ErrorWarningCodes.NodeWarningDiskAverageQueueLength;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalActiveFirewallRules)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyFirewallRules : ErrorWarningCode.WarningTooManyFirewallRules;
+                    errorWarningKind = (healthState == HealthState.Error) ?
+                        ErrorWarningCodes.ErrorTooManyFirewallRules : ErrorWarningCodes.WarningTooManyFirewallRules;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalActivePorts)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyActivePorts : ErrorWarningCode.WarningTooManyActiveTcpPorts;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                        ErrorWarningCodes.AppErrorTooManyActiveTcpPorts : ErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            ErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : ErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
+                    }
                 }
                 else if (data.Property == ErrorWarningProperty.TotalEphemeralPorts)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyActiveEphemeralPorts : ErrorWarningCode.WarningTooManyActiveEphemeralPorts;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            ErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : ErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            ErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : ErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
+                    }
                 }
 
                 var healthMessage = new StringBuilder();
