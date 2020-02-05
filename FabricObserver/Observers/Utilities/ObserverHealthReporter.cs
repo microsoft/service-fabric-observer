@@ -111,19 +111,19 @@ namespace FabricObserver.Utilities
                     break;
             }
 
-            string kind = string.Empty;
+            string kind = null;
             string source = healthReport.Observer;
 
             if (!string.IsNullOrEmpty(healthReport.Code))
             {
-                source += $"({healthReport.Code})";
-                kind = healthReport.Code + ": ";
+                source = $"{healthReport.Code}";
+                kind = $"{healthReport.Code}: ";
             }
             else if (!string.IsNullOrEmpty(healthReport.ResourceUsageDataProperty)
                 && healthReport.State == HealthState.Ok)
             {
                 source += $"({healthReport.ResourceUsageDataProperty})";
-                kind = ErrorWarningCode.Ok + ": ";
+                kind = $"{ErrorWarningCodes.Ok}: ";
             }
 
             var healthInformation = new HealthInformation(source, property, healthReport.State)
