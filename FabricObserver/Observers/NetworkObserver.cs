@@ -425,7 +425,7 @@ namespace FabricObserver
                         Utilities.HealthReport report = new Utilities.HealthReport
                         {
                             AppName = new Uri(this.userEndpoints[j].AppTarget),
-                            Code = ErrorWarningCode.WarningNetworkEndpointUnreachable,
+                            Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EmitLogEvent = true,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = timeToLiveWarning,
@@ -449,7 +449,7 @@ namespace FabricObserver
                                 Utilities.Telemetry.HealthScope.Application,
                                 this.userEndpoints[j].AppTarget,
                                 HealthState.Warning,
-                                $"{this.NodeName}/{ErrorWarningCode.WarningNetworkEndpointUnreachable}: {healthMessage}",
+                                $"{this.NodeName}/{FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable}: {healthMessage}",
                                 this.ObserverName,
                                 this.Token);
                         }

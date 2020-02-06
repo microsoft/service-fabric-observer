@@ -53,7 +53,7 @@ namespace FabricObserver.Utilities
             }
         }
 
-        public void ReportHealthToServiceFabric(Utilities.HealthReport healthReport)
+        public void ReportHealthToServiceFabric(HealthReport healthReport)
         {
             if (healthReport == null)
             {
@@ -72,104 +72,30 @@ namespace FabricObserver.Utilities
 
             var timeToLive = TimeSpan.FromMinutes(5);
 
-            if (healthReport.HealthReportTimeToLive != default(TimeSpan))
+            if (healthReport.HealthReportTimeToLive != default)
             {
                 timeToLive = healthReport.HealthReportTimeToLive;
             }
-
-            string kind = string.Empty;
-
-            if (healthReport.Code != null)
-            {
-                kind = healthReport.Code + ": ";
-            }
-
-            string source = healthReport.Observer;
-            string property;
 
             // In order for multiple Error/Warning/Ok events to show up in SFX Details view from observer instances,
             // Event Source Ids must be unique, thus the seemingly strange conditionals inside the cases below:
             // The apparent duplicity in OR checks is for the case when the incoming report is an OK report, where there is
             // no error code, but the specific ErrorWarningProperty is known.
+            string property;
+
             switch (healthReport.Observer)
             {
                 case ObserverConstants.AppObserverName:
                     property = "AppHealth";
-
-                    if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalCpuTime)
-                    {
-                        source += "(CPU)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionPct)
-                    {
-                        source += "(Memory%)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionMB)
-                    {
-                        source += "(MemoryMB)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveEphemeralPorts
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalEphemeralPorts)
-                    {
-                        source += "(ActiveEphemeralPorts)";
-                    }
-
                     break;
                 case ObserverConstants.CertificateObserverName:
                     property = "SecurityHealth";
                     break;
                 case ObserverConstants.DiskObserverName:
                     property = "DiskHealth";
-
-                    if (healthReport.Code == ErrorWarningCode.WarningDiskAverageQueueLength
-                        || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.DiskAverageQueueLength)
-                    {
-                        source += "(DiskQueueLength)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningDiskSpacePercentUsed
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.DiskSpaceUsagePercentage)
-                    {
-                        source += "(DiskSpace%)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningDiskSpaceMB
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.DiskSpaceUsageMB)
-                    {
-                        source += "(DiskSpaceMB)";
-                    }
-
                     break;
                 case ObserverConstants.FabricSystemObserverName:
                     property = "FabricSystemServiceHealth";
-
-                    if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalCpuTime)
-                    {
-                        source += "(CPU)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionPct)
-                    {
-                        source += "(Memory%)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionMB)
-                    {
-                        source += "(MemoryMB)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveTcpPorts
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalActivePorts)
-                    {
-                        source += "(ActivePorts)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveEphemeralPorts
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalEphemeralPorts)
-                    {
-                        source += "(ActiveEphemeralPorts)";
-                    }
-
                     break;
                 case ObserverConstants.NetworkObserverName:
                     property = "NetworkingHealth";
@@ -179,42 +105,25 @@ namespace FabricObserver.Utilities
                     break;
                 case ObserverConstants.NodeObserverName:
                     property = "MachineResourceHealth";
-
-                    if (healthReport.Code == ErrorWarningCode.WarningCpuTime
-                        || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalCpuTime)
-                    {
-                        source += "(CPU)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyFirewallRules
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalActiveFirewallRules)
-                    {
-                        source += "(FirewallRules)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryPercentUsed
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionPct)
-                    {
-                        source += "(Memory%)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningMemoryCommitted
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalMemoryConsumptionMB)
-                    {
-                        source += "(MemoryMB)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveTcpPorts
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalActivePorts)
-                    {
-                        source += "(ActivePorts)";
-                    }
-                    else if (healthReport.Code == ErrorWarningCode.WarningTooManyActiveEphemeralPorts
-                             || healthReport.ResourceUsageDataProperty == ErrorWarningProperty.TotalEphemeralPorts)
-                    {
-                        source += "(ActiveEphemeralPorts)";
-                    }
-
                     break;
                 default:
                     property = "FOGenericHealth";
                     break;
+            }
+
+            string kind = null;
+            string source = healthReport.Observer;
+
+            if (!string.IsNullOrEmpty(healthReport.Code))
+            {
+                source = $"{healthReport.Code}";
+                kind = $"{healthReport.Code}: ";
+            }
+            else if (!string.IsNullOrEmpty(healthReport.ResourceUsageDataProperty)
+                && healthReport.State == HealthState.Ok)
+            {
+                source += $"({healthReport.ResourceUsageDataProperty})";
+                kind = $"{FOErrorWarningCodes.Ok}: ";
             }
 
             var healthInformation = new HealthInformation(source, property, healthReport.State)

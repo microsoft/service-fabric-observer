@@ -628,39 +628,88 @@ namespace FabricObserver
 
                 if (data.Property == ErrorWarningProperty.TotalCpuTime)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorCpuTime : ErrorWarningCode.WarningCpuTime;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorCpuTime : FOErrorWarningCodes.AppWarningCpuTime;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorCpuTime : FOErrorWarningCodes.NodeWarningCpuTime;
+                    }
                 }
                 else if (data.Property == ErrorWarningProperty.DiskSpaceUsagePercentage)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpacePercentUsed : ErrorWarningCode.WarningDiskSpacePercentUsed;
+                    errorWarningKind = (healthState == HealthState.Error) ?
+                        FOErrorWarningCodes.NodeErrorDiskSpacePercentUsed : FOErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
                 }
                 else if (data.Property == ErrorWarningProperty.DiskSpaceUsageMB)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskSpaceMB : ErrorWarningCode.WarningDiskSpaceMB;
+                    errorWarningKind = (healthState == HealthState.Error) ?
+                        FOErrorWarningCodes.NodeErrorDiskSpaceMB : FOErrorWarningCodes.NodeWarningDiskSpaceMB;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionMB)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryCommitted : ErrorWarningCode.WarningMemoryCommitted;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorMemoryCommittedMB : FOErrorWarningCodes.AppWarningMemoryCommittedMB;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                           FOErrorWarningCodes.NodeErrorMemoryCommittedMB : FOErrorWarningCodes.NodeWarningMemoryCommittedMB;
+                    }
                 }
                 else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionPct)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorMemoryPercentUsed : ErrorWarningCode.WarningMemoryPercentUsed;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorMemoryPercentUsed : FOErrorWarningCodes.AppWarningMemoryPercentUsed;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorMemoryPercentUsed : FOErrorWarningCodes.NodeWarningMemoryPercentUsed;
+                    }
                 }
                 else if (data.Property == ErrorWarningProperty.DiskAverageQueueLength)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorDiskAverageQueueLength : ErrorWarningCode.WarningDiskAverageQueueLength;
+                    errorWarningKind = (healthState == HealthState.Error) ?
+                        FOErrorWarningCodes.NodeErrorDiskAverageQueueLength : FOErrorWarningCodes.NodeWarningDiskAverageQueueLength;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalActiveFirewallRules)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyFirewallRules : ErrorWarningCode.WarningTooManyFirewallRules;
+                    errorWarningKind = (healthState == HealthState.Error) ?
+                        FOErrorWarningCodes.ErrorTooManyFirewallRules : FOErrorWarningCodes.WarningTooManyFirewallRules;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalActivePorts)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyActivePorts : ErrorWarningCode.WarningTooManyActiveTcpPorts;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                        FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
+                    }
                 }
                 else if (data.Property == ErrorWarningProperty.TotalEphemeralPorts)
                 {
-                    errorWarningKind = (healthState == HealthState.Error) ? ErrorWarningCode.ErrorTooManyActiveEphemeralPorts : ErrorWarningCode.WarningTooManyActiveEphemeralPorts;
+                    if (replicaOrInstance != null)
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
+                    }
+                    else
+                    {
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
+                    }
                 }
 
                 var healthMessage = new StringBuilder();
