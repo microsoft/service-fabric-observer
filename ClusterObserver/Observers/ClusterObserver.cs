@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver.Utilities.Telemetry;
 using FabricClusterObserver.Utilities;
+using System.Fabric;
 
 namespace FabricClusterObserver
 {
@@ -161,7 +162,7 @@ namespace FabricClusterObserver
                         this.ObserverName,
                         this.Token);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException)
             {
                 this.ObserverLogger.LogError(
                     $"Unable to determine cluster health:{Environment.NewLine}{e.ToString()}");
@@ -175,8 +176,6 @@ namespace FabricClusterObserver
                         $"Unable to determine Cluster Health. Probing will continue.",
                         this.ObserverName,
                         this.Token);
-
-                throw;
             }
         }
     }
