@@ -123,7 +123,7 @@ namespace FabricObserver.Utilities
                 && healthReport.State == HealthState.Ok)
             {
                 source += $"({healthReport.ResourceUsageDataProperty})";
-                kind = $"{ErrorWarningCodes.Ok}: ";
+                kind = $"{FOErrorWarningCodes.Ok}: ";
             }
 
             var healthInformation = new HealthInformation(source, property, healthReport.State)

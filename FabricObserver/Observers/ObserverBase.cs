@@ -631,35 +631,35 @@ namespace FabricObserver
                     if (replicaOrInstance != null)
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            ErrorWarningCodes.AppErrorCpuTime : ErrorWarningCodes.AppWarningCpuTime;
+                            FOErrorWarningCodes.AppErrorCpuTime : FOErrorWarningCodes.AppWarningCpuTime;
                     }
                     else
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            ErrorWarningCodes.NodeErrorCpuTime : ErrorWarningCodes.NodeWarningCpuTime;
+                            FOErrorWarningCodes.NodeErrorCpuTime : FOErrorWarningCodes.NodeWarningCpuTime;
                     }
                 }
                 else if (data.Property == ErrorWarningProperty.DiskSpaceUsagePercentage)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ?
-                        ErrorWarningCodes.NodeErrorDiskSpacePercentUsed : ErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
+                        FOErrorWarningCodes.NodeErrorDiskSpacePercentUsed : FOErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
                 }
                 else if (data.Property == ErrorWarningProperty.DiskSpaceUsageMB)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ?
-                        ErrorWarningCodes.NodeErrorDiskSpaceMB : ErrorWarningCodes.NodeWarningDiskSpaceMB;
+                        FOErrorWarningCodes.NodeErrorDiskSpaceMB : FOErrorWarningCodes.NodeWarningDiskSpaceMB;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionMB)
                 {
                     if (replicaOrInstance != null)
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            ErrorWarningCodes.AppErrorMemoryCommittedMB : ErrorWarningCodes.AppWarningMemoryCommittedMB;
+                            FOErrorWarningCodes.AppErrorMemoryCommittedMB : FOErrorWarningCodes.AppWarningMemoryCommittedMB;
                     }
                     else
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                           ErrorWarningCodes.NodeErrorMemoryCommittedMB : ErrorWarningCodes.NodeWarningMemoryCommittedMB;
+                           FOErrorWarningCodes.NodeErrorMemoryCommittedMB : FOErrorWarningCodes.NodeWarningMemoryCommittedMB;
                     }
                 }
                 else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionPct)
@@ -667,35 +667,35 @@ namespace FabricObserver
                     if (replicaOrInstance != null)
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            ErrorWarningCodes.AppErrorMemoryPercentUsed : ErrorWarningCodes.AppWarningMemoryPercentUsed;
+                            FOErrorWarningCodes.AppErrorMemoryPercentUsed : FOErrorWarningCodes.AppWarningMemoryPercentUsed;
                     }
                     else
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            ErrorWarningCodes.NodeErrorMemoryPercentUsed : ErrorWarningCodes.NodeWarningMemoryPercentUsed;
+                            FOErrorWarningCodes.NodeErrorMemoryPercentUsed : FOErrorWarningCodes.NodeWarningMemoryPercentUsed;
                     }
                 }
                 else if (data.Property == ErrorWarningProperty.DiskAverageQueueLength)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ?
-                        ErrorWarningCodes.NodeErrorDiskAverageQueueLength : ErrorWarningCodes.NodeWarningDiskAverageQueueLength;
+                        FOErrorWarningCodes.NodeErrorDiskAverageQueueLength : FOErrorWarningCodes.NodeWarningDiskAverageQueueLength;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalActiveFirewallRules)
                 {
                     errorWarningKind = (healthState == HealthState.Error) ?
-                        ErrorWarningCodes.ErrorTooManyFirewallRules : ErrorWarningCodes.WarningTooManyFirewallRules;
+                        FOErrorWarningCodes.ErrorTooManyFirewallRules : FOErrorWarningCodes.WarningTooManyFirewallRules;
                 }
                 else if (data.Property == ErrorWarningProperty.TotalActivePorts)
                 {
                     if (replicaOrInstance != null)
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                        ErrorWarningCodes.AppErrorTooManyActiveTcpPorts : ErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
+                        FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
                     }
                     else
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            ErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : ErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
+                            FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
                     }
                 }
                 else if (data.Property == ErrorWarningProperty.TotalEphemeralPorts)
@@ -703,12 +703,12 @@ namespace FabricObserver
                     if (replicaOrInstance != null)
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            ErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : ErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
+                            FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
                     }
                     else
                     {
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            ErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : ErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
+                            FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
                     }
                 }
 

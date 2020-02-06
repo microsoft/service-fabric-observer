@@ -11,8 +11,6 @@ namespace FabricObserver.Utilities
 {
     internal class DiskUsage : IDisposable
     {
-        internal string Drive { get; private set; }
-
         private WindowsPerfCounters winPerfCounters;
         private bool isDisposed = false;
 
@@ -41,6 +39,8 @@ namespace FabricObserver.Utilities
         /// Or from whatever drive letter you supplied to DiskUsage(string driveLetter) ctor.
         /// </summary>
         internal int PercentUsedSpace => this.GetCurrentDiskSpaceUsedPercent(this.Drive);
+
+        internal string Drive { get; private set; }
 
         internal static double GetTotalDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
