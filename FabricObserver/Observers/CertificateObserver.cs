@@ -155,7 +155,7 @@ namespace FabricObserver
 
                 healthReport = new HealthReport
                 {
-                    Code = ErrorWarningCodes.WarningCertificateExpiration,
+                    Code = FOErrorWarningCodes.WarningCertificateExpiration,
                     Observer = this.ObserverName,
                     ReportType = HealthReportType.Node,
                     EmitLogEvent = true,
