@@ -8,19 +8,19 @@
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 30 minutes. -->
     <Parameter Name="ObserverExecutionTimeout" Value="1800" />
-    <!-- Required: Your ApplicationInsights instrumentation key. -->
-    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          ClusterObserver will write to its own directory on this path.-->
     <Parameter Name="ObserverLogPath" Value="C:\observer_logs" />
     <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- Optional: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
+    <!-- Required: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
          but you can implement whatever provider you want. See IObserverTelemetryProvider interface.
          Disabling this would render ClusterObserver useless, as it is designed specifically to 
          emit aggregated cluster health state telemetry to a log analytics service. -->
     <Parameter Name="EnableTelemetryProvider" Value="True" />
+    <!-- Required: Your ApplicationInsights instrumentation key. -->
+    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
   </Section>
@@ -36,12 +36,15 @@
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
-    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="False" />
+    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
     <!-- Optional (and useful only if EmitHealthWarningEvaluationDetails is set to True): fabric:/System app warnings can be noisy and are often ephemeral. 
          It's best to ignore Warning states for Fabric system services. You should focus on Warning state alerting for your own apps.
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
     <Parameter Name="IgnoreFabricSystemAppWarnings" Value="True"/>
     <!-- Optional: Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
     <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
+    <!-- Optional: Emit the string representation of ClusterHealth.HealthStatistics structure when Warning or Error 
+         AggregatedHealthState is detected.-->
+    <Parameter Name="EmitHealthStatistics" Value="True"/>
   </Section>
 </Settings>
