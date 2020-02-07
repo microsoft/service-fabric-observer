@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver.Utilities.Telemetry;
 using FabricClusterObserver.Utilities;
+using System.Fabric;
+using System.Linq;
 
 namespace FabricClusterObserver
 {
@@ -54,7 +56,10 @@ namespace FabricClusterObserver
 
         private async Task ProbeClusterHealthAsync(CancellationToken token)
         {
-            if (!this.IsTelemetryEnabled)
+            // The point of this service is to emit SF Health telemetry to your external log analytics service, so
+            // if telemetry is not enabled or you don't provide an AppInsights instrumentation key, for example, 
+            // then querying HM for health info isn't useful.
+            if (!this.IsTelemetryEnabled || this.ObserverTelemetryClient == null)
             {
                 return;
             }
@@ -80,6 +85,12 @@ namespace FabricClusterObserver
                     ObserverConstants.IgnoreSystemAppWarnings,
                     "false"), out bool ignoreSystemAppWarnings);
 
+            _ = bool.TryParse(
+                    this.GetSettingParameterValue(
+                    ObserverConstants.ClusterObserverConfigurationSectionName,
+                    ObserverConstants.EmitHealthStatistics,
+                    "false"), out bool emitHealthStatistics);
+
             try
             {
                 var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
@@ -87,6 +98,7 @@ namespace FabricClusterObserver
                                                 token).ConfigureAwait(true);
 
                 string telemetryDescription = string.Empty;
+                string clusterHealthStatistics = string.Empty;
 
                 // Previous run generated unhealthy evaluation report. Clear it (send Ok) .
                 if (emitOkHealthState && clusterHealth.AggregatedHealthState == HealthState.Ok
@@ -104,6 +116,12 @@ namespace FabricClusterObserver
                     }
 
                     var unhealthyEvaluations = clusterHealth.UnhealthyEvaluations;
+
+                    // No Unhealthy Evaluations means nothing to see here. 
+                    if (unhealthyEvaluations.Count == 0)
+                    {
+                        return;
+                    }
 
                     foreach (var evaluation in unhealthyEvaluations)
                     {
@@ -141,6 +159,12 @@ namespace FabricClusterObserver
                             telemetryDescription += $"Cluster HealthEvent Details: {healthEvent.HealthInformation.Description}{Environment.NewLine}";
                         }
                     }
+
+                    // HealthStatistics as a string.
+                    if (emitHealthStatistics)
+                    {
+                        telemetryDescription += $"{clusterHealth.HealthStatistics.ToString()}";
+                    }
                 }
 
                 // Track current health state for use in next run.
@@ -161,13 +185,13 @@ namespace FabricClusterObserver
                         this.ObserverName,
                         this.Token);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException)
             {
                 this.ObserverLogger.LogError(
                     $"Unable to determine cluster health:{Environment.NewLine}{e.ToString()}");
 
                 // Telemetry.
-                await this.ObserverTelemetryClient?.ReportHealthAsync(
+                await this.ObserverTelemetryClient.ReportHealthAsync(
                         HealthScope.Cluster,
                         "AggregatedClusterHealth",
                         HealthState.Unknown,
@@ -175,8 +199,6 @@ namespace FabricClusterObserver
                         $"Unable to determine Cluster Health. Probing will continue.",
                         this.ObserverName,
                         this.Token);
-
-                throw;
             }
         }
     }
