@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using FabricClusterObserver.Utilities.Telemetry;
 using FabricClusterObserver.Utilities;
 using System.Fabric;
-using System.Linq;
 
 namespace FabricClusterObserver
 {
@@ -127,36 +126,126 @@ namespace FabricClusterObserver
                     {
                         token.ThrowIfCancellationRequested();
 
-                        telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}";
+                        telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}{Environment.NewLine}";
 
                         // Application in Warning or Error?
                         // Note: SF System app Warnings can be noisy, ephemeral (not Errors - you should generally not ignore Error states),
                         // so check for them and ignore if specified in your config's IgnoreFabricSystemAppWarnings setting.
-                        foreach (var app in clusterHealth.ApplicationHealthStates)
+                        if (evaluation.Kind == HealthEvaluationKind.Application
+                            || evaluation.Kind == HealthEvaluationKind.Applications)
                         {
-                            if (app.AggregatedHealthState == HealthState.Ok
-                                || (emitWarningDetails
-                                   && (app.AggregatedHealthState != HealthState.Warning
-                                      || (evaluation.Kind == HealthEvaluationKind.SystemApplication
-                                      && ignoreSystemAppWarnings))))
+                            foreach (var app in clusterHealth.ApplicationHealthStates)
                             {
-                                continue;
-                            }
+                                Token.ThrowIfCancellationRequested();
 
-                            telemetryDescription += $"Application in Error or Warning: {app.ApplicationName}{Environment.NewLine}";
+                                if (app.AggregatedHealthState == HealthState.Ok
+                                    || (!emitWarningDetails
+                                       && (app.AggregatedHealthState == HealthState.Warning
+                                          || (evaluation.Kind == HealthEvaluationKind.SystemApplication
+                                          && ignoreSystemAppWarnings))))
+                                {
+                                    continue;
+                                }
+
+                                telemetryDescription += $"Application in Error or Warning: {app.ApplicationName}{Environment.NewLine}";
+
+                                foreach (var application in clusterHealth.ApplicationHealthStates)
+                                {
+                                    Token.ThrowIfCancellationRequested();
+
+                                    if (application.AggregatedHealthState == HealthState.Ok
+                                       || (!emitWarningDetails && application.AggregatedHealthState == HealthState.Warning))
+                                    {
+                                        continue;
+                                    }
+
+                                    var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
+                                        application.ApplicationName,
+                                        this.AsyncClusterOperationTimeoutSeconds,
+                                        token);
+
+                                    var serviceHealthStates = appHealth.ServiceHealthStates;
+                                    var appHealthEvents = appHealth.HealthEvents;
+
+                                    // From FO?
+                                    foreach (var appHealthEvent in appHealthEvents)
+                                    {
+                                        Token.ThrowIfCancellationRequested();
+
+                                        if (!FOErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(appHealthEvent.HealthInformation.SourceId))
+                                        {
+                                            continue;
+                                        }
+
+                                        string errorWarning = "Warning";
+
+                                        if (FOErrorWarningCodes.AppErrorCodesDictionary[appHealthEvent.HealthInformation.SourceId].Contains("Error"))
+                                        {
+                                            errorWarning = "Error";
+                                        }
+
+                                        telemetryDescription +=
+                                            $"  FabricObserver {errorWarning} Code: {appHealthEvent.HealthInformation.SourceId}{Environment.NewLine}" +
+                                            $"  {errorWarning} Details: {appHealthEvent.HealthInformation.Description}{Environment.NewLine}";
+                                    }
+
+                                    // Service in error?
+                                    foreach (var service in serviceHealthStates)
+                                    {
+                                        Token.ThrowIfCancellationRequested();
+
+                                        if (service.AggregatedHealthState == HealthState.Ok
+                                            || (!emitWarningDetails && service.AggregatedHealthState == HealthState.Warning))
+                                        {
+                                            continue;
+                                        }
+
+                                        telemetryDescription += $"Service in Error: {service.ServiceName}{Environment.NewLine}";
+                                    }
+                                }
+                            }
                         }
-
-                        // Custom Cluster Health Events: ClusterHealthReports you create (report to HM) become Cluster HealthEvents.
-                        foreach (var healthEvent in clusterHealth.HealthEvents)
+                        else if (evaluation.Kind == HealthEvaluationKind.Node
+                                || evaluation.Kind == HealthEvaluationKind.Nodes)
                         {
-                            if (healthEvent.HealthInformation.HealthState == HealthState.Ok
-                                || string.IsNullOrEmpty(healthEvent.HealthInformation.Description)
-                                || emitWarningDetails && healthEvent.HealthInformation.HealthState != HealthState.Warning)
+                            // Node in Warning or Error?
+                            foreach (var node in clusterHealth.NodeHealthStates)
                             {
-                                continue;
-                            }
+                                if (node.AggregatedHealthState == HealthState.Ok
+                                    || (!emitWarningDetails && node.AggregatedHealthState == HealthState.Warning))
+                                {
+                                    continue;
+                                }
 
-                            telemetryDescription += $"Cluster HealthEvent Details: {healthEvent.HealthInformation.Description}{Environment.NewLine}";
+                                telemetryDescription += $"Node in Error or Warning: {node.NodeName}{Environment.NewLine}";
+
+                                var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(
+                                       node.NodeName,
+                                       this.AsyncClusterOperationTimeoutSeconds,
+                                       token);
+
+                                // From FO?
+                                foreach (var nodeHealthEvent in nodeHealth.HealthEvents)
+                                {
+                                    Token.ThrowIfCancellationRequested();
+
+                                    if (!FOErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(nodeHealthEvent.HealthInformation.SourceId))
+                                    {
+                                        continue;
+                                    }
+
+                                    string errorWarning = "Warning";
+
+                                    if (FOErrorWarningCodes.NodeErrorCodesDictionary[nodeHealthEvent.HealthInformation.SourceId].Contains("Error"))
+                                    {
+                                        errorWarning = "Error";
+                                    }
+
+                                    telemetryDescription +=
+                                        $"  FabricObserver {errorWarning} Code: {nodeHealthEvent.HealthInformation.SourceId}{Environment.NewLine}" +
+                                        $"  {errorWarning} Details: {nodeHealthEvent.HealthInformation.Description}{Environment.NewLine}";
+                                }
+                            }
                         }
                     }
 
@@ -185,7 +274,7 @@ namespace FabricClusterObserver
                         this.ObserverName,
                         this.Token);
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException)
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
             {
                 this.ObserverLogger.LogError(
                     $"Unable to determine cluster health:{Environment.NewLine}{e.ToString()}");
