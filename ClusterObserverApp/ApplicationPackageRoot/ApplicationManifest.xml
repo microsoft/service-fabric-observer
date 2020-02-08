@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricClusterObserverAppType" ApplicationTypeVersion="1.0.3" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricClusterObserverAppType" ApplicationTypeVersion="1.0.4" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="ClusterObserver_InstanceCount" DefaultValue="1" />
   </Parameters>
@@ -7,7 +7,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricClusterObserverPkg" ServiceManifestVersion="1.0.3" />
+    <ServiceManifestRef ServiceManifestName="FabricClusterObserverPkg" ServiceManifestVersion="1.0.4" />
     <ConfigOverrides />
   </ServiceManifestImport>
   <DefaultServices>

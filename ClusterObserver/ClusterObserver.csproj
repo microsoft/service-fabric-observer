@@ -131,6 +131,7 @@
     <Compile Include="FabricClusterObserver.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ServiceEventSource.cs" />
+    <Compile Include="Utilities\FOErrorWarningCodes.cs" />
     <Compile Include="Utilities\Logger.cs" />
     <Compile Include="Utilities\LogLevel.cs" />
     <Compile Include="Utilities\ObserverConstants.cs" />

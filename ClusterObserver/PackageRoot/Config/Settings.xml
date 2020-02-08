@@ -36,7 +36,7 @@
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
-    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
+    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="False" />
     <!-- Optional (and useful only if EmitHealthWarningEvaluationDetails is set to True): fabric:/System app warnings can be noisy and are often ephemeral. 
          It's best to ignore Warning states for Fabric system services. You should focus on Warning state alerting for your own apps.
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
@@ -45,6 +45,6 @@
     <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
     <!-- Optional: Emit the string representation of ClusterHealth.HealthStatistics structure when Warning or Error 
          AggregatedHealthState is detected.-->
-    <Parameter Name="EmitHealthStatistics" Value="True"/>
+    <Parameter Name="EmitHealthStatistics" Value="False"/>
   </Section>
 </Settings>
