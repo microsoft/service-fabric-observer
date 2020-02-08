@@ -719,7 +719,14 @@ namespace FabricObserver
                     healthMessage.Append($"{name} (Service Process: {procName}, {repPartitionId}, {repOrInstanceId}): ");
                 }
 
-                healthMessage.Append($"{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
+                string drive = string.Empty;
+
+                if (data.Property.Contains("Disk"))
+                {
+                    drive = $"{data.Id}: ";
+                }
+
+                healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
                 healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
 
                 var healthReport = new Utilities.HealthReport
@@ -752,7 +759,7 @@ namespace FabricObserver
                         !string.IsNullOrEmpty(id) ? HealthScope.Application : HealthScope.Node,
                         $"{(appName != null ? appName.OriginalString : this.NodeName)}",
                         healthState,
-                        $"{this.NodeName}/{errorWarningKind}/{data.Property}/{Math.Round(data.AverageDataValue)}",
+                        $"{this.NodeName}/{errorWarningKind}/{drive}{data.Property}/{Math.Round(data.AverageDataValue)}",
                         this.ObserverName,
                         this.Token);
                 }
