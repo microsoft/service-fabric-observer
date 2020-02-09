@@ -292,8 +292,6 @@ namespace FabricObserver
             this.perfCounters = new WindowsPerfCounters();
             this.diskUsage = new DiskUsage();
 
-            this.Token.ThrowIfCancellationRequested();
-
             try
             {
                 foreach (var proc in this.processWatchList)
