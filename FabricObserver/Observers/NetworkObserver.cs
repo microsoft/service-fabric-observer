@@ -59,7 +59,7 @@ namespace FabricObserver
         private List<ConnectionState> connectionStatus = new List<ConnectionState>();
         private HealthState healthState = HealthState.Ok;
         private bool hasRun = false;
-        private CancellationToken token;
+        private CancellationToken cancellationToken;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetworkObserver"/> class.
@@ -86,8 +86,7 @@ namespace FabricObserver
                 return;
             }
 
-            this.token = token;
-            token.ThrowIfCancellationRequested();
+            this.cancellationToken = token;
 
             // Run conn tests.
             Retry.Do(
@@ -101,7 +100,7 @@ namespace FabricObserver
             this.hasRun = true;
         }
 
-        private static string GetNetworkInterfaceInfo()
+        private static string GetNetworkInterfaceInfo(CancellationToken token)
         {
             try
             {
@@ -119,6 +118,8 @@ namespace FabricObserver
 
                 foreach (var nic in nics)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var properties = nic.GetIPProperties();
 
                     interfaceInfo.Append("\n" + nic.Description + "\n");
@@ -158,7 +159,7 @@ namespace FabricObserver
                 $"Initializing {this.ObserverName} for network monitoring. | {this.NodeName}",
                 LogLevel.Information);
 
-            this.token.ThrowIfCancellationRequested();
+            this.cancellationToken.ThrowIfCancellationRequested();
 
             // This only needs to be logged once.
             // This file is used by the ObserverWebApi application.
@@ -166,7 +167,7 @@ namespace FabricObserver
             {
                 var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "NetInfo.txt");
 
-                if (!this.ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo()))
+                if (!this.ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(this.cancellationToken)))
                 {
                     this.HealthReporter.ReportFabricObserverServiceHealth(
                         this.FabricServiceContext.ServiceName.OriginalString,
@@ -195,7 +196,7 @@ namespace FabricObserver
                 return false;
             }
 
-            this.token.ThrowIfCancellationRequested();
+            this.cancellationToken.ThrowIfCancellationRequested();
 
             if (!File.Exists(networkObserverConfigFileName))
             {
@@ -204,7 +205,7 @@ namespace FabricObserver
                 return false;
             }
 
-            this.token.ThrowIfCancellationRequested();
+            this.cancellationToken.ThrowIfCancellationRequested();
 
             if (this.userEndpoints.Count == 0)
             {
@@ -228,7 +229,7 @@ namespace FabricObserver
 
             for (int i = 0; i < this.userEndpoints.Count; i++)
             {
-                this.token.ThrowIfCancellationRequested();
+                this.cancellationToken.ThrowIfCancellationRequested();
 
                 var config = this.userEndpoints[i];
 
@@ -247,7 +248,7 @@ namespace FabricObserver
 
                 foreach (var endpoint in config.Endpoints)
                 {
-                    this.token.ThrowIfCancellationRequested();
+                    this.cancellationToken.ThrowIfCancellationRequested();
 
                     if (string.IsNullOrWhiteSpace(endpoint.HostName))
                     {
@@ -315,6 +316,7 @@ namespace FabricObserver
             {
                 foreach (var config in configList)
                 {
+                    this.cancellationToken.ThrowIfCancellationRequested();
                     foreach (var endpoint in config.Endpoints)
                     {
                         bool passed = false;
@@ -357,6 +359,8 @@ namespace FabricObserver
 
                         this.SetHealthState(endpoint, passed);
                     }
+
+                    this.cancellationToken.ThrowIfCancellationRequested();
                 }
             }
         }

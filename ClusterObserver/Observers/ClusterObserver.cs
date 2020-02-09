@@ -39,8 +39,6 @@ namespace FabricClusterObserver
 
             if (token.IsCancellationRequested)
             {
-                this.Token.ThrowIfCancellationRequested();
-
                 return;
             }
 

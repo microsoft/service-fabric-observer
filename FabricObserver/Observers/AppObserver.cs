@@ -69,10 +69,8 @@ namespace FabricObserver
             bool initialized = this.Initialize();
             this.Token = token;
 
-            if (!initialized || token.IsCancellationRequested)
+            if (!initialized)
             {
-                this.Token.ThrowIfCancellationRequested();
-
                 this.HealthReporter.ReportFabricObserverServiceHealth(
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
