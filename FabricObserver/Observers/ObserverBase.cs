@@ -799,7 +799,7 @@ namespace FabricObserver
                         ReportType = healthReportType,
                         State = HealthState.Ok,
                         NodeName = this.NodeName,
-                        Observer = this.ObserverName,
+                        Observer = $"{this.ObserverName}({data.Id})",
                         ResourceUsageDataProperty = data.Property,
                     };
 
