@@ -8,7 +8,7 @@
 | FO003 | Percentage of total CPU usage has exceeded configured Error threshold on a VM instance. | 
 | FO004 | Percentage of total CPU usage has exceeded configured Warning threshold on a VM instance. | 
 | FO005 | Certificate expiration has occured. | 
-| FO006 | Certificate expiration is immenent. |  
+| FO006 | Certificate expiration is imminent. |  
 | FO007 | Disk usage percentatge has exceeded configured Error threshold on a VM instance. | 
 | FO008 | Disk usage space (MB) has exceeded configured Error threshold on a VM instance. | 
 | FO009 | Disk usage percentatge has exceeded configured Warning threshold on a VM instance. |  
