@@ -1,6 +1,6 @@
 **FabricObserver Error and Warning Codes as defined in class file FOErrorWarningCodes.cs** 
 
-|Member Name|Code|description|  
+| Member Name | Code | Description |  
 | :--- | :--- | :--- | 
 | AppErrorCpuTime | FO001 | Percentage of total CPU usage has exceeded configured Error threshold for an app service process. | 
 | AppWarningCpuTime | FO002 | Percentage of total CPU usage has exceeded configured Warning threshold for an app service process. | 
