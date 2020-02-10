@@ -10,6 +10,9 @@ namespace FabricClusterObserver.Utilities
     // FabricObserver Error/Warning/Ok Codes.
     public sealed class FOErrorWarningCodes
     {
+        // Ok
+        public const string Ok = "FO000";
+
         // CPU
         public const string AppErrorCpuTime = "FO001";
         public const string AppWarningCpuTime = "FO002";
@@ -25,59 +28,38 @@ namespace FabricClusterObserver.Utilities
         public const string NodeErrorDiskSpaceMB = "FO008";
         public const string NodeWarningDiskSpacePercentUsed = "FO009";
         public const string NodeWarningDiskSpaceMB = "FO010";
-        public const string AppErrorDiskIoReads = "FO011";
-        public const string AppWarningDiskIoReads = "FO012";
-        public const string AppErrorDiskIoWrites = "FO013";
-        public const string AppWarningDiskIoWrites = "FO014";
-        public const string NodeErrorDiskIoReads = "FO015";
-        public const string NodeWarningDiskIoReads = "FO016";
-        public const string NodeErrorDiskIoWrites = "FO017";
-        public const string NodeWarningDiskIoWrites = "FO018";
-        public const string NodeErrorDiskAverageQueueLength = "FO019";
-        public const string NodeWarningDiskAverageQueueLength = "FO020";
+        public const string NodeErrorDiskAverageQueueLength = "FO011";
+        public const string NodeWarningDiskAverageQueueLength = "FO012";
 
         // Memory
-        public const string AppErrorMemoryCommitted = "FO021";
-        public const string AppWarningMemoryCommitted = "FO022";
-        public const string AppErrorMemoryPercentUsed = "FO023";
-        public const string AppWarningMemoryPercentUsed = "FO024";
-        public const string AppErrorMemoryCommittedMB = "FO025";
-        public const string AppWarningMemoryCommittedMB = "FO026";
-        public const string NodeErrorMemoryCommitted = "FO027";
-        public const string NodeWarningMemoryCommitted = "FO028";
-        public const string NodeErrorMemoryPercentUsed = "FO029";
-        public const string NodeWarningMemoryPercentUsed = "FO030";
-        public const string NodeErrorMemoryCommittedMB = "FO031";
-        public const string NodeWarningMemoryCommittedMB = "FO032";
+        public const string AppErrorMemoryPercentUsed = "FO013";
+        public const string AppWarningMemoryPercentUsed = "FO014";
+        public const string AppErrorMemoryCommittedMB = "FO015";
+        public const string AppWarningMemoryCommittedMB = "FO016";
+        public const string NodeErrorMemoryPercentUsed = "FO017";
+        public const string NodeWarningMemoryPercentUsed = "FO018";
+        public const string NodeErrorMemoryCommittedMB = "FO019";
+        public const string NodeWarningMemoryCommittedMB = "FO020";
 
         // Networking
-        public const string AppErrorNetworkEndpointUnreachable = "FO033";
-        public const string AppWarningNetworkEndpointUnreachable = "FO034";
-        public const string AppErrorTooManyActiveTcpPorts = "FO035";
-        public const string AppWarningTooManyActiveTcpPorts = "FO036";
-        public const string NodeErrorTooManyActiveTcpPorts = "FO037";
-        public const string NodeWarningTooManyActiveTcpPorts = "FO038";
-        public const string ErrorTooManyFirewallRules = "FO039";
-        public const string WarningTooManyFirewallRules = "FO040";
-        public const string AppErrorTooManyActiveEphemeralPorts = "FO041";
-        public const string AppWarningTooManyActiveEphemeralPorts = "FO042";
-        public const string NodeErrorTooManyActiveEphemeralPorts = "FO043";
-        public const string NodeWarningTooManyActiveEphemeralPorts = "FO044";
-
-        // Ok
-        public const string Ok = "FO000";
+        public const string AppErrorNetworkEndpointUnreachable = "FO021";
+        public const string AppWarningNetworkEndpointUnreachable = "FO022";
+        public const string AppErrorTooManyActiveTcpPorts = "FO023";
+        public const string AppWarningTooManyActiveTcpPorts = "FO024";
+        public const string NodeErrorTooManyActiveTcpPorts = "FO025";
+        public const string NodeWarningTooManyActiveTcpPorts = "FO026";
+        public const string ErrorTooManyFirewallRules = "FO027";
+        public const string WarningTooManyFirewallRules = "FO028";
+        public const string AppErrorTooManyActiveEphemeralPorts = "FO029";
+        public const string AppWarningTooManyActiveEphemeralPorts = "FO030";
+        public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
+        public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
 
         public static Dictionary<string, string> AppErrorCodesDictionary { get; private set; } = new Dictionary<string, string>
         {
             { Ok, "Ok" },
             { AppErrorCpuTime, "AppErrorCpuTime" },
             { AppWarningCpuTime, "AppWarningCpuTime" },
-            { AppErrorDiskIoReads, "AppErrorDiskIoReads" },
-            { AppWarningDiskIoReads, "AppWarningDiskIoReads" },
-            { AppErrorDiskIoWrites, "AppErrorDiskIoWrites" },
-            { AppWarningDiskIoWrites, "AppWarningDiskIoWrites" },
-            { AppErrorMemoryCommitted, "AppErrorMemoryCommitted" },
-            { AppWarningMemoryCommitted, "AppWarningMemoryCommitted" },
             { AppErrorMemoryPercentUsed, "AppErrorMemoryPercentUsed" },
             { AppWarningMemoryPercentUsed, "AppWarningMemoryPercentUsed" },
             { AppErrorMemoryCommittedMB, "AppErrorMemoryCommittedMB" },
@@ -101,14 +83,8 @@ namespace FabricClusterObserver.Utilities
             { NodeErrorDiskSpaceMB, "NodeErrorDiskSpaceMB" },
             { NodeWarningDiskSpacePercentUsed, "NodeWarningDiskSpacePercentUsed" },
             { NodeWarningDiskSpaceMB, "NodeWarningDiskSpaceMB" },
-            { NodeErrorDiskIoReads, "NodeErrorDiskIoReads" },
-            { NodeWarningDiskIoReads, "NodeWarningDiskIoReads" },
-            { NodeErrorDiskIoWrites, "NodeErrorDiskIoWrites" },
-            { NodeWarningDiskIoWrites, "NodeWarningDiskIoWrites" },
             { NodeErrorDiskAverageQueueLength, "NodeErrorDiskAverageQueueLength" },
             { NodeWarningDiskAverageQueueLength, "NodeWarningDiskAverageQueueLength" },
-            { NodeErrorMemoryCommitted, "NodeErrorMemoryCommitted" },
-            { NodeWarningMemoryCommitted, "NodeWarningMemoryCommitted" },
             { NodeErrorMemoryPercentUsed, "NodeErrorMemoryPercentUsed" },
             { NodeWarningMemoryPercentUsed, "NodeWarningMemoryPercentUsed" },
             { NodeErrorMemoryCommittedMB, "NodeErrorMemoryCommittedMB" },
