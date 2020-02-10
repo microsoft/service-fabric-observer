@@ -9,17 +9,17 @@
 | FO004 | Percentage of total CPU usage has exceeded configured ***Warning*** threshold on a VM instance. | 
 | FO005 | Certificate expiration has occured. | 
 | FO006 | Certificate expiration is imminent. |  
-| FO007 | Disk usage percentatge has exceeded configured ***Error*** threshold on a VM instance. | 
+| FO007 | Disk usage percentage has exceeded configured ***Error*** threshold on a VM instance. | 
 | FO008 | Disk usage space (MB) has exceeded configured ***Error*** threshold on a VM instance. | 
-| FO009 | Disk usage percentatge has exceeded configured ***Warning*** threshold on a VM instance. |  
+| FO009 | Disk usage percentage has exceeded configured ***Warning*** threshold on a VM instance. |  
 | FO010 | Disk usage space (MB) has exceeded configured ***Warning*** threshold on a VM instance. |  
-| FO011 | Avergage disk queue length has exceeded configured Erorr threshold. |  
+| FO011 | Avergage disk queue length has exceeded configured ***Error*** threshold. |  
 | FO012 | Average disk queue length has exceeded configured ***Warning*** threshold. |  
 | FO013 | Percentage of total physical memory usage has exceeded configured ***Error*** threshold for an app service process. |  
 | FO014 | Percentage of total physical memory usage has exceeded configured ***Warning*** threshold for an app service process. |  
 | FO015 | Committed memory (MB) has exceeded configured ***Error*** threshold for an app service process. |  
 | FO016 | Committed memory (MB) has exceeded configured ***Warning*** threshold for an app service process. |  
-| FO017 | Percentage of total physical memory usage has exceeded configured ***Warning*** threshold on VM instance. |  
+| FO017 | Percentage of total physical memory usage has exceeded configured ***Error*** threshold on VM instance. |  
 | FO018 | Percentage of total physical memory usage has exceeded configured ***Warning*** threshold on VM instance. | 
 | FO019 | Total Committed memory (MB) has exceeded configured ***Error*** threshold on a VM instance. | 
 | FO020 | Total Committed memory (MB) has exceeded configured ***Warning*** threshold on a VM instance. | 
