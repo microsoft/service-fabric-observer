@@ -7,9 +7,10 @@ using System;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricClusterObserver.Utilities.Telemetry;
 using FabricClusterObserver.Utilities;
+using FabricClusterObserver.Utilities.Telemetry;
 using System.Fabric;
+using System.Linq;
 
 namespace FabricClusterObserver
 {
@@ -90,6 +91,7 @@ namespace FabricClusterObserver
 
             try
             {
+                
                 var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
                                                 this.AsyncClusterOperationTimeoutSeconds,
                                                 token).ConfigureAwait(true);
@@ -119,6 +121,11 @@ namespace FabricClusterObserver
                     {
                         return;
                     }
+
+                    // Check cluster upgrade status.
+                    int UDInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(
+                                                    FabricClientInstance, 
+                                                    Token).ConfigureAwait(false);
 
                     foreach (var evaluation in unhealthyEvaluations)
                     {
@@ -155,6 +162,31 @@ namespace FabricClusterObserver
                                        || (!emitWarningDetails && application.AggregatedHealthState == HealthState.Warning))
                                     {
                                         continue;
+                                    }
+
+                                    var appUpgradeStatus = await FabricClientInstance.ApplicationManager.GetApplicationUpgradeProgressAsync(application.ApplicationName);
+                                    
+                                    if (appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
+                                        || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress)
+                                    {
+                                        var UDInAppUpgrade = await UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(
+                                                                    FabricClientInstance,
+                                                                    Token,
+                                                                    appUpgradeStatus.ApplicationName);
+                                        
+                                        string udText = string.Empty;
+                                        
+                                        // -1 means no upgrade in progress for application
+                                        // int.MaxValue means an exception was thrown during upgrade check and you should
+                                        // check the logs for what went wrong, then fix the bug (if it's a bug you can fix).
+                                        if (UDInAppUpgrade.Any(ud => ud > -1 && ud < int.MaxValue))
+                                        {
+                                            udText = $" in UD {UDInAppUpgrade.Where(ud => ud > -1 && ud < int.MaxValue).First()}";
+                                        }
+
+                                        telemetryDescription += 
+                                            $"Note: {app.ApplicationName} is currently upgrading{udText}, " +
+                                            $"which may be why it's in a transient error or warning state.{Environment.NewLine}";
                                     }
 
                                     var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
@@ -216,6 +248,14 @@ namespace FabricClusterObserver
                                 }
 
                                 telemetryDescription += $"Node in Error or Warning: {node.NodeName}{Environment.NewLine}";
+
+                                if (UDInClusterUpgrade > -1)
+                                {
+                                    telemetryDescription += 
+                                        $"Note: Cluster is currently upgrading in UD {UDInClusterUpgrade}. " +
+                                        $"Node {node.NodeName} Error State could be due to this upgrade process, which will take down a node as a " +
+                                        $"normal part of upgrade process. This is a temporary condition.{Environment.NewLine}.";
+                                }
 
                                 var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(
                                        node.NodeName,
