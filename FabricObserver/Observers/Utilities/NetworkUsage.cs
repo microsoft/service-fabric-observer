@@ -82,22 +82,21 @@ namespace FabricObserver.Utilities
         /// <returns>List of string,int Tuples.</returns>
         /// <summary>
         ///  Returns number of ephemeral ports (ports within a dynamic numerical range) in use by a process
-        ///  on node as a List.<Tuple<int, int>> (process id, port count in use by said process) ordered by port count, descending.
-        ///  On failure, for handled exceptions., this function returns a list of one Tuple<int, int> of value (-1, -1).
+        ///  on node as a List of tuple (int, int) containg process id and port count in use by said process) ordered by port count, descending.
+        ///  On failure, for handled exceptions., this function returns a list of one (int, int) of value (-1, -1).
         /// </summary>
-        /// <param name="procId">Optional int process ID</param>
-        /// <param name="protocol">Optional Protocol (defaults to TCP. Cannot be None.)</param>
-        /// <returns></returns>
-        internal static List<Tuple<int, int>> TupleGetEphemeralPortProcessCount(
-                                                int procId = -1,
-                                                Protocol protocol = Protocol.TCP)
+        /// <param name="procId" type="int">Optional int process ID</param>
+        /// <param name="protocol" type="Protocol">Optional Protocol (defaults to TCP. Cannot be None.)</param>
+        /// <returns>List of tuple (int, int).</returns>
+        internal static List<(int ProcessId, int PortCount)>
+            TupleGetEphemeralPortProcessCount(int procId = -1, Protocol protocol = Protocol.TCP)
         {
             try
             {
                 // Unsupported by underlying API. Could throw an ArgumentException here if that makes you happy.
                 if (protocol == Protocol.None)
                 {
-                    return new List<Tuple<int, int>> { Tuple.Create(-1, -1) };
+                    return new List<(int, int)> { (-1, -1) };
                 }
 
                 string protoParam = Enum.GetName(protocol.GetType(), protocol)?.ToLower();
@@ -120,7 +119,7 @@ namespace FabricObserver.Utilities
                     var stdOutput = p.StandardOutput;
 
                     // (process, port count)
-                    var ephemeralPortProcessTupleList = new List<Tuple<int, int>>();
+                    var ephemeralPortProcessTupleList = new List<(int, int)>();
                     var ephemeralPortList = new List<string>();
 
                     foreach (var portRow in stdOutput?.ReadToEnd().Split(
@@ -147,12 +146,12 @@ namespace FabricObserver.Utilities
 
                     if (exitStatus != "0")
                     {
-                        return new List<Tuple<int, int>> { Tuple.Create(-1, -1) };
+                        return new List<(int, int)> { (-1, -1) };
                     }
 
-                    Tuple<int, int> portRange = TupleGetDynamicPortRange(protocol);
-                    int lowPortRange = portRange.Item1;
-                    int highPortRange = portRange.Item2;
+                    var portRange = TupleGetDynamicPortRange(protocol);
+                    int lowPortRange = portRange.LowPort;
+                    int highPortRange = portRange.HighPort;
 
                     // Add tuple {process id, count} to list for active ports in dynamic range.
                     foreach (string line in ephemeralPortList)
@@ -172,7 +171,7 @@ namespace FabricObserver.Utilities
                             continue;
                         }
 
-                        ephemeralPortProcessTupleList.Add(Tuple.Create(
+                        ephemeralPortProcessTupleList.Add((
                             int.Parse(proc),
                             ephemeralPortList.Where(s => s.Split(
                                                             new string[] { " " },
@@ -182,6 +181,7 @@ namespace FabricObserver.Utilities
                     }
 
                     var ret = ephemeralPortProcessTupleList.OrderByDescending(x => x.Item2).ToList();
+
                     return ret;
                 }
             }
@@ -195,10 +195,11 @@ namespace FabricObserver.Utilities
             {
             }
 
-            return new List<Tuple<int, int>> { Tuple.Create(-1, -1) };
+            return new List<(int, int)> { (-1, -1) };
         }
 
-        internal static Tuple<int, int> TupleGetDynamicPortRange(Protocol protocol = Protocol.TCP)
+        internal static (int LowPort, int HighPort)
+            TupleGetDynamicPortRange(Protocol protocol = Protocol.TCP)
         {
             using (var p = new Process())
             {
@@ -238,13 +239,13 @@ namespace FabricObserver.Utilities
 
                     if (exitStatus != "0")
                     {
-                        return Tuple.Create(-1, -1);
+                        return (-1, -1);
                     }
 
                     int lowPortRange = int.Parse(startPort);
                     int highPortRange = lowPortRange + int.Parse(portCount);
 
-                    return Tuple.Create(lowPortRange, highPortRange);
+                    return (lowPortRange, highPortRange);
                 }
                 catch (ArgumentException)
                 {
@@ -256,7 +257,7 @@ namespace FabricObserver.Utilities
                 {
                 }
 
-                return Tuple.Create(-1, -1);
+                return (-1, -1);
             }
         }
 
@@ -317,9 +318,9 @@ namespace FabricObserver.Utilities
                     }
 
                     int ephemeralPortsInUse = 0;
-                    Tuple<int, int> portRange = TupleGetDynamicPortRange(protocol);
-                    int lowPortRange = portRange.Item1;
-                    int highPortRange = portRange.Item2;
+                    var portRange = TupleGetDynamicPortRange(protocol);
+                    int lowPortRange = portRange.LowPort;
+                    int highPortRange = portRange.HighPort;
 
                     // Compute count of active ports in dynamic range.
                     foreach (string line in ephemeralPortList)
@@ -348,11 +349,12 @@ namespace FabricObserver.Utilities
             return -1;
         }
 
-        internal static Tuple<int, int> TupleGetFabricApplicationPortRangeForNodeType(string nodeType, string clusterManifestXml)
+        internal static (int LowPort, int HighPort)
+            TupleGetFabricApplicationPortRangeForNodeType(string nodeType, string clusterManifestXml)
         {
             if (string.IsNullOrEmpty(nodeType) || string.IsNullOrEmpty(clusterManifestXml))
             {
-                return Tuple.Create(-1, -1);
+                return (-1, -1);
             }
 
             try
@@ -369,11 +371,11 @@ namespace FabricObserver.Utilities
 
                 // Application Port Range.
                 var endpointsNodeList = xdoc.SelectNodes($"//sf:NodeTypes//sf:NodeType[@Name='{nodeType}']//sf:Endpoints", nsmgr);
-                Tuple<int, int> ret = Tuple.Create(-1, -1);
+                var ret = (-1, -1);
 
                 foreach (XmlNode node in endpointsNodeList)
                 {
-                    ret = Tuple.Create(int.Parse(node.ChildNodes[6].Attributes.Item(0).Value), int.Parse(node.ChildNodes[6].Attributes.Item(1).Value));
+                    ret = (int.Parse(node.ChildNodes[6].Attributes.Item(0).Value), int.Parse(node.ChildNodes[6].Attributes.Item(1).Value));
                 }
 
                 reader?.Dispose();
@@ -390,7 +392,7 @@ namespace FabricObserver.Utilities
             {
             }
 
-            return Tuple.Create(-1, -1);
+            return (-1, -1);
         }
 
         internal static int GetActiveFirewallRulesCount()

@@ -351,15 +351,15 @@ namespace FabricObserver
                 sb.AppendLine($"OSHealthStatus*: {this.osStatus}");
                 sb.AppendLine($"NumberOfProcesses*: {numProcs}");
 
-                if (dynamicPortRange.Item1 > -1)
+                if (dynamicPortRange.LowPort > -1)
                 {
-                    osEphemeralPortRange = $"{dynamicPortRange.Item1} - {dynamicPortRange.Item2}";
+                    osEphemeralPortRange = $"{dynamicPortRange.LowPort} - {dynamicPortRange.HighPort}";
                     sb.AppendLine($"WindowsEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
                 }
 
-                if (appPortRange.Item1 > -1)
+                if (appPortRange.LowPort > -1)
                 {
-                    fabricAppPortRange = $"{appPortRange.Item1} - {appPortRange.Item2}";
+                    fabricAppPortRange = $"{appPortRange.LowPort} - {appPortRange.HighPort}";
                     sb.AppendLine($"FabricApplicationTCPPortRange: {fabricAppPortRange}");
                 }
 
@@ -383,22 +383,22 @@ namespace FabricObserver
                 sb.AppendLine($"FreeVirtualMemory*: {Math.Round(freeVirtualMem / 1024 / 1024, 2)} GB");
 
                 // Disk
-                var drivesInformation = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
-                logicalDriveCount = drivesInformation.Count;
+                var drivesInformationTuple = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
+                logicalDriveCount = drivesInformationTuple.Count;
 
                 sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
 
-                foreach (var tuple in drivesInformation)
+                foreach (var (DriveName, DiskSize, PercentConsumed) in drivesInformationTuple)
                 {
                     string systemDrv = "Data";
 
-                    if (Environment.SystemDirectory.Substring(0, 1) == tuple.Item1)
+                    if (Environment.SystemDirectory.Substring(0, 1) == DriveName)
                     {
                         systemDrv = "System";
                     }
 
-                    sb.AppendLine($"Drive {tuple.Item1} ({systemDrv}) Size: {tuple.Item2} GB");
-                    sb.AppendLine($"Drive {tuple.Item1} ({systemDrv}) Consumed*: {tuple.Item3}%");
+                    sb.AppendLine($"Drive {DriveName} ({systemDrv}) Size: {DiskSize} GB");
+                    sb.AppendLine($"Drive {DriveName} ({systemDrv}) Consumed*: {PercentConsumed}%");
                 }
 
                 string osHotFixes = GetWindowsHotFixes(token);

@@ -65,11 +65,12 @@ namespace FabricObserver.Utilities
             return (int)(usedPct * 100);
         }
 
-        internal List<Tuple<string, double, int>> GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit sizeUnit = SizeUnit.Bytes)
+        internal List<(string DriveName, double DiskSize, int PercentConsumed)>
+            GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
 
-            var tuples = new List<Tuple<string, double, int>>();
+            var tuples = new List<(string, double, int)>();
 
             for (int i = 0; i < allDrives.Length; i++)
             {
@@ -81,7 +82,7 @@ namespace FabricObserver.Utilities
                 var drivename = allDrives[i].Name;
                 var totalSize = GetTotalDiskSpace(drivename, sizeUnit);
                 var pctUsed = this.GetCurrentDiskSpaceUsedPercent(drivename);
-                tuples.Add(Tuple.Create(drivename.Substring(0, 1), totalSize, pctUsed));
+                tuples.Add((drivename.Substring(0, 1), totalSize, pctUsed));
             }
 
             return tuples;
