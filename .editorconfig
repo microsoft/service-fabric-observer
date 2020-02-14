@@ -2,3 +2,6 @@
 
 # SA1600: Elements should be documented
 dotnet_diagnostic.SA1600.severity = silent
+
+# SA1312: Variable names should begin with lower-case letter
+dotnet_diagnostic.SA1312.severity = silent

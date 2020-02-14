@@ -291,16 +291,16 @@ namespace FabricObserver
                         }
 
                         // Memory (private working set (process)).
-                        var mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(currentProcess.ProcessName);
-                        this.allAppMemDataMB.FirstOrDefault(x => x.Id == id).Data.Add((long)mem);
+                        var processMem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(currentProcess.ProcessName);
+                        this.allAppMemDataMB.FirstOrDefault(x => x.Id == id).Data.Add((long)processMem);
 
                         // Memory (percent in use (total)).
                         var memInfo = ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
-                        long totalMem = memInfo.Item1;
+                        long totalMem = memInfo.TotalMemory;
 
                         if (totalMem > -1)
                         {
-                            double usedPct = Math.Round(((double)(mem * 100)) / (totalMem * 1024), 2);
+                            double usedPct = Math.Round(((double)(processMem * 100)) / (totalMem * 1024), 2);
                             this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(usedPct);
                         }
 

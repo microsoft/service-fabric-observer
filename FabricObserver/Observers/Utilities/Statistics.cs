@@ -89,12 +89,13 @@ namespace FabricObserver.Utilities
 
             var computation = ComputeSumAndSumOfSquares(sequence);
 
-            var variance = computation.Item3 - (computation.Item2 * computation.Item2 / computation.Item1);
+            var variance = computation.SumOfSquares - (computation.Sum * computation.Sum / computation.Count);
 
-            return Math.Sqrt(variance / computation.Item1);
+            return Math.Sqrt(variance / computation.Count);
         }
 
-        private static Tuple<int, double, double> ComputeSumAndSumOfSquares(IEnumerable<double> sequence)
+        private static (int Count, double Sum, double SumOfSquares)
+            ComputeSumAndSumOfSquares(IEnumerable<double> sequence)
         {
             double sum = 0;
             double sumOfSquares = 0;
@@ -107,7 +108,7 @@ namespace FabricObserver.Utilities
                 sumOfSquares += item * item;
             }
 
-            return new Tuple<int, double, double>(count, sum, sumOfSquares);
+            return (count, sum, sumOfSquares);
         }
 
         internal static double StandardDeviation(List<long> sequence)

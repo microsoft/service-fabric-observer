@@ -191,7 +191,8 @@ namespace FabricObserver
             });
         }
 
-        public static Tuple<long, int> TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        public static (long TotalMemory, int PercentInUse)
+            TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             ManagementObjectSearcher win32OSInfo = null;
             ManagementObjectCollection results = null;
@@ -227,7 +228,7 @@ namespace FabricObserver
                         double used = ((double)(visibleTotal - freePhysical)) / visibleTotal;
                         int usedPct = (int)(used * 100);
 
-                        return Tuple.Create(visibleTotal / 1024 / 1024, usedPct);
+                        return (visibleTotal / 1024 / 1024, usedPct);
                     }
                 }
             }
@@ -246,7 +247,7 @@ namespace FabricObserver
                 results?.Dispose();
             }
 
-            return Tuple.Create(-1L, -1);
+            return (-1L, -1);
         }
 
         private static string GetConfigSettingValue(string parameterName)

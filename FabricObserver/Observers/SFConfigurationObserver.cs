@@ -204,11 +204,11 @@ namespace FabricObserver
                 sb.AppendLine($"Node Id: {this.FabricServiceContext.NodeContext.NodeId}");
                 sb.AppendLine($"Node Instance Id: {this.FabricServiceContext.NodeContext.NodeInstanceId}");
                 sb.AppendLine($"Node Type: {this.FabricServiceContext.NodeContext.NodeType}");
-                Tuple<int, int> portRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                var portRangeTuple = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
 
-                if (portRange.Item1 > -1)
+                if (portRangeTuple.LowPort > -1)
                 {
-                    sb.AppendLine($"Application Port Range: {portRange.Item1} - {portRange.Item2}");
+                    sb.AppendLine($"Application Port Range: {portRangeTuple.LowPort} - {portRangeTuple.HighPort}");
                 }
 
                 var infraNode = xdoc?.SelectSingleNode("//sf:Node", nsmgr);
