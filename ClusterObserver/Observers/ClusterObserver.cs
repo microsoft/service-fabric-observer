@@ -49,9 +49,10 @@ namespace FabricClusterObserver
 
         public override async Task ReportAsync(CancellationToken token)
         {
-            await this.ProbeClusterHealthAsync(token).ConfigureAwait(true);
+            await ProbeClusterHealthAsync(token).ConfigureAwait(true);
         }
 
+        // TODO: Check for active fabric repairs (RM) in cluster.
         private async Task ProbeClusterHealthAsync(CancellationToken token)
         {
             // The point of this service is to emit SF Health telemetry to your external log analytics service, so
@@ -76,12 +77,6 @@ namespace FabricClusterObserver
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitOkHealthState,
                     "false"), out bool emitOkHealthState);
-
-            _ = bool.TryParse(
-                    this.GetSettingParameterValue(
-                    ObserverConstants.ClusterObserverConfigurationSectionName,
-                    ObserverConstants.IgnoreSystemAppWarnings,
-                    "false"), out bool ignoreSystemAppWarnings);
 
             _ = bool.TryParse(
                     this.GetSettingParameterValue(
@@ -134,20 +129,21 @@ namespace FabricClusterObserver
                         telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}{Environment.NewLine}";
 
                         // Application in Warning or Error?
-                        // Note: SF System app Warnings can be noisy, ephemeral (not Errors - you should generally not ignore Error states),
-                        // so check for them and ignore if specified in your config's IgnoreFabricSystemAppWarnings setting.
                         if (evaluation.Kind == HealthEvaluationKind.Application
                             || evaluation.Kind == HealthEvaluationKind.Applications)
                         {
                             foreach (var app in clusterHealth.ApplicationHealthStates)
                             {
                                 Token.ThrowIfCancellationRequested();
+                                
+                                if (app.AggregatedHealthState == HealthState.Ok)
+                                {
+                                    continue;
+                                }
 
-                                if (app.AggregatedHealthState == HealthState.Ok
-                                    || (!emitWarningDetails
-                                       && (app.AggregatedHealthState == HealthState.Warning
-                                          || (evaluation.Kind == HealthEvaluationKind.SystemApplication
-                                          && ignoreSystemAppWarnings))))
+                                // Ignore any Warning state?
+                                if (!emitWarningDetails
+                                     && app.AggregatedHealthState == HealthState.Warning)
                                 {
                                     continue;
                                 }
@@ -159,7 +155,8 @@ namespace FabricClusterObserver
                                     Token.ThrowIfCancellationRequested();
 
                                     if (application.AggregatedHealthState == HealthState.Ok
-                                       || (!emitWarningDetails && application.AggregatedHealthState == HealthState.Warning))
+                                       || (!emitWarningDetails 
+                                           && application.AggregatedHealthState == HealthState.Warning))
                                     {
                                         continue;
                                     }
@@ -312,7 +309,8 @@ namespace FabricClusterObserver
                         this.ObserverName,
                         this.Token);
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
+            catch (Exception e) when 
+                  (e is FabricException || e is OperationCanceledException || e is TimeoutException)
             {
                 this.ObserverLogger.LogError(
                     $"Unable to determine cluster health:{Environment.NewLine}{e.ToString()}");
