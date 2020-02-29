@@ -266,10 +266,8 @@
 
                     return this.Content(ret, format.ToLower() == "html" ? "text/html" : "text/json");
                 }
-                else
-                {
-                    return this.Content("no node found with that name.");
-                }
+
+                return this.Content("no node found with that name.");
             }
             catch (ArgumentException ae)
             {
@@ -370,10 +368,10 @@
 
                     this.sb = new StringBuilder();
 
-                    this.sb.AppendLine("<html>\n\t<head>");
-                    this.sb.AppendLine("\n\t\t<title>FabricObserver Observer Report: Errors and Warnings</title>");
-                    this.sb.AppendLine("\n\t\t" + this.script);
-                    this.sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
+                    _ = this.sb.AppendLine("<html>\n\t<head>");
+                    _ = this.sb.AppendLine("\n\t\t<title>FabricObserver Observer Report: Errors and Warnings</title>");
+                    _ = this.sb.AppendLine("\n\t\t" + this.script);
+                    _ = this.sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
                                    "\t\t\t.container {\n" +
                                    "\t\t\t\tfont-family: Consolas; font-size: 14px; background-color: lightblue; padding: 5px; border: 1px solid grey; " +
                                    "width: 98%;\n" +
@@ -387,65 +385,65 @@
                                    "\t\t\t}\n" +
                                    "\t\t\t a:link { text-decoration: none; }" +
                                    "\n\t\t</style>");
-                    this.sb.AppendLine("\n\t</head>");
-                    this.sb.AppendLine("\n\t<body>");
-                    this.sb.AppendLine("\n\t\t\t <br/>");
-                    this.sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\"><br/><strong>Errors and Warnings for " + name + " on " + nodeName + "</strong><br/><br/>" + nodeLinks);
+                    _ = this.sb.AppendLine("\n\t</head>");
+                    _ = this.sb.AppendLine("\n\t<body>");
+                    _ = this.sb.AppendLine("\n\t\t\t <br/>");
+                    _ = this.sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\"><br/><strong>Errors and Warnings for " + name + " on " + nodeName + "</strong><br/><br/>" + nodeLinks);
 
                     switch (name.ToLower())
                     {
                         case "appobserver":
                             if (!string.IsNullOrEmpty(appObserverLogText))
                             {
-                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + appObserverLogText + "<br/><br/>");
+                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + appObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "diskobserver":
                             if (!string.IsNullOrEmpty(diskObserverLogText))
                             {
-                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + diskObserverLogText + "<br/><br/>");
+                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + diskObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "fabricsystemobserver":
                             if (!string.IsNullOrEmpty(fabricSystemObserverLogText))
                             {
-                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + fabricSystemObserverLogText + "<br/><br/>");
+                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + fabricSystemObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "networkobserver":
                             if (!string.IsNullOrEmpty(networkObserverLogText))
                             {
-                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + networkObserverLogText + "<br/><br/>");
+                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + networkObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "nodeobserver":
                             if (!string.IsNullOrEmpty(nodeObserverLogText))
                             {
-                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + nodeObserverLogText + "<br/><br/>");
+                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + nodeObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "osobserver":
                             if (!string.IsNullOrEmpty(osObserverLogText))
                             {
-                                this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + osObserverLogText + "<br/><br/>");
+                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + osObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         default:
-                            this.sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist.");
+                            _ = this.sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist.");
                             break;
                     }
 
-                    this.sb.AppendLine("\n\t\t\t</div>");
-                    this.sb.AppendLine("\n\t</body>");
-                    this.sb.AppendLine("</html>");
+                    _ = this.sb.AppendLine("\n\t\t\t</div>");
+                    _ = this.sb.AppendLine("\n\t</body>");
+                    _ = this.sb.AppendLine("</html>");
                     html = this.sb.ToString();
-                    this.sb.Clear();
+                    _ = this.sb.Clear();
                     break;
                 }
                 catch (IOException ie)

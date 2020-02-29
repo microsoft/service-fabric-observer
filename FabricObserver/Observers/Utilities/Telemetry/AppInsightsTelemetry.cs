@@ -192,7 +192,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.FromResult(1);
             }
 
-            this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
+            _ = this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
 
             return Task.FromResult(0);
         }

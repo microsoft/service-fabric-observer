@@ -18,7 +18,7 @@ namespace FabricObserver.Observers.Utilities
             CancellationToken token,
             int maxAttempts = 3)
         {
-            Do<object>(
+            _ = Do<object>(
                 () =>
             {
                 action();

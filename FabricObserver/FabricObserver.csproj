@@ -234,6 +234,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Observers\CertificateObserver.cs" />
+    <Compile Include="Observers\Utilities\ConnectionState.cs" />
     <Compile Include="Observers\DiskObserver.cs" />
     <Compile Include="Observers\Interfaces\IDataTableFileLogger.cs" />
     <Compile Include="Observers\Interfaces\IObserverLogger.cs" />

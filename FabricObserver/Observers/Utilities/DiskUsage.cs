@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -70,22 +71,13 @@ namespace FabricObserver.Observers.Utilities
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
 
-            var tuples = new List<(string, double, int)>();
-
-            for (int i = 0; i < allDrives.Length; i++)
-            {
-                if (!allDrives[i].IsReady)
-                {
-                    continue;
-                }
-
-                var drivename = allDrives[i].Name;
-                var totalSize = GetTotalDiskSpace(drivename, sizeUnit);
-                var pctUsed = GetCurrentDiskSpaceUsedPercent(drivename);
-                tuples.Add((drivename.Substring(0, 1), totalSize, pctUsed));
-            }
-
-            return tuples;
+            return (
+                from t in allDrives
+                where t.IsReady
+                select t.Name into driveName
+                let totalSize = GetTotalDiskSpace(driveName, sizeUnit)
+                let pctUsed = GetCurrentDiskSpaceUsedPercent(driveName)
+                select (driveName.Substring(0, 1), totalSize, pctUsed)).ToList();
         }
 
         internal double GetAvailableDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
@@ -111,19 +103,21 @@ namespace FabricObserver.Observers.Utilities
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.isDisposed)
+            if (this.isDisposed)
             {
-                if (disposing)
-                {
-                    if (this.winPerfCounters != null)
-                    {
-                        this.winPerfCounters.Dispose();
-                        this.winPerfCounters = null;
-                    }
-                }
-
-                this.isDisposed = true;
+                return;
             }
+
+            if (disposing)
+            {
+                if (this.winPerfCounters != null)
+                {
+                    this.winPerfCounters.Dispose();
+                    this.winPerfCounters = null;
+                }
+            }
+
+            this.isDisposed = true;
         }
 
         private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)

@@ -24,7 +24,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public WindowsPerfCounters()
         {
-            this.InitializePerfCounters();
+            _ = this.InitializePerfCounters();
             this.Logger = new Logger("Utilities");
         }
 
@@ -74,17 +74,15 @@ namespace FabricObserver.Observers.Utilities
                     // Don't throw.
                     return 0F;
                 }
-                else
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled exception: " + e);
 
-                    throw;
-                }
+                this.Logger.LogError($"{cat} {counter} PerfCounter unhandled exception: " + e);
+
+                throw;
             }
         }
 
         internal float PerfCounterGetProcessorInfo(
-            string countername = null,
+            string counterName = null,
             string category = null,
             string instance = null)
         {
@@ -99,9 +97,9 @@ namespace FabricObserver.Observers.Utilities
                     cat = category;
                 }
 
-                if (!string.IsNullOrEmpty(countername))
+                if (!string.IsNullOrEmpty(counterName))
                 {
-                    counter = countername;
+                    counter = counterName;
                 }
 
                 if (!string.IsNullOrEmpty(instance))
@@ -125,12 +123,10 @@ namespace FabricObserver.Observers.Utilities
                     // Don't throw.
                     return 0F;
                 }
-                else
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
 
-                    throw;
-                }
+                this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
+
+                throw;
             }
         }
 
@@ -169,11 +165,9 @@ namespace FabricObserver.Observers.Utilities
                     // Don't throw.
                     return 0F;
                 }
-                else
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
-                    throw;
-                }
+
+                this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
+                throw;
             }
         }
 
@@ -200,48 +194,48 @@ namespace FabricObserver.Observers.Utilities
                     // Don't throw.
                     return 0F;
                 }
-                else
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
 
-                    throw;
-                }
+                this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
+
+                throw;
             }
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposedValue)
+            if (this.disposedValue)
             {
-                if (disposing)
+                return;
+            }
+
+            if (disposing)
+            {
+                if (this.diskAverageQueueLengthCounter != null)
                 {
-                    if (this.diskAverageQueueLengthCounter != null)
-                    {
-                        this.diskAverageQueueLengthCounter.Dispose();
-                        this.diskAverageQueueLengthCounter = null;
-                    }
-
-                    if (this.memCommittedBytesPerfCounter != null)
-                    {
-                        this.memCommittedBytesPerfCounter.Dispose();
-                        this.memCommittedBytesPerfCounter = null;
-                    }
-
-                    if (this.cpuTimePerfCounter != null)
-                    {
-                        this.cpuTimePerfCounter.Dispose();
-                        this.cpuTimePerfCounter = null;
-                    }
-
-                    if (this.memProcessPrivateWorkingSetCounter != null)
-                    {
-                        this.memProcessPrivateWorkingSetCounter.Dispose();
-                        this.memProcessPrivateWorkingSetCounter = null;
-                    }
+                    this.diskAverageQueueLengthCounter.Dispose();
+                    this.diskAverageQueueLengthCounter = null;
                 }
 
-                this.disposedValue = true;
+                if (this.memCommittedBytesPerfCounter != null)
+                {
+                    this.memCommittedBytesPerfCounter.Dispose();
+                    this.memCommittedBytesPerfCounter = null;
+                }
+
+                if (this.cpuTimePerfCounter != null)
+                {
+                    this.cpuTimePerfCounter.Dispose();
+                    this.cpuTimePerfCounter = null;
+                }
+
+                if (this.memProcessPrivateWorkingSetCounter != null)
+                {
+                    this.memProcessPrivateWorkingSetCounter.Dispose();
+                    this.memProcessPrivateWorkingSetCounter = null;
+                }
             }
+
+            this.disposedValue = true;
         }
 
         /// <inheritdoc/>

@@ -66,19 +66,19 @@ namespace FabricClusterObserver.Observers
             token.ThrowIfCancellationRequested();
 
             // Get ClusterObserver settings (specified in PackageRoot/Config/Settings.xml).
-            bool.TryParse(
+            _ = bool.TryParse(
                 this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitHealthWarningEvaluationConfigurationSetting,
                     "false"), out bool emitWarningDetails);
-            
-            bool.TryParse(
+
+            _ = bool.TryParse(
                 this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitOkHealthState,
                     "false"), out bool emitOkHealthState);
 
-            bool.TryParse(
+            _ = bool.TryParse(
                 this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitHealthStatistics,

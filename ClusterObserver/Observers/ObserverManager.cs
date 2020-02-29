@@ -58,7 +58,7 @@ namespace FabricClusterObserver.Observers
         {
             this.token = token;
             this.cts = new CancellationTokenSource();
-            this.token.Register(() => { this.ShutdownHandler(this, null); });
+            _ = this.token.Register(() => { this.ShutdownHandler(this, null); });
             FabricClientInstance = new FabricClient();
             FabricServiceContext = context;
             this.nodeName = FabricServiceContext?.NodeContext.NodeName;
@@ -94,7 +94,7 @@ namespace FabricClusterObserver.Observers
         {
             this.cts = new CancellationTokenSource();
             this.token = this.cts.Token;
-            this.token.Register(() => { this.ShutdownHandler(this, null); });
+            _ = this.token.Register(() => { this.ShutdownHandler(this, null); });
             this.Logger = new Logger("ObserverManagerSingleObserverRun");
 
             this.observers = new List<ObserverBase>(new[]
@@ -139,7 +139,7 @@ namespace FabricClusterObserver.Observers
             Thread.Sleep(this.shutdownGracePeriodInSeconds * 1000);
 
             this.shutdownSignaled = true;
-            this.globalShutdownEventHandle?.Set();
+            _ = this.globalShutdownEventHandle?.Set();
             this.StopObservers();
         }
 
@@ -165,7 +165,7 @@ namespace FabricClusterObserver.Observers
 
                 // The event can be signaled by CtrlC,
                 // Exit ASAP when the program terminates (i.e., shutdown/abort is signaled.)
-                ewh.WaitOne(timeout.Subtract(elapsedTime));
+                _ = ewh.WaitOne(timeout.Subtract(elapsedTime));
                 stopwatch.Stop();
 
                 elapsedTime = stopwatch.Elapsed;
@@ -264,7 +264,7 @@ namespace FabricClusterObserver.Observers
                 {
                     if (this.shutdownSignaled || this.token.IsCancellationRequested)
                     {
-                        this.globalShutdownEventHandle.Set();
+                        _ = this.globalShutdownEventHandle.Set();
                         this.Logger.LogInfo("Shutdown signaled. Stopping.");
                         break;
                     }
@@ -291,7 +291,7 @@ namespace FabricClusterObserver.Observers
                 // Telemetry.
                 if (TelemetryEnabled)
                 {
-                    TelemetryClient?.ReportHealthAsync(
+                    _ = TelemetryClient?.ReportHealthAsync(
                         HealthScope.Application,
                         "ClusterObserverServiceHealth",
                         HealthState.Warning,
@@ -373,7 +373,7 @@ namespace FabricClusterObserver.Observers
 
                         if (TelemetryEnabled)
                         {
-                            TelemetryClient?.ReportHealthAsync(
+                            _ = TelemetryClient?.ReportHealthAsync(
                                 HealthScope.Application,
                                 "ObserverHealthReport",
                                 HealthState.Warning,
@@ -393,7 +393,7 @@ namespace FabricClusterObserver.Observers
                         continue;
                     }
 
-                    exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:\r\n{ex.InnerException}");
+                    _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:\r\n{ex.InnerException}");
                     allExecuted = false;
                 }
             }
@@ -406,7 +406,7 @@ namespace FabricClusterObserver.Observers
             else
             {
                 this.Logger.LogError(exceptionBuilder.ToString());
-                exceptionBuilder.Clear();
+                _ = exceptionBuilder.Clear();
             }
 
             return allExecuted;

@@ -357,7 +357,7 @@ namespace FabricObserver.Observers
 
                         if (app.ApplicationTypeName?.ToLower() != applicationType.ToLower())
                         {
-                            deployedApps.Remove(app);
+                            _ = deployedApps.Remove(app);
                         }
                     }
                 }
@@ -457,18 +457,17 @@ namespace FabricObserver.Observers
                     {
                         bool isInFilterList = serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
-                        // Include
-                        if (filterType == ServiceFilterType.Include
-                            && !isInFilterList)
+                        switch (filterType)
                         {
-                            continue;
-                        }
-
-                        // Exclude
-                        else if (filterType == ServiceFilterType.Exclude
-                                 && isInFilterList)
-                        {
-                            continue;
+                            // Include
+                            case ServiceFilterType.Include when !isInFilterList:
+                            // Exclude
+                            case ServiceFilterType.Exclude when isInFilterList:
+                                continue;
+                            case ServiceFilterType.None:
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(filterType), filterType, null);
                         }
                     }
                 }
@@ -496,8 +495,8 @@ namespace FabricObserver.Observers
                         }
 
                         // Exclude
-                        else if (filterType == ServiceFilterType.Exclude
-                                 && isInFilterList)
+                        if (filterType == ServiceFilterType.Exclude
+                            && isInFilterList)
                         {
                             continue;
                         }
@@ -578,7 +577,7 @@ namespace FabricObserver.Observers
 
                         // Memory
                         ProcessResourceDataReportHealth(
-                            allAppMemDataMB.Where(x => x.Id == id).FirstOrDefault(),
+                            allAppMemDataMB.FirstOrDefault(x => x.Id == id),
                             app.MemoryErrorLimitMb,
                             app.MemoryWarningLimitMb,
                             timeToLiveWarning,
@@ -587,7 +586,7 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError);
 
                         ProcessResourceDataReportHealth(
-                            allAppMemDataPercent.Where(x => x.Id == id).FirstOrDefault(),
+                            allAppMemDataPercent.FirstOrDefault(x => x.Id == id),
                             app.MemoryErrorLimitPercent,
                             app.MemoryWarningLimitPercent,
                             timeToLiveWarning,
@@ -597,7 +596,7 @@ namespace FabricObserver.Observers
 
                         // Ports
                         ProcessResourceDataReportHealth(
-                            allAppTotalActivePortsData.Where(x => x.Id == id).FirstOrDefault(),
+                            allAppTotalActivePortsData.FirstOrDefault(x => x.Id == id),
                             app.NetworkErrorActivePorts,
                             app.NetworkWarningActivePorts,
                             timeToLiveWarning,
@@ -606,7 +605,7 @@ namespace FabricObserver.Observers
 
                         // Ports
                         ProcessResourceDataReportHealth(
-                            allAppEphemeralPortsData.Where(x => x.Id == id).FirstOrDefault(),
+                            allAppEphemeralPortsData.FirstOrDefault(x => x.Id == id),
                             app.NetworkErrorEphemeralPorts,
                             app.NetworkWarningEphemeralPorts,
                             timeToLiveWarning,
@@ -630,27 +629,24 @@ namespace FabricObserver.Observers
 
         protected override void Dispose(bool disposing)
         {
-            if (disposed)
+            if (disposed || !disposing)
             {
                 return;
             }
 
-            if (disposing)
+            if (perfCounters != null)
             {
-                if (perfCounters != null)
-                {
-                    perfCounters.Dispose();
-                    perfCounters = null;
-                }
-
-                if (diskUsage != null)
-                {
-                    diskUsage.Dispose();
-                    diskUsage = null;
-                }
-
-                disposed = true;
+                perfCounters.Dispose();
+                perfCounters = null;
             }
+
+            if (diskUsage != null)
+            {
+                diskUsage.Dispose();
+                diskUsage = null;
+            }
+
+            disposed = true;
         }
 
         private void LogAllAppResourceDataToCsv(string appName)

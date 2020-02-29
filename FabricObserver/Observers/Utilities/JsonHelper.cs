@@ -36,7 +36,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                JsonConvert.DeserializeObject<T>(text);
+                _ = JsonConvert.DeserializeObject<T>(text);
                 return true;
             }
             catch (JsonSerializationException)

@@ -5,7 +5,7 @@
 
 namespace FabricObserver.Observers.MachineInfoModel
 {
-    internal class ApplicationInfo
+    public class ApplicationInfo
     {
         public string Target { get; set; }
 

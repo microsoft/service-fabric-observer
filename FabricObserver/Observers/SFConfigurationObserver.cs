@@ -53,7 +53,7 @@ namespace FabricObserver.Observers
         private string sFLogRoot;
 
         // Values.
-        private string sFRootDir;
+        public string SFRootDir { get; private set; }
 
         // Values.
         private string sFNodeLastBootTime;
@@ -96,7 +96,7 @@ namespace FabricObserver.Observers
                 this.sFCodePath = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureCodePathRegistryName, null);
                 this.sFDataRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureDataRootRegistryName, null);
                 this.sFLogRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureLogRootRegistryName, null);
-                this.sFRootDir = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureRootDirectoryRegistryName, null);
+                this.SFRootDir = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureRootDirectoryRegistryName, null);
                 this.sFEnableCircularTraceSession = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableCircularTraceSessionRegistryName, null));
                 this.sFVolumeDiskServiceEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureIsSfVolumeDiskServiceEnabledName, null));
                 this.unsupportedPreviewFeaturesEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableUnsupportedPreviewFeaturesName, null));
@@ -186,52 +186,52 @@ namespace FabricObserver.Observers
 
                     // Failover Manager.
                     var fMparameterNodes = xdoc.SelectNodes("//sf:Section[@Name='FailoverManager']//sf:Parameter", nsmgr);
-                    sb.AppendLine("\nCluster Information:\n");
+                    _ = sb.AppendLine("\nCluster Information:\n");
 
                     foreach (XmlNode node in fMparameterNodes)
                     {
                         token.ThrowIfCancellationRequested();
 
-                        sb.AppendLine(node.Attributes.Item(0).Value + ": " + node.Attributes.Item(1).Value);
+                        _ = sb.AppendLine(node.Attributes.Item(0).Value + ": " + node.Attributes.Item(1).Value);
                     }
                 }
 
                 token.ThrowIfCancellationRequested();
 
                 // Node Information.
-                sb.AppendLine($"\nNode Info:\n");
-                sb.AppendLine($"Node Name: {this.NodeName}");
-                sb.AppendLine($"Node Id: {this.FabricServiceContext.NodeContext.NodeId}");
-                sb.AppendLine($"Node Instance Id: {this.FabricServiceContext.NodeContext.NodeInstanceId}");
-                sb.AppendLine($"Node Type: {this.FabricServiceContext.NodeContext.NodeType}");
+                _ = sb.AppendLine($"\nNode Info:\n");
+                _ = sb.AppendLine($"Node Name: {this.NodeName}");
+                _ = sb.AppendLine($"Node Id: {this.FabricServiceContext.NodeContext.NodeId}");
+                _ = sb.AppendLine($"Node Instance Id: {this.FabricServiceContext.NodeContext.NodeInstanceId}");
+                _ = sb.AppendLine($"Node Type: {this.FabricServiceContext.NodeContext.NodeType}");
                 var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
 
                 if (lowPort > -1)
                 {
-                    sb.AppendLine($"Application Port Range: {lowPort} - {highPort}");
+                    _ = sb.AppendLine($"Application Port Range: {lowPort} - {highPort}");
                 }
 
                 var infraNode = xdoc?.SelectSingleNode("//sf:Node", nsmgr);
 
                 if (infraNode != null)
                 {
-                    sb.AppendLine("Is Seed Node: " + infraNode.Attributes["IsSeedNode"]?.Value);
-                    sb.AppendLine("Fault Domain: " + infraNode.Attributes["FaultDomain"]?.Value);
-                    sb.AppendLine("Upgrade Domain: " + infraNode.Attributes["UpgradeDomain"]?.Value);
+                    _ = sb.AppendLine("Is Seed Node: " + infraNode.Attributes["IsSeedNode"]?.Value);
+                    _ = sb.AppendLine("Fault Domain: " + infraNode.Attributes["FaultDomain"]?.Value);
+                    _ = sb.AppendLine("Upgrade Domain: " + infraNode.Attributes["UpgradeDomain"]?.Value);
                 }
 
                 token.ThrowIfCancellationRequested();
 
                 if (!string.IsNullOrEmpty(this.sFNodeLastBootTime))
                 {
-                    sb.AppendLine("Last Rebooted: " + this.sFNodeLastBootTime);
+                    _ = sb.AppendLine("Last Rebooted: " + this.sFNodeLastBootTime);
                 }
 
                 // Stop here for unit testing.
                 if (this.IsTestRun)
                 {
                     ret = sb.ToString();
-                    sb.Clear();
+                    _ = sb.Clear();
 
                     return ret;
                 }
@@ -239,7 +239,7 @@ namespace FabricObserver.Observers
                 // Application Info.
                 if (appList != null)
                 {
-                    sb.AppendLine("\nDeployed Apps:\n");
+                    _ = sb.AppendLine("\nDeployed Apps:\n");
 
                     foreach (var app in appList)
                     {
@@ -251,14 +251,14 @@ namespace FabricObserver.Observers
                         var healthState = app.HealthState.ToString();
                         var status = app.ApplicationStatus.ToString();
 
-                        sb.AppendLine("Application Name: " + appName);
-                        sb.AppendLine("Type: " + appType);
-                        sb.AppendLine("Version: " + appVersion);
-                        sb.AppendLine("Health state: " + healthState);
-                        sb.AppendLine("Status: " + status);
+                        _ = sb.AppendLine("Application Name: " + appName);
+                        _ = sb.AppendLine("Type: " + appType);
+                        _ = sb.AppendLine("Version: " + appVersion);
+                        _ = sb.AppendLine("Health state: " + healthState);
+                        _ = sb.AppendLine("Status: " + status);
 
                         // Service(s).
-                        sb.AppendLine("\n\tServices:");
+                        _ = sb.AppendLine("\n\tServices:");
                         var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
                         var replicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, app.ApplicationName).ConfigureAwait(true);
 
@@ -288,23 +288,23 @@ namespace FabricObserver.Observers
                                     ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
                                 }
 
-                                sb.AppendLine("\tService Name: " + serviceName.OriginalString);
-                                sb.AppendLine("\tTypeName: " + type);
-                                sb.AppendLine("\tKind: " + kind);
-                                sb.AppendLine("\tProcessModel: " + processModel);
-                                sb.AppendLine("\tServiceManifest Version: " + serviceManifestVersion);
+                                _ = sb.AppendLine("\tService Name: " + serviceName.OriginalString);
+                                _ = sb.AppendLine("\tTypeName: " + type);
+                                _ = sb.AppendLine("\tKind: " + kind);
+                                _ = sb.AppendLine("\tProcessModel: " + processModel);
+                                _ = sb.AppendLine("\tServiceManifest Version: " + serviceManifestVersion);
 
                                 if (ports > -1)
                                 {
-                                    sb.AppendLine("\tActive Ports: " + ports);
+                                    _ = sb.AppendLine("\tActive Ports: " + ports);
                                 }
 
                                 if (ephemeralPorts > -1)
                                 {
-                                    sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
+                                    _ = sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
                                 }
 
-                                sb.AppendLine();
+                                _ = sb.AppendLine();
 
                                 // ETW.
                                 if (this.IsEtwEnabled)
@@ -338,7 +338,7 @@ namespace FabricObserver.Observers
                 }
 
                 ret = sb.ToString();
-                sb.Clear();
+                _ = sb.Clear();
             }
             finally
             {
@@ -356,55 +356,55 @@ namespace FabricObserver.Observers
 
             var sb = new StringBuilder();
 
-            sb.AppendLine("\nService Fabric information:\n");
+            _ = sb.AppendLine("\nService Fabric information:\n");
 
             if (!string.IsNullOrEmpty(this.sFVersion))
             {
-                sb.AppendLine("Runtime Version: " + this.sFVersion);
+                _ = sb.AppendLine("Runtime Version: " + this.sFVersion);
             }
 
             if (this.sFBinRoot != null)
             {
-                sb.AppendLine("Fabric Bin root directory: " + this.sFBinRoot);
+                _ = sb.AppendLine("Fabric Bin root directory: " + this.sFBinRoot);
             }
 
             if (this.sFCodePath != null)
             {
-                sb.AppendLine("Fabric Code Path: " + this.sFCodePath);
+                _ = sb.AppendLine("Fabric Code Path: " + this.sFCodePath);
             }
 
             if (!string.IsNullOrEmpty(this.sFDataRoot))
             {
-                sb.AppendLine("Data root directory: " + this.sFDataRoot);
+                _ = sb.AppendLine("Data root directory: " + this.sFDataRoot);
             }
 
             if (!string.IsNullOrEmpty(this.sFLogRoot))
             {
-                sb.AppendLine("Log root directory: " + this.sFLogRoot);
+                _ = sb.AppendLine("Log root directory: " + this.sFLogRoot);
             }
 
             if (this.sFVolumeDiskServiceEnabled != null)
             {
-                sb.AppendLine("Volume Disk Service Enabled: " + this.sFVolumeDiskServiceEnabled);
+                _ = sb.AppendLine("Volume Disk Service Enabled: " + this.sFVolumeDiskServiceEnabled);
             }
 
             if (this.unsupportedPreviewFeaturesEnabled != null)
             {
-                sb.AppendLine("Unsupported Preview Features Enabled: " + this.unsupportedPreviewFeaturesEnabled);
+                _ = sb.AppendLine("Unsupported Preview Features Enabled: " + this.unsupportedPreviewFeaturesEnabled);
             }
 
             if (this.sFCompatibilityJsonPath != null)
             {
-                sb.AppendLine("Compatibility Json path: " + this.sFCompatibilityJsonPath);
+                _ = sb.AppendLine("Compatibility Json path: " + this.sFCompatibilityJsonPath);
             }
 
             if (this.sFEnableCircularTraceSession != null)
             {
-                sb.AppendLine("Enable Circular trace session: " + this.sFEnableCircularTraceSession);
+                _ = sb.AppendLine("Enable Circular trace session: " + this.sFEnableCircularTraceSession);
             }
 
-            sb.Append(await this.GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
-            sb.AppendLine();
+            _ = sb.Append(await this.GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
+            _ = sb.AppendLine();
 
             token.ThrowIfCancellationRequested();
 
@@ -420,7 +420,7 @@ namespace FabricObserver.Observers
                     "Unable to create SFInfraInfo.txt file.");
             }
 
-            sb.Clear();
+            _ = sb.Clear();
         }
     }
 }

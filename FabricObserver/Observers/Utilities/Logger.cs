@@ -171,7 +171,7 @@ namespace FabricObserver.Observers.Utilities
                     {
                         if (directory != null)
                         {
-                            Directory.CreateDirectory(directory);
+                            _ = Directory.CreateDirectory(directory);
                         }
                     }
 

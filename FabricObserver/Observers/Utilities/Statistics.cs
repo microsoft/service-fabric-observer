@@ -36,35 +36,31 @@ namespace FabricObserver.Observers.Utilities
 
         internal static double StandardDeviation<T>(List<T> data)
         {
-            var average = 0.0;
+            double average;
             var squaredMeanDifferences = new List<double>();
 
-            if (data is List<long> v && v.Count > 0)
+            switch (data)
             {
-                average = v.Average();
-                squaredMeanDifferences.AddRange(from n in v
-                                                select (n - average) * (n - average));
-            }
-
-            if (data is List<int> x && x.Count > 0)
-            {
-                average = x.Average();
-                squaredMeanDifferences.AddRange(from n in x
-                                                select (n - average) * (n - average));
-            }
-
-            if (data is List<float> y && y.Count > 0)
-            {
-                average = Convert.ToDouble(y.Average());
-                squaredMeanDifferences.AddRange(from n in y
-                                                select (n - average) * (n - average));
-            }
-
-            if (data is List<double> z && z.Count > 0)
-            {
-                average = z.Average();
-                squaredMeanDifferences.AddRange(from n in z
-                                                select (n - average) * (n - average));
+                case List<long> v when v.Count > 0:
+                    average = v.Average();
+                    squaredMeanDifferences.AddRange(from n in v
+                        select (n - average) * (n - average));
+                    break;
+                case List<int> x when x.Count > 0:
+                    average = x.Average();
+                    squaredMeanDifferences.AddRange(from n in x
+                        select (n - average) * (n - average));
+                    break;
+                case List<float> y when y.Count > 0:
+                    average = Convert.ToDouble(y.Average());
+                    squaredMeanDifferences.AddRange(from n in y
+                        select (n - average) * (n - average));
+                    break;
+                case List<double> z when z.Count > 0:
+                    average = z.Average();
+                    squaredMeanDifferences.AddRange(from n in z
+                        select (n - average) * (n - average));
+                    break;
             }
 
             // Find the mean of those squared differences:
@@ -107,7 +103,7 @@ namespace FabricObserver.Observers.Utilities
             for (int i = 0; i < data.Count; i++)
             {
                 var visit = data[i];
-                bst.Add(visit);
+                _ = bst.Add(visit);
                 map[visit] = i;
 
                 if (i < kwidth - 1)
@@ -118,18 +114,11 @@ namespace FabricObserver.Observers.Utilities
                 if (i >= kwidth && map[data[i - kwidth]] == (i - kwidth))
                 {
                     int k = data[i - kwidth];
-                    bst.Remove(k);
-                    map.Remove(k);
+                    _ = bst.Remove(k);
+                    _ = map.Remove(k);
                 }
 
-                if (windowType == WindowType.Max)
-                {
-                    window.Insert(i - kwidth + 1, bst.Max);
-                }
-                else
-                {
-                    window.Insert(i - kwidth + 1, bst.Min);
-                }
+                window.Insert(i - kwidth + 1, windowType == WindowType.Max ? bst.Max : bst.Min);
             }
 
             return window;

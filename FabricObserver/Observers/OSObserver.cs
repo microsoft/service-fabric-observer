@@ -85,12 +85,12 @@ namespace FabricObserver.Observers
                     if (this.IsTelemetryEnabled)
                     {
                         _ = this.ObserverTelemetryClient?.ReportHealthAsync(
-                        HealthScope.Application,
-                        FabricRuntime.GetActivationContext().ApplicationName,
-                        HealthState.Error,
-                        $"{this.NodeName} - OS reporting unhealthy: {this.osStatus}",
-                        this.ObserverName,
-                        this.Token);
+                            HealthScope.Application,
+                            FabricRuntime.GetActivationContext().ApplicationName,
+                            HealthState.Error,
+                            $"{this.NodeName} - OS reporting unhealthy: {this.osStatus}",
+                            this.ObserverName,
+                            this.Token);
                     }
                 }
                 else if (this.HasActiveFabricErrorOrWarning &&
@@ -181,18 +181,18 @@ namespace FabricObserver.Observers
 
                     if (generateUrl)
                     {
-                        sb.AppendFormat("<a href=\"{0}\" target=\"_blank\">{1}</a>   {2}", obj["Caption"], obj["HotFixID"], obj["InstalledOn"]);
+                        _ = sb.AppendFormat("<a href=\"{0}\" target=\"_blank\">{1}</a>   {2}", obj["Caption"], obj["HotFixID"], obj["InstalledOn"]);
                     }
                     else
                     {
-                        sb.AppendFormat("{0}", obj["HotFixID"]);
+                        _ = sb.AppendFormat("{0}", obj["HotFixID"]);
                     }
 
-                    sb.AppendLine();
+                    _ = sb.AppendLine();
                 }
 
                 ret = sb.ToString().Trim();
-                sb.Clear();
+                _ = sb.Clear();
             }
             catch (ArgumentException)
             {
@@ -232,11 +232,11 @@ namespace FabricObserver.Observers
             string lastBootTime = string.Empty;
             string installDate = string.Empty;
             int logicalProcessorCount = Environment.ProcessorCount;
-            int logicalDriveCount = 0;
-            int activePorts = 0;
-            int activeEphemeralPorts = 0;
+            int logicalDriveCount;
+            int activePorts;
+            int activeEphemeralPorts;
             int totalVirtMem = 0;
-            string fabricAppPortRange = string.Empty;
+            string fabricAppPortRange;
             string osLang = string.Empty;
             double freePhysicalMem = 0;
             double freeVirtualMem = 0;
@@ -328,7 +328,7 @@ namespace FabricObserver.Observers
                 // Active, ephemeral ports.
                 activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
                 var dynamicPortRange = NetworkUsage.TupleGetDynamicPortRange();
-                string clusterManifestXml = null;
+                string clusterManifestXml;
                 string osEphemeralPortRange = string.Empty;
                 fabricAppPortRange = string.Empty;
 
@@ -338,51 +338,51 @@ namespace FabricObserver.Observers
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
                 // OS info.
-                sb.AppendLine("OS Information:\r\n");
-                sb.AppendLine($"Name: {osName}");
-                sb.AppendLine($"Version: {osVersion}");
-                sb.AppendLine($"InstallDate: {installDate}");
-                sb.AppendLine($"LastBootUpTime*: {lastBootTime}");
-                sb.AppendLine($"OSLanguage: {osLang}");
-                sb.AppendLine($"OSHealthStatus*: {this.osStatus}");
-                sb.AppendLine($"NumberOfProcesses*: {numProcs}");
+                _ = sb.AppendLine("OS Information:\r\n");
+                _ = sb.AppendLine($"Name: {osName}");
+                _ = sb.AppendLine($"Version: {osVersion}");
+                _ = sb.AppendLine($"InstallDate: {installDate}");
+                _ = sb.AppendLine($"LastBootUpTime*: {lastBootTime}");
+                _ = sb.AppendLine($"OSLanguage: {osLang}");
+                _ = sb.AppendLine($"OSHealthStatus*: {this.osStatus}");
+                _ = sb.AppendLine($"NumberOfProcesses*: {numProcs}");
 
                 if (dynamicPortRange.LowPort > -1)
                 {
                     osEphemeralPortRange = $"{dynamicPortRange.LowPort} - {dynamicPortRange.HighPort}";
-                    sb.AppendLine($"WindowsEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
+                    _ = sb.AppendLine($"WindowsEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
                 }
 
                 if (lowPort > -1)
                 {
                     fabricAppPortRange = $"{lowPort} - {highPort}";
-                    sb.AppendLine($"FabricApplicationTCPPortRange: {fabricAppPortRange}");
+                    _ = sb.AppendLine($"FabricApplicationTCPPortRange: {fabricAppPortRange}");
                 }
 
                 if (firewalls > -1)
                 {
-                    sb.AppendLine($"ActiveFirewallRules*: {firewalls}");
+                    _ = sb.AppendLine($"ActiveFirewallRules*: {firewalls}");
                 }
 
                 if (activePorts > -1)
                 {
-                    sb.AppendLine($"TotalActiveTCPPorts*: {activePorts}");
+                    _ = sb.AppendLine($"TotalActiveTCPPorts*: {activePorts}");
                 }
 
                 // Hardware info.
                 // Proc/Mem
-                sb.AppendLine("\r\nHardware Information:\r\n");
-                sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
-                sb.AppendLine($"TotalVirtualMemorySize: {totalVirtMem} GB");
-                sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGb} GB");
-                sb.AppendLine($"FreePhysicalMemory*: {Math.Round(freePhysicalMem / 1024 / 1024, 2)} GB");
-                sb.AppendLine($"FreeVirtualMemory*: {Math.Round(freeVirtualMem / 1024 / 1024, 2)} GB");
+                _ = sb.AppendLine("\r\nHardware Information:\r\n");
+                _ = sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
+                _ = sb.AppendLine($"TotalVirtualMemorySize: {totalVirtMem} GB");
+                _ = sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGb} GB");
+                _ = sb.AppendLine($"FreePhysicalMemory*: {Math.Round(freePhysicalMem / 1024 / 1024, 2)} GB");
+                _ = sb.AppendLine($"FreeVirtualMemory*: {Math.Round(freeVirtualMem / 1024 / 1024, 2)} GB");
 
                 // Disk
                 var drivesInformationTuple = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
                 logicalDriveCount = drivesInformationTuple.Count;
 
-                sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
+                _ = sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
 
                 foreach (var (driveName, diskSize, percentConsumed) in drivesInformationTuple)
                 {
@@ -393,19 +393,19 @@ namespace FabricObserver.Observers
                         systemDrv = "System";
                     }
 
-                    sb.AppendLine($"Drive {driveName} ({systemDrv}) Size: {diskSize} GB");
-                    sb.AppendLine($"Drive {driveName} ({systemDrv}) Consumed*: {percentConsumed}%");
+                    _ = sb.AppendLine($"Drive {driveName} ({systemDrv}) Size: {diskSize} GB");
+                    _ = sb.AppendLine($"Drive {driveName} ({systemDrv}) Consumed*: {percentConsumed}%");
                 }
 
                 string osHotFixes = GetWindowsHotFixes(token);
 
                 if (!string.IsNullOrEmpty(osHotFixes))
                 {
-                    sb.AppendLine($"\nWindows Patches/Hot Fixes*:\n\n{osHotFixes}");
+                    _ = sb.AppendLine($"\nWindows Patches/Hot Fixes*:\n\n{osHotFixes}");
                 }
 
                 // Dynamic info qualifier (*)
-                sb.AppendLine($"\n* Dynamic data.");
+                _ = sb.AppendLine($"\n* Dynamic data.");
 
                 this.osReport = sb.ToString();
 
@@ -454,7 +454,7 @@ namespace FabricObserver.Observers
                 results?.Dispose();
                 win32OsInfo?.Dispose();
                 diskUsage?.Dispose();
-                sb.Clear();
+                _ = sb.Clear();
             }
         }
     }

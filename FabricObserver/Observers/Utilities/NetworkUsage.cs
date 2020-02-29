@@ -51,7 +51,7 @@ namespace FabricObserver.Observers.Utilities
                     };
 
                     p.StartInfo = ps;
-                    p.Start();
+                    _ = p.Start();
 
                     var stdOutput = p.StandardOutput;
                     string output = stdOutput.ReadToEnd().Trim('\n', '\r');
@@ -115,7 +115,7 @@ namespace FabricObserver.Observers.Utilities
                     };
 
                     p.StartInfo = ps;
-                    p.Start();
+                    _ = p.Start();
                     var stdOutput = p.StandardOutput;
 
                     // (process, port count)
@@ -223,7 +223,7 @@ namespace FabricObserver.Observers.Utilities
                     };
 
                     p.StartInfo = ps;
-                    p.Start();
+                    _ = p.Start();
 
                     var stdOutput = p.StandardOutput;
                     string output = stdOutput?.ReadToEnd();
@@ -289,7 +289,7 @@ namespace FabricObserver.Observers.Utilities
                     };
 
                     p.StartInfo = ps;
-                    p.Start();
+                    _ = p.Start();
                     var stdOutput = p.StandardOutput;
 
                     var ephemeralPortList = new List<string>();

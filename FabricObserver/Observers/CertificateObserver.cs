@@ -107,7 +107,7 @@ namespace FabricObserver.Observers
             }
             finally
             {
-                store?.Dispose();
+                store.Dispose();
             }
         }
 
@@ -186,7 +186,7 @@ namespace FabricObserver.Observers
             try
             {
                 ch = new X509Chain();
-                ch.Build(certificate);
+                _ = ch.Build(certificate);
 
                 if (ch.ChainElements.Count == 1)
                 {
@@ -264,9 +264,9 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    var clusterCertificateNode = certificateNode?.Item(0).ChildNodes.Item(0);
+                    var clusterCertificateNode = certificateNode?.Item(0)?.ChildNodes.Item(0);
 
-                    var commonNameAttribute = clusterCertificateNode?.Attributes.GetNamedItem("X509FindType");
+                    var commonNameAttribute = clusterCertificateNode?.Attributes?.GetNamedItem("X509FindType");
                     if (commonNameAttribute != null)
                     {
                         if (commonNameAttribute.Value == "FindBySubjectName")
@@ -282,8 +282,8 @@ namespace FabricObserver.Observers
                     }
 
                     this.SecurityConfiguration.SecurityType = SecurityType.Thumbprint;
-                    this.SecurityConfiguration.ClusterCertThumbprintOrCommonName = clusterCertificateNode?.Attributes.GetNamedItem("X509FindValue").Value;
-                    var secondaryThumbprintAttribute = clusterCertificateNode?.Attributes.GetNamedItem("X509FindValueSecondary");
+                    this.SecurityConfiguration.ClusterCertThumbprintOrCommonName = clusterCertificateNode?.Attributes?.GetNamedItem("X509FindValue").Value;
+                    var secondaryThumbprintAttribute = clusterCertificateNode?.Attributes?.GetNamedItem("X509FindValueSecondary");
 
                     if (secondaryThumbprintAttribute != null)
                     {
@@ -335,35 +335,49 @@ namespace FabricObserver.Observers
                 }
             }
 
-            var expiry = newestCertificate.NotAfter; // Expiration time in local time (not UTC)
-            var timeUntilExpiry = expiry.Subtract(System.DateTime.Now);
+            DateTime? expiry = newestCertificate?.NotAfter; // Expiration time in local time (not UTC)
+            var timeUntilExpiry = expiry?.Subtract(DateTime.Now);
 
-            if (timeUntilExpiry.TotalMilliseconds < 0)
+            if (timeUntilExpiry?.TotalMilliseconds < 0)
             {
-                this.ExpiredWarnings.Add($"Certificate expired on {expiry.ToShortDateString()}: [Thumbprint: {newestCertificate.Thumbprint} Issuer {newestCertificate.Issuer}, Subject: {newestCertificate.Subject}]/n{message}");
+                this.ExpiredWarnings.Add(
+                    $"Certificate expired on {expiry?.ToShortDateString()}: " +
+                    $"[Thumbprint: {newestCertificate?.Thumbprint} " +
+                    $"" +
+                    $"Issuer {newestCertificate.Issuer}, " +
+                    $"Subject: {newestCertificate.Subject}]{Environment.NewLine}{message}");
             }
-            else if (timeUntilExpiry.TotalDays < warningThreshold)
+            else if (timeUntilExpiry?.TotalDays < warningThreshold)
             {
-                this.ExpiringWarnings.Add($"Certificate expiring in {timeUntilExpiry.TotalDays} days, on {expiry.ToShortDateString()}: [Thumbprint: {newestCertificate.Thumbprint} Issuer {newestCertificate.Issuer}, Subject: {newestCertificate.Subject}]/n{message}");
+                this.ExpiringWarnings.Add(
+                    $"Certificate expiring in {timeUntilExpiry?.TotalDays} days, on {expiry?.ToShortDateString()}: " +
+                    $"[Thumbprint: {newestCertificate.Thumbprint} " +
+                    $"Issuer {newestCertificate.Issuer}, " +
+                    $"Subject: {newestCertificate.Subject}]{Environment.NewLine}{message}");
             }
         }
 
         private void CheckByThumbprint(X509Store store, string thumbprint, int warningThreshold)
         {
-            var certificates = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
+            var certificates = store.Certificates.Find(
+                X509FindType.FindByThumbprint,
+                thumbprint,
+                false);
 
             if (certificates.Count == 0)
             {
-                this.NotFoundWarnings.Add($"Could not find requested certificate with thumbprint: {thumbprint} in LocalMachine/My");
+                this.NotFoundWarnings.Add(
+                    $"Could not find requested certificate with thumbprint: {thumbprint} in LocalMachine/My");
+
                 return;
             }
 
             // Return first value
             var enumerator = certificates.GetEnumerator();
-            enumerator.MoveNext();
+            _ = enumerator.MoveNext();
 
-            var expiry = enumerator.Current.NotAfter; // Expiration time in local time (not UTC)
-            var timeUntilExpiry = expiry.Subtract(DateTime.Now);
+            var expiry = enumerator?.Current?.NotAfter; // Expiration time in local time (not UTC)
+            var timeUntilExpiry = expiry?.Subtract(DateTime.Now);
             var message = HowToUpdateCnCertsSfLinkHtml;
 
             if (IsSelfSignedCertificate(enumerator.Current))
@@ -371,13 +385,19 @@ namespace FabricObserver.Observers
                 message = HowToUpdateSelfSignedCertSfLinkHtml;
             }
 
-            if (timeUntilExpiry.TotalMilliseconds < 0)
+            if (timeUntilExpiry?.TotalMilliseconds < 0)
             {
-                this.ExpiredWarnings.Add($"Certificate Expired on {expiry.ToShortDateString()}: Thumbprint: {enumerator.Current.Thumbprint} Issuer {enumerator.Current.Issuer}, Subject: {enumerator.Current.Subject}\n{message}");
+                this.ExpiredWarnings.Add($"Certificate Expired on {expiry?.ToShortDateString()}: " +
+                                         $"Thumbprint: {enumerator.Current.Thumbprint} " +
+                                         $"Issuer {enumerator.Current.Issuer}, " +
+                                         $"Subject: {enumerator.Current.Subject}{Environment.NewLine}{message}");
             }
-            else if (timeUntilExpiry.TotalDays < warningThreshold)
+            else if (timeUntilExpiry?.TotalDays < warningThreshold)
             {
-                this.ExpiringWarnings.Add($"Certificate Expiring on {expiry.ToShortDateString()}: Thumbprint: {enumerator.Current.Thumbprint} Issuer {enumerator.Current.Issuer}, Subject: {enumerator.Current.Subject}\n{message}");
+                this.ExpiringWarnings.Add($"Certificate Expiring on {expiry?.ToShortDateString()}: " +
+                                          $"Thumbprint: {enumerator.Current.Thumbprint} " +
+                                          $"Issuer {enumerator.Current.Issuer}, " +
+                                          $"Subject: {enumerator.Current.Subject}{Environment.NewLine}{message}");
             }
         }
     }

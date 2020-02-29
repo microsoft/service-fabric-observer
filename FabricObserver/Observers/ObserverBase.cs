@@ -381,7 +381,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                Directory.CreateDirectory(this.dumpsPath);
+                _ = Directory.CreateDirectory(this.dumpsPath);
             }
             catch (IOException e)
             {
@@ -464,7 +464,7 @@ namespace FabricObserver.Observers
                 {
                     if (!NativeMethods.MiniDumpWriteDump(
                         processHandle,
-                        (uint) processId,
+                        (uint)processId,
                         file.SafeFileHandle,
                         miniDumpType,
                         IntPtr.Zero,
@@ -520,7 +520,7 @@ namespace FabricObserver.Observers
                 // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
-                    this.ObserverTelemetryClient?.ReportMetricAsync(
+                    _ = this.ObserverTelemetryClient?.ReportMetricAsync(
                         $"{this.NodeName}-{name}-{data.Id}-{data.Property}",
                         data.AverageDataValue,
                         this.Token);
@@ -544,7 +544,7 @@ namespace FabricObserver.Observers
                 // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
-                    this.ObserverTelemetryClient?.ReportMetricAsync(
+                    _ = this.ObserverTelemetryClient?.ReportMetricAsync(
                         $"{this.NodeName}-{data.Id}-{data.Property}",
                         data.AverageDataValue,
                         this.Token);
@@ -686,7 +686,7 @@ namespace FabricObserver.Observers
 
                 if (name != null)
                 {
-                    healthMessage.Append($"{name} (Service Process: {procName}, {repPartitionId}, {repOrInstanceId}): ");
+                    _ = healthMessage.Append($"{name} (Service Process: {procName}, {repPartitionId}, {repOrInstanceId}): ");
                 }
 
                 string drive = string.Empty;
@@ -696,8 +696,8 @@ namespace FabricObserver.Observers
                     drive = $"{data.Id}: ";
                 }
 
-                healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
+                _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
+                _ = healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
 
                 var healthReport = new HealthReport
                 {
@@ -725,7 +725,7 @@ namespace FabricObserver.Observers
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (this.IsTelemetryEnabled)
                 {
-                    this.ObserverTelemetryClient?.ReportHealthAsync(
+                    _ = this.ObserverTelemetryClient?.ReportHealthAsync(
                         !string.IsNullOrEmpty(id) ? HealthScope.Application : HealthScope.Node,
                         $"{(appName != null ? appName.OriginalString : this.NodeName)}",
                         healthState,
@@ -746,7 +746,7 @@ namespace FabricObserver.Observers
                             Observer = this.ObserverName,
                             HealthEventErrorCode = errorWarningKind,
                             HealthEventDescription = healthMessage.ToString(),
-                            data.Property, 
+                            data.Property,
                             data.Id,
                             Value = $"{Math.Round(data.AverageDataValue)}",
                             Unit = data.Units,
@@ -754,7 +754,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Clean up sb.
-                healthMessage.Clear();
+                _ = healthMessage.Clear();
             }
             else
             {
