@@ -11,31 +11,31 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using FabricObserver.Utilities;
+using FabricObserver.Observers.Utilities;
 using Microsoft.Win32;
 
-namespace FabricObserver
+namespace FabricObserver.Observers
 {
     // This observer doesn't monitor or report health status.
     // It provides information about the currently installed Service Fabric runtime environment, apps, and services.
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
-    public class SFConfigurationObserver : ObserverBase
+    public class SfConfigurationObserver : ObserverBase
     {
         // SF Reg Key Path.
-        private const string SFWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
+        private const string SfWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
 
         // Keys.
-        private const string SFInfrastructureCompatibilityJsonPathRegistryName = "CompatibilityJsonPath";
-        private const string SFInfrastructureEnableCircularTraceSessionRegistryName = "EnableCircularTraceSession";
-        private const string SFInfrastructureBinRootRegistryName = "FabricBinRoot";
-        private const string SFInfrastructureCodePathRegistryName = "FabricCodePath";
-        private const string SFInfrastructureDataRootRegistryName = "FabricDataRoot";
-        private const string SFInfrastructureLogRootRegistryName = "FabricLogRoot";
-        private const string SFInfrastructureRootDirectoryRegistryName = "FabricRoot";
-        private const string SFInfrastructureVersionRegistryName = "FabricVersion";
-        private const string SFInfrastructureIsSFVolumeDiskServiceEnabledName = "IsSFVolumeDiskServiceEnabled";
-        private const string SFInfrastructureEnableUnsupportedPreviewFeaturesName = "EnableUnsupportedPreviewFeatures";
-        private const string SFInfrastructureNodeLastBootUpTime = "NodeLastBootUpTime";
+        private const string SfInfrastructureCompatibilityJsonPathRegistryName = "CompatibilityJsonPath";
+        private const string SfInfrastructureEnableCircularTraceSessionRegistryName = "EnableCircularTraceSession";
+        private const string SfInfrastructureBinRootRegistryName = "FabricBinRoot";
+        private const string SfInfrastructureCodePathRegistryName = "FabricCodePath";
+        private const string SfInfrastructureDataRootRegistryName = "FabricDataRoot";
+        private const string SfInfrastructureLogRootRegistryName = "FabricLogRoot";
+        private const string SfInfrastructureRootDirectoryRegistryName = "FabricRoot";
+        private const string SfInfrastructureVersionRegistryName = "FabricVersion";
+        private const string SfInfrastructureIsSfVolumeDiskServiceEnabledName = "IsSFVolumeDiskServiceEnabled";
+        private const string SfInfrastructureEnableUnsupportedPreviewFeaturesName = "EnableUnsupportedPreviewFeatures";
+        private const string SfInfrastructureNodeLastBootUpTime = "NodeLastBootUpTime";
 
         // Values.
         private string sFVersion;
@@ -60,15 +60,15 @@ namespace FabricObserver
 
         // Values.
         private string sFCompatibilityJsonPath;
-        private bool? sFVolumeDiskServiceEnabled = null;
-        private bool? unsupportedPreviewFeaturesEnabled = null;
-        private bool? sFEnableCircularTraceSession = null;
+        private bool? sFVolumeDiskServiceEnabled;
+        private bool? unsupportedPreviewFeaturesEnabled;
+        private bool? sFEnableCircularTraceSession;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SFConfigurationObserver"/> class.
+        /// Initializes a new instance of the <see cref="SfConfigurationObserver"/> class.
         /// </summary>
-        public SFConfigurationObserver()
-            : base(ObserverConstants.SFConfigurationObserverName)
+        public SfConfigurationObserver()
+            : base(ObserverConstants.SfConfigurationObserverName)
         {
         }
 
@@ -90,17 +90,17 @@ namespace FabricObserver
 
             try
             {
-                this.sFVersion = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureVersionRegistryName, null);
-                this.sFBinRoot = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureBinRootRegistryName, null);
-                this.sFCompatibilityJsonPath = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureCompatibilityJsonPathRegistryName, null);
-                this.sFCodePath = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureCodePathRegistryName, null);
-                this.sFDataRoot = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureDataRootRegistryName, null);
-                this.sFLogRoot = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureLogRootRegistryName, null);
-                this.sFRootDir = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureRootDirectoryRegistryName, null);
-                this.sFEnableCircularTraceSession = Convert.ToBoolean(Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureEnableCircularTraceSessionRegistryName, null));
-                this.sFVolumeDiskServiceEnabled = Convert.ToBoolean(Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureIsSFVolumeDiskServiceEnabledName, null));
-                this.unsupportedPreviewFeaturesEnabled = Convert.ToBoolean(Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureEnableUnsupportedPreviewFeaturesName, null));
-                this.sFNodeLastBootTime = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureNodeLastBootUpTime, null);
+                this.sFVersion = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureVersionRegistryName, null);
+                this.sFBinRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureBinRootRegistryName, null);
+                this.sFCompatibilityJsonPath = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureCompatibilityJsonPathRegistryName, null);
+                this.sFCodePath = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureCodePathRegistryName, null);
+                this.sFDataRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureDataRootRegistryName, null);
+                this.sFLogRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureLogRootRegistryName, null);
+                this.sFRootDir = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureRootDirectoryRegistryName, null);
+                this.sFEnableCircularTraceSession = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableCircularTraceSessionRegistryName, null));
+                this.sFVolumeDiskServiceEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureIsSfVolumeDiskServiceEnabledName, null));
+                this.unsupportedPreviewFeaturesEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableUnsupportedPreviewFeaturesName, null));
+                this.sFNodeLastBootTime = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureNodeLastBootUpTime, null);
             }
             catch (ArgumentException ae)
             {
@@ -108,7 +108,7 @@ namespace FabricObserver
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
                     HealthState.Warning,
-                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n{ae.ToString()}");
+                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n{ae}");
             }
             catch (IOException ie)
             {
@@ -116,7 +116,7 @@ namespace FabricObserver
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
                     HealthState.Warning,
-                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n {ie.ToString()}");
+                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n {ie}");
             }
             catch (Exception e)
             {
@@ -124,7 +124,7 @@ namespace FabricObserver
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
                     HealthState.Warning,
-                    $"this.NodeName | Unhandled Exception trying to read registry value:\n{e.ToString()}");
+                    $"this.NodeName | Unhandled Exception trying to read registry value:\n{e}");
                 throw;
             }
 
@@ -168,7 +168,7 @@ namespace FabricObserver
             XmlDocument xdoc = null;
             XmlNamespaceManager nsmgr = null;
             StringReader sreader = null;
-            string ret = null;
+            string ret;
 
             try
             {
@@ -204,11 +204,11 @@ namespace FabricObserver
                 sb.AppendLine($"Node Id: {this.FabricServiceContext.NodeContext.NodeId}");
                 sb.AppendLine($"Node Instance Id: {this.FabricServiceContext.NodeContext.NodeInstanceId}");
                 sb.AppendLine($"Node Type: {this.FabricServiceContext.NodeContext.NodeType}");
-                Tuple<int, int> portRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
 
-                if (portRange.Item1 > -1)
+                if (lowPort > -1)
                 {
-                    sb.AppendLine($"Application Port Range: {portRange.Item1} - {portRange.Item2}");
+                    sb.AppendLine($"Application Port Range: {lowPort} - {highPort}");
                 }
 
                 var infraNode = xdoc?.SelectSingleNode("//sf:Node", nsmgr);
@@ -257,7 +257,7 @@ namespace FabricObserver
                         sb.AppendLine("Health state: " + healthState);
                         sb.AppendLine("Status: " + status);
 
-                        // App's Service(s).
+                        // Service(s).
                         sb.AppendLine("\n\tServices:");
                         var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
                         var replicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, app.ApplicationName).ConfigureAwait(true);
@@ -266,7 +266,7 @@ namespace FabricObserver
                         {
                             var kind = service.ServiceKind.ToString();
                             var type = service.ServiceTypeName;
-                            var serviceManifestversion = service.ServiceManifestVersion;
+                            var serviceManifestVersion = service.ServiceManifestVersion;
                             var serviceName = service.ServiceName;
                             var serviceDescription = await this.FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
                             var processModel = serviceDescription.ServicePackageActivationMode.ToString();
@@ -292,7 +292,7 @@ namespace FabricObserver
                                 sb.AppendLine("\tTypeName: " + type);
                                 sb.AppendLine("\tKind: " + kind);
                                 sb.AppendLine("\tProcessModel: " + processModel);
-                                sb.AppendLine("\tServiceManifest Version: " + serviceManifestversion);
+                                sb.AppendLine("\tServiceManifest Version: " + serviceManifestVersion);
 
                                 if (ports > -1)
                                 {
@@ -325,7 +325,7 @@ namespace FabricObserver
                                             ServiceTypeName = type,
                                             Kind = kind,
                                             ProcessModel = processModel,
-                                            ServiceManifestVersion = serviceManifestversion,
+                                            ServiceManifestVersion = serviceManifestVersion,
                                             ActivePorts = ports,
                                             EphemeralPorts = ephemeralPorts,
                                         });

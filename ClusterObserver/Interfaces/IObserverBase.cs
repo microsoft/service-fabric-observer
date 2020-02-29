@@ -9,7 +9,7 @@ using FabricClusterObserver.Utilities;
 
 namespace FabricClusterObserver.Interfaces
 {
-    public interface IObserverBase<TServiceContext> : IObserver
+    public interface IObserverBase<out TServiceContext> : IObserver
     {
         string ObserverName { get; set; }
 

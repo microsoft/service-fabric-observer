@@ -16,9 +16,10 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Utilities;
+using FabricObserver.Observers.Utilities;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
-namespace FabricObserver
+namespace FabricObserver.Observers
 {
     // ***FabricSystemObserver is disabled by default.***
     // This observer monitors all Fabric system service processes across various resource usage metrics.
@@ -47,19 +48,19 @@ namespace FabricObserver
         // amount of time, in seconds, it took this observer to complete run run.
         private TimeSpan runtime = TimeSpan.MinValue;
         private Stopwatch stopWatch;
-        private bool disposed = false;
+        private bool disposed;
 
         // Health Report data container - For use in analysis to deterWarne health state.
         private List<FabricResourceUsageData<int>> allCpuData;
         private List<FabricResourceUsageData<long>> allMemData;
 
         // Windows only. (EventLog).
-        private List<EventRecord> evtRecordList = null;
-        private WindowsPerfCounters perfCounters = null;
-        private DiskUsage diskUsage = null;
-        private bool monitorWinEventLog = false;
-        private int unhealthyNodesErrorThreshold = 0;
-        private int unhealthyNodesWarnThreshold = 0;
+        private List<EventRecord> evtRecordList;
+        private WindowsPerfCounters perfCounters;
+        private DiskUsage diskUsage;
+        private bool monitorWinEventLog;
+        private int unhealthyNodesErrorThreshold;
+        private int unhealthyNodesWarnThreshold;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
@@ -73,9 +74,9 @@ namespace FabricObserver
 
         public int MemErrorUsageThresholdMB { get; set; } = 15000;
 
-        public int TotalActivePortCount { get; set; } = 0;
+        public int TotalActivePortCount { get; set; }
 
-        public int TotalActiveEphemeralPortCount { get; set; } = 0;
+        public int TotalActiveEphemeralPortCount { get; set; }
 
         public int PortCountWarning { get; set; } = 1000;
 
@@ -307,7 +308,7 @@ namespace FabricObserver
                 {
                     this.WriteToLogWithLevel(
                         this.ObserverName,
-                        "Unhandled exception in ObserveAsync. Failed to observe CPU and Memory usage of " + string.Join(",", this.processWatchList) + ": " + e.ToString(),
+                        "Unhandled exception in ObserveAsync. Failed to observe CPU and Memory usage of " + string.Join(",", this.processWatchList) + ": " + e,
                         LogLevel.Error);
                 }
 
@@ -382,7 +383,7 @@ namespace FabricObserver
                             this.allCpuData.FirstOrDefault(x => x.Id == procName).Data.Add(cpu);
 
                             // Memory - Private WS for proc.
-                            var workingset = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMB(process.ProcessName);
+                            var workingset = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
                             this.allMemData.FirstOrDefault(x => x.Id == procName).Data.Add((long)workingset);
 
                             --procCount;
@@ -508,7 +509,7 @@ namespace FabricObserver
         {
             this.Token.ThrowIfCancellationRequested();
             var timeToLiveWarning = this.SetTimeToLiveWarning(this.runtime.Seconds);
-            var portInformationReport = new Utilities.HealthReport
+            var portInformationReport = new HealthReport
             {
                 Observer = this.ObserverName,
                 NodeName = this.NodeName,
@@ -732,7 +733,7 @@ namespace FabricObserver
             }
             catch (Exception e)
             {
-                this.ObserverLogger.LogWarning($"Unhandled Exception querying Cluster health:{Environment.NewLine}{e.ToString()}");
+                this.ObserverLogger.LogWarning($"Unhandled Exception querying Cluster health:{Environment.NewLine}{e}");
 
                 throw;
             }

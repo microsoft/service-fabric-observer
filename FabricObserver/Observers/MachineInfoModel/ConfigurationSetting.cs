@@ -9,12 +9,16 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
 
-namespace FabricObserver.Model
+namespace FabricObserver.Observers.MachineInfoModel
 {
     public class ConfigurationSetting<T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationSetting{T}"/> class.
+        /// <param name="configurationSettings">The settings instance.</param>
+        /// <param name="configurationSectionName">The section name.</param>
+        /// <param name="settingName">The setting name.</param>
+        /// <param name="defaultValue">The default value.</param>
         /// </summary>
         public ConfigurationSetting(
             ConfigurationSettings configurationSettings,
@@ -62,25 +66,20 @@ namespace FabricObserver.Model
         {
             get
             {
-                if (!this.ValueSpecified)
+                if (this.ValueSpecified)
                 {
-                    this.Value1 = this.DefaultValue;
-                    var appConfigValue = this.GetConfigurationSetting(this.SettingName);
-
-                    if (appConfigValue != null)
-                    {
-                        if (!this.TryParse(appConfigValue, out T val))
-                        {
-                            this.Value1 = this.DefaultValue;
-                        }
-                        else
-                        {
-                            this.Value1 = val;
-                        }
-                    }
-
-                    this.ValueSpecified = true;
+                    return this.Value1;
                 }
+
+                this.Value1 = this.DefaultValue;
+                var appConfigValue = this.GetConfigurationSetting(this.SettingName);
+
+                if (appConfigValue != null)
+                {
+                    this.Value1 = !this.TryParse(appConfigValue, out T val) ? this.DefaultValue : val;
+                }
+
+                this.ValueSpecified = true;
 
                 // This is ALWAYS the ACS value of the setting (never overwritten)
                 return this.Value1;
@@ -166,19 +165,7 @@ namespace FabricObserver.Model
 
                 var parseMethod = type.GetMethod("Parse", new[] { typeof(string) });
 
-                if (parseMethod == null)
-                {
-                    return null;
-                }
-
-                try
-                {
-                    return parseMethod.Invoke(null, new object[] { value });
-                }
-                catch (TargetInvocationException)
-                {
-                    throw;
-                }
+                return parseMethod?.Invoke(null, new object[] { value });
             }
             catch (ArgumentException)
             {
@@ -235,16 +222,17 @@ namespace FabricObserver.Model
 
             string parameterValue = this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].Value;
 
-            if (this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].IsEncrypted &&
-                !string.IsNullOrEmpty(parameterValue))
+            if (!this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName]
+                .IsEncrypted || string.IsNullOrEmpty(parameterValue))
             {
-                var paramValueAsCharArray = SecureStringToCharArray(
-                    this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].DecryptValue());
-
-                return new string(paramValueAsCharArray);
+                return parameterValue;
             }
 
-            return parameterValue;
+            var paramValueAsCharArray = SecureStringToCharArray(
+                this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].DecryptValue());
+
+            return new string(paramValueAsCharArray);
+
         }
 
         internal static char[] SecureStringToCharArray(SecureString secureString)

@@ -7,7 +7,7 @@ using System;
 using System.Fabric;
 using System.Fabric.Health;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     /// <summary>
     /// Reports health data to Service Fabric Health Manager and logs locally (optional).
@@ -15,7 +15,7 @@ namespace FabricObserver.Utilities
     public class ObserverHealthReporter
     {
         private readonly Logger logger;
-        private FabricClient fabricClient = null;
+        private readonly FabricClient fabricClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
@@ -100,7 +100,7 @@ namespace FabricObserver.Utilities
                 case ObserverConstants.NetworkObserverName:
                     property = "NetworkingHealth";
                     break;
-                case ObserverConstants.OSObserverName:
+                case ObserverConstants.OsObserverName:
                     property = "MachineInformation";
                     break;
                 case ObserverConstants.NodeObserverName:

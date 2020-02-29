@@ -13,10 +13,12 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Model;
-using FabricObserver.Utilities;
+using FabricObserver.Observers.MachineInfoModel;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
-namespace FabricObserver
+namespace FabricObserver.Observers
 {
     /// <summary>
     /// This observer monitors network conditions related to user-supplied configuration settings in
@@ -58,7 +60,7 @@ namespace FabricObserver
         private List<NetworkObserverConfig> userEndpoints = new List<NetworkObserverConfig>();
         private List<ConnectionState> connectionStatus = new List<ConnectionState>();
         private HealthState healthState = HealthState.Ok;
-        private bool hasRun = false;
+        private bool hasRun;
         private CancellationToken cancellationToken;
 
         /// <summary>
@@ -426,10 +428,10 @@ namespace FabricObserver
                         this.healthState = HealthState.Warning;
                         var healthMessage = "Outbound Internet connection failure detected for endpoint " + connStatus.HostName + "\n";
 
-                        Utilities.HealthReport report = new Utilities.HealthReport
+                        HealthReport report = new HealthReport
                         {
                             AppName = new Uri(this.userEndpoints[j].AppTarget),
-                            Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
+                            Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EmitLogEvent = true,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = timeToLiveWarning,
@@ -450,10 +452,10 @@ namespace FabricObserver
                         if (this.IsTelemetryEnabled)
                         {
                             _ = this.ObserverTelemetryClient?.ReportHealthAsync(
-                                Utilities.Telemetry.HealthScope.Application,
+                                HealthScope.Application,
                                 this.userEndpoints[j].AppTarget,
                                 HealthState.Warning,
-                                $"{this.NodeName}/{FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable}: {healthMessage}",
+                                $"{this.NodeName}/{FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable}: {healthMessage}",
                                 this.ObserverName,
                                 this.Token);
                         }
@@ -466,7 +468,7 @@ namespace FabricObserver
                             var healthMessage = "Outbound Internet connection test successful.";
 
                             // Clear existing Health Warning.
-                            Utilities.HealthReport report = new Utilities.HealthReport
+                            HealthReport report = new HealthReport
                             {
                                 AppName = new Uri(this.userEndpoints[j].AppTarget),
                                 EmitLogEvent = true,

@@ -6,7 +6,7 @@
 using System;
 using System.Diagnostics;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     public class WindowsPerfCounters : IDisposable
     {
@@ -15,7 +15,7 @@ namespace FabricObserver.Utilities
         private PerformanceCounter memCommittedBytesPerfCounter;
         private PerformanceCounter memProcessPrivateWorkingSetCounter;
 
-        private bool disposedValue = false;
+        private bool disposedValue;
 
         private Logger Logger { get; }
 
@@ -69,14 +69,14 @@ namespace FabricObserver.Utilities
                 if (e is ArgumentNullException || e is PlatformNotSupportedException
                     || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
                 {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter handled exception: " + e.ToString());
+                    this.Logger.LogError($"{cat} {counter} PerfCounter handled exception: " + e);
 
                     // Don't throw.
                     return 0F;
                 }
                 else
                 {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled exception: " + e.ToString());
+                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled exception: " + e);
 
                     throw;
                 }
@@ -120,14 +120,14 @@ namespace FabricObserver.Utilities
                 if (e is ArgumentNullException || e is PlatformNotSupportedException
                     || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
                 {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e.ToString());
+                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e);
 
                     // Don't throw.
                     return 0F;
                 }
                 else
                 {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e.ToString());
+                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
 
                     throw;
                 }
@@ -135,9 +135,9 @@ namespace FabricObserver.Utilities
         }
 
         // Committed bytes.
-        internal float PerfCounterGetMemoryInfoMB(
+        internal float PerfCounterGetMemoryInfoMb(
             string category = null,
-            string countername = null)
+            string counterName = null)
         {
             string cat = "Memory";
             string counter = "Committed Bytes";
@@ -149,9 +149,9 @@ namespace FabricObserver.Utilities
                     cat = category;
                 }
 
-                if (!string.IsNullOrEmpty(countername))
+                if (!string.IsNullOrEmpty(counterName))
                 {
-                    counter = countername;
+                    counter = counterName;
                 }
 
                 this.memCommittedBytesPerfCounter.CategoryName = cat;
@@ -164,20 +164,20 @@ namespace FabricObserver.Utilities
                 if (e is ArgumentNullException || e is PlatformNotSupportedException
                     || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
                 {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e.ToString());
+                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e);
 
                     // Don't throw.
                     return 0F;
                 }
                 else
                 {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e.ToString());
+                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
                     throw;
                 }
             }
         }
 
-        internal float PerfCounterGetProcessPrivateWorkingSetMB(string procName)
+        internal float PerfCounterGetProcessPrivateWorkingSetMb(string procName)
         {
             string cat = "Process";
             string counter = "Working Set - Private";
@@ -195,14 +195,14 @@ namespace FabricObserver.Utilities
                 if (e is ArgumentNullException || e is PlatformNotSupportedException
                     || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
                 {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e.ToString());
+                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e);
 
                     // Don't throw.
                     return 0F;
                 }
                 else
                 {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e.ToString());
+                    this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
 
                     throw;
                 }

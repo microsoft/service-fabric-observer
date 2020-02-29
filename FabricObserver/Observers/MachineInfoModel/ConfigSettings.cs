@@ -4,47 +4,43 @@
 // ------------------------------------------------------------
 
 using System.Fabric.Description;
-using FabricObserver.Utilities;
+using FabricObserver.Observers.Utilities;
 
-namespace FabricObserver.Model
+namespace FabricObserver.Observers.MachineInfoModel
 {
     public static class ConfigSettings
     {
-        public static string ConfigPackagePath
-        {
-            get
-            {
-                return ObserverManager.FabricServiceContext.CodePackageActivationContext.
-                    GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
-            }
-        }
+        public static string ConfigPackagePath =>
+            ObserverManager.FabricServiceContext.CodePackageActivationContext.
+                GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
 
-        public static string AppObserverDataFileName { get; set; } = null;
+        public static string AppObserverDataFileName { get; set; }
 
-        public static string NetworkObserverDataFileName { get; set; } = null;
+        public static string NetworkObserverDataFileName { get; set; }
 
         public static void Initialize(
-            ConfigurationSettings configurationSettings,
+            ConfigurationSettings configSettings,
             string configurationSectionName,
             string dataFileName)
         {
-            ConfigSettings.configurationSettings = configurationSettings;
+            ConfigSettings.configurationSettings = configSettings;
 
-            if (configurationSectionName == ObserverConstants.AppObserverConfigurationSectionName)
+            switch (configurationSectionName)
             {
-                AppObserverDataFileName = new ConfigurationSetting<string>(
-                    configurationSettings,
-                    configurationSectionName,
-                    dataFileName,
-                    string.Empty).Value;
-            }
-            else if (configurationSectionName == ObserverConstants.NetworkObserverConfigurationSectionName)
-            {
-                NetworkObserverDataFileName = new ConfigurationSetting<string>(
-                    configurationSettings,
-                    configurationSectionName,
-                    dataFileName,
-                    string.Empty).Value;
+                case ObserverConstants.AppObserverConfigurationSectionName:
+                    AppObserverDataFileName = new ConfigurationSetting<string>(
+                        configSettings,
+                        configurationSectionName,
+                        dataFileName,
+                        string.Empty).Value;
+                    break;
+                case ObserverConstants.NetworkObserverConfigurationSectionName:
+                    NetworkObserverDataFileName = new ConfigurationSetting<string>(
+                        configSettings,
+                        configurationSectionName,
+                        dataFileName,
+                        string.Empty).Value;
+                    break;
             }
         }
 
@@ -55,22 +51,23 @@ namespace FabricObserver.Model
         {
             configurationSettings = newConfigurationSettings;
 
-            // Fabric Client settings
-            if (configurationSectionName == ObserverConstants.AppObserverConfigurationSectionName)
+            switch (configurationSectionName)
             {
-                AppObserverDataFileName = new ConfigurationSetting<string>(
-                    configurationSettings,
-                    configurationSectionName,
-                    dataFileName,
-                    string.Empty).Value;
-            }
-            else if (configurationSectionName == ObserverConstants.NetworkObserverConfigurationSectionName)
-            {
-                NetworkObserverDataFileName = new ConfigurationSetting<string>(
-                    configurationSettings,
-                    configurationSectionName,
-                    dataFileName,
-                    string.Empty).Value;
+                // Fabric Client settings
+                case ObserverConstants.AppObserverConfigurationSectionName:
+                    AppObserverDataFileName = new ConfigurationSetting<string>(
+                        configurationSettings,
+                        configurationSectionName,
+                        dataFileName,
+                        string.Empty).Value;
+                    break;
+                case ObserverConstants.NetworkObserverConfigurationSectionName:
+                    NetworkObserverDataFileName = new ConfigurationSetting<string>(
+                        configurationSettings,
+                        configurationSectionName,
+                        dataFileName,
+                        string.Empty).Value;
+                    break;
             }
         }
 

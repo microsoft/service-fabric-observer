@@ -16,34 +16,35 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Interfaces;
-using FabricObserver.Model;
-using FabricObserver.Utilities;
-using FabricObserver.Utilities.Telemetry;
+using FabricObserver.Observers.Interfaces;
+using FabricObserver.Observers.MachineInfoModel;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Win32;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
-namespace FabricObserver
+namespace FabricObserver.Observers
 {
     public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
     {
         // SF Infra.
-        private const string SFWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
-        private const string SFInfrastructureLogRootRegistryName = "FabricLogRoot";
-        private const int TTLAddMinutes = 1;
-        private string sFLogRoot = null;
+        private const string SfWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
+        private const string SfInfrastructureLogRootRegistryName = "FabricLogRoot";
+        private const int TtlAddMinutes = 1;
+        private string sFLogRoot;
 
         // Dump.
-        private string dumpsPath = null;
+        private string dumpsPath;
         private int maxDumps = 5;
-        private Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
 
         protected bool IsTelemetryEnabled { get; set; } = ObserverManager.TelemetryEnabled;
 
         protected bool IsEtwEnabled { get; set; } = ObserverManager.EtwEnabled;
 
-        protected IObserverTelemetryProvider ObserverTelemetryClient { get; set; } = null;
+        protected IObserverTelemetryProvider ObserverTelemetryClient { get; set; }
 
-        protected FabricClient FabricClientInstance { get; set; } = null;
+        protected FabricClient FabricClientInstance { get; set; }
 
         /// <inheritdoc/>
         public string ObserverName { get; set; }
@@ -85,14 +86,14 @@ namespace FabricObserver
         // This information is used by ObserverManager.
 
         /// <inheritdoc/>
-        public bool HasActiveFabricErrorOrWarning { get; set; } = false;
+        public bool HasActiveFabricErrorOrWarning { get; set; }
 
         /// <inheritdoc/>
         public TimeSpan RunInterval { get; set; } = TimeSpan.MinValue;
 
         public TimeSpan AsyncClusterOperationTimeoutSeconds { get; set; } = TimeSpan.FromSeconds(60);
 
-        public List<string> Settings { get; } = null;
+        public List<string> Settings { get; }
 
         /// <inheritdoc/>
         public abstract Task ObserveAsync(CancellationToken token);
@@ -120,11 +121,11 @@ namespace FabricObserver
 
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
-                this.SetDefaultSFDumpPath();
+                this.SetDefaultSfDumpPath();
             }
 
             // Observer Logger setup.
-            string logFolderBasePath = null;
+            string logFolderBasePath;
             string observerLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
                 ObserverConstants.ObserverLogPath);
@@ -194,7 +195,7 @@ namespace FabricObserver
             if (bool.TryParse(
                 this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
-                ObserverConstants.EnableLongRunningCSVLogging),
+                ObserverConstants.EnableLongRunningCsvLogging),
                 out bool enableDataLogging))
             {
                 this.CsvFileLogger.EnableCsvLogging = enableDataLogging;
@@ -219,6 +220,8 @@ namespace FabricObserver
                 case LogLevel.Error:
                     this.ObserverLogger.LogError("{0} logged at level {1}: {2}", property, level, description);
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(level), level, null);
             }
 
             Logger.Flush();
@@ -242,12 +245,12 @@ namespace FabricObserver
             {
                 var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
-                if (!serviceConfiguration.Settings.Sections.Any(sec => sec.Name == sectionName))
+                if (serviceConfiguration.Settings.Sections.All(sec => sec.Name != sectionName))
                 {
                     return null;
                 }
 
-                if (!serviceConfiguration.Settings.Sections[sectionName].Parameters.Any(param => param.Name == parameterName))
+                if (serviceConfiguration.Settings.Sections[sectionName].Parameters.All(param => param.Name != parameterName))
                 {
                     return null;
                 }
@@ -290,7 +293,7 @@ namespace FabricObserver
 
             var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
-            var sections = serviceConfiguration.Settings.Sections.Where(sec => sec.Name == sectionName)?.FirstOrDefault();
+            var sections = serviceConfiguration.Settings.Sections.FirstOrDefault(sec => sec.Name == sectionName);
 
             if (sections == null)
             {
@@ -349,7 +352,7 @@ namespace FabricObserver
                         this.FabricServiceContext.ServiceName.OriginalString,
                         this.ObserverName,
                         HealthState.Warning,
-                        $"Unhandled exception running GetObserverRunInterval:{Environment.NewLine}{e.ToString()}");
+                        $"Unhandled exception running GetObserverRunInterval:{Environment.NewLine}{e}");
 
                     throw;
                 }
@@ -358,12 +361,12 @@ namespace FabricObserver
             return interval;
         }
 
-        private void SetDefaultSFDumpPath()
+        private void SetDefaultSfDumpPath()
         {
             // This only needs to be set once.
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
-                this.sFLogRoot = (string)Registry.GetValue(SFWindowsRegistryPath, SFInfrastructureLogRootRegistryName, null);
+                this.sFLogRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureLogRootRegistryName, null);
 
                 if (!string.IsNullOrEmpty(this.sFLogRoot))
                 {
@@ -371,22 +374,24 @@ namespace FabricObserver
                 }
             }
 
-            if (!Directory.Exists(this.dumpsPath))
+            if (Directory.Exists(this.dumpsPath))
             {
-                try
-                {
-                    Directory.CreateDirectory(this.dumpsPath);
-                }
-                catch (IOException e)
-                {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.ToString(),
-                        this.ObserverName,
-                        HealthState.Warning,
-                        $"Unable to create dumps directory:{Environment.NewLine}{e.ToString()}");
+                return;
+            }
 
-                    this.dumpsPath = null;
-                }
+            try
+            {
+                Directory.CreateDirectory(this.dumpsPath);
+            }
+            catch (IOException e)
+            {
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.ToString(),
+                    this.ObserverName,
+                    HealthState.Warning,
+                    $"Unable to create dumps directory:{Environment.NewLine}{e}");
+
+                this.dumpsPath = null;
             }
         }
 
@@ -400,35 +405,37 @@ namespace FabricObserver
 
             string processName = string.Empty;
 
-            var miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal;
+            NativeMethods.MINIDUMP_TYPE miniDumpType;
 
-            if (dumpType == DumpType.Full)
+            switch (dumpType)
             {
-                miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
-            }
-            else if (dumpType == DumpType.MiniPlus)
-            {
-                miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
-            }
-            else if (dumpType == DumpType.Mini)
-            {
-                miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithIndirectlyReferencedMemory |
-                               NativeMethods.MINIDUMP_TYPE.MiniDumpScanMemory;
+                case DumpType.Full:
+                    miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
+                    break;
+                case DumpType.MiniPlus:
+                    miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
+                    break;
+                case DumpType.Mini:
+                    miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithIndirectlyReferencedMemory |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpScanMemory;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(dumpType), dumpType, null);
             }
 
             try
             {
                 // This is to ensure friendly-name of resulting dmp file.
-                processName = Process.GetProcessById(processId)?.ProcessName;
+                processName = Process.GetProcessById(processId).ProcessName;
 
                 if (string.IsNullOrEmpty(processName))
                 {
@@ -457,7 +464,7 @@ namespace FabricObserver
                 {
                     if (!NativeMethods.MiniDumpWriteDump(
                         processHandle,
-                        (uint)processId,
+                        (uint) processId,
                         file.SafeFileHandle,
                         miniDumpType,
                         IntPtr.Zero,
@@ -470,17 +477,10 @@ namespace FabricObserver
 
                 return true;
             }
-            catch (ArgumentException ae)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
-                this.ObserverLogger.LogInfo("Unable to generate dump file {0} with error {1}", processName, ae.ToString());
-            }
-            catch (InvalidOperationException ie)
-            {
-                this.ObserverLogger.LogInfo("Unable to generate dump file {0} with error {1}", processName, ie.ToString());
-            }
-            catch (Win32Exception we)
-            {
-                this.ObserverLogger.LogInfo("Unable to generate dump file {0} with error {1}", processName, we.ToString());
+                this.ObserverLogger.LogInfo(
+                    $"Unable to generate dump file {processName} with error{Environment.NewLine}{e}");
             }
 
             return false;
@@ -509,7 +509,7 @@ namespace FabricObserver
 
             if (replicaOrInstance != null)
             {
-                repPartitionId = $"Partition: {replicaOrInstance.Partitionid}";
+                repPartitionId = $"Partition: {replicaOrInstance.PartitionId}";
                 repOrInstanceId = $"Replica: {replicaOrInstance.ReplicaOrInstanceId}";
 
                 // Create a unique id which may be used in the case of warnings or OK clears.
@@ -520,7 +520,7 @@ namespace FabricObserver
                 // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
-                    _ = this.ObserverTelemetryClient?.ReportMetricAsync(
+                    this.ObserverTelemetryClient?.ReportMetricAsync(
                         $"{this.NodeName}-{name}-{data.Id}-{data.Property}",
                         data.AverageDataValue,
                         this.Token);
@@ -528,7 +528,7 @@ namespace FabricObserver
 
                 try
                 {
-                    procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId)?.ProcessName;
+                    procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId).ProcessName;
                 }
                 catch (ArgumentException)
                 {
@@ -544,7 +544,7 @@ namespace FabricObserver
                 // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
-                    _ = this.ObserverTelemetryClient?.ReportMetricAsync(
+                    this.ObserverTelemetryClient?.ReportMetricAsync(
                         $"{this.NodeName}-{data.Id}-{data.Property}",
                         data.AverageDataValue,
                         this.Token);
@@ -561,8 +561,8 @@ namespace FabricObserver
                         Level = 0, // Info
                         Node = this.NodeName,
                         Observer = this.ObserverName,
-                        Property = data.Property,
-                        Id = data.Id,
+                        data.Property,
+                        data.Id,
                         Value = $"{Math.Round(data.AverageDataValue)}",
                         Unit = data.Units,
                     });
@@ -604,13 +604,9 @@ namespace FabricObserver
 
                     // Ignore these, it just means no dmp will be created.This is not
                     // critical to FO. Log as info, not warning.
-                    catch (ArgumentException ae)
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
                     {
-                        this.ObserverLogger.LogInfo($"Unable to generate dmp file:\n{ae.ToString()}");
-                    }
-                    catch (InvalidOperationException ioe)
-                    {
-                        this.ObserverLogger.LogInfo($"Unable to generate dmp file:\n{ioe.ToString()}");
+                        this.ObserverLogger.LogInfo($"Unable to generate dmp file:{Environment.NewLine}{e}");
                     }
                 }
             }
@@ -626,90 +622,64 @@ namespace FabricObserver
             {
                 string errorWarningKind = null;
 
-                if (data.Property == ErrorWarningProperty.TotalCpuTime)
+                switch (data.Property)
                 {
-                    if (replicaOrInstance != null)
-                    {
+                    case ErrorWarningProperty.TotalCpuTime when replicaOrInstance != null:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.AppErrorCpuTime : FOErrorWarningCodes.AppWarningCpuTime;
-                    }
-                    else
-                    {
+                            FoErrorWarningCodes.AppErrorCpuTime : FoErrorWarningCodes.AppWarningCpuTime;
+                        break;
+                    case ErrorWarningProperty.TotalCpuTime:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorCpuTime : FOErrorWarningCodes.NodeWarningCpuTime;
-                    }
-                }
-                else if (data.Property == ErrorWarningProperty.DiskSpaceUsagePercentage)
-                {
-                    errorWarningKind = (healthState == HealthState.Error) ?
-                        FOErrorWarningCodes.NodeErrorDiskSpacePercentUsed : FOErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
-                }
-                else if (data.Property == ErrorWarningProperty.DiskSpaceUsageMB)
-                {
-                    errorWarningKind = (healthState == HealthState.Error) ?
-                        FOErrorWarningCodes.NodeErrorDiskSpaceMB : FOErrorWarningCodes.NodeWarningDiskSpaceMB;
-                }
-                else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionMB)
-                {
-                    if (replicaOrInstance != null)
-                    {
+                            FoErrorWarningCodes.NodeErrorCpuTime : FoErrorWarningCodes.NodeWarningCpuTime;
+                        break;
+                    case ErrorWarningProperty.DiskSpaceUsagePercentage:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.AppErrorMemoryCommittedMB : FOErrorWarningCodes.AppWarningMemoryCommittedMB;
-                    }
-                    else
-                    {
+                            FoErrorWarningCodes.NodeErrorDiskSpacePercentUsed : FoErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
+                        break;
+                    case ErrorWarningProperty.DiskSpaceUsageMb:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                           FOErrorWarningCodes.NodeErrorMemoryCommittedMB : FOErrorWarningCodes.NodeWarningMemoryCommittedMB;
-                    }
-                }
-                else if (data.Property == ErrorWarningProperty.TotalMemoryConsumptionPct)
-                {
-                    if (replicaOrInstance != null)
-                    {
+                            FoErrorWarningCodes.NodeErrorDiskSpaceMb : FoErrorWarningCodes.NodeWarningDiskSpaceMb;
+                        break;
+                    case ErrorWarningProperty.TotalMemoryConsumptionMb when replicaOrInstance != null:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.AppErrorMemoryPercentUsed : FOErrorWarningCodes.AppWarningMemoryPercentUsed;
-                    }
-                    else
-                    {
+                            FoErrorWarningCodes.AppErrorMemoryCommittedMb : FoErrorWarningCodes.AppWarningMemoryCommittedMb;
+                        break;
+                    case ErrorWarningProperty.TotalMemoryConsumptionMb:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorMemoryPercentUsed : FOErrorWarningCodes.NodeWarningMemoryPercentUsed;
-                    }
-                }
-                else if (data.Property == ErrorWarningProperty.DiskAverageQueueLength)
-                {
-                    errorWarningKind = (healthState == HealthState.Error) ?
-                        FOErrorWarningCodes.NodeErrorDiskAverageQueueLength : FOErrorWarningCodes.NodeWarningDiskAverageQueueLength;
-                }
-                else if (data.Property == ErrorWarningProperty.TotalActiveFirewallRules)
-                {
-                    errorWarningKind = (healthState == HealthState.Error) ?
-                        FOErrorWarningCodes.ErrorTooManyFirewallRules : FOErrorWarningCodes.WarningTooManyFirewallRules;
-                }
-                else if (data.Property == ErrorWarningProperty.TotalActivePorts)
-                {
-                    if (replicaOrInstance != null)
-                    {
+                            FoErrorWarningCodes.NodeErrorMemoryCommittedMb : FoErrorWarningCodes.NodeWarningMemoryCommittedMb;
+                        break;
+                    case ErrorWarningProperty.TotalMemoryConsumptionPct when replicaOrInstance != null:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                        FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
-                    }
-                    else
-                    {
+                            FoErrorWarningCodes.AppErrorMemoryPercentUsed : FoErrorWarningCodes.AppWarningMemoryPercentUsed;
+                        break;
+                    case ErrorWarningProperty.TotalMemoryConsumptionPct:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
-                    }
-                }
-                else if (data.Property == ErrorWarningProperty.TotalEphemeralPorts)
-                {
-                    if (replicaOrInstance != null)
-                    {
+                            FoErrorWarningCodes.NodeErrorMemoryPercentUsed : FoErrorWarningCodes.NodeWarningMemoryPercentUsed;
+                        break;
+                    case ErrorWarningProperty.DiskAverageQueueLength:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
-                    }
-                    else
-                    {
+                            FoErrorWarningCodes.NodeErrorDiskAverageQueueLength : FoErrorWarningCodes.NodeWarningDiskAverageQueueLength;
+                        break;
+                    case ErrorWarningProperty.TotalActiveFirewallRules:
                         errorWarningKind = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
-                    }
+                            FoErrorWarningCodes.ErrorTooManyFirewallRules : FoErrorWarningCodes.WarningTooManyFirewallRules;
+                        break;
+                    case ErrorWarningProperty.TotalActivePorts when replicaOrInstance != null:
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FoErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FoErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
+                        break;
+                    case ErrorWarningProperty.TotalActivePorts:
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FoErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FoErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
+                        break;
+                    case ErrorWarningProperty.TotalEphemeralPorts when replicaOrInstance != null:
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FoErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FoErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
+                        break;
+                    case ErrorWarningProperty.TotalEphemeralPorts:
+                        errorWarningKind = (healthState == HealthState.Error) ?
+                            FoErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FoErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
+                        break;
                 }
 
                 var healthMessage = new StringBuilder();
@@ -729,7 +699,7 @@ namespace FabricObserver
                 healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
                 healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
 
-                var healthReport = new Utilities.HealthReport
+                var healthReport = new HealthReport
                 {
                     AppName = appName,
                     Code = errorWarningKind,
@@ -755,7 +725,7 @@ namespace FabricObserver
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (this.IsTelemetryEnabled)
                 {
-                    _ = this.ObserverTelemetryClient?.ReportHealthAsync(
+                    this.ObserverTelemetryClient?.ReportHealthAsync(
                         !string.IsNullOrEmpty(id) ? HealthScope.Application : HealthScope.Node,
                         $"{(appName != null ? appName.OriginalString : this.NodeName)}",
                         healthState,
@@ -776,8 +746,8 @@ namespace FabricObserver
                             Observer = this.ObserverName,
                             HealthEventErrorCode = errorWarningKind,
                             HealthEventDescription = healthMessage.ToString(),
-                            Property = data.Property,
-                            Id = data.Id,
+                            data.Property, 
+                            data.Id,
                             Value = $"{Math.Round(data.AverageDataValue)}",
                             Unit = data.Units,
                         });
@@ -790,7 +760,7 @@ namespace FabricObserver
             {
                 if (data.ActiveErrorOrWarning)
                 {
-                    var report = new Utilities.HealthReport
+                    var report = new HealthReport
                     {
                         AppName = appName,
                         EmitLogEvent = true,
@@ -823,39 +793,39 @@ namespace FabricObserver
             if (this.LastRunDateTime == DateTime.MinValue)
             {
                 return TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds)
-                       .Add(TimeSpan.FromMinutes(TTLAddMinutes));
+                       .Add(TimeSpan.FromMinutes(TtlAddMinutes));
             }
-            else
-            {
-                return DateTime.Now.Subtract(this.LastRunDateTime)
-                       .Add(TimeSpan.FromSeconds(runDuration))
-                       .Add(TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds))
 
-                       // If a RunInterval is specified, it must be reflected in the TTL.
-                       .Add(this.RunInterval > TimeSpan.MinValue ? this.RunInterval : TimeSpan.Zero)
-                       .Add(TimeSpan.FromMinutes(TTLAddMinutes));
-            }
+            return DateTime.Now.Subtract(this.LastRunDateTime)
+                   .Add(TimeSpan.FromSeconds(runDuration))
+                   .Add(TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds))
+
+                   // If a RunInterval is specified, it must be reflected in the TTL.
+                   .Add(this.RunInterval > TimeSpan.MinValue ? this.RunInterval : TimeSpan.Zero)
+                   .Add(TimeSpan.FromMinutes(TtlAddMinutes));
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.
         // If an Observer needs to dispose, then override this non-impl.
-        private bool disposedValue = false; // To detect redundant calls
+        private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposedValue)
+            if (this.disposedValue)
             {
-                if (disposing)
-                {
-                    if (this.FabricClientInstance != null)
-                    {
-                        this.FabricClientInstance.Dispose();
-                        this.FabricClientInstance = null;
-                    }
-                }
-
-                this.disposedValue = true;
+                return;
             }
+
+            if (disposing)
+            {
+                if (this.FabricClientInstance != null)
+                {
+                    this.FabricClientInstance.Dispose();
+                    this.FabricClientInstance = null;
+                }
+            }
+
+            this.disposedValue = true;
         }
 
         /// <inheritdoc/>

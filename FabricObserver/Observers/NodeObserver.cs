@@ -7,31 +7,31 @@ using System;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Utilities;
+using FabricObserver.Observers.Utilities;
 
-namespace FabricObserver
+namespace FabricObserver.Observers
 {
     // This observer monitors VM level resource usage across CPU and Memory, and reports port and firewall rule counts.
-    // Thresholds for Erorr and Warning signals are user-supplied in NodeObserver.config.json.
+    // Thresholds for Error and Warning signals are user-supplied in NodeObserver.config.json.
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class NodeObserver : ObserverBase
     {
-        private FabricResourceUsageData<float> allCpuDataPrivTime = null;
-        private FabricResourceUsageData<float> allMemDataCommittedBytes = null;
-        private FabricResourceUsageData<int> firewallData = null;
-        private FabricResourceUsageData<int> activePortsData = null;
-        private FabricResourceUsageData<int> ephemeralPortsData = null;
-        private FabricResourceUsageData<int> allMemDataPercentUsed = null;
+        private FabricResourceUsageData<float> allCpuDataPrivTime;
+        private FabricResourceUsageData<float> allMemDataCommittedBytes;
+        private FabricResourceUsageData<int> firewallData;
+        private FabricResourceUsageData<int> activePortsData;
+        private FabricResourceUsageData<int> ephemeralPortsData;
+        private FabricResourceUsageData<int> allMemDataPercentUsed;
         private WindowsPerfCounters perfCounters;
-        private bool disposed = false;
+        private bool disposed;
 
         public int CpuErrorUsageThresholdPct { get; set; }
 
-        public int MemErrorUsageThresholdMB { get; set; }
+        public int MemErrorUsageThresholdMb { get; set; }
 
         public int CpuWarningUsageThresholdPct { get; set; }
 
-        public int MemWarningUsageThresholdMB { get; set; }
+        public int MemWarningUsageThresholdMb { get; set; }
 
         public int ActivePortsErrorThreshold { get; set; }
 
@@ -111,7 +111,7 @@ namespace FabricObserver
 
             if (this.allMemDataCommittedBytes == null)
             {
-                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMB, "MemoryConsumedMb");
+                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb");
             }
 
             if (this.allMemDataPercentUsed == null)
@@ -152,11 +152,11 @@ namespace FabricObserver
 
             var memError = this.GetSettingParameterValue(
                 ObserverConstants.NodeObserverConfigurationSectionName,
-                ObserverConstants.NodeObserverMemoryErrorLimitMB);
+                ObserverConstants.NodeObserverMemoryErrorLimitMb);
 
-            if (!string.IsNullOrEmpty(memError) && int.TryParse(memError, out int memErrorUsageThresholdMB))
+            if (!string.IsNullOrEmpty(memError) && int.TryParse(memError, out int memErrorUsageThresholdMb))
             {
-                this.MemErrorUsageThresholdMB = memErrorUsageThresholdMB;
+                this.MemErrorUsageThresholdMb = memErrorUsageThresholdMb;
             }
 
             var portsErr = this.GetSettingParameterValue(
@@ -210,11 +210,11 @@ namespace FabricObserver
 
             var memWarn = this.GetSettingParameterValue(
                 ObserverConstants.NodeObserverConfigurationSectionName,
-                ObserverConstants.NodeObserverMemoryWarningLimitMB);
+                ObserverConstants.NodeObserverMemoryWarningLimitMb);
 
-            if (!string.IsNullOrEmpty(memWarn) && int.TryParse(memWarn, out int memWarningUsageThresholdMB))
+            if (!string.IsNullOrEmpty(memWarn) && int.TryParse(memWarn, out int memWarningUsageThresholdMb))
             {
-                this.MemWarningUsageThresholdMB = memWarningUsageThresholdMB;
+                this.MemWarningUsageThresholdMb = memWarningUsageThresholdMb;
             }
 
             var portsWarn = this.GetSettingParameterValue(
@@ -284,14 +284,15 @@ namespace FabricObserver
                             this.allCpuDataPrivTime.Data.Add(this.perfCounters.PerfCounterGetProcessorInfo());
                         }
 
-                        if (this.MemWarningUsageThresholdMB > 0)
+                        if (this.MemWarningUsageThresholdMb > 0)
                         {
-                            this.allMemDataCommittedBytes.Data.Add(this.perfCounters.PerfCounterGetMemoryInfoMB());
+                            this.allMemDataCommittedBytes.Data.Add(this.perfCounters.PerfCounterGetMemoryInfoMb());
                         }
 
                         if (this.MemoryWarningLimitPercent > 0)
                         {
-                            this.allMemDataPercentUsed.Data.Add(ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse().Item2);
+                            this.allMemDataPercentUsed.Data.Add(
+                                ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                         }
 
                         Thread.Sleep(250);
@@ -396,8 +397,8 @@ namespace FabricObserver
                 {
                     this.ProcessResourceDataReportHealth(
                         this.allMemDataCommittedBytes,
-                        this.MemErrorUsageThresholdMB,
-                        this.MemWarningUsageThresholdMB,
+                        this.MemErrorUsageThresholdMb,
+                        this.MemWarningUsageThresholdMb,
                         timeToLiveWarning);
                 }
 

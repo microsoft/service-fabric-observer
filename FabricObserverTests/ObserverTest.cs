@@ -7,11 +7,13 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver;
+using FabricClusterObserver.Observers;
 using FabricObserver;
-using FabricObserver.Utilities;
+using FabricObserver.Observers;
+using FabricObserver.Observers.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ClusterObserverManager = FabricClusterObserver.ObserverManager;
-using ObserverManager = FabricObserver.ObserverManager;
+using ClusterObserverManager = FabricClusterObserver.Observers.ObserverManager;
+using ObserverManager = FabricObserver.Observers.ObserverManager;
 
 /*
 
@@ -58,7 +60,7 @@ namespace FabricObserverTests
                     Guid.NewGuid(),
                     long.MaxValue);
 
-        private readonly bool isSFRuntimePresentOnTestMachine = false;
+        private readonly bool isSFRuntimePresentOnTestMachine;
         private CancellationToken token = new CancellationToken { };
 
         /// <summary>
@@ -264,12 +266,12 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new OSObserver();
+            var obs = new OsObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.CsvFileLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.OsObserverName);
 
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
@@ -284,13 +286,13 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new SFConfigurationObserver();
+            var obs = new SfConfigurationObserver();
 
             // These are set in derived ObserverBase.
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.CsvFileLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.SFConfigurationObserverName);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.SfConfigurationObserverName);
 
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
@@ -669,7 +671,7 @@ namespace FabricObserverTests
 
             var stopWatch = new Stopwatch();
 
-            var obs = new OSObserver
+            var obs = new OsObserver
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
@@ -718,7 +720,7 @@ namespace FabricObserverTests
 
             var stopWatch = new Stopwatch();
 
-            var obs = new SFConfigurationObserver
+            var obs = new SfConfigurationObserver
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
@@ -1022,7 +1024,7 @@ namespace FabricObserverTests
             {
                 IsTestRun = true,
                 CpuWarningUsageThresholdPct = -1000,
-                MemWarningUsageThresholdMB = -2500,
+                MemWarningUsageThresholdMb = -2500,
                 EphemeralPortsErrorThreshold = -42,
             };
 
@@ -1056,7 +1058,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new OSObserver()
+            var obs = new OsObserver()
             {
                 IsTestRun = true,
                 TestManifestPath = $@"{Environment.CurrentDirectory}\clusterManifest.xml",
@@ -1293,7 +1295,7 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
-                MemWarningUsageThresholdMB = 1, // This will generate Warning for sure.
+                MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1329,7 +1331,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new SFConfigurationObserver
+            var obs = new SfConfigurationObserver
             {
                 IsTestRun = true,
             };

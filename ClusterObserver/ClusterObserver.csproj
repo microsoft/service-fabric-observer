@@ -137,6 +137,7 @@
     <Compile Include="Utilities\ObserverConstants.cs" />
     <Compile Include="Utilities\Telemetry\AppInsightsTelemetry.cs" />
     <Compile Include="Utilities\Telemetry\HealthScope.cs" />
+    <Compile Include="Utilities\UpgradeChecker.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig">

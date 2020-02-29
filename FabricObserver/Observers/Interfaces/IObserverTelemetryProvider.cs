@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Utilities.Telemetry;
+using FabricObserver.Observers.Utilities.Telemetry;
 
-namespace FabricObserver.Interfaces
+namespace FabricObserver.Observers.Interfaces
 {
     /// <summary>
     /// IObserverTelemetry interface.

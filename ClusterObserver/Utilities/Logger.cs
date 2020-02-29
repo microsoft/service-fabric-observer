@@ -17,19 +17,17 @@ namespace FabricClusterObserver.Utilities
         // Text file logger for observers - info/warn/error.
         private ILogger OLogger { get; set; }
 
-        private string loggerName = null;
+        private readonly string loggerName;
 
-        internal string Foldername { get; }
+        internal string FolderName { get; }
 
         internal string Filename { get; }
 
-        /// <inheritdoc/>
         public bool EnableVerboseLogging { get; set; } = false;
 
-        /// <inheritdoc/>
-        public string LogFolderBasePath { get; set; } = null;
+        public string LogFolderBasePath { get; set; }
 
-        public string FilePath { get; set; } = null;
+        public string FilePath { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.
@@ -38,7 +36,7 @@ namespace FabricClusterObserver.Utilities
         /// <param name="logFolderBasePath">Base folder path.</param>
         public Logger(string observerName, string logFolderBasePath = null)
         {
-            this.Foldername = observerName;
+            this.FolderName = observerName;
             this.Filename = observerName + ".log";
             this.loggerName = observerName;
 
@@ -64,9 +62,9 @@ namespace FabricClusterObserver.Utilities
 
             string file = Path.Combine(logFolderBase, "fabric_observer.log");
 
-            if (!string.IsNullOrEmpty(this.Foldername) && !string.IsNullOrEmpty(this.Filename))
+            if (!string.IsNullOrEmpty(this.FolderName) && !string.IsNullOrEmpty(this.Filename))
             {
-                string folderPath = Path.Combine(logFolderBase, this.Foldername);
+                string folderPath = Path.Combine(logFolderBase, this.FolderName);
                 file = Path.Combine(folderPath, this.Filename);
             }
 
@@ -104,13 +102,11 @@ namespace FabricClusterObserver.Utilities
             this.OLogger = LogManager.GetLogger(this.loggerName);
         }
 
-        /// <inheritdoc/>
         public void LogTrace(string observer, string format, params object[] parameters)
         {
             this.OLogger.Trace(observer + "|" + format, parameters);
         }
 
-        /// <inheritdoc/>
         public void LogInfo(string format, params object[] parameters)
         {
             if (!this.EnableVerboseLogging)
@@ -121,13 +117,11 @@ namespace FabricClusterObserver.Utilities
             this.OLogger.Info(format, parameters);
         }
 
-        /// <inheritdoc/>
         public void LogError(string format, params object[] parameters)
         {
             this.OLogger.Error(format, parameters);
         }
 
-        /// <inheritdoc/>
         public void LogWarning(string format, params object[] parameters)
         {
             this.OLogger.Warn(format, parameters);

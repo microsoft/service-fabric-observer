@@ -7,12 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     internal class DiskUsage : IDisposable
     {
         private WindowsPerfCounters winPerfCounters;
-        private bool isDisposed = false;
+        private bool isDisposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DiskUsage"/> class.
@@ -38,9 +38,9 @@ namespace FabricObserver.Utilities
         /// Gets the percent used space (as an integer value) of the current drive where this code is running from.
         /// Or from whatever drive letter you supplied to DiskUsage(string driveLetter) ctor.
         /// </summary>
-        internal int PercentUsedSpace => this.GetCurrentDiskSpaceUsedPercent(this.Drive);
+        internal int PercentUsedSpace => GetCurrentDiskSpaceUsedPercent(this.Drive);
 
-        internal string Drive { get; private set; }
+        internal string Drive { get; }
 
         internal static double GetTotalDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
@@ -50,7 +50,7 @@ namespace FabricObserver.Utilities
             return Math.Round(ConvertToSizeUnits(total, sizeUnit), 2);
         }
 
-        internal int GetCurrentDiskSpaceUsedPercent(string drive)
+        internal static int GetCurrentDiskSpaceUsedPercent(string drive)
         {
             if (string.IsNullOrEmpty(drive))
             {
@@ -58,18 +58,19 @@ namespace FabricObserver.Utilities
             }
 
             var driveInfo = new DriveInfo(drive);
-            long availableMB = driveInfo.AvailableFreeSpace / 1024 / 1024;
-            long totalMB = driveInfo.TotalSize / 1024 / 1024;
-            double usedPct = ((double)(totalMB - availableMB)) / totalMB;
+            long availableMb = driveInfo.AvailableFreeSpace / 1024 / 1024;
+            long totalMb = driveInfo.TotalSize / 1024 / 1024;
+            double usedPct = ((double)(totalMb - availableMb)) / totalMb;
 
             return (int)(usedPct * 100);
         }
 
-        internal List<Tuple<string, double, int>> GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit sizeUnit = SizeUnit.Bytes)
+        internal List<(string DriveName, double DiskSize, int PercentConsumed)>
+            GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
 
-            var tuples = new List<Tuple<string, double, int>>();
+            var tuples = new List<(string, double, int)>();
 
             for (int i = 0; i < allDrives.Length; i++)
             {
@@ -80,14 +81,14 @@ namespace FabricObserver.Utilities
 
                 var drivename = allDrives[i].Name;
                 var totalSize = GetTotalDiskSpace(drivename, sizeUnit);
-                var pctUsed = this.GetCurrentDiskSpaceUsedPercent(drivename);
-                tuples.Add(Tuple.Create(drivename.Substring(0, 1), totalSize, pctUsed));
+                var pctUsed = GetCurrentDiskSpaceUsedPercent(drivename);
+                tuples.Add((drivename.Substring(0, 1), totalSize, pctUsed));
             }
 
             return tuples;
         }
 
-        internal double GetAvailabeDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
+        internal double GetAvailableDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             var driveInfo = new DriveInfo(driveLetter);
             long available = driveInfo.AvailableFreeSpace;

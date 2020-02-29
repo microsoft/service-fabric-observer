@@ -7,13 +7,13 @@ using System;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
-using FabricObserver.Interfaces;
+using FabricObserver.Observers.Interfaces;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
 using NLog.Time;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     public sealed class Logger : IObserverLogger<ILogger>
     {
@@ -22,7 +22,7 @@ namespace FabricObserver.Utilities
         // Text file logger for observers - info/warn/error.
         private ILogger OLogger { get; set; }
 
-        private string loggerName = null;
+        private string loggerName;
 
         internal string Foldername { get; }
 
@@ -32,9 +32,9 @@ namespace FabricObserver.Utilities
         public bool EnableVerboseLogging { get; set; } = false;
 
         /// <inheritdoc/>
-        public string LogFolderBasePath { get; set; } = null;
+        public string LogFolderBasePath { get; set; }
 
-        public string FilePath { get; set; } = null;
+        public string FilePath { get; set; }
 
         public static EventSource EtwLogger { get; private set; }
 
@@ -166,9 +166,13 @@ namespace FabricObserver.Utilities
                 try
                 {
                     string directory = Path.GetDirectoryName(path);
+
                     if (!Directory.Exists(directory))
                     {
-                        Directory.CreateDirectory(directory);
+                        if (directory != null)
+                        {
+                            Directory.CreateDirectory(directory);
+                        }
                     }
 
                     File.WriteAllText(path, content);

@@ -3,13 +3,13 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     public sealed class ErrorWarningProperty
     {
         // CPU/Memory
         public const string TotalCpuTime = "Total CPU Time";
-        public const string TotalMemoryConsumptionMB = "Memory Consumption MB";
+        public const string TotalMemoryConsumptionMb = "Memory Consumption MB";
         public const string TotalMemoryConsumptionPct = "Memory Consumption %";
 
         // Certificates
@@ -18,9 +18,9 @@ namespace FabricObserver.Utilities
         // Disk.
         public const string DiskAverageQueueLength = "Average Disk Queue Length";
         public const string DiskSpaceUsagePercentage = "Disk Space Consumption %";
-        public const string DiskSpaceUsageMB = "Disk Space Consumption MB";
-        public const string DiskSpaceAvailableMB = "Disk Space Available MB";
-        public const string DiskSpaceTotalMB = "Disk Space Total MB";
+        public const string DiskSpaceUsageMb = "Disk Space Consumption MB";
+        public const string DiskSpaceAvailableMb = "Disk Space Available MB";
+        public const string DiskSpaceTotalMb = "Disk Space Total MB";
 
         // Network
         public const string InternetConnectionFailure = "Outbound Internet Connection Failure";
