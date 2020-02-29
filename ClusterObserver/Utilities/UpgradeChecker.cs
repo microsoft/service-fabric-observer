@@ -10,13 +10,14 @@ namespace FabricClusterObserver.Utilities
 {
     public static class UpgradeChecker
     {
-        private static readonly Logger logger = new Logger("UpgradeLogger");
-      
+        private static readonly Logger Logger = new Logger("UpgradeLogger");
+
         /// <summary>
         /// Gather list of UD's from all upgrades
         /// </summary>
         /// <param name="fabricClient">FabricClient</param>
-        /// <returns>List of ud's</returns>
+        /// <param name="token"></param>
+        /// <returns>List of uds</returns>
         public static async Task<IList<int>>
             GetUDsWhereUpgradeInProgressAsync(FabricClient fabricClient, CancellationToken token)
         {
@@ -47,7 +48,7 @@ namespace FabricClusterObserver.Utilities
         {
             try
             {
-                ApplicationList appList = null;
+                ApplicationList appList;
                 int currentUpgradeDomainInProgress = -1;
                 var upgradeDomainsInProgress = new List<int>();
 
@@ -77,7 +78,7 @@ namespace FabricClusterObserver.Utilities
                     {
                         if (int.TryParse(upgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
                         {
-                            logger.LogInfo($"Application Upgrade for {application.ApplicationName} is in progress in {currentUpgradeDomainInProgress} upgrade domain.");
+                            Logger.LogInfo($"Application Upgrade for {application.ApplicationName} is in progress in {currentUpgradeDomainInProgress} upgrade domain.");
 
                             if (!upgradeDomainsInProgress.Contains(currentUpgradeDomainInProgress))
                             {
@@ -97,7 +98,7 @@ namespace FabricClusterObserver.Utilities
                 // remains -1, otherwise it will be added only once
                 if (!upgradeDomainsInProgress.Any())
                 {
-                    logger.LogInfo(
+                    Logger.LogInfo(
                         $"No Application Upgrade is in progress in domain {currentUpgradeDomainInProgress}");
 
                     upgradeDomainsInProgress.Add(currentUpgradeDomainInProgress);
@@ -107,7 +108,7 @@ namespace FabricClusterObserver.Utilities
             }
             catch (Exception e)
             {
-                logger.LogError(e.ToString());
+                Logger.LogError(e.ToString());
 
                 return new List<int>{ int.MaxValue };
             }
@@ -117,6 +118,7 @@ namespace FabricClusterObserver.Utilities
         /// Get the UD where service fabric upgrade is in progress
         /// </summary>
         /// <param name="fabricClient">FabricClient</param>
+        /// <param name="token"></param>
         /// <returns>UD in progress</returns>
         public static async Task<int> GetUdsWhereFabricUpgradeInProgressAsync(
             FabricClient fabricClient, 
@@ -137,7 +139,7 @@ namespace FabricClusterObserver.Utilities
                 {
                     if (int.TryParse(fabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
                     {
-                        logger.LogInfo("ServiceFabric Upgrade is in progress in {0} domain", currentUpgradeDomainInProgress);
+                        Logger.LogInfo("ServiceFabric Upgrade is in progress in {0} domain", currentUpgradeDomainInProgress);
                         
                         return currentUpgradeDomainInProgress;
                     }
@@ -148,13 +150,13 @@ namespace FabricClusterObserver.Utilities
                 }
 
                 // Will return -1 if there are no upgrades are in progress for service fabric.
-                logger.LogInfo($"No Service Fabric Upgrade is in progress in domain {currentUpgradeDomainInProgress}.");
+                Logger.LogInfo($"No Service Fabric Upgrade is in progress in domain {currentUpgradeDomainInProgress}.");
                 
                 return currentUpgradeDomainInProgress;
             }
             catch (Exception e)
             {
-                logger.LogError(e.ToString());
+                Logger.LogError(e.ToString());
 
                 return int.MaxValue;
             }

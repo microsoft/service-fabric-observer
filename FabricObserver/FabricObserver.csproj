@@ -240,11 +240,13 @@
     <Compile Include="Observers\Interfaces\IObserver.cs" />
     <Compile Include="Observers\Interfaces\IObserverBase.cs" />
     <Compile Include="Observers\Interfaces\IObserverTelemetryProvider.cs" />
+    <Compile Include="Observers\MachineInfoModel\Endpoint.cs" />
     <Compile Include="Observers\MachineInfoModel\NetworkObserverConfig.cs" />
     <Compile Include="Observers\NetworkObserver.cs" />
     <Compile Include="Observers\NodeObserver.cs" />
     <Compile Include="Observers\Utilities\FOErrorWarningCodes.cs" />
     <Compile Include="Observers\Utilities\ErrorWarningProperty.cs" />
+    <Compile Include="Observers\Utilities\Protocol.cs" />
     <Compile Include="Observers\Utilities\SecurityConfiguration.cs" />
     <Compile Include="Observers\Utilities\SecurityType.cs" />
     <Compile Include="Observers\Utilities\HealthReport.cs" />

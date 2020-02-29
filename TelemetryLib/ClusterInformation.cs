@@ -22,7 +22,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
         private const string FabricRegistryKeyPath = "Software\\Microsoft\\Service Fabric";
         private static string paasClusterId;
         private static string diagnosticsClusterId;
-        private static XmlDocument clusterManifestXdoc = null;
+        private static XmlDocument clusterManifestXdoc;
   
         /// <summary>
         /// Gets ClusterID, tenantID and ClusterType for current ServiceFabric cluster

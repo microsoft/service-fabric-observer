@@ -6,7 +6,7 @@
 using System;
 using System.Fabric.Health;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     public class HealthReport
     {

@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     [SuppressUnmanagedCodeSecurity]
     internal static class NativeMethods

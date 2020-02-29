@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricClusterObserver.Observers;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 
@@ -13,7 +14,7 @@ namespace FabricClusterObserver
     /// </summary>
     internal sealed class FabricClusterObserver : StatelessService
     {
-        private ObserverManager observerManager = null;
+        private ObserverManager observerManager;
 
         public FabricClusterObserver(StatelessServiceContext context)
             : base(context)

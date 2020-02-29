@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     public static class JsonHelper
     {
@@ -36,7 +36,7 @@ namespace FabricObserver.Utilities
 
             try
             {
-                var app = JsonConvert.DeserializeObject<T>(text);
+                JsonConvert.DeserializeObject<T>(text);
                 return true;
             }
             catch (JsonSerializationException)

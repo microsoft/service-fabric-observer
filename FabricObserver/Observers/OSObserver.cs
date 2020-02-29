@@ -12,28 +12,30 @@ using System.Management;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Utilities;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
-namespace FabricObserver
+namespace FabricObserver.Observers
 {
     // This observer monitors OS health state and provides static and dynamic OS level information.
-    // This observer is not configurable. It will signal infinte TTL Ok Health Reports that will show up
+    // This observer is not configurable. It will signal infinite TTL Ok Health Reports that will show up
     // under node details in SFX as well as emit ETW events.
     // If FabricObserverWebApi is installed, the output includes a local file that is used
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
-    public class OSObserver : ObserverBase
+    public class OsObserver : ObserverBase
     {
         private string osReport;
         private string osStatus;
-        private int totalVisibleMemoryGB = -1;
+        private int totalVisibleMemoryGb = -1;
 
         public string TestManifestPath { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="OSObserver"/> class.
+        /// Initializes a new instance of the <see cref="OsObserver"/> class.
         /// </summary>
-        public OSObserver()
-            : base(ObserverConstants.OSObserverName)
+        public OsObserver()
+            : base(ObserverConstants.OsObserverName)
         {
         }
 
@@ -65,7 +67,7 @@ namespace FabricObserver
                     this.osStatus.ToUpper() != "OK")
                 {
                     string healthMessage = $"OS reporting unhealthy: {this.osStatus}";
-                    var healthReport = new Utilities.HealthReport
+                    var healthReport = new HealthReport
                     {
                         Observer = this.ObserverName,
                         NodeName = this.NodeName,
@@ -83,7 +85,7 @@ namespace FabricObserver
                     if (this.IsTelemetryEnabled)
                     {
                         _ = this.ObserverTelemetryClient?.ReportHealthAsync(
-                        Utilities.Telemetry.HealthScope.Application,
+                        HealthScope.Application,
                         FabricRuntime.GetActivationContext().ApplicationName,
                         HealthState.Error,
                         $"{this.NodeName} - OS reporting unhealthy: {this.osStatus}",
@@ -97,7 +99,7 @@ namespace FabricObserver
                 {
                     // Clear Error or Warning with an OK Health Report.
                     string healthMessage = $"OS reporting healthy: {this.osStatus}";
-                    var healthReport = new Utilities.HealthReport
+                    var healthReport = new HealthReport
                     {
                         Observer = this.ObserverName,
                         NodeName = this.NodeName,
@@ -127,7 +129,7 @@ namespace FabricObserver
                     }
                 }
 
-                var osReport = new Utilities.HealthReport
+                var report = new HealthReport
                 {
                     Observer = this.ObserverName,
                     HealthMessage = this.osReport,
@@ -136,7 +138,7 @@ namespace FabricObserver
                     HealthReportTimeToLive = this.SetTimeToLiveWarning(),
                 };
 
-                this.HealthReporter.ReportHealthToServiceFabric(osReport);
+                this.HealthReporter.ReportHealthToServiceFabric(report);
 
                 return Task.CompletedTask;
             }
@@ -210,9 +212,7 @@ namespace FabricObserver
             finally
             {
                 results?.Dispose();
-                results = null;
                 searcher?.Dispose();
-                searcher = null;
             }
 
             return ret;
@@ -220,7 +220,7 @@ namespace FabricObserver
 
         private void GetComputerInfo(CancellationToken token)
         {
-            ManagementObjectSearcher win32OSInfo = null;
+            ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
 
             var sb = new StringBuilder();
@@ -243,8 +243,8 @@ namespace FabricObserver
 
             try
             {
-                win32OSInfo = new ManagementObjectSearcher("SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory,TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
-                results = win32OSInfo.Get();
+                win32OsInfo = new ManagementObjectSearcher("SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory,TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+                results = win32OsInfo.Get();
 
                 foreach (var prop in results)
                 {
@@ -262,58 +262,61 @@ namespace FabricObserver
                             continue;
                         }
 
-                        if (name.ToLower() == "caption")
+                        switch (name.ToLower())
                         {
-                            osName = value;
-                        }
-                        else if (name.ToLower() == "numberofprocesses")
-                        {
-                            // Number of running processes
-                            _ = int.TryParse(value, out numProcs);
-                        }
-                        else if (name.ToLower() == "status")
-                        {
-                            this.osStatus = value;
-                        }
-                        else if (name.ToLower() == "oslanguage")
-                        {
-                            osLang = value;
-                        }
-                        else if (name.ToLower() == "version")
-                        {
-                            osVersion = value;
-                        }
-                        else if (name.ToLower().Contains("bootuptime"))
-                        {
-                            value = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
-                            lastBootTime = value;
-                        }
-                        else if (name.ToLower().Contains("date"))
-                        {
-                            value = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
-                            installDate = value;
-                        }
-                        else if (name.ToLower().Contains("memory"))
-                        {
-                            // For output.
-                            int i = int.Parse(value) / 1024 / 1024;
+                            case "caption":
+                                osName = value;
+                                break;
+                            case "numberofprocesses":
+                                // Number of running processes
+                                _ = int.TryParse(value, out numProcs);
+                                break;
+                            case "status":
+                                this.osStatus = value;
+                                break;
+                            case "oslanguage":
+                                osLang = value;
+                                break;
+                            case "version":
+                                osVersion = value;
+                                break;
+                            default:
+                            {
+                                if (name.ToLower().Contains("bootuptime"))
+                                {
+                                    value = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
+                                    lastBootTime = value;
+                                }
+                                else if (name.ToLower().Contains("date"))
+                                {
+                                    value = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
+                                    installDate = value;
+                                }
+                                else if (name.ToLower().Contains("memory"))
+                                {
+                                    // For output.
+                                    int i = int.Parse(value) / 1024 / 1024;
 
-                            // TotalVisible only needs to be set once.
-                            if (name.ToLower().Contains("totalvisible"))
-                            {
-                                this.totalVisibleMemoryGB = i;
-                            }
-                            else if (name.ToLower().Contains("totalvirtual"))
-                            {
-                                totalVirtMem = i;
-                            }
-                            else if (name.ToLower().Contains("freephysical"))
-                            {
-                                _ = double.TryParse(value, out freePhysicalMem);
-                            }
-                            else if (name.ToLower().Contains("freevirtual"))
-                            {
-                                _ = double.TryParse(value, out freeVirtualMem);
+                                    // TotalVisible only needs to be set once.
+                                    if (name.ToLower().Contains("totalvisible"))
+                                    {
+                                        this.totalVisibleMemoryGb = i;
+                                    }
+                                    else if (name.ToLower().Contains("totalvirtual"))
+                                    {
+                                        totalVirtMem = i;
+                                    }
+                                    else if (name.ToLower().Contains("freephysical"))
+                                    {
+                                        _ = double.TryParse(value, out freePhysicalMem);
+                                    }
+                                    else if (name.ToLower().Contains("freevirtual"))
+                                    {
+                                        _ = double.TryParse(value, out freeVirtualMem);
+                                    }
+                                }
+
+                                break;
                             }
                         }
                     }
@@ -329,16 +332,9 @@ namespace FabricObserver
                 string osEphemeralPortRange = string.Empty;
                 fabricAppPortRange = string.Empty;
 
-                if (this.IsTestRun)
-                {
-                    clusterManifestXml = File.ReadAllText(this.TestManifestPath);
-                }
-                else
-                {
-                    clusterManifestXml = this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).GetAwaiter().GetResult();
-                }
+                clusterManifestXml = this.IsTestRun ? File.ReadAllText(this.TestManifestPath) : this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).GetAwaiter().GetResult();
 
-                var appPortRange = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
                 // OS info.
@@ -357,9 +353,9 @@ namespace FabricObserver
                     sb.AppendLine($"WindowsEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
                 }
 
-                if (appPortRange.LowPort > -1)
+                if (lowPort > -1)
                 {
-                    fabricAppPortRange = $"{appPortRange.LowPort} - {appPortRange.HighPort}";
+                    fabricAppPortRange = $"{lowPort} - {highPort}";
                     sb.AppendLine($"FabricApplicationTCPPortRange: {fabricAppPortRange}");
                 }
 
@@ -378,7 +374,7 @@ namespace FabricObserver
                 sb.AppendLine("\r\nHardware Information:\r\n");
                 sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
                 sb.AppendLine($"TotalVirtualMemorySize: {totalVirtMem} GB");
-                sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGB} GB");
+                sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGb} GB");
                 sb.AppendLine($"FreePhysicalMemory*: {Math.Round(freePhysicalMem / 1024 / 1024, 2)} GB");
                 sb.AppendLine($"FreeVirtualMemory*: {Math.Round(freeVirtualMem / 1024 / 1024, 2)} GB");
 
@@ -388,17 +384,17 @@ namespace FabricObserver
 
                 sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
 
-                foreach (var (DriveName, DiskSize, PercentConsumed) in drivesInformationTuple)
+                foreach (var (driveName, diskSize, percentConsumed) in drivesInformationTuple)
                 {
                     string systemDrv = "Data";
 
-                    if (Environment.SystemDirectory.Substring(0, 1) == DriveName)
+                    if (Environment.SystemDirectory.Substring(0, 1) == driveName)
                     {
                         systemDrv = "System";
                     }
 
-                    sb.AppendLine($"Drive {DriveName} ({systemDrv}) Size: {DiskSize} GB");
-                    sb.AppendLine($"Drive {DriveName} ({systemDrv}) Consumed*: {PercentConsumed}%");
+                    sb.AppendLine($"Drive {driveName} ({systemDrv}) Size: {diskSize} GB");
+                    sb.AppendLine($"Drive {driveName} ({systemDrv}) Consumed*: {percentConsumed}%");
                 }
 
                 string osHotFixes = GetWindowsHotFixes(token);
@@ -427,7 +423,7 @@ namespace FabricObserver
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
-                            TotalMemorySizeGB = this.totalVisibleMemoryGB,
+                            TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             LogicalProcessorCount = logicalProcessorCount,
                             LogicalDriveCount = logicalDriveCount,
                             NumberOfRunningProcesses = numProcs,
@@ -456,7 +452,7 @@ namespace FabricObserver
             finally
             {
                 results?.Dispose();
-                win32OSInfo?.Dispose();
+                win32OsInfo?.Dispose();
                 diskUsage?.Dispose();
                 sb.Clear();
             }

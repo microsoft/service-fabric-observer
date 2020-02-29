@@ -8,17 +8,17 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using FabricObserver.Utilities;
-using HealthReport = FabricObserver.Utilities.HealthReport;
+using FabricObserver.Observers.Utilities;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
-namespace FabricObserver
+namespace FabricObserver.Observers
 {
     public class CertificateObserver : ObserverBase
     {
-        private const string HowToUpdateCNCertsSFLinkHtml =
+        private const string HowToUpdateCnCertsSfLinkHtml =
             "<a href=\"https://aka.ms/AA69ai7\" target=\"_blank\">Click here to learn how to update expiring/expired certificates.</a>";
 
-        private const string HowToUpdateSelfSignedCertSFLinkHtml =
+        private const string HowToUpdateSelfSignedCertSfLinkHtml =
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
 
         public CertificateObserver()
@@ -69,7 +69,7 @@ namespace FabricObserver
             this.ExpiringWarnings = new List<string>();
             this.NotFoundWarnings = new List<string>();
 
-            X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
 
             try
             {
@@ -78,7 +78,7 @@ namespace FabricObserver
                 // Cluster Certificates
                 if (this.SecurityConfiguration.SecurityType == SecurityType.CommonName)
                 {
-                    this.CheckLastestBySubjectName(store, this.SecurityConfiguration.ClusterCertThumbprintOrCommonName, this.DaysUntilClusterExpireWarningThreshold);
+                    this.CheckLatestBySubjectName(store, this.SecurityConfiguration.ClusterCertThumbprintOrCommonName, this.DaysUntilClusterExpireWarningThreshold);
                 }
                 else if (this.SecurityConfiguration.SecurityType == SecurityType.Thumbprint)
                 {
@@ -86,9 +86,9 @@ namespace FabricObserver
                 }
 
                 // App certificates
-                foreach (string commonname in this.AppCertificateCommonNamesToObserve)
+                foreach (string commonName in this.AppCertificateCommonNamesToObserve)
                 {
-                    this.CheckLastestBySubjectName(store, commonname, this.DaysUntilAppExpireWarningThreshold);
+                    this.CheckLatestBySubjectName(store, commonName, this.DaysUntilAppExpireWarningThreshold);
                 }
 
                 foreach (string thumbprint in this.AppCertificateThumbprintsToObserve)
@@ -103,8 +103,7 @@ namespace FabricObserver
                 this.WriteToLogWithLevel(
                     this.ObserverName,
                     $"Can't access {store.Name} due to {e.Message} - {e.StackTrace}",
-                    Utilities.LogLevel.Warning);
-                return;
+                    LogLevel.Warning);
             }
             finally
             {
@@ -155,7 +154,7 @@ namespace FabricObserver
 
                 healthReport = new HealthReport
                 {
-                    Code = FOErrorWarningCodes.WarningCertificateExpiration,
+                    Code = FoErrorWarningCodes.WarningCertificateExpiration,
                     Observer = this.ObserverName,
                     ReportType = HealthReportType.Node,
                     EmitLogEvent = true,
@@ -210,53 +209,25 @@ namespace FabricObserver
                 ObserverConstants.CertificateObserverConfigurationSectionName,
                 ObserverConstants.CertificateObserverDaysUntilClusterExpiryWarningThreshold);
 
-            if (!string.IsNullOrEmpty(daysUntilClusterExpireWarningThreshold))
-            {
-                this.DaysUntilClusterExpireWarningThreshold = int.Parse(daysUntilClusterExpireWarningThreshold);
-            }
-            else
-            {
-                this.DaysUntilClusterExpireWarningThreshold = 14;
-            }
+            this.DaysUntilClusterExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilClusterExpireWarningThreshold) ? int.Parse(daysUntilClusterExpireWarningThreshold) : 14;
 
             var daysUntilAppExpireWarningClusterThreshold = this.GetSettingParameterValue(
             ObserverConstants.CertificateObserverConfigurationSectionName,
             ObserverConstants.CertificateObserverDaysUntilAppExpiryWarningThreshold);
 
-            if (!string.IsNullOrEmpty(daysUntilAppExpireWarningClusterThreshold))
-            {
-                this.DaysUntilAppExpireWarningThreshold = int.Parse(daysUntilAppExpireWarningClusterThreshold);
-            }
-            else
-            {
-                this.DaysUntilAppExpireWarningThreshold = 14;
-            }
+            this.DaysUntilAppExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilAppExpireWarningClusterThreshold) ? int.Parse(daysUntilAppExpireWarningClusterThreshold) : 14;
 
             var appThumbprintsToObserve = this.GetSettingParameterValue(
                     ObserverConstants.CertificateObserverConfigurationSectionName,
                     ObserverConstants.CertificateObserverAppCertificateThumbprints);
 
-            if (!string.IsNullOrEmpty(appThumbprintsToObserve))
-            {
-                this.AppCertificateThumbprintsToObserve = JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve);
-            }
-            else
-            {
-                this.AppCertificateThumbprintsToObserve = new List<string>();
-            }
+            this.AppCertificateThumbprintsToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve) : new List<string>();
 
             var appCommonNamesToObserve = this.GetSettingParameterValue(
                     ObserverConstants.CertificateObserverConfigurationSectionName,
                     ObserverConstants.CertificateObserverAppCertificateCommonNames);
 
-            if (!string.IsNullOrEmpty(appThumbprintsToObserve))
-            {
-                this.AppCertificateCommonNamesToObserve = JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve);
-            }
-            else
-            {
-                this.AppCertificateCommonNamesToObserve = new List<string>();
-            }
+            this.AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();
 
             await this.GetSecurityTypes(token).ConfigureAwait(true);
         }
@@ -287,16 +258,15 @@ namespace FabricObserver
 
                 var certificateNode = xdoc.SelectNodes($"//sf:NodeType[@Name='{this.NodeType}']//sf:Certificates", nsmgr);
 
-                if (certificateNode.Count == 0)
+                if (certificateNode?.Count == 0)
                 {
                     this.SecurityConfiguration.SecurityType = SecurityType.None;
-                    return;
                 }
                 else
                 {
-                    var clusterCertificateNode = certificateNode.Item(0).ChildNodes.Item(0);
+                    var clusterCertificateNode = certificateNode?.Item(0).ChildNodes.Item(0);
 
-                    var commonNameAttribute = clusterCertificateNode.Attributes.GetNamedItem("X509FindType");
+                    var commonNameAttribute = clusterCertificateNode?.Attributes.GetNamedItem("X509FindType");
                     if (commonNameAttribute != null)
                     {
                         if (commonNameAttribute.Value == "FindBySubjectName")
@@ -312,8 +282,8 @@ namespace FabricObserver
                     }
 
                     this.SecurityConfiguration.SecurityType = SecurityType.Thumbprint;
-                    this.SecurityConfiguration.ClusterCertThumbprintOrCommonName = clusterCertificateNode.Attributes.GetNamedItem("X509FindValue").Value;
-                    var secondaryThumbprintAttribute = clusterCertificateNode.Attributes.GetNamedItem("X509FindValueSecondary");
+                    this.SecurityConfiguration.ClusterCertThumbprintOrCommonName = clusterCertificateNode?.Attributes.GetNamedItem("X509FindValue").Value;
+                    var secondaryThumbprintAttribute = clusterCertificateNode?.Attributes.GetNamedItem("X509FindValueSecondary");
 
                     if (secondaryThumbprintAttribute != null)
                     {
@@ -325,7 +295,7 @@ namespace FabricObserver
             {
                 this.WriteToLogWithLevel(
                 this.ObserverName,
-                $"There was an issue parsing the cluster manifest. Observer cannot run.\nError Details:\n{e.ToString()}",
+                $"There was an issue parsing the cluster manifest. Observer cannot run.\nError Details:\n{e}",
                 LogLevel.Error);
 
                 throw;
@@ -337,10 +307,10 @@ namespace FabricObserver
             }
         }
 
-        private void CheckLastestBySubjectName(X509Store store, string subjectName, int warningThreshold)
+        private void CheckLatestBySubjectName(X509Store store, string subjectName, int warningThreshold)
         {
             var certificates = store.Certificates.Find(X509FindType.FindBySubjectName, subjectName, false);
-            X509Certificate2 newestcertificate = null;
+            X509Certificate2 newestCertificate = null;
             var newestNotAfter = DateTime.MinValue;
 
             if (certificates.Count == 0)
@@ -349,32 +319,32 @@ namespace FabricObserver
                 return;
             }
 
-            var message = HowToUpdateCNCertsSFLinkHtml;
+            var message = HowToUpdateCnCertsSfLinkHtml;
 
             foreach (var certificate in certificates)
             {
                 if (certificate.NotAfter > newestNotAfter)
                 {
-                    newestcertificate = certificate;
+                    newestCertificate = certificate;
                     newestNotAfter = certificate.NotAfter;
                 }
 
                 if (IsSelfSignedCertificate(certificate))
                 {
-                    message = HowToUpdateSelfSignedCertSFLinkHtml;
+                    message = HowToUpdateSelfSignedCertSfLinkHtml;
                 }
             }
 
-            var expiry = newestcertificate.NotAfter; // Expiration time in local time (not UTC)
+            var expiry = newestCertificate.NotAfter; // Expiration time in local time (not UTC)
             var timeUntilExpiry = expiry.Subtract(System.DateTime.Now);
 
             if (timeUntilExpiry.TotalMilliseconds < 0)
             {
-                this.ExpiredWarnings.Add($"Certificate expired on {expiry.ToShortDateString()}: [Thumbprint: {newestcertificate.Thumbprint} Issuer {newestcertificate.Issuer}, Subject: {newestcertificate.Subject}]/n{message}");
+                this.ExpiredWarnings.Add($"Certificate expired on {expiry.ToShortDateString()}: [Thumbprint: {newestCertificate.Thumbprint} Issuer {newestCertificate.Issuer}, Subject: {newestCertificate.Subject}]/n{message}");
             }
             else if (timeUntilExpiry.TotalDays < warningThreshold)
             {
-                this.ExpiringWarnings.Add($"Certificate expiring in {timeUntilExpiry.TotalDays} days, on {expiry.ToShortDateString()}: [Thumbprint: {newestcertificate.Thumbprint} Issuer {newestcertificate.Issuer}, Subject: {newestcertificate.Subject}]/n{message}");
+                this.ExpiringWarnings.Add($"Certificate expiring in {timeUntilExpiry.TotalDays} days, on {expiry.ToShortDateString()}: [Thumbprint: {newestCertificate.Thumbprint} Issuer {newestCertificate.Issuer}, Subject: {newestCertificate.Subject}]/n{message}");
             }
         }
 
@@ -394,11 +364,11 @@ namespace FabricObserver
 
             var expiry = enumerator.Current.NotAfter; // Expiration time in local time (not UTC)
             var timeUntilExpiry = expiry.Subtract(DateTime.Now);
-            var message = HowToUpdateCNCertsSFLinkHtml;
+            var message = HowToUpdateCnCertsSfLinkHtml;
 
             if (IsSelfSignedCertificate(enumerator.Current))
             {
-                message = HowToUpdateSelfSignedCertSFLinkHtml;
+                message = HowToUpdateSelfSignedCertSfLinkHtml;
             }
 
             if (timeUntilExpiry.TotalMilliseconds < 0)

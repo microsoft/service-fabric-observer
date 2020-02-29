@@ -20,7 +20,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
         private const string EventName = "TraceSessionStats";
         private const string TaskName = "FabricObserver";
         private readonly TelemetryClient telemetryClient;
-        private readonly ServiceContext serviceContext = null;
+        private readonly ServiceContext serviceContext;
         private readonly ITelemetryEventSource eventSource;
         private readonly string clusterId, tenantId, clusterType;
 

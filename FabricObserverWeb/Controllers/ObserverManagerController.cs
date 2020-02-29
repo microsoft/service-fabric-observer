@@ -20,7 +20,7 @@ namespace FabricObserverWeb
     public class ObserverManagerController : ControllerBase
     {
         private const int MaxRetries = 3;
-        private readonly StatelessServiceContext serviceContext = null;
+        private readonly StatelessServiceContext serviceContext;
         private readonly FabricClient fabricClient;
         private readonly string script = @"
                 <script type='text/javascript'>
@@ -41,7 +41,7 @@ namespace FabricObserverWeb
                 }
                 </script>";
 
-        private StringBuilder sb = null;
+        private StringBuilder sb;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManagerController"/> class.

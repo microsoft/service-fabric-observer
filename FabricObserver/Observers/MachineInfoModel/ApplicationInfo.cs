@@ -3,7 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace FabricObserver.Model
+namespace FabricObserver.Observers.MachineInfoModel
 {
     internal class ApplicationInfo
     {
@@ -15,9 +15,9 @@ namespace FabricObserver.Model
 
         public string ServiceIncludeList { get; set; }
 
-        public long MemoryWarningLimitMB { get; set; }
+        public long MemoryWarningLimitMb { get; set; }
 
-        public long MemoryErrorLimitMB { get; set; }
+        public long MemoryErrorLimitMb { get; set; }
 
         public int MemoryWarningLimitPercent { get; set; }
 
@@ -46,8 +46,8 @@ namespace FabricObserver.Model
                                              $"ApplicationTypeName: {this.TargetType ?? string.Empty}\n" +
                                              $"ServiceExcludeList: {this.ServiceExcludeList ?? string.Empty}\n" +
                                              $"ServiceIncludeList: {this.ServiceIncludeList ?? string.Empty}\n" +
-                                             $"MemoryWarningLimitMB: {this.MemoryWarningLimitMB}\n" +
-                                             $"MemoryErrorLimitMB: {this.MemoryErrorLimitMB}\n" +
+                                             $"MemoryWarningLimitMB: {this.MemoryWarningLimitMb}\n" +
+                                             $"MemoryErrorLimitMB: {this.MemoryErrorLimitMb}\n" +
                                              $"MemoryWarningLimitPercent: {this.MemoryWarningLimitPercent}\n" +
                                              $"MemoryErrorLimitPercent: {this.MemoryErrorLimitPercent}\n" +
                                              $"CpuWarningLimit: {this.CpuWarningLimitPct}\n" +

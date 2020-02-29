@@ -7,15 +7,15 @@ namespace FabricClusterObserver.Utilities
 {
     public sealed class ObserverConstants
     {
-        public const string ObserverManangerName = "ClusterObserverManager";
+        public const string ObserverManagerName = "ClusterObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
         public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
-        public const string EnableLongRunningCSVLogging = "EnableLongRunningCSVLogging";
+        public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
         public const string ObserverLogPath = "ObserverLogPath";
         public const string ObserverRunIntervalParameterName = "RunInterval";
         public const string ObserverEnabled = "Enabled";
-        public const string AIKey = "AppInsightsInstrumentationKey";
+        public const string AiKey = "AppInsightsInstrumentationKey";
         public const string TelemetryEnabled = "EnableTelemetryProvider";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
 

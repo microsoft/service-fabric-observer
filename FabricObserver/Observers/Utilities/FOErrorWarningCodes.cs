@@ -5,10 +5,10 @@
 
 using System.Collections.Generic;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     // FabricObserver Error/Warning/Ok Codes.
-    public sealed class FOErrorWarningCodes
+    public sealed class FoErrorWarningCodes
     {
         // Ok
         public const string Ok = "FO000";
@@ -25,21 +25,21 @@ namespace FabricObserver.Utilities
 
         // Disk
         public const string NodeErrorDiskSpacePercentUsed = "FO007";
-        public const string NodeErrorDiskSpaceMB = "FO008";
+        public const string NodeErrorDiskSpaceMb = "FO008";
         public const string NodeWarningDiskSpacePercentUsed = "FO009";
-        public const string NodeWarningDiskSpaceMB = "FO010";
+        public const string NodeWarningDiskSpaceMb = "FO010";
         public const string NodeErrorDiskAverageQueueLength = "FO011";
         public const string NodeWarningDiskAverageQueueLength = "FO012";
 
         // Memory
         public const string AppErrorMemoryPercentUsed = "FO013";
         public const string AppWarningMemoryPercentUsed = "FO014";
-        public const string AppErrorMemoryCommittedMB = "FO015";
-        public const string AppWarningMemoryCommittedMB = "FO016";
+        public const string AppErrorMemoryCommittedMb = "FO015";
+        public const string AppWarningMemoryCommittedMb = "FO016";
         public const string NodeErrorMemoryPercentUsed = "FO017";
         public const string NodeWarningMemoryPercentUsed = "FO018";
-        public const string NodeErrorMemoryCommittedMB = "FO019";
-        public const string NodeWarningMemoryCommittedMB = "FO020";
+        public const string NodeErrorMemoryCommittedMb = "FO019";
+        public const string NodeWarningMemoryCommittedMb = "FO020";
 
         // Networking
         public const string AppErrorNetworkEndpointUnreachable = "FO021";
@@ -62,8 +62,8 @@ namespace FabricObserver.Utilities
             { AppWarningCpuTime, "AppWarningCpuTime" },
             { AppErrorMemoryPercentUsed, "AppErrorMemoryPercentUsed" },
             { AppWarningMemoryPercentUsed, "AppWarningMemoryPercentUsed" },
-            { AppErrorMemoryCommittedMB, "AppErrorMemoryCommittedMB" },
-            { AppWarningMemoryCommittedMB, "AppWarningMemoryCommittedMB" },
+            { AppErrorMemoryCommittedMb, "AppErrorMemoryCommittedMB" },
+            { AppWarningMemoryCommittedMb, "AppWarningMemoryCommittedMB" },
             { AppErrorNetworkEndpointUnreachable, "AppErrorNetworkEndpointUnreachable" },
             { AppWarningNetworkEndpointUnreachable, "AppWarningNetworkEndpointUnreachable" },
             { AppErrorTooManyActiveTcpPorts, "AppErrorTooManyActiveTcpPorts" },
@@ -80,15 +80,15 @@ namespace FabricObserver.Utilities
             { ErrorCertificateExpiration, "ErrorCertificateExpiration" },
             { WarningCertificateExpiration, "WarningCertificateExpiration" },
             { NodeErrorDiskSpacePercentUsed, "NodeErrorDiskSpacePercentUsed" },
-            { NodeErrorDiskSpaceMB, "NodeErrorDiskSpaceMB" },
+            { NodeErrorDiskSpaceMb, "NodeErrorDiskSpaceMB" },
             { NodeWarningDiskSpacePercentUsed, "NodeWarningDiskSpacePercentUsed" },
-            { NodeWarningDiskSpaceMB, "NodeWarningDiskSpaceMB" },
+            { NodeWarningDiskSpaceMb, "NodeWarningDiskSpaceMB" },
             { NodeErrorDiskAverageQueueLength, "NodeErrorDiskAverageQueueLength" },
             { NodeWarningDiskAverageQueueLength, "NodeWarningDiskAverageQueueLength" },
             { NodeErrorMemoryPercentUsed, "NodeErrorMemoryPercentUsed" },
             { NodeWarningMemoryPercentUsed, "NodeWarningMemoryPercentUsed" },
-            { NodeErrorMemoryCommittedMB, "NodeErrorMemoryCommittedMB" },
-            { NodeWarningMemoryCommittedMB, "NodeWarningMemoryCommittedMB" },
+            { NodeErrorMemoryCommittedMb, "NodeErrorMemoryCommittedMB" },
+            { NodeWarningMemoryCommittedMb, "NodeWarningMemoryCommittedMB" },
             { NodeErrorTooManyActiveTcpPorts, "NodeErrorTooManyActiveTcpPorts" },
             { NodeWarningTooManyActiveTcpPorts, "NodeWarningTooManyActiveTcpPorts" },
             { ErrorTooManyFirewallRules, "NodeErrorTooManyFirewallRules" },

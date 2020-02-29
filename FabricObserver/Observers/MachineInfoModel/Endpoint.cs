@@ -3,20 +3,12 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System;
-
 namespace FabricObserver.Observers.MachineInfoModel
 {
-    public class ReplicaOrInstanceMonitoringInfo
+    public class Endpoint
     {
-        public long HostProcessId { get; set; }
+        public string HostName { get; set; }
 
-        public Uri ApplicationName { get; set; }
-
-        public string ApplicationTypeName { get; set; }
-
-        public long ReplicaOrInstanceId { get; set; }
-
-        public Guid PartitionId { get; set; }
+        public int Port { get; set; }
     }
 }

@@ -82,31 +82,31 @@ namespace FabricObserverTests
         // Interface required events. These are never used. Ignore the Warnings(CS0414).
 
         /// <inheritdoc/>
-        public event EventHandler<PackageAddedEventArgs<CodePackage>> CodePackageAddedEvent = null;
+        public event EventHandler<PackageAddedEventArgs<CodePackage>> CodePackageAddedEvent;
 
         /// <inheritdoc/>
-        public event EventHandler<PackageModifiedEventArgs<CodePackage>> CodePackageModifiedEvent = null;
+        public event EventHandler<PackageModifiedEventArgs<CodePackage>> CodePackageModifiedEvent;
 
         /// <inheritdoc/>
-        public event EventHandler<PackageRemovedEventArgs<CodePackage>> CodePackageRemovedEvent = null;
+        public event EventHandler<PackageRemovedEventArgs<CodePackage>> CodePackageRemovedEvent;
 
         /// <inheritdoc/>
-        public event EventHandler<PackageAddedEventArgs<ConfigurationPackage>> ConfigurationPackageAddedEvent = null;
+        public event EventHandler<PackageAddedEventArgs<ConfigurationPackage>> ConfigurationPackageAddedEvent;
 
         /// <inheritdoc/>
-        public event EventHandler<PackageModifiedEventArgs<ConfigurationPackage>> ConfigurationPackageModifiedEvent = null;
+        public event EventHandler<PackageModifiedEventArgs<ConfigurationPackage>> ConfigurationPackageModifiedEvent;
 
         /// <inheritdoc/>
-        public event EventHandler<PackageRemovedEventArgs<ConfigurationPackage>> ConfigurationPackageRemovedEvent = null;
+        public event EventHandler<PackageRemovedEventArgs<ConfigurationPackage>> ConfigurationPackageRemovedEvent;
 
         /// <inheritdoc/>
-        public event EventHandler<PackageAddedEventArgs<DataPackage>> DataPackageAddedEvent = null;
+        public event EventHandler<PackageAddedEventArgs<DataPackage>> DataPackageAddedEvent;
 
         /// <inheritdoc/>
-        public event EventHandler<PackageModifiedEventArgs<DataPackage>> DataPackageModifiedEvent = null;
+        public event EventHandler<PackageModifiedEventArgs<DataPackage>> DataPackageModifiedEvent;
 
         /// <inheritdoc/>
-        public event EventHandler<PackageRemovedEventArgs<DataPackage>> DataPackageRemovedEvent = null;
+        public event EventHandler<PackageRemovedEventArgs<DataPackage>> DataPackageRemovedEvent;
 
         /// <inheritdoc/>
         public ApplicationPrincipalsDescription GetApplicationPrincipals()
@@ -189,34 +189,33 @@ namespace FabricObserverTests
         /// <inheritdoc/>
         public void ReportApplicationHealth(HealthInformation healthInformation)
         {
-            return;
         }
 
         /// <inheritdoc/>
         public void ReportDeployedServicePackageHealth(HealthInformation healthInformation)
         {
-            return;
         }
 
         /// <inheritdoc/>
         public void ReportDeployedApplicationHealth(HealthInformation healthInformation)
         {
-            return;
         }
 
-        private bool disposedValue = false; // To detect redundant calls
+        private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposedValue)
+            if (this.disposedValue)
             {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects).
-                }
-
-                this.disposedValue = true;
+                return;
             }
+
+            if (disposing)
+            {
+                // TODO: dispose managed state (managed objects).
+            }
+
+            this.disposedValue = true;
         }
 
         /// <inheritdoc/>
@@ -229,19 +228,16 @@ namespace FabricObserverTests
         /// <inheritdoc/>
         public void ReportApplicationHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
         {
-            return;
         }
 
         /// <inheritdoc/>
         public void ReportDeployedApplicationHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
         {
-            return;
         }
 
         /// <inheritdoc/>
         public void ReportDeployedServicePackageHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
         {
-            return;
         }
     }
 }

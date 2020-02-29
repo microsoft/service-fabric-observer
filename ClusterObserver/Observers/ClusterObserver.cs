@@ -4,15 +4,15 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Fabric;
 using System.Fabric.Health;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver.Utilities;
 using FabricClusterObserver.Utilities.Telemetry;
-using System.Fabric;
-using System.Linq;
 
-namespace FabricClusterObserver
+namespace FabricClusterObserver.Observers
 {
     public class ClusterObserver : ObserverBase
     {
@@ -66,20 +66,20 @@ namespace FabricClusterObserver
             token.ThrowIfCancellationRequested();
 
             // Get ClusterObserver settings (specified in PackageRoot/Config/Settings.xml).
-            _ = bool.TryParse(
-                    this.GetSettingParameterValue(
+            bool.TryParse(
+                this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitHealthWarningEvaluationConfigurationSetting,
                     "false"), out bool emitWarningDetails);
             
-            _ = bool.TryParse(
-                    this.GetSettingParameterValue(
+            bool.TryParse(
+                this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitOkHealthState,
                     "false"), out bool emitOkHealthState);
 
-            _ = bool.TryParse(
-                    this.GetSettingParameterValue(
+            bool.TryParse(
+                this.GetSettingParameterValue(
                     ObserverConstants.ClusterObserverConfigurationSectionName,
                     ObserverConstants.EmitHealthStatistics,
                     "false"), out bool emitHealthStatistics);
@@ -92,7 +92,6 @@ namespace FabricClusterObserver
                                                 token).ConfigureAwait(true);
 
                 string telemetryDescription = string.Empty;
-                string clusterHealthStatistics = string.Empty;
 
                 // Previous run generated unhealthy evaluation report. Clear it (send Ok) .
                 if (emitOkHealthState && clusterHealth.AggregatedHealthState == HealthState.Ok
@@ -118,7 +117,7 @@ namespace FabricClusterObserver
                     }
 
                     // Check cluster upgrade status.
-                    int UDInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(
+                    int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(
                                                     FabricClientInstance, 
                                                     Token).ConfigureAwait(false);
 
@@ -128,166 +127,211 @@ namespace FabricClusterObserver
 
                         telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}{Environment.NewLine}";
 
-                        // Application in Warning or Error?
-                        if (evaluation.Kind == HealthEvaluationKind.Application
-                            || evaluation.Kind == HealthEvaluationKind.Applications)
+                        switch (evaluation.Kind)
                         {
-                            foreach (var app in clusterHealth.ApplicationHealthStates)
+                            // Application in Warning or Error?
+                            case HealthEvaluationKind.Application:
+                            case HealthEvaluationKind.Applications:
                             {
-                                Token.ThrowIfCancellationRequested();
-                                
-                                if (app.AggregatedHealthState == HealthState.Ok)
-                                {
-                                    continue;
-                                }
-
-                                // Ignore any Warning state?
-                                if (!emitWarningDetails
-                                     && app.AggregatedHealthState == HealthState.Warning)
-                                {
-                                    continue;
-                                }
-
-                                telemetryDescription += $"Application in Error or Warning: {app.ApplicationName}{Environment.NewLine}";
-
-                                foreach (var application in clusterHealth.ApplicationHealthStates)
+                                foreach (var app in clusterHealth.ApplicationHealthStates)
                                 {
                                     Token.ThrowIfCancellationRequested();
-
-                                    if (application.AggregatedHealthState == HealthState.Ok
-                                       || (!emitWarningDetails 
-                                           && application.AggregatedHealthState == HealthState.Warning))
+                                
+                                    if (app.AggregatedHealthState == HealthState.Ok)
                                     {
                                         continue;
                                     }
 
-                                    var appUpgradeStatus = await FabricClientInstance.ApplicationManager.GetApplicationUpgradeProgressAsync(application.ApplicationName);
-                                    
-                                    if (appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
-                                        || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress)
+                                    // Ignore any Warning state?
+                                    if (!emitWarningDetails
+                                        && app.AggregatedHealthState == HealthState.Warning)
                                     {
-                                        var UDInAppUpgrade = await UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(
-                                                                    FabricClientInstance,
-                                                                    Token,
-                                                                    appUpgradeStatus.ApplicationName);
-                                        
-                                        string udText = string.Empty;
-                                        
-                                        // -1 means no upgrade in progress for application
-                                        // int.MaxValue means an exception was thrown during upgrade check and you should
-                                        // check the logs for what went wrong, then fix the bug (if it's a bug you can fix).
-                                        if (UDInAppUpgrade.Any(ud => ud > -1 && ud < int.MaxValue))
-                                        {
-                                            udText = $" in UD {UDInAppUpgrade.Where(ud => ud > -1 && ud < int.MaxValue).First()}";
-                                        }
-
-                                        telemetryDescription += 
-                                            $"Note: {app.ApplicationName} is currently upgrading{udText}, " +
-                                            $"which may be why it's in a transient error or warning state.{Environment.NewLine}";
+                                        continue;
                                     }
 
-                                    var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
-                                        application.ApplicationName,
-                                        this.AsyncClusterOperationTimeoutSeconds,
-                                        token);
+                                    telemetryDescription += $"Application in Error or Warning: {app.ApplicationName}{Environment.NewLine}";
 
-                                    var serviceHealthStates = appHealth.ServiceHealthStates;
-                                    var appHealthEvents = appHealth.HealthEvents;
-
-                                    // From FO?
-                                    foreach (var appHealthEvent in appHealthEvents)
+                                    foreach (var application in clusterHealth.ApplicationHealthStates)
                                     {
                                         Token.ThrowIfCancellationRequested();
 
-                                        if (!FOErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(appHealthEvent.HealthInformation.SourceId))
+                                        if (application.AggregatedHealthState == HealthState.Ok
+                                            || (!emitWarningDetails 
+                                                && application.AggregatedHealthState == HealthState.Warning))
+                                        {
+                                            continue;
+                                        }
+
+                                        var appUpgradeStatus = await FabricClientInstance.ApplicationManager.GetApplicationUpgradeProgressAsync(application.ApplicationName);
+                                    
+                                        if (appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
+                                            || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress)
+                                        {
+                                            var udInAppUpgrade = await UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(
+                                                FabricClientInstance,
+                                                Token,
+                                                appUpgradeStatus.ApplicationName);
+                                        
+                                            string udText = string.Empty;
+                                        
+                                            // -1 means no upgrade in progress for application
+                                            // int.MaxValue means an exception was thrown during upgrade check and you should
+                                            // check the logs for what went wrong, then fix the bug (if it's a bug you can fix).
+                                            if (udInAppUpgrade.Any(ud => ud > -1 && ud < int.MaxValue))
+                                            {
+                                                udText = $" in UD {udInAppUpgrade.First(ud => ud > -1 && ud < int.MaxValue)}";
+                                            }
+
+                                            telemetryDescription += 
+                                                $"Note: {app.ApplicationName} is currently upgrading{udText}, " +
+                                                $"which may be why it's in a transient error or warning state.{Environment.NewLine}";
+                                        }
+
+                                        var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
+                                            application.ApplicationName,
+                                            this.AsyncClusterOperationTimeoutSeconds,
+                                            token);
+
+                                        var serviceHealthStates = appHealth.ServiceHealthStates;
+                                        var appHealthEvents = appHealth.HealthEvents;
+
+                                        // From FO?
+                                        foreach (var appHealthEvent in appHealthEvents)
+                                        {
+                                            Token.ThrowIfCancellationRequested();
+
+                                            if (!FoErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(appHealthEvent.HealthInformation.SourceId))
+                                            {
+                                                continue;
+                                            }
+
+                                            string errorWarning = "Warning";
+
+                                            if (FoErrorWarningCodes.AppErrorCodesDictionary[appHealthEvent.HealthInformation.SourceId].Contains("Error"))
+                                            {
+                                                errorWarning = "Error";
+                                            }
+
+                                            telemetryDescription +=
+                                                $"  FabricObserver {errorWarning} Code: {appHealthEvent.HealthInformation.SourceId}{Environment.NewLine}" +
+                                                $"  {errorWarning} Details: {appHealthEvent.HealthInformation.Description}{Environment.NewLine}";
+                                        }
+
+                                        // Service in error?
+                                        foreach (var service in serviceHealthStates)
+                                        {
+                                            Token.ThrowIfCancellationRequested();
+
+                                            if (service.AggregatedHealthState == HealthState.Ok
+                                                || (!emitWarningDetails && service.AggregatedHealthState == HealthState.Warning))
+                                            {
+                                                continue;
+                                            }
+
+                                            telemetryDescription += $"Service in Error: {service.ServiceName}{Environment.NewLine}";
+                                        }
+                                    }
+                                }
+
+                                break;
+                            }
+                            case HealthEvaluationKind.Node:
+                            case HealthEvaluationKind.Nodes:
+                            {
+                                // Node in Warning or Error?
+                                foreach (var node in clusterHealth.NodeHealthStates)
+                                {
+                                    if (node.AggregatedHealthState == HealthState.Ok
+                                        || (!emitWarningDetails && node.AggregatedHealthState == HealthState.Warning))
+                                    {
+                                        continue;
+                                    }
+
+                                    telemetryDescription += $"Node in Error or Warning: {node.NodeName}{Environment.NewLine}";
+
+                                    if (udInClusterUpgrade > -1)
+                                    {
+                                        telemetryDescription += 
+                                            $"Note: Cluster is currently upgrading in UD {udInClusterUpgrade}. " +
+                                            $"Node {node.NodeName} Error State could be due to this upgrade process, which will take down a node as a " +
+                                            $"normal part of upgrade process. This is a temporary condition.{Environment.NewLine}.";
+                                    }
+
+                                    var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(
+                                        node.NodeName,
+                                        this.AsyncClusterOperationTimeoutSeconds,
+                                        token);
+
+                                    // From FO?
+                                    foreach (var nodeHealthEvent in nodeHealth.HealthEvents)
+                                    {
+                                        Token.ThrowIfCancellationRequested();
+
+                                        if (!FoErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(nodeHealthEvent.HealthInformation.SourceId))
                                         {
                                             continue;
                                         }
 
                                         string errorWarning = "Warning";
 
-                                        if (FOErrorWarningCodes.AppErrorCodesDictionary[appHealthEvent.HealthInformation.SourceId].Contains("Error"))
+                                        if (FoErrorWarningCodes.NodeErrorCodesDictionary[nodeHealthEvent.HealthInformation.SourceId].Contains("Error"))
                                         {
                                             errorWarning = "Error";
                                         }
 
                                         telemetryDescription +=
-                                            $"  FabricObserver {errorWarning} Code: {appHealthEvent.HealthInformation.SourceId}{Environment.NewLine}" +
-                                            $"  {errorWarning} Details: {appHealthEvent.HealthInformation.Description}{Environment.NewLine}";
-                                    }
-
-                                    // Service in error?
-                                    foreach (var service in serviceHealthStates)
-                                    {
-                                        Token.ThrowIfCancellationRequested();
-
-                                        if (service.AggregatedHealthState == HealthState.Ok
-                                            || (!emitWarningDetails && service.AggregatedHealthState == HealthState.Warning))
-                                        {
-                                            continue;
-                                        }
-
-                                        telemetryDescription += $"Service in Error: {service.ServiceName}{Environment.NewLine}";
+                                            $"  FabricObserver {errorWarning} Code: {nodeHealthEvent.HealthInformation.SourceId}{Environment.NewLine}" +
+                                            $"  {errorWarning} Details: {nodeHealthEvent.HealthInformation.Description}{Environment.NewLine}";
                                     }
                                 }
+
+                                break;
                             }
-                        }
-                        else if (evaluation.Kind == HealthEvaluationKind.Node
-                                || evaluation.Kind == HealthEvaluationKind.Nodes)
-                        {
-                            // Node in Warning or Error?
-                            foreach (var node in clusterHealth.NodeHealthStates)
-                            {
-                                if (node.AggregatedHealthState == HealthState.Ok
-                                    || (!emitWarningDetails && node.AggregatedHealthState == HealthState.Warning))
-                                {
-                                    continue;
-                                }
-
-                                telemetryDescription += $"Node in Error or Warning: {node.NodeName}{Environment.NewLine}";
-
-                                if (UDInClusterUpgrade > -1)
-                                {
-                                    telemetryDescription += 
-                                        $"Note: Cluster is currently upgrading in UD {UDInClusterUpgrade}. " +
-                                        $"Node {node.NodeName} Error State could be due to this upgrade process, which will take down a node as a " +
-                                        $"normal part of upgrade process. This is a temporary condition.{Environment.NewLine}.";
-                                }
-
-                                var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(
-                                       node.NodeName,
-                                       this.AsyncClusterOperationTimeoutSeconds,
-                                       token);
-
-                                // From FO?
-                                foreach (var nodeHealthEvent in nodeHealth.HealthEvents)
-                                {
-                                    Token.ThrowIfCancellationRequested();
-
-                                    if (!FOErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(nodeHealthEvent.HealthInformation.SourceId))
-                                    {
-                                        continue;
-                                    }
-
-                                    string errorWarning = "Warning";
-
-                                    if (FOErrorWarningCodes.NodeErrorCodesDictionary[nodeHealthEvent.HealthInformation.SourceId].Contains("Error"))
-                                    {
-                                        errorWarning = "Error";
-                                    }
-
-                                    telemetryDescription +=
-                                        $"  FabricObserver {errorWarning} Code: {nodeHealthEvent.HealthInformation.SourceId}{Environment.NewLine}" +
-                                        $"  {errorWarning} Details: {nodeHealthEvent.HealthInformation.Description}{Environment.NewLine}";
-                                }
-                            }
+                            case HealthEvaluationKind.Invalid:
+                                break;
+                            case HealthEvaluationKind.Event:
+                                break;
+                            case HealthEvaluationKind.Replicas:
+                                break;
+                            case HealthEvaluationKind.Partitions:
+                                break;
+                            case HealthEvaluationKind.DeployedServicePackages:
+                                break;
+                            case HealthEvaluationKind.DeployedApplications:
+                                break;
+                            case HealthEvaluationKind.Services:
+                                break;
+                            case HealthEvaluationKind.SystemApplication:
+                                break;
+                            case HealthEvaluationKind.UpgradeDomainDeployedApplications:
+                                break;
+                            case HealthEvaluationKind.UpgradeDomainNodes:
+                                break;
+                            case HealthEvaluationKind.Replica:
+                                break;
+                            case HealthEvaluationKind.Partition:
+                                break;
+                            case HealthEvaluationKind.DeployedServicePackage:
+                                break;
+                            case HealthEvaluationKind.DeployedApplication:
+                                break;
+                            case HealthEvaluationKind.Service:
+                                break;
+                            case HealthEvaluationKind.DeltaNodesCheck:
+                                break;
+                            case HealthEvaluationKind.UpgradeDomainDeltaNodesCheck:
+                                break;
+                            case HealthEvaluationKind.ApplicationTypeApplications:
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
                         }
                     }
 
                     // HealthStatistics as a string.
                     if (emitHealthStatistics)
                     {
-                        telemetryDescription += $"{clusterHealth.HealthStatistics.ToString()}";
+                        telemetryDescription += $"{clusterHealth.HealthStatistics}";
                     }
                 }
 
@@ -313,7 +357,7 @@ namespace FabricClusterObserver
                   (e is FabricException || e is OperationCanceledException || e is TimeoutException)
             {
                 this.ObserverLogger.LogError(
-                    $"Unable to determine cluster health:{Environment.NewLine}{e.ToString()}");
+                    $"Unable to determine cluster health:{Environment.NewLine}{e}");
 
                 // Telemetry.
                 await this.ObserverTelemetryClient.ReportHealthAsync(
@@ -321,7 +365,7 @@ namespace FabricClusterObserver
                         "AggregatedClusterHealth",
                         HealthState.Unknown,
                         $"ProbeClusterHealthAsync threw {e.Message}{Environment.NewLine}" +
-                        $"Unable to determine Cluster Health. Probing will continue.",
+                        "Unable to determine Cluster Health. Probing will continue.",
                         this.ObserverName,
                         this.Token);
             }
