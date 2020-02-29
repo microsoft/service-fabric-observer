@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Observers;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 
@@ -18,7 +19,7 @@ namespace FabricObserver
     /// </summary>
     internal sealed class FabricObserver : StatelessService
     {
-        private ObserverManager observerManager = null;
+        private ObserverManager observerManager;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserver"/> class.

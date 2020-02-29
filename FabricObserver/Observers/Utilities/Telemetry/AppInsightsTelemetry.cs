@@ -8,12 +8,12 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Interfaces;
+using FabricObserver.Observers.Interfaces;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 
-namespace FabricObserver.Utilities.Telemetry
+namespace FabricObserver.Observers.Utilities.Telemetry
 {
     /// <summary>
     /// Abstracts the ApplicationInsights telemetry API calls allowing
@@ -24,12 +24,9 @@ namespace FabricObserver.Utilities.Telemetry
         /// <summary>
         /// ApplicationInsights telemetry client.
         /// </summary>
-        private readonly TelemetryClient telemetryClient = null;
+        private readonly TelemetryClient telemetryClient;
         private readonly Logger logger;
 
-        /// <summary>
-        /// AiTelemetry constructor.
-        /// </summary>
         public AppInsightsTelemetry(string key)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -56,8 +53,8 @@ namespace FabricObserver.Utilities.Telemetry
         /// </summary>
         public string Key
         {
-            get { return this.telemetryClient?.InstrumentationKey; }
-            set { this.telemetryClient.InstrumentationKey = value; }
+            get => this.telemetryClient?.InstrumentationKey;
+            set => this.telemetryClient.InstrumentationKey = value;
         }
 
         /// <summary>
@@ -89,7 +86,7 @@ namespace FabricObserver.Utilities.Telemetry
                 return Task.FromResult(1);
             }
 
-            AvailabilityTelemetry at = new AvailabilityTelemetry(testName, captured, duration, location, success, message);
+            var at = new AvailabilityTelemetry(testName, captured, duration, location, success, message);
 
             at.Properties.Add("Service", serviceName?.OriginalString);
             at.Properties.Add("Instance", instance);
@@ -148,7 +145,7 @@ namespace FabricObserver.Utilities.Telemetry
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.ToString()}");
+                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
                 throw;
             }
 
@@ -261,7 +258,7 @@ namespace FabricObserver.Utilities.Telemetry
                 return Task.FromResult(false);
             }
 
-            MetricTelemetry mt = new MetricTelemetry(name, value)
+            var mt = new MetricTelemetry(name, value)
             {
                 Count = count,
                 Min = min,
@@ -287,37 +284,27 @@ namespace FabricObserver.Utilities.Telemetry
             return Task.FromResult(0);
         }
 
-        private bool disposedValue = false; // To detect redundant calls
+        private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposedValue)
+            if (this.disposedValue)
             {
-                if (disposing)
-                {
-                }
-
-                this.disposedValue = true;
+                return;
             }
+
+            if (disposing)
+            {
+            }
+
+            this.disposedValue = true;
         }
-
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~AppInsightsTelemetry()
-        // {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
-        // This code added to correctly implement the disposable pattern.
 
         /// <inheritdoc/>
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             this.Dispose(true);
-
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
         }
     }
 }

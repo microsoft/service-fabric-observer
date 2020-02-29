@@ -9,6 +9,7 @@ using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver.Interfaces;
+using FabricClusterObserver.Observers;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -24,7 +25,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <summary>
         /// ApplicationInsights telemetry client.
         /// </summary>
-        private readonly TelemetryClient telemetryClient = null;
+        private readonly TelemetryClient telemetryClient;
         private readonly Logger logger;
 
         /// <summary>
@@ -148,7 +149,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.ToString()}");
+                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
                 throw;
             }
 
@@ -287,7 +288,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             return Task.FromResult(0);
         }
 
-        private bool disposedValue = false; // To detect redundant calls
+        private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {

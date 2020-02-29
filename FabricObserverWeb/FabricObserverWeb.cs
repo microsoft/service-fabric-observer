@@ -22,7 +22,7 @@ namespace FabricObserverWeb
     internal sealed class FabricObserverWeb : StatelessService, IDisposable
     {
         private FabricClient fabricClient;
-        private bool disposed = false;
+        private bool disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserverWeb"/> class.

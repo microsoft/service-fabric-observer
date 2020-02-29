@@ -13,15 +13,15 @@ using System.Threading.Tasks;
 using FabricClusterObserver.Interfaces;
 using FabricClusterObserver.Utilities;
 
-namespace FabricClusterObserver
+namespace FabricClusterObserver.Observers
 {
     public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
     {
         protected bool IsTelemetryEnabled { get; set; } = ObserverManager.TelemetryEnabled;
 
-        protected IObserverTelemetryProvider ObserverTelemetryClient { get; set; } = null;
+        protected IObserverTelemetryProvider ObserverTelemetryClient { get; set; }
 
-        protected FabricClient FabricClientInstance { get; set; } = null;
+        protected FabricClient FabricClientInstance { get; set; }
 
         /// <inheritdoc/>
         public string ObserverName { get; set; }
@@ -64,7 +64,7 @@ namespace FabricClusterObserver
 
         public TimeSpan AsyncClusterOperationTimeoutSeconds { get; set; } = TimeSpan.FromSeconds(60);
 
-        public List<string> Settings { get; } = null;
+        public List<string> Settings { get; }
 
         /// <inheritdoc/>
         public abstract Task ObserveAsync(CancellationToken token);
@@ -91,7 +91,7 @@ namespace FabricClusterObserver
             this.NodeType = this.FabricServiceContext.NodeContext.NodeType;
 
             // Observer Logger setup.
-            string logFolderBasePath = null;
+            string logFolderBasePath;
             string observerLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
                 ObserverConstants.ObserverLogPath);
@@ -247,7 +247,7 @@ namespace FabricClusterObserver
 
             var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
-            var sections = serviceConfiguration.Settings.Sections.Where(sec => sec.Name == sectionName)?.FirstOrDefault();
+            var sections = serviceConfiguration.Settings.Sections.FirstOrDefault(sec => sec.Name == sectionName);
 
             if (sections == null)
             {
@@ -312,7 +312,7 @@ namespace FabricClusterObserver
 
         // This is here so each Observer doesn't have to implement IDisposable.
         // If an Observer needs to dispose, then override this non-impl.
-        private bool disposedValue = false; // To detect redundant calls
+        private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {

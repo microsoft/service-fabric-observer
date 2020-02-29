@@ -5,11 +5,11 @@
 
 using System;
 using System.Collections.Generic;
-using FabricObserver.Utilities;
+using FabricObserver.Observers.Utilities;
 
-namespace FabricObserver.Interfaces
+namespace FabricObserver.Observers.Interfaces
 {
-    public interface IObserverBase<TServiceContext> : IObserver
+    public interface IObserverBase<out TServiceContext> : IObserver
     {
         string ObserverName { get; set; }
 

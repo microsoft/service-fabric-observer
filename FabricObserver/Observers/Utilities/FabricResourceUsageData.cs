@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     public class FabricResourceUsageData<T>
     {
@@ -54,12 +54,12 @@ namespace FabricObserver.Utilities
 
         public List<T> Data { get; }
 
-        private bool isInWarningState = false;
+        private bool isInWarningState;
 
         /// <summary>
         /// Gets count of warnings per observer instance across iterations for the lifetime of the Observer.
         /// </summary>
-        public int LifetimeWarningCount { get; private set; } = 0;
+        public int LifetimeWarningCount { get; private set; }
 
         public T MaxDataValue
         {
@@ -114,16 +114,13 @@ namespace FabricObserver.Utilities
         /// </summary>
         public bool ActiveErrorOrWarning
         {
-            get
-            {
-                return this.isInWarningState;
-            }
+            get => this.isInWarningState;
 
             set
             {
                 this.isInWarningState = value;
 
-                if (value == true)
+                if (value)
                 {
                     this.LifetimeWarningCount++;
                 }

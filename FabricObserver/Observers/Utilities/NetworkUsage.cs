@@ -13,13 +13,13 @@ using System.Management;
 using System.Text.RegularExpressions;
 using System.Xml;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     internal static class NetworkUsage
     {
         internal static int GetActivePortCount(
             int procId = -1,
-            Protocol protocol = Protocol.TCP)
+            Protocol protocol = Protocol.Tcp)
         {
             try
             {
@@ -89,7 +89,7 @@ namespace FabricObserver.Utilities
         /// <param name="protocol" type="Protocol">Optional Protocol (defaults to TCP. Cannot be None.)</param>
         /// <returns>List of tuple (int, int).</returns>
         internal static List<(int ProcessId, int PortCount)>
-            TupleGetEphemeralPortProcessCount(int procId = -1, Protocol protocol = Protocol.TCP)
+            TupleGetEphemeralPortProcessCount(int procId = -1, Protocol protocol = Protocol.Tcp)
         {
             try
             {
@@ -199,7 +199,7 @@ namespace FabricObserver.Utilities
         }
 
         internal static (int LowPort, int HighPort)
-            TupleGetDynamicPortRange(Protocol protocol = Protocol.TCP)
+            TupleGetDynamicPortRange(Protocol protocol = Protocol.Tcp)
         {
             using (var p = new Process())
             {
@@ -263,7 +263,7 @@ namespace FabricObserver.Utilities
 
         internal static int GetActiveEphemeralPortCount(
                                 int procId = -1,
-                                Protocol protocol = Protocol.TCP)
+                                Protocol protocol = Protocol.Tcp)
         {
             try
             {
@@ -438,12 +438,5 @@ namespace FabricObserver.Utilities
 
             return -1;
         }
-    }
-
-    internal enum Protocol
-    {
-        None,
-        TCP,
-        UDP,
     }
 }

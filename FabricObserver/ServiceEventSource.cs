@@ -39,11 +39,13 @@ namespace FabricObserver
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (!this.IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                this.Message(finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            this.Message(finalMessage);
         }
 
         private const int MessageEventId = 1;
@@ -51,28 +53,32 @@ namespace FabricObserver
         [Event(MessageEventId, Level = EventLevel.Informational, Message = "{0}")]
         public void Message(string message)
         {
-            if (this.IsEnabled())
+            if (!this.IsEnabled())
             {
-                this.WriteEvent(MessageEventId, message);
+                return;
             }
+
+            this.WriteEvent(MessageEventId, message);
         }
 
         [NonEvent]
         public void ServiceMessage(StatelessServiceContext serviceContext, string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (!this.IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                this.ServiceMessage(
-                    serviceContext.ServiceName.ToString(),
-                    serviceContext.ServiceTypeName,
-                    serviceContext.InstanceId,
-                    serviceContext.PartitionId,
-                    serviceContext.CodePackageActivationContext.ApplicationName,
-                    serviceContext.CodePackageActivationContext.ApplicationTypeName,
-                    serviceContext.NodeContext.NodeName,
-                    finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            this.ServiceMessage(
+                serviceContext.ServiceName.ToString(),
+                serviceContext.ServiceTypeName,
+                serviceContext.InstanceId,
+                serviceContext.PartitionId,
+                serviceContext.CodePackageActivationContext.ApplicationName,
+                serviceContext.CodePackageActivationContext.ApplicationTypeName,
+                serviceContext.NodeContext.NodeName,
+                finalMessage);
         }
 
         // For very high-frequency events it might be advantageous to raise events using WriteEventCore API.
@@ -156,10 +162,12 @@ namespace FabricObserver
         [Event(VerboseMessageEventId, Level = EventLevel.Verbose, Message = "{0}")]
         public void VerboseMessage(string message)
         {
-            if (this.IsEnabled())
+            if (!this.IsEnabled())
             {
-                this.WriteEvent(VerboseMessageEventId, message);
+                return;
             }
+
+            this.WriteEvent(VerboseMessageEventId, message);
         }
 
         [NonEvent]
@@ -182,15 +190,17 @@ namespace FabricObserver
             string foConfigInfo,
             string foHealthInfo)
         {
-            if (this.IsEnabled())
+            if (!this.IsEnabled())
             {
-                this.WriteEvent(
-                    FabricObserverTelemetryEventId,
-                    clusterId,
-                    applicationVersion,
-                    foConfigInfo,
-                    foHealthInfo);
+                return;
             }
+
+            this.WriteEvent(
+                FabricObserverTelemetryEventId,
+                clusterId,
+                applicationVersion,
+                foConfigInfo,
+                foHealthInfo);
         }
 
 #if UNSAFE

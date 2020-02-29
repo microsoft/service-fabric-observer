@@ -6,15 +6,15 @@
 using System;
 using System.Diagnostics;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     // .NET Standard Process-based impl (cross-platform)
     internal class CpuUsage
     {
         private DateTime prevTime = DateTime.MinValue;
-        private DateTime currTime = DateTime.MinValue;
+        private DateTime currentTimeTime = DateTime.MinValue;
         private TimeSpan prevTotalProcessorTime;
-        private TimeSpan currTotalProcessorTime;
+        private TimeSpan currentTotalProcessorTime;
 
         public int GetCpuUsageProcess(Process p)
         {
@@ -30,13 +30,13 @@ namespace FabricObserver.Utilities
             }
             else
             {
-                this.currTime = DateTime.Now;
-                this.currTotalProcessorTime = p.TotalProcessorTime;
-                var currentUsage = (this.currTotalProcessorTime.TotalMilliseconds - this.prevTotalProcessorTime.TotalMilliseconds) / this.currTime.Subtract(this.prevTime).TotalMilliseconds;
-                double cpuUsuage = currentUsage / Environment.ProcessorCount;
-                this.prevTime = this.currTime;
-                this.prevTotalProcessorTime = this.currTotalProcessorTime;
-                return (int)(cpuUsuage * 100);
+                this.currentTimeTime = DateTime.Now;
+                this.currentTotalProcessorTime = p.TotalProcessorTime;
+                var currentUsage = (this.currentTotalProcessorTime.TotalMilliseconds - this.prevTotalProcessorTime.TotalMilliseconds) / this.currentTimeTime.Subtract(this.prevTime).TotalMilliseconds;
+                var cpuUsage = currentUsage / Environment.ProcessorCount;
+                this.prevTime = this.currentTimeTime;
+                this.prevTotalProcessorTime = this.currentTotalProcessorTime;
+                return (int)(cpuUsage * 100);
             }
 
             return 0;

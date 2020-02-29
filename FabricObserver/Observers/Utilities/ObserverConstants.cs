@@ -3,21 +3,21 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     public sealed class ObserverConstants
     {
-        public const string ObserverManangerName = "ObserverManager";
+        public const string ObserverManagerName = "ObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
         public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
-        public const string EnableLongRunningCSVLogging = "EnableLongRunningCSVLogging";
+        public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
         public const string ObserverLogPath = "ObserverLogPath";
         public const string DataLogPath = "DataLogPath";
-        public const string FQDN = "FQDN";
+        public const string Fqdn = "FQDN";
         public const string ObserverRunIntervalParameterName = "RunInterval";
         public const string ObserverEnabled = "Enabled";
-        public const string AIKey = "AppInsightsInstrumentationKey";
+        public const string AiKey = "AppInsightsInstrumentationKey";
         public const string TelemetryEnabled = "EnableTelemetryProvider";
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
         public const string EventSourceProviderName = "EventSourceProviderName";
@@ -59,10 +59,10 @@ namespace FabricObserver.Utilities
         public const string DiskObserverIntervalParameterName = "RunInterval";
         public const string DiskObserverDiskSpacePercentError = "DiskSpacePercentErrorThreshold";
         public const string DiskObserverDiskSpacePercentWarning = "DiskSpacePercentWarningThreshold";
-        public const string DiskObserverIOReadsError = "IOReadsErrorThreshold";
-        public const string DiskObserverIOReadsWarning = "IOReadsWarningThreshold";
-        public const string DiskObserverIOWritesError = "IOWritesErrorThreshold";
-        public const string DiskObserverIOWritesWarning = "IOWritesWarningThreshold";
+        public const string DiskObserverIoReadsError = "IOReadsErrorThreshold";
+        public const string DiskObserverIoReadsWarning = "IOReadsWarningThreshold";
+        public const string DiskObserverIoWritesError = "IOWritesErrorThreshold";
+        public const string DiskObserverIoWritesWarning = "IOWritesWarningThreshold";
         public const string DiskObserverAverageQueueLengthError = "AverageQueueLengthErrorThreshold";
         public const string DiskObserverAverageQueueLengthWarning = "AverageQueueLengthWarningThreshold";
 
@@ -73,10 +73,10 @@ namespace FabricObserver.Utilities
         public const string FabricSystemObserverWarnCpu = "WarnCpuThresholdPercent";
         public const string FabricSystemObserverErrorMemory = "ErrorMemoryThresholdMB";
         public const string FabricSystemObserverWarnMemory = "WarnMemoryThresholdMB";
-        public const string FabricSystemObserverErrorDiskIOReads = "ErrorDiskIOReadsThreshold";
-        public const string FabricSystemObserverWarnDiskIOReads = "WarnDiskIOReadsThreshold";
-        public const string FabricSystemObserverErrorDiskIOWrites = "ErrorDiskIOWritesThreshold";
-        public const string FabricSystemObserverWarnDiskIOWrites = "WarnDiskIOWritesThreshold";
+        public const string FabricSystemObserverErrorDiskIoReads = "ErrorDiskIOReadsThreshold";
+        public const string FabricSystemObserverWarnDiskIoReads = "WarnDiskIOReadsThreshold";
+        public const string FabricSystemObserverErrorDiskIoWrites = "ErrorDiskIOWritesThreshold";
+        public const string FabricSystemObserverWarnDiskIoWrites = "WarnDiskIOWritesThreshold";
         public const string FabricSystemObserverErrorPercentUnhealthyNodes = "PercentUnhealthyNodesErrorThreshold";
         public const string FabricSystemObserverWarnPercentUnhealthyNodes = "PercentUnhealthyNodesWarnThreshold";
         public const string FabricSystemObserverMonitorWindowsEventLog = "MonitorWindowsEventLog";
@@ -90,8 +90,8 @@ namespace FabricObserver.Utilities
         public const string NodeObserverConfigurationSectionName = "NodeObserverConfiguration";
         public const string NodeObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
         public const string NodeObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
-        public const string NodeObserverMemoryErrorLimitMB = "MemoryErrorLimitMB";
-        public const string NodeObserverMemoryWarningLimitMB = "MemoryWarningLimitMB";
+        public const string NodeObserverMemoryErrorLimitMb = "MemoryErrorLimitMB";
+        public const string NodeObserverMemoryWarningLimitMb = "MemoryWarningLimitMB";
         public const string NodeObserverNetworkErrorActivePorts = "NetworkErrorActivePorts";
         public const string NodeObserverNetworkWarningActivePorts = "NetworkWarningActivePorts";
         public const string NodeObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";
@@ -102,13 +102,13 @@ namespace FabricObserver.Utilities
         public const string NodeObserverMemoryUsePercentWarning = "MemoryWarningLimitPercent";
 
         // OSObserver.
-        public const string OSObserverName = "OSObserver";
-        public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
+        public const string OsObserverName = "OSObserver";
+        public const string OsObserverConfigurationSectionName = "OSObserverConfiguration";
 
         // SFConfigurationObserver.
-        public const string SFConfigurationObserverName = "SFConfigurationObserver";
-        public const string SFConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
-        public const string SFConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
-        public const string SFConfigurationObserverRunIntervalParameterName = "RunInterval";
+        public const string SfConfigurationObserverName = "SFConfigurationObserver";
+        public const string SfConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
+        public const string SfConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
+        public const string SfConfigurationObserverRunIntervalParameterName = "RunInterval";
     }
 }

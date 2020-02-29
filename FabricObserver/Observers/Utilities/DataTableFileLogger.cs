@@ -6,11 +6,12 @@
 using System;
 using System.IO;
 using FabricObserver.Interfaces;
+using FabricObserver.Observers.Interfaces;
 using NLog;
 using NLog.Targets;
 using NLog.Time;
 
-namespace FabricObserver.Utilities
+namespace FabricObserver.Observers.Utilities
 {
     // CSV file logger for long-running monitoring data (memory/cpu/disk/network usage data).
     public class DataTableFileLogger : IDataTableFileLogger<ILogger>
@@ -21,7 +22,7 @@ namespace FabricObserver.Utilities
         /// <inheritdoc/>
         public string DataLogFolderPath { get; set; } = null;
 
-        private static ILogger Logger { get; set; } = null;
+        private static ILogger Logger { get; set; }
 
         /// <inheritdoc/>
         public void ConfigureLogger(string filename)

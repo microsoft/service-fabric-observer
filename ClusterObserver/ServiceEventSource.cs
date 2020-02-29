@@ -18,7 +18,8 @@ namespace FabricClusterObserver
         }
 
         // Instance constructor is private to enforce singleton semantics
-        private ServiceEventSource() : base() { }
+        private ServiceEventSource()
+        { }
 
         #region Keywords
         // Event keywords can be used to categorize events. 
@@ -42,11 +43,13 @@ namespace FabricClusterObserver
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (!this.IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                Message(finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            Message(finalMessage);
         }
 
         private const int MessageEventId = 1;
@@ -62,19 +65,21 @@ namespace FabricClusterObserver
         [NonEvent]
         public void ServiceMessage(StatelessServiceContext serviceContext, string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (!this.IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                ServiceMessage(
-                    serviceContext.ServiceName.ToString(),
-                    serviceContext.ServiceTypeName,
-                    serviceContext.InstanceId,
-                    serviceContext.PartitionId,
-                    serviceContext.CodePackageActivationContext.ApplicationName,
-                    serviceContext.CodePackageActivationContext.ApplicationTypeName,
-                    serviceContext.NodeContext.NodeName,
-                    finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            ServiceMessage(
+                serviceContext.ServiceName.ToString(),
+                serviceContext.ServiceTypeName,
+                serviceContext.InstanceId,
+                serviceContext.PartitionId,
+                serviceContext.CodePackageActivationContext.ApplicationName,
+                serviceContext.CodePackageActivationContext.ApplicationTypeName,
+                serviceContext.NodeContext.NodeName,
+                finalMessage);
         }
 
         // For very high-frequency events it might be advantageous to raise events using WriteEventCore API.
