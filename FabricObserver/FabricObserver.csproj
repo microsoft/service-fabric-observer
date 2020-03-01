@@ -245,6 +245,8 @@
     <Compile Include="Observers\MachineInfoModel\NetworkObserverConfig.cs" />
     <Compile Include="Observers\NetworkObserver.cs" />
     <Compile Include="Observers\NodeObserver.cs" />
+    <Compile Include="Observers\Utilities\FabricClientRetryErrors.cs" />
+    <Compile Include="Observers\Utilities\FabricClientRetryHelper.cs" />
     <Compile Include="Observers\Utilities\FOErrorWarningCodes.cs" />
     <Compile Include="Observers\Utilities\ErrorWarningProperty.cs" />
     <Compile Include="Observers\Utilities\Protocol.cs" />
