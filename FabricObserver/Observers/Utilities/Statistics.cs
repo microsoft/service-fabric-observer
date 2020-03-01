@@ -17,23 +17,6 @@ namespace FabricObserver.Observers.Utilities
 
     public sealed class Statistics
     {
-        internal static (int Count, double Sum, double SumOfSquares)
-            ComputeSumAndSumOfSquares(IEnumerable<double> sequence)
-        {
-            double sum = 0;
-            double sumOfSquares = 0;
-            int count = 0;
-
-            foreach (var item in sequence)
-            {
-                count++;
-                sum += item;
-                sumOfSquares += item * item;
-            }
-
-            return (count, sum, sumOfSquares);
-        }
-
         /// <summary>
         /// Computes the standard deviation of type T of a List of numeric values of type T.
         /// </summary>
@@ -118,10 +101,10 @@ namespace FabricObserver.Observers.Utilities
 
         /// <summary>
         /// Computes Max or Min values within left-to-right sliding window of elements
-        /// of width windowWidth in a generic numeric list of type T.
+        /// of width windowWidth in a numeric list of type T.
         /// </summary>
         /// <typeparam name="T">Type of numeric value in List.</typeparam>
-        /// <param name="data">List of some numeric type.</param>
+        /// <param name="data">List of some numeric type T.</param>
         /// <param name="windowWidth">Number of elements inside a window.</param>
         /// <param name="windowType">Minimum or Maximum sliding window sort.</param>
         /// <returns>List of sliding window sorted elements of numeric type T.</returns>
