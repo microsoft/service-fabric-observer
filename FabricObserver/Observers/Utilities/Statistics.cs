@@ -40,8 +40,7 @@ namespace FabricObserver.Observers.Utilities
         /// <typeparam name="T">Generic numeric type.</typeparam>
         /// <param name="data">List of generic numeric values.</param>
         /// <returns>Standard deviation of input as generic T.
-        /// Consumer must convert to expected actual type:
-        /// See impl of StandardDeviation member of FabricResourceUsageData class.</returns>
+        /// Consumption: See impl of StandardDeviation member of FabricResourceUsageData class.</returns>
         internal static T StandardDeviation<T>(List<T> data)
         {
             var squaredMeanDifferences = new List<T>();
@@ -55,12 +54,15 @@ namespace FabricObserver.Observers.Utilities
                     average = value.Average();
                     squaredMeanDifferences.AddRange(
                         value.Select(
-                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+                            n => (T)Convert.ChangeType(
+                                (n - average) * (n - average), typeof(T))));
 
-                    meanOfSquaredDifferences = (T)Convert.ChangeType(((squaredMeanDifferences as List<long>) ?? throw new InvalidOperationException()).Average(), typeof(T));
+                    meanOfSquaredDifferences = (T)Convert.ChangeType(
+                        (squaredMeanDifferences as List<long> ?? throw new InvalidOperationException()).Average(), typeof(T));
 
                     // Standard Deviation is the square root of the mean of squared differences:
-                    standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToInt64(meanOfSquaredDifferences)), typeof(T));
+                    standardDeviation = (T)Convert.ChangeType(
+                        Math.Sqrt(Convert.ToInt64(meanOfSquaredDifferences)), typeof(T));
 
                     break;
 
@@ -68,10 +70,14 @@ namespace FabricObserver.Observers.Utilities
                     average = value.Average();
                     squaredMeanDifferences.AddRange(
                         value.Select(
-                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+                            n => (T)Convert.ChangeType(
+                                (n - average) * (n - average), typeof(T))));
 
-                    meanOfSquaredDifferences = (T)Convert.ChangeType(((squaredMeanDifferences as List<int>) ?? throw new InvalidOperationException()).Average(), typeof(T));
-                    standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToInt32(meanOfSquaredDifferences)), typeof(T));
+                    meanOfSquaredDifferences = (T)Convert.ChangeType(
+                        (squaredMeanDifferences as List<int> ?? throw new InvalidOperationException()).Average(), typeof(T));
+
+                    standardDeviation = (T)Convert.ChangeType(
+                        Math.Sqrt(Convert.ToInt32(meanOfSquaredDifferences)), typeof(T));
 
                     break;
 
@@ -79,10 +85,14 @@ namespace FabricObserver.Observers.Utilities
                     average = value.Average();
                     squaredMeanDifferences.AddRange(
                         value.Select(
-                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+                            n => (T)Convert.ChangeType(
+                                (n - average) * (n - average), typeof(T))));
 
-                    meanOfSquaredDifferences = (T)Convert.ChangeType(((squaredMeanDifferences as List<float>) ?? throw new InvalidOperationException()).Average(), typeof(T));
-                    standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToSingle(meanOfSquaredDifferences)), typeof(T));
+                    meanOfSquaredDifferences = (T)Convert.ChangeType(
+                        (squaredMeanDifferences as List<float> ?? throw new InvalidOperationException()).Average(), typeof(T));
+
+                    standardDeviation = (T)Convert.ChangeType(
+                        Math.Sqrt(Convert.ToSingle(meanOfSquaredDifferences)), typeof(T));
 
                     break;
 
@@ -90,10 +100,14 @@ namespace FabricObserver.Observers.Utilities
                     average = value.Average();
                     squaredMeanDifferences.AddRange(
                         value.Select(
-                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+                            n => (T)Convert.ChangeType(
+                                (n - average) * (n - average), typeof(T))));
 
-                    meanOfSquaredDifferences = (T)Convert.ChangeType(((squaredMeanDifferences as List<double>) ?? throw new InvalidOperationException()).Average(), typeof(T));
-                    standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToDouble(meanOfSquaredDifferences)), typeof(T));
+                    meanOfSquaredDifferences = (T)Convert.ChangeType(
+                        (squaredMeanDifferences as List<double> ?? throw new InvalidOperationException()).Average(), typeof(T));
+
+                    standardDeviation = (T)Convert.ChangeType(
+                        Math.Sqrt(Convert.ToDouble(meanOfSquaredDifferences)), typeof(T));
 
                     break;
             }
