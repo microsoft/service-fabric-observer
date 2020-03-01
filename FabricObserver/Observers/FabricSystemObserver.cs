@@ -86,7 +86,7 @@ namespace FabricObserver.Observers
 
         public int MemWarnUsageThresholdMb { get; set; } = 14000;
 
-        public string ErorrOrWarningKind { get; set; } = null;
+        public string ErrorOrWarningKind { get; set; } = null;
 
         private void Initialize()
         {
@@ -650,9 +650,10 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessResourceDataList<T>(
-            List<FabricResourceUsageData<T>> data,
+            IReadOnlyCollection<FabricResourceUsageData<T>> data,
             T thresholdError,
             T thresholdWarning)
+                where T : struct
         {
             foreach (var dataItem in data)
             {
@@ -676,6 +677,7 @@ namespace FabricObserver.Observers
                         case ErrorWarningProperty.TotalMemoryConsumptionPct:
                             dataLogMonitorType = "Working Set %";
                             break;
+
                         case ErrorWarningProperty.TotalCpuTime:
                             dataLogMonitorType = "% CPU Time";
                             break;

@@ -494,6 +494,7 @@ namespace FabricObserver.Observers
             HealthReportType healthReportType = HealthReportType.Node,
             ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
             bool dumpOnError = false)
+                where T : struct
         {
             if (data == null)
             {

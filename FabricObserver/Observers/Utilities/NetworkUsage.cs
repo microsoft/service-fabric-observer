@@ -23,7 +23,6 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                string findStrProc = string.Empty;
                 string protoParam = string.Empty;
 
                 if (protocol != Protocol.None)
@@ -31,7 +30,7 @@ namespace FabricObserver.Observers.Utilities
                     protoParam = "-p " + Enum.GetName(protocol.GetType(), protocol)?.ToLower();
                 }
 
-                findStrProc = $"| find /i \"{Enum.GetName(protocol.GetType(), protocol)?.ToLower()}\"";
+                var findStrProc = $"| find /i \"{Enum.GetName(protocol.GetType(), protocol)?.ToLower()}\"";
 
                 if (procId > 0)
                 {
@@ -82,14 +81,16 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>List of string,int Tuples.</returns>
         /// <summary>
         ///  Returns number of ephemeral ports (ports within a dynamic numerical range) in use by a process
-        ///  on node as a List of tuple (int, int) containg process id and port count in use by said process) ordered by port count, descending.
+        ///  on node as a List of tuple (int, int) containing process id and port count in use by said process) ordered by port count, descending.
         ///  On failure, for handled exceptions., this function returns a list of one (int, int) of value (-1, -1).
         /// </summary>
         /// <param name="procId" type="int">Optional int process ID</param>
         /// <param name="protocol" type="Protocol">Optional Protocol (defaults to TCP. Cannot be None.)</param>
         /// <returns>List of tuple (int, int).</returns>
         internal static List<(int ProcessId, int PortCount)>
-            TupleGetEphemeralPortProcessCount(int procId = -1, Protocol protocol = Protocol.Tcp)
+            TupleGetEphemeralPortProcessCount(
+                int procId = -1,
+                Protocol protocol = Protocol.Tcp)
         {
             try
             {
@@ -122,18 +123,18 @@ namespace FabricObserver.Observers.Utilities
                     var ephemeralPortProcessTupleList = new List<(int, int)>();
                     var ephemeralPortList = new List<string>();
 
-                    foreach (var portRow in stdOutput?.ReadToEnd().Split(
-                        new string[] { "\r", "\n" },
+                    foreach (var portRow in stdOutput.ReadToEnd().Split(
+                        new[] { "\r", "\n" },
                         StringSplitOptions.RemoveEmptyEntries))
                     {
-                        if (!portRow.ToLower().Contains(protoParam))
+                        if (!portRow.ToLower().Contains(protoParam ?? throw new InvalidOperationException()))
                         {
                             continue;
                         }
 
                         // caller supplied a proc id? It is always the last item in the netstat column output, thus
                         // LastIndex is used to protect against selecting a port number of the same value.
-                        if (procId > -1 && portRow.LastIndexOf(procId.ToString()) < 0)
+                        if (procId > -1 && portRow.LastIndexOf(procId.ToString(), StringComparison.Ordinal) < 0)
                         {
                             continue;
                         }
@@ -142,23 +143,21 @@ namespace FabricObserver.Observers.Utilities
                     }
 
                     var exitStatus = p.ExitCode.ToString();
-                    stdOutput?.Close();
+                    stdOutput.Close();
 
                     if (exitStatus != "0")
                     {
                         return new List<(int, int)> { (-1, -1) };
                     }
 
-                    var portRange = TupleGetDynamicPortRange(protocol);
-                    int lowPortRange = portRange.LowPort;
-                    int highPortRange = portRange.HighPort;
+                    var (lowPortRange, highPortRange) = TupleGetDynamicPortRange(protocol);
 
                     // Add tuple {process id, count} to list for active ports in dynamic range.
                     foreach (string line in ephemeralPortList)
                     {
                         int port = GetPortNumberFromConsoleOutputRow(line, protoParam);
-                        string proc = line.ToLower().Replace(protoParam, string.Empty).Trim()
-                                          .Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries)[3].Trim();
+                        string proc = line.ToLower().Replace(protoParam ?? throw new InvalidOperationException(), string.Empty).Trim()
+                                          .Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries)[3].Trim();
 
                         if (string.IsNullOrEmpty(proc))
                         {
@@ -166,18 +165,18 @@ namespace FabricObserver.Observers.Utilities
                         }
 
                         if (port <= lowPortRange || port >= highPortRange
-                            || ephemeralPortProcessTupleList.Any(x => x.Item1 == int.Parse(proc)))
+                                                 || ephemeralPortProcessTupleList.Any(x => x.Item1 == int.Parse(proc)))
                         {
                             continue;
                         }
 
                         ephemeralPortProcessTupleList.Add((
                             int.Parse(proc),
-                            ephemeralPortList.Where(s => s.Split(
-                                                            new string[] { " " },
-                                                            StringSplitOptions.RemoveEmptyEntries)[4].Trim() == proc
-                                                            && GetPortNumberFromConsoleOutputRow(s, protoParam) >= lowPortRange
-                                                            && GetPortNumberFromConsoleOutputRow(s, protoParam) <= highPortRange).Count()));
+                            ephemeralPortList.Count(s => s.Split(
+                                                             new[] { " " },
+                                                             StringSplitOptions.RemoveEmptyEntries)[4].Trim() == proc
+                                                         && GetPortNumberFromConsoleOutputRow(s, protoParam) >= lowPortRange
+                                                         && GetPortNumberFromConsoleOutputRow(s, protoParam) <= highPortRange)));
                     }
 
                     var ret = ephemeralPortProcessTupleList.OrderByDescending(x => x.Item2).ToList();
@@ -185,13 +184,10 @@ namespace FabricObserver.Observers.Utilities
                     return ret;
                 }
             }
-            catch (ArgumentException)
-            {
-            }
-            catch (InvalidOperationException)
-            {
-            }
-            catch (Win32Exception)
+            catch (Exception e) when
+                (e is ArgumentException
+                 || e is InvalidOperationException
+                 || e is Win32Exception)
             {
             }
 
@@ -226,7 +222,7 @@ namespace FabricObserver.Observers.Utilities
                     _ = p.Start();
 
                     var stdOutput = p.StandardOutput;
-                    string output = stdOutput?.ReadToEnd();
+                    string output = stdOutput.ReadToEnd();
                     Match match = Regex.Match(
                         output,
                         @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
@@ -235,7 +231,7 @@ namespace FabricObserver.Observers.Utilities
                     string startPort = match.Groups["startPort"].Value;
                     string portCount = match.Groups["numberOfPorts"].Value;
                     string exitStatus = p.ExitCode.ToString();
-                    stdOutput?.Close();
+                    stdOutput.Close();
 
                     if (exitStatus != "0")
                     {
@@ -247,13 +243,10 @@ namespace FabricObserver.Observers.Utilities
 
                     return (lowPortRange, highPortRange);
                 }
-                catch (ArgumentException)
-                {
-                }
-                catch (IOException)
-                {
-                }
-                catch (Win32Exception)
+                catch (Exception e) when
+                 (e is IOException
+                 || e is InvalidOperationException
+                 || e is Win32Exception)
                 {
                 }
 
@@ -294,55 +287,42 @@ namespace FabricObserver.Observers.Utilities
 
                     var ephemeralPortList = new List<string>();
 
-                    foreach (var portRow in stdOutput?.ReadToEnd().Split(
-                        new string[] { "\r", "\n" },
+                    foreach (var portRow in stdOutput.ReadToEnd().Split(
+                        new[] { "\r", "\n" },
                         StringSplitOptions.RemoveEmptyEntries))
                     {
-                        if (portRow.ToLower().Contains(protoParam))
+                        if (protoParam != null && !portRow.ToLower().Contains(protoParam))
                         {
-                            if (procId > -1 && portRow.LastIndexOf(procId.ToString()) < 0)
-                            {
-                                continue;
-                            }
-
-                            ephemeralPortList.Add(portRow);
+                            continue;
                         }
+
+                        if (procId > -1 && portRow.LastIndexOf(procId.ToString(), StringComparison.Ordinal) < 0)
+                        {
+                            continue;
+                        }
+
+                        ephemeralPortList.Add(portRow);
                     }
 
                     var exitStatus = p.ExitCode.ToString();
-                    stdOutput?.Close();
+                    stdOutput.Close();
 
                     if (exitStatus != "0")
                     {
                         return -1;
                     }
 
-                    int ephemeralPortsInUse = 0;
-                    var portRange = TupleGetDynamicPortRange(protocol);
-                    int lowPortRange = portRange.LowPort;
-                    int highPortRange = portRange.HighPort;
+                    var (lowPortRange, highPortRange) = TupleGetDynamicPortRange(protocol);
 
                     // Compute count of active ports in dynamic range.
-                    foreach (string line in ephemeralPortList)
-                    {
-                        int port = GetPortNumberFromConsoleOutputRow(line, protoParam);
-
-                        if (port >= lowPortRange && port <= highPortRange)
-                        {
-                            ephemeralPortsInUse++;
-                        }
-                    }
-
-                    return ephemeralPortsInUse;
+                    return ephemeralPortList.Select(line => GetPortNumberFromConsoleOutputRow(line, protoParam))
+                        .Count(port => port >= lowPortRange && port <= highPortRange);
                 }
             }
-            catch (ArgumentException)
-            {
-            }
-            catch (InvalidOperationException)
-            {
-            }
-            catch (Win32Exception)
+            catch (Exception e) when
+            (e is ArgumentException
+             || e is InvalidOperationException
+             || e is Win32Exception)
             {
             }
 
@@ -371,14 +351,26 @@ namespace FabricObserver.Observers.Utilities
 
                 // Application Port Range.
                 var endpointsNodeList = xdoc.SelectNodes($"//sf:NodeTypes//sf:NodeType[@Name='{nodeType}']//sf:Endpoints", nsmgr);
+
+                if (endpointsNodeList == null)
+                {
+                    return (-1, -1);
+                }
+
                 var ret = (-1, -1);
 
                 foreach (XmlNode node in endpointsNodeList)
                 {
-                    ret = (int.Parse(node.ChildNodes[6].Attributes.Item(0).Value), int.Parse(node.ChildNodes[6].Attributes.Item(1).Value));
+                    if (node == null || node.ChildNodes.Count < 7)
+                    {
+                        continue;
+                    }
+
+                    ret = (int.Parse(node.ChildNodes[6].Attributes?.Item(0).Value ?? "-1"),
+                           int.Parse(node.ChildNodes[6].Attributes?.Item(1).Value ?? "-1"));
                 }
 
-                reader?.Dispose();
+                reader.Dispose();
 
                 return ret;
             }
@@ -426,7 +418,7 @@ namespace FabricObserver.Observers.Utilities
             try
             {
                 return int.Parse(row.ToLower().Replace(protoParam, string.Empty).Trim()
-                          .Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries)[0]
+                          .Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries)[0]
                           .Split(':')[1]);
             }
             catch (ArgumentException)

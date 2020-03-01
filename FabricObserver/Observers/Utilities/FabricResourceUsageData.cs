@@ -10,6 +10,7 @@ using System.Linq;
 namespace FabricObserver.Observers.Utilities
 {
     public class FabricResourceUsageData<T>
+            where T : struct
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricResourceUsageData{T}"/> class.
@@ -78,30 +79,25 @@ namespace FabricObserver.Observers.Utilities
         {
             get
             {
-                var average = 0.0;
+                double average = 0.0;
 
-                var v = this.Data as List<long>;
-                if (v?.Count > 0)
+                switch (this.Data)
                 {
-                    average = v.Average();
-                }
+                    case List<long> v when v.Count > 0:
+                        average = v.Average();
+                        break;
 
-                var x = this.Data as List<int>;
-                if (x?.Count > 0)
-                {
-                    average = x.Average();
-                }
+                    case List<int> x when x.Count > 0:
+                        average = x.Average();
+                        break;
 
-                var y = this.Data as List<float>;
-                if (y?.Count > 0)
-                {
-                    average = Convert.ToDouble(y.Average());
-                }
+                    case List<float> y when y.Count > 0:
+                        average = Convert.ToDouble(y.Average());
+                        break;
 
-                var z = this.Data as List<double>;
-                if (z?.Count > 0)
-                {
-                    average = z.Average();
+                    case List<double> z when z.Count > 0:
+                        average = z.Average();
+                        break;
                 }
 
                 return average;
@@ -134,25 +130,16 @@ namespace FabricObserver.Observers.Utilities
                 return false;
             }
 
-            if (this.AverageDataValue >= Convert.ToDouble(threshold))
-            {
-                return true;
-            }
-
-            return false;
+            return this.AverageDataValue >= Convert.ToDouble(threshold);
         }
 
-        public double StandardDeviation
-        {
-            get
-            {
-                if (this.Data?.Count > 0)
-                {
-                    return Statistics.StandardDeviation(this.Data);
-                }
+        public T StandardDeviation =>
+            Data?.Count > 0 ? (T)Convert.ChangeType(Statistics.StandardDeviation(Data), typeof(T)) : default(T);
 
-                return 0;
-            }
-        }
+        public List<T> SlidingWindow =>
+            Data?.Count > 0 ? Statistics.SlidingWindow(
+                Data,
+                9,
+                WindowType.Max) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
     }
 }
