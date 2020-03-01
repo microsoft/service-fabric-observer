@@ -274,7 +274,12 @@ namespace FabricObserver.Observers
                     this.firewallData.Data.Add(firewalls);
 
                     // CPU and Memory.
-                    for (int i = 0; i < 30; i++)
+                    // Note: Please make sure you understand the normal state of your nodes
+                    // with respect to the machine resource use and/or abuse by your service(s).
+                    // For example, if it is normal for your services to consume 90% of available CPU and memory
+                    // as part of the work they perform under normal traffic flow, then it doesn't make sense to warn or
+                    // error on these conditions.
+                    for (int i = 0; i < 60; i++)
                     {
                         token.ThrowIfCancellationRequested();
 
@@ -295,19 +300,19 @@ namespace FabricObserver.Observers
                                 ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                         }
 
-                        Thread.Sleep(250);
+                        Thread.Sleep(500);
                     }
+                }
+                catch (OperationCanceledException)
+                {
                 }
                 catch (Exception e)
                 {
-                    if (!(e is OperationCanceledException))
-                    {
-                        this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.HealthReporter.ReportFabricObserverServiceHealth(
                             this.FabricServiceContext.ServiceName.OriginalString,
                             this.ObserverName,
                             HealthState.Warning,
-                            $"Unhandled exception in GetSystemCpuMemoryValuesAsync: {e.Message}: \n {e.StackTrace}");
-                    }
+                            $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
                     throw;
                 }
@@ -435,14 +440,16 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                if (!(e is OperationCanceledException))
+                if (e is OperationCanceledException)
                 {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        this.ObserverName,
-                        HealthState.Warning,
-                        e.ToString());
+                    return Task.FromResult(1);
                 }
+
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Warning,
+                    e.ToString());
 
                 throw;
             }

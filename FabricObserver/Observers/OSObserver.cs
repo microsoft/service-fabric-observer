@@ -179,14 +179,11 @@ namespace FabricObserver.Observers
                 {
                     token.ThrowIfCancellationRequested();
 
-                    if (generateUrl)
-                    {
-                        _ = sb.AppendFormat("<a href=\"{0}\" target=\"_blank\">{1}</a>   {2}", obj["Caption"], obj["HotFixID"], obj["InstalledOn"]);
-                    }
-                    else
-                    {
-                        _ = sb.AppendFormat("{0}", obj["HotFixID"]);
-                    }
+                    _ = generateUrl ? sb.AppendFormat(
+                        "<a href=\"{0}\" target=\"_blank\">{1}</a>   {2}",
+                        obj["Caption"],
+                        obj["HotFixID"],
+                        obj["InstalledOn"]) : sb.AppendFormat("{0}", obj["HotFixID"]);
 
                     _ = sb.AppendLine();
                 }
@@ -232,11 +229,7 @@ namespace FabricObserver.Observers
             string lastBootTime = string.Empty;
             string installDate = string.Empty;
             int logicalProcessorCount = Environment.ProcessorCount;
-            int logicalDriveCount;
-            int activePorts;
-            int activeEphemeralPorts;
-            int totalVirtMem = 0;
-            string fabricAppPortRange;
+            int totalVirtualMem = 0;
             string osLang = string.Empty;
             double freePhysicalMem = 0;
             double freeVirtualMem = 0;
@@ -304,7 +297,7 @@ namespace FabricObserver.Observers
                                     }
                                     else if (name.ToLower().Contains("totalvirtual"))
                                     {
-                                        totalVirtMem = i;
+                                        totalVirtualMem = i;
                                     }
                                     else if (name.ToLower().Contains("freephysical"))
                                     {
@@ -323,18 +316,17 @@ namespace FabricObserver.Observers
                 }
 
                 // Active, bound ports.
-                activePorts = NetworkUsage.GetActivePortCount();
+                var activePorts = NetworkUsage.GetActivePortCount();
 
                 // Active, ephemeral ports.
-                activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
-                var dynamicPortRange = NetworkUsage.TupleGetDynamicPortRange();
-                string clusterManifestXml;
+                var activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
+                var (lowPortOs, highPortOs) = NetworkUsage.TupleGetDynamicPortRange();
                 string osEphemeralPortRange = string.Empty;
-                fabricAppPortRange = string.Empty;
+                var fabricAppPortRange = string.Empty;
 
-                clusterManifestXml = this.IsTestRun ? File.ReadAllText(this.TestManifestPath) : this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).GetAwaiter().GetResult();
+                var clusterManifestXml = this.IsTestRun ? File.ReadAllText(this.TestManifestPath) : this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).GetAwaiter().GetResult();
 
-                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                var (lowPortApp, highPortApp) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
                 // OS info.
@@ -347,15 +339,15 @@ namespace FabricObserver.Observers
                 _ = sb.AppendLine($"OSHealthStatus*: {this.osStatus}");
                 _ = sb.AppendLine($"NumberOfProcesses*: {numProcs}");
 
-                if (dynamicPortRange.LowPort > -1)
+                if (lowPortOs > -1)
                 {
-                    osEphemeralPortRange = $"{dynamicPortRange.LowPort} - {dynamicPortRange.HighPort}";
+                    osEphemeralPortRange = $"{lowPortOs} - {highPortOs}";
                     _ = sb.AppendLine($"WindowsEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
                 }
 
-                if (lowPort > -1)
+                if (lowPortApp > -1)
                 {
-                    fabricAppPortRange = $"{lowPort} - {highPort}";
+                    fabricAppPortRange = $"{lowPortApp} - {highPortApp}";
                     _ = sb.AppendLine($"FabricApplicationTCPPortRange: {fabricAppPortRange}");
                 }
 
@@ -373,14 +365,14 @@ namespace FabricObserver.Observers
                 // Proc/Mem
                 _ = sb.AppendLine("\r\nHardware Information:\r\n");
                 _ = sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
-                _ = sb.AppendLine($"TotalVirtualMemorySize: {totalVirtMem} GB");
+                _ = sb.AppendLine($"TotalVirtualMemorySize: {totalVirtualMem} GB");
                 _ = sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGb} GB");
                 _ = sb.AppendLine($"FreePhysicalMemory*: {Math.Round(freePhysicalMem / 1024 / 1024, 2)} GB");
                 _ = sb.AppendLine($"FreeVirtualMemory*: {Math.Round(freeVirtualMem / 1024 / 1024, 2)} GB");
 
                 // Disk
                 var drivesInformationTuple = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
-                logicalDriveCount = drivesInformationTuple.Count;
+                var logicalDriveCount = drivesInformationTuple.Count;
 
                 _ = sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
 

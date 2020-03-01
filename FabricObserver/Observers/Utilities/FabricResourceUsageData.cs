@@ -136,10 +136,16 @@ namespace FabricObserver.Observers.Utilities
         public T StandardDeviation =>
             Data?.Count > 0 ? (T)Convert.ChangeType(Statistics.StandardDeviation(Data), typeof(T)) : default(T);
 
-        public List<T> SlidingWindow =>
+        public List<T> SlidingWindowMax =>
             Data?.Count > 0 ? Statistics.SlidingWindow(
                 Data,
-                9,
+                3,
                 WindowType.Max) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
+
+        public List<T> SlidingWindowMin =>
+            Data?.Count > 0 ? Statistics.SlidingWindow(
+                Data,
+                3,
+                WindowType.Min) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
     }
 }

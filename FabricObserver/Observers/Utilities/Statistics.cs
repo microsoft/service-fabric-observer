@@ -35,13 +35,14 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Computes the standard deviation of type T of a generic List of numeric values of type T.
+        /// Computes the standard deviation of type T of a List of numeric values of type T.
         /// </summary>
-        /// <typeparam name="T">Generic numeric type.</typeparam>
-        /// <param name="data">List of generic numeric values.</param>
-        /// <returns>Standard deviation of input as generic T.
+        /// <typeparam name="T">Numeric type T.</typeparam>
+        /// <param name="data">List of numeric values of type T.</param>
+        /// <returns>Standard deviation of input type T as type T.
         /// Consumption: See impl of StandardDeviation member of FabricResourceUsageData class.</returns>
         internal static T StandardDeviation<T>(List<T> data)
+            where T : struct
         {
             var squaredMeanDifferences = new List<T>();
             T meanOfSquaredDifferences;
@@ -122,7 +123,7 @@ namespace FabricObserver.Observers.Utilities
         /// <typeparam name="T">Type of numeric value in List.</typeparam>
         /// <param name="data">List of some numeric type.</param>
         /// <param name="windowWidth">Number of elements inside a window.</param>
-        /// <param name="windowType">Min or Max value to look for.</param>
+        /// <param name="windowType">Minimum or Maximum sliding window sort.</param>
         /// <returns>List of sliding window sorted elements of numeric type T.</returns>
         internal static List<T> SlidingWindow<T>(
             List<T> data,
@@ -137,7 +138,7 @@ namespace FabricObserver.Observers.Utilities
 
             var map = new Dictionary<T, T>(data.Count);
             var x = data.Count - (windowWidth + 1);
-            var window = new List<T> { (T)Convert.ChangeType(x, typeof(T)) };
+            var windowList = new List<T> { (T)Convert.ChangeType(x, typeof(T)) };
             var bst = new SortedSet<T>();
 
             for (var i = 0; i < x; i++)
@@ -163,10 +164,10 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                window.Insert(i - windowWidth + 1, windowType == WindowType.Max ? bst.Max : bst.Min);
+                windowList.Insert(i - windowWidth + 1, windowType == WindowType.Max ? bst.Max : bst.Min);
             }
 
-            return window;
+            return windowList;
         }
     }
 }
