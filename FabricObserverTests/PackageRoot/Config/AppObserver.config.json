@@ -1,10 +1,10 @@
 ﻿[
   {
-    "targetAppType": "CpuStressType",
+    "targetAppType": "AppTestType",
     "cpuWarningLimitPercent": 20
   },
   {
-    "targetApp": "fabric:/FabricObserver",
+    "targetApp": "fabric:/TestApp",
     "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,

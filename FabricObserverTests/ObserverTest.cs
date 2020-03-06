@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Fabric;
@@ -6,10 +7,9 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricClusterObserver;
 using FabricClusterObserver.Observers;
-using FabricObserver;
 using FabricObserver.Observers;
+using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ClusterObserverManager = FabricClusterObserver.Observers.ObserverManager;
@@ -61,7 +61,7 @@ namespace FabricObserverTests
                     long.MaxValue);
 
         private readonly bool isSFRuntimePresentOnTestMachine;
-        private CancellationToken token = new CancellationToken { };
+        private readonly CancellationToken token = new CancellationToken { };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverTest"/> class.
@@ -118,7 +118,7 @@ namespace FabricObserverTests
                     Directory.Delete(outputFolder, true);
                 }
             }
-            catch
+            catch (IOException)
             {
             }
         }
@@ -310,11 +310,64 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            var obs = new AppObserver
+            {
+                IsTestRun = true,
+                ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
+            };
+
+            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
+            {
+                ApplicationName = new Uri("fabric:/TestApp"),
+                PartitionId = Guid.NewGuid(),
+                HostProcessId = 0,
+                ReplicaOrInstanceId = default(long),
+            });
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            ObserverManager.FabricClientInstance.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy()
+        {
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
 
             var obs = new AppObserver
             {
                 IsTestRun = true,
+                ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
+
+            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
+            {
+                ApplicationName = new Uri("fabric:/TestApp"),
+                ApplicationTypeName = "TestAppType",
+                PartitionId = Guid.NewGuid(),
+                HostProcessId = 0,
+                ReplicaOrInstanceId = default(long),
+            });
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
@@ -823,7 +876,6 @@ namespace FabricObserverTests
         {
             if (!this.isSFRuntimePresentOnTestMachine)
             {
-                Assert.IsTrue(1 == 1);
                 return;
             }
 
@@ -1550,12 +1602,7 @@ namespace FabricObserverTests
             try
             {
                 var ps = Process.GetProcessesByName("Fabric");
-                if (ps?.Length == 0)
-                {
-                    return false;
-                }
-
-                return true;
+                return ps?.Length != 0;
             }
             catch (InvalidOperationException)
             {

@@ -18,7 +18,7 @@ For an app named MyApp, you would simply add this to PackageRoot/Config/AppObser
 ```JSON 
 [
   {
-    "target": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "cpuWarningLimitPct": 65
   }
 ]
@@ -30,12 +30,12 @@ You would add this to PackageRoot/Config/AppObserver.config.json:
 ```JSON 
 [
  {
-    "target": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "ILikeCpuService, ILikeCpuTooService",
     "cpuWarningLimitPct": 45
   },
   {
-    "target": "fabric:/MyOtherApp",
+    "targetApp": "fabric:/MyOtherApp",
     "serviceIncludeList": "ILoveCpuService",
     "cpuWarningLimitPct": 65
   }
@@ -59,7 +59,7 @@ When you use this property, you can also use either serviceExcludeList or servic
 ```JSON 
 [
   {
-    "targetType": "XApplicationType",
+    "targetAppType": "MyAppType",
     "cpuWarningLimitPct": 40,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
@@ -104,15 +104,15 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
 
 ```JSON
   {
-    "target": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "memoryWarningLimitPercent": 30
   },
   {
-    "target": "fabric:/AnotherApp",
+    "targetApp": "fabric:/AnotherApp",
     "memoryWarningLimitPercent": 30
   },
   {
-    "target": "fabric:/SomeOtherApp",
+    "targetApp": "fabric:/SomeOtherApp",
     "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42",
     "memoryWarningLimitPercent": 40
   }
@@ -129,12 +129,12 @@ regardless of target - there is no requirement for unique target properties in t
 
 ```JSON
   {
-    "target": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2",
     "cpuWarningLimitPct": 45
   },
   {
-    "target": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MemoryCrunchingService1, MemoryCrunchingService42",
     "memoryWarningLimitPercent": 30
   }
@@ -146,7 +146,7 @@ just add the threshold properties to one object:
 
 ```JSON
   {
-    "target": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2, MemoryCrunchingService1, MemoryCrunchingService42",
     "cpuWarningLimitPct": 45,
     "memoryWarningLimitPercent": 30
@@ -158,7 +158,7 @@ The following configuration tells AppObserver to monitor and report Warnings for
 
 ```JSON
 {
-    "target": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyService42, MyOtherService42",
     "cpuErrorLimitPct": 90,
     "cpuWarningLimitPct": 80,
@@ -211,7 +211,7 @@ In NetworkObserver's configuration file (PackageRoot/Config/NetworkObserver.conf
 ```JSON
 [
   {
-    "appTarget": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "endpoints": [
       {
         "hostname": "critical.endpoint.com",
@@ -228,7 +228,7 @@ In NetworkObserver's configuration file (PackageRoot/Config/NetworkObserver.conf
     ]
   },
   {
-    "appTarget": "fabric:/AnotherApp",
+    "targetApp": "fabric:/AnotherApp",
     "endpoints": [
       {
         "hostname": "critical.endpoint42.com",

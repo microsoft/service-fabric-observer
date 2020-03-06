@@ -22,9 +22,9 @@ namespace FabricObserver.Observers.Utilities
         // Text file logger for observers - info/warn/error.
         private ILogger OLogger { get; set; }
 
-        private string loggerName;
+        private readonly string loggerName;
 
-        internal string Foldername { get; }
+        internal string FolderName { get; }
 
         internal string Filename { get; }
 
@@ -58,7 +58,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="logFolderBasePath">Base folder path.</param>
         public Logger(string observerName, string logFolderBasePath = null)
         {
-            this.Foldername = observerName;
+            this.FolderName = observerName;
             this.Filename = observerName + ".log";
             this.loggerName = observerName;
 
@@ -84,9 +84,9 @@ namespace FabricObserver.Observers.Utilities
 
             string file = Path.Combine(logFolderBase, "fabric_observer.log");
 
-            if (!string.IsNullOrEmpty(this.Foldername) && !string.IsNullOrEmpty(this.Filename))
+            if (!string.IsNullOrEmpty(this.FolderName) && !string.IsNullOrEmpty(this.Filename))
             {
-                string folderPath = Path.Combine(logFolderBase, this.Foldername);
+                string folderPath = Path.Combine(logFolderBase, this.FolderName);
                 file = Path.Combine(folderPath, this.Filename);
             }
 

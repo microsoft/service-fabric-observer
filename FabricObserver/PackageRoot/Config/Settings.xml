@@ -17,11 +17,12 @@
     <Parameter Name="ObserverLogPath" Value="C:\observer_logs" />
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data. -->
     <Parameter Name="DataLogPath" Value="C:\observer_logs\fabric_observer_data" />
-    <!-- Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+    <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
+         These files will be written to the DataLogPath supplied above.-->
+    <Parameter Name="EnableLongRunningCSVLogging" Value="False"/>
+    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- Optional: Enabling this will generate CSV files that contain long-running resourcce metric data across observers. --> 
-    <Parameter Name="EnableLongRunningCSVLogging" Value="False"/>
     <!-- Optional: This is for use by the text logger to build node warning/error hyperlinks 
          that FabricObserverWebApi uses in html output. The API does not communicate directly with FabricObserver.
          It relies on the existence of local log files, across ObserverManager and individual observers (they log to their own folders). 
@@ -95,7 +96,7 @@
        That is, we do not have a fixed set of guaranteed problematic thresholds for SF infrastructure services. 
        Again, it is best to not Enable this observer until you have done some experimentation with monitoring how your service code impacts 
        Service Fabric system services. Otherwise, you may end up generating noise and creating support tickets when there is in fact nothing wrong with
-       SF, but that your service code is just stressing SF componentry. This is of course useful to know, but FabricSystemObserver can't tell you that
+       SF, but that your service code is just stressing SF runtime services. This is of course useful to know, but FabricSystemObserver can't tell you that
        your code is the problem. -->
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="False" />
@@ -107,10 +108,6 @@
     <Parameter Name="WarnCpuThresholdPercent" Value="80" />
     <Parameter Name="ErrorMemoryThresholdMB" Value="" />
     <Parameter Name="WarnMemoryThresholdMB" Value="1024" />
-    <Parameter Name="ErrorDiskIOReadsThreshold" Value="" />
-    <Parameter Name="WarnDiskIOReadsThreshold" Value="" />
-    <Parameter Name="ErrorDiskIOWritesThreshold" Value="" />
-    <Parameter Name="WarnDiskIOWritesThreshold" Value="" />
     <Parameter Name="PercentUnhealthyNodesWarnThreshold" Value="" />
     <Parameter Name="PercentUnhealthyNodesErrorThreshold" Value="" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />

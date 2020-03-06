@@ -9,6 +9,8 @@ using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
 {
+    // Why the generic constraint on struct? Because this type only works on numeric types,
+    // which are all structs in .NET so it's really a partial constraint, but useful just the same.
     public class FabricResourceUsageData<T>
             where T : struct
     {
@@ -17,7 +19,12 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="property">Metric string.</param>
         /// <param name="id">Instance id.</param>
-        public FabricResourceUsageData(string property, string id)
+        /// <param name="dataCapacity">Max element capacity of instance's data container
+        /// (CircularBufferCollection.<T>, which implements IList<T>).</param>
+        public FabricResourceUsageData(
+            string property,
+            string id,
+            int dataCapacity = 30)
         {
             if (string.IsNullOrEmpty(property))
             {
@@ -29,7 +36,7 @@ namespace FabricObserver.Observers.Utilities
                 throw new ArgumentException($"Must provide a non-empty {id}.");
             }
 
-            this.Data = new List<T>();
+            this.Data = new CircularBufferCollection<T>(dataCapacity);
             this.Property = property;
             this.Id = id;
             this.Units = string.Empty;
@@ -47,13 +54,26 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        /// <summary>
+        /// Gets the name of the machine resource property this instance represents.
+        /// </summary>
         public string Property { get; }
 
+        /// <summary>
+        /// Gets the unique Id of this instance.
+        /// </summary>
         public string Id { get; }
 
+        /// <summary>
+        /// Gets the unit of measure for the data (%, MB/GB, etc).
+        /// </summary>
         public string Units { get; }
 
-        public List<T> Data { get; }
+        /// <summary>
+        /// Gets the Circular Buffer of type IList that holds the resource monitoring
+        /// numeric data.
+        /// </summary>
+        public IList<T> Data { get; }
 
         private bool isInWarningState;
 
@@ -62,41 +82,36 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public int LifetimeWarningCount { get; private set; }
 
-        public T MaxDataValue
+        /// <summary>
+        /// Gets the largest numeric value in the Data collection.
+        /// </summary>
+        public T MaxDataValue => this.Data?.Count > 0 ? this.Data.Max() : default(T);
+
+        /// <summary>
+        /// Gets the average value in the Data collection.
+        /// </summary>
+        public T AverageDataValue
         {
             get
             {
-                if (this.Data?.Count > 0)
-                {
-                    return this.Data.Max();
-                }
-
-                return default(T);
-            }
-        }
-
-        public double AverageDataValue
-        {
-            get
-            {
-                double average = 0.0;
+                T average = default(T);
 
                 switch (this.Data)
                 {
-                    case List<long> v when v.Count > 0:
-                        average = v.Average();
+                    case IList<long> v when v.Count > 0:
+                        average = (T)Convert.ChangeType(Math.Round(v.Average(), 1), typeof(T));
                         break;
 
-                    case List<int> x when x.Count > 0:
-                        average = x.Average();
+                    case IList<int> x when x.Count > 0:
+                        average = (T)Convert.ChangeType(Math.Round(x.Average(), 1), typeof(T));
                         break;
 
-                    case List<float> y when y.Count > 0:
-                        average = Convert.ToDouble(y.Average());
+                    case IList<float> y when y.Count > 0:
+                        average = (T)Convert.ChangeType(Math.Round(y.Average(), 1), typeof(T));
                         break;
 
-                    case List<double> z when z.Count > 0:
-                        average = z.Average();
+                    case IList<double> z when z.Count > 0:
+                        average = (T)Convert.ChangeType(Math.Round(z.Average(), 1), typeof(T));
                         break;
                 }
 
@@ -123,6 +138,12 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        /// <summary>
+        /// Determines whether or not a supplied threshold has been reached when taking the average of the values in the Data collection.
+        /// </summary>
+        /// <typeparam name="TU">Error/Warning Threshold value to determine health state decision.</typeparam>
+        /// <param name="threshold">Threshold value to measure against.</param>
+        /// <returns>Returns true or false depending upon computed health state based on supplied threshold value.</returns>
         public bool IsUnhealthy<TU>(TU threshold)
         {
             if (this.Data.Count < 1 || Convert.ToDouble(threshold) < 1)
@@ -130,21 +151,30 @@ namespace FabricObserver.Observers.Utilities
                 return false;
             }
 
-            return this.AverageDataValue >= Convert.ToDouble(threshold);
+            return Convert.ToDouble(this.AverageDataValue) >= Convert.ToDouble(threshold);
         }
 
+        /// <summary>
+        /// Gets the standard deviation of the data held in the Data collection.
+        /// </summary>
         public T StandardDeviation =>
-            Data?.Count > 0 ? (T)Convert.ChangeType(Statistics.StandardDeviation(Data), typeof(T)) : default(T);
+            this.Data?.Count > 0 ? Statistics.StandardDeviation(this.Data) : default;
 
-        public List<T> SlidingWindowMax =>
-            Data?.Count > 0 ? Statistics.SlidingWindow(
-                Data,
+        /// <summary>
+        /// Gets SlidingWindow Max: A sorted list of sliding window maximums.
+        /// </summary>
+        public IList<T> SlidingWindowMax =>
+            this.Data?.Count > 0 ? Statistics.SlidingWindow(
+                this.Data,
                 3,
                 WindowType.Max) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
 
-        public List<T> SlidingWindowMin =>
-            Data?.Count > 0 ? Statistics.SlidingWindow(
-                Data,
+        /// <summary>
+        ///  Gets SlidingWindow Min: A sorted list of sliding window minimums.
+        /// </summary>
+        public IList<T> SlidingWindowMin =>
+            this.Data?.Count > 0 ? Statistics.SlidingWindow(
+                this.Data,
                 3,
                 WindowType.Min) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
     }

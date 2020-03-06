@@ -30,12 +30,12 @@ namespace FabricObserver.Observers
         // SF Infra.
         private const string SfWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
         private const string SfInfrastructureLogRootRegistryName = "FabricLogRoot";
-        private const int TtlAddMinutes = 1;
+        private const int TtlAddMinutes = 5;
         private string sFLogRoot;
 
         // Dump.
         private string dumpsPath;
-        private int maxDumps = 5;
+        private readonly int maxDumps = 5;
         private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
 
         protected bool IsTelemetryEnabled { get; set; } = ObserverManager.TelemetryEnabled;
@@ -63,6 +63,8 @@ namespace FabricObserver.Observers
         /// <inheritdoc/>
         public DateTime LastRunDateTime { get; set; }
 
+        public TimeSpan RunDuration { get; set; }
+
         public CancellationToken Token { get; set; }
 
         /// <inheritdoc/>
@@ -75,7 +77,7 @@ namespace FabricObserver.Observers
         public bool IsTestRun { get; set; } = false;
 
         // Loggers.
-
+        //
         /// <inheritdoc/>
         public Logger ObserverLogger { get; set; }
 
@@ -84,7 +86,7 @@ namespace FabricObserver.Observers
 
         // Each derived Observer can set this to maintain health status across iterations.
         // This information is used by ObserverManager.
-
+        //
         /// <inheritdoc/>
         public bool HasActiveFabricErrorOrWarning { get; set; }
 
@@ -205,7 +207,10 @@ namespace FabricObserver.Observers
         }
 
         /// <inheritdoc/>
-        public void WriteToLogWithLevel(string property, string description, LogLevel level)
+        public void WriteToLogWithLevel(
+            string property,
+            string description,
+            LogLevel level)
         {
             switch (level)
             {
@@ -564,7 +569,7 @@ namespace FabricObserver.Observers
                         Observer = this.ObserverName,
                         data.Property,
                         data.Id,
-                        Value = $"{Math.Round(data.AverageDataValue)}",
+                        Value = $"{Math.Round(Convert.ToDouble(data.AverageDataValue))}",
                         Unit = data.Units,
                     });
             }
@@ -629,18 +634,22 @@ namespace FabricObserver.Observers
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorCpuTime : FoErrorWarningCodes.AppWarningCpuTime;
                         break;
+
                     case ErrorWarningProperty.TotalCpuTime:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.NodeErrorCpuTime : FoErrorWarningCodes.NodeWarningCpuTime;
                         break;
+
                     case ErrorWarningProperty.DiskSpaceUsagePercentage:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.NodeErrorDiskSpacePercentUsed : FoErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
                         break;
+
                     case ErrorWarningProperty.DiskSpaceUsageMb:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.NodeErrorDiskSpaceMb : FoErrorWarningCodes.NodeWarningDiskSpaceMb;
                         break;
+
                     case ErrorWarningProperty.TotalMemoryConsumptionMb when replicaOrInstance != null:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorMemoryCommittedMb : FoErrorWarningCodes.AppWarningMemoryCommittedMb;
@@ -649,34 +658,42 @@ namespace FabricObserver.Observers
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.NodeErrorMemoryCommittedMb : FoErrorWarningCodes.NodeWarningMemoryCommittedMb;
                         break;
+
                     case ErrorWarningProperty.TotalMemoryConsumptionPct when replicaOrInstance != null:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorMemoryPercentUsed : FoErrorWarningCodes.AppWarningMemoryPercentUsed;
                         break;
+
                     case ErrorWarningProperty.TotalMemoryConsumptionPct:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.NodeErrorMemoryPercentUsed : FoErrorWarningCodes.NodeWarningMemoryPercentUsed;
                         break;
+
                     case ErrorWarningProperty.DiskAverageQueueLength:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.NodeErrorDiskAverageQueueLength : FoErrorWarningCodes.NodeWarningDiskAverageQueueLength;
                         break;
+
                     case ErrorWarningProperty.TotalActiveFirewallRules:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.ErrorTooManyFirewallRules : FoErrorWarningCodes.WarningTooManyFirewallRules;
                         break;
+
                     case ErrorWarningProperty.TotalActivePorts when replicaOrInstance != null:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FoErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
                         break;
+
                     case ErrorWarningProperty.TotalActivePorts:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FoErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
                         break;
+
                     case ErrorWarningProperty.TotalEphemeralPorts when replicaOrInstance != null:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FoErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
                         break;
+
                     case ErrorWarningProperty.TotalEphemeralPorts:
                         errorWarningKind = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FoErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
@@ -698,7 +715,7 @@ namespace FabricObserver.Observers
                 }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
+                _ = healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(Convert.ToDouble(data.AverageDataValue))}{data.Units}");
 
                 var healthReport = new HealthReport
                 {
@@ -730,7 +747,7 @@ namespace FabricObserver.Observers
                         !string.IsNullOrEmpty(id) ? HealthScope.Application : HealthScope.Node,
                         $"{(appName != null ? appName.OriginalString : this.NodeName)}",
                         healthState,
-                        $"{this.NodeName}/{errorWarningKind}/{drive}{data.Property}/{Math.Round(data.AverageDataValue)}",
+                        $"{this.NodeName}/{errorWarningKind}/{drive}{data.Property}/{Math.Round(Convert.ToDouble(data.AverageDataValue))}",
                         this.ObserverName,
                         this.Token);
                 }
@@ -749,7 +766,7 @@ namespace FabricObserver.Observers
                             HealthEventDescription = healthMessage.ToString(),
                             data.Property,
                             data.Id,
-                            Value = $"{Math.Round(data.AverageDataValue)}",
+                            Value = $"{Math.Round(Convert.ToDouble(data.AverageDataValue))}",
                             Unit = data.Units,
                         });
                 }
@@ -785,10 +802,9 @@ namespace FabricObserver.Observers
 
             // No need to keep data in memory.
             data.Data.Clear();
-            data.Data.TrimExcess();
         }
 
-        internal TimeSpan SetTimeToLiveWarning(int runDuration = 0)
+        internal TimeSpan SetHealthReportTimeToLive()
         {
             // First run.
             if (this.LastRunDateTime == DateTime.MinValue)
@@ -798,17 +814,20 @@ namespace FabricObserver.Observers
             }
 
             return DateTime.Now.Subtract(this.LastRunDateTime)
-                   .Add(TimeSpan.FromSeconds(runDuration))
-                   .Add(TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds))
+                .Add(TimeSpan.FromSeconds(
+                    this.RunDuration > TimeSpan.MinValue ? this.RunDuration.TotalSeconds : 0))
+                .Add(TimeSpan.FromSeconds(
+                    ObserverManager.ObserverExecutionLoopSleepSeconds))
 
-                   // If a RunInterval is specified, it must be reflected in the TTL.
-                   .Add(this.RunInterval > TimeSpan.MinValue ? this.RunInterval : TimeSpan.Zero)
-                   .Add(TimeSpan.FromMinutes(TtlAddMinutes));
+                // If a RunInterval is specified, it must be reflected in the TTL.
+                .Add(this.RunInterval > TimeSpan.MinValue ? this.RunInterval : TimeSpan.Zero);
+
+               // .Add(TimeSpan.FromMinutes(TtlAddMinutes));
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.
         // If an Observer needs to dispose, then override this non-impl.
-        private bool disposedValue; // To detect redundant calls
+        private bool disposedValue;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -832,15 +851,7 @@ namespace FabricObserver.Observers
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             this.Dispose(true);
         }
-    }
-
-    internal enum DumpType
-    {
-        Mini,
-        MiniPlus,
-        Full,
     }
 }

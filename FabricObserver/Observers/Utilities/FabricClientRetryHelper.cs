@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace FabricObserver.Observers.Utilities
 {
     /// <summary>
-    /// Helper class to execute fabric client operations with retry
+    /// Helper class to execute fabric client operations with retry.
     /// </summary>
     public static class FabricClientRetryHelper
     {
@@ -21,11 +21,11 @@ namespace FabricObserver.Observers.Utilities
         private static readonly Logger Logger = new Logger("FabricClientRetryHelper");
 
         /// <summary>
-        /// Helper method to execute given function with defaultFabricClientRetryErrors and default Operation Timeout
+        /// Helper method to execute given function with defaultFabricClientRetryErrors and default Operation Timeout.
         /// </summary>
-        /// <param name="function">Action to be performed</param>
-        /// <param name="cancellationToken">Cancellation token for Async operation</param>
-        /// <returns>Task object</returns>
+        /// <param name="function">Action to be performed.</param>
+        /// <param name="cancellationToken">Cancellation token for Async operation.</param>
+        /// <returns>Task object.</returns>
         public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
             Func<Task<T>> function,
             CancellationToken cancellationToken)
@@ -38,13 +38,13 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Helper method to execute given function with given user FabricClientRetryErrors and given Operation Timeout
+        /// Helper method to execute given function with given user FabricClientRetryErrors and given Operation Timeout.
         /// </summary>
-        /// <param name="function">Action to be performed</param>
-        /// <param name="errors">Fabric Client Errors that can be retired</param>
-        /// <param name="operationTimeout">Timeout for the operation</param>
-        /// <param name="cancellationToken">Cancellation token for Async operation</param>
-        /// <returns>Task object</returns>
+        /// <param name="function">Action to be performed.</param>
+        /// <param name="errors">Fabric Client Errors that can be retired.</param>
+        /// <param name="operationTimeout">Timeout for the operation.</param>
+        /// <param name="cancellationToken">Cancellation token for Async operation.</param>
+        /// <returns>Task object.</returns>
         public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
             Func<Task<T>> function,
             FabricClientRetryErrors errors,

@@ -7,9 +7,9 @@ namespace FabricObserver.Observers.MachineInfoModel
 {
     public class ApplicationInfo
     {
-        public string Target { get; set; }
+        public string TargetApp { get; set; }
 
-        public string TargetType { get; set; }
+        public string TargetAppType { get; set; }
 
         public string ServiceExcludeList { get; set; }
 
@@ -23,9 +23,9 @@ namespace FabricObserver.Observers.MachineInfoModel
 
         public int MemoryErrorLimitPercent { get; set; }
 
-        public int CpuErrorLimitPct { get; set; }
+        public int CpuErrorLimitPercent { get; set; }
 
-        public int CpuWarningLimitPct { get; set; }
+        public int CpuWarningLimitPercent { get; set; }
 
         public int NetworkErrorActivePorts { get; set; }
 
@@ -42,16 +42,16 @@ namespace FabricObserver.Observers.MachineInfoModel
         public bool DumpProcessOnError { get; set; }
 
         /// <inheritdoc/>
-        public override string ToString() => $"ApplicationName: {this.Target ?? string.Empty}\n" +
-                                             $"ApplicationTypeName: {this.TargetType ?? string.Empty}\n" +
+        public override string ToString() => $"ApplicationName: {this.TargetApp ?? string.Empty}\n" +
+                                             $"ApplicationTypeName: {this.TargetAppType ?? string.Empty}\n" +
                                              $"ServiceExcludeList: {this.ServiceExcludeList ?? string.Empty}\n" +
                                              $"ServiceIncludeList: {this.ServiceIncludeList ?? string.Empty}\n" +
                                              $"MemoryWarningLimitMB: {this.MemoryWarningLimitMb}\n" +
                                              $"MemoryErrorLimitMB: {this.MemoryErrorLimitMb}\n" +
                                              $"MemoryWarningLimitPercent: {this.MemoryWarningLimitPercent}\n" +
                                              $"MemoryErrorLimitPercent: {this.MemoryErrorLimitPercent}\n" +
-                                             $"CpuWarningLimit: {this.CpuWarningLimitPct}\n" +
-                                             $"CpuErrorLimit: {this.CpuErrorLimitPct}\n" +
+                                             $"CpuWarningLimitPercent: {this.CpuWarningLimitPercent}\n" +
+                                             $"CpuErrorLimitPercent: {this.CpuErrorLimitPercent}\n" +
                                              $"NetworkErrorActivePorts: {this.NetworkErrorActivePorts}\n" +
                                              $"NetworkWarningActivePorts: {this.NetworkWarningActivePorts}\n" +
                                              $"NetworkErrorEphemeralPorts: {this.NetworkErrorEphemeralPorts}\n" +

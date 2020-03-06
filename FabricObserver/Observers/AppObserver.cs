@@ -25,20 +25,24 @@ namespace FabricObserver.Observers
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class AppObserver : ObserverBase
     {
-        private readonly string configPackagePath;
-        private List<ApplicationInfo> targetList = new List<ApplicationInfo>();
+        private const int DataListCapacity = 30;
 
         // Health Report data containers - For use in analysis to determine health state.
         // These lists are cleared after each healthy iteration.
-        private List<FabricResourceUsageData<int>> allAppCpuData;
-        private List<FabricResourceUsageData<long>> allAppMemDataMB;
-        private List<FabricResourceUsageData<double>> allAppMemDataPercent;
-        private List<FabricResourceUsageData<int>> allAppTotalActivePortsData;
-        private List<FabricResourceUsageData<int>> allAppEphemeralPortsData;
-        private List<ReplicaOrInstanceMonitoringInfo> replicaOrInstanceList;
+        private readonly List<FabricResourceUsageData<int>> allAppCpuData;
+        private readonly List<FabricResourceUsageData<float>> allAppMemDataMb;
+        private readonly List<FabricResourceUsageData<double>> allAppMemDataPercent;
+        private readonly List<FabricResourceUsageData<int>> allAppTotalActivePortsData;
+        private readonly List<FabricResourceUsageData<int>> allAppEphemeralPortsData;
         private WindowsPerfCounters perfCounters;
         private DiskUsage diskUsage;
         private bool disposed;
+        private readonly Stopwatch stopwatch;
+        private readonly List<ApplicationInfo> targetList;
+
+        public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList { get; set; }
+
+        public string ConfigPackagePath { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
@@ -46,12 +50,14 @@ namespace FabricObserver.Observers
         public AppObserver()
             : base(ObserverConstants.AppObserverName)
         {
-            configPackagePath = ConfigSettings.ConfigPackagePath;
-            allAppCpuData = new List<FabricResourceUsageData<int>>();
-            allAppMemDataMB = new List<FabricResourceUsageData<long>>();
-            allAppMemDataPercent = new List<FabricResourceUsageData<double>>();
-            allAppTotalActivePortsData = new List<FabricResourceUsageData<int>>();
-            allAppEphemeralPortsData = new List<FabricResourceUsageData<int>>();
+            this.ConfigPackagePath = ConfigSettings.ConfigPackagePath;
+            this.allAppCpuData = new List<FabricResourceUsageData<int>>();
+            this.allAppMemDataMb = new List<FabricResourceUsageData<float>>();
+            this.allAppMemDataPercent = new List<FabricResourceUsageData<double>>();
+            this.allAppTotalActivePortsData = new List<FabricResourceUsageData<int>>();
+            this.allAppEphemeralPortsData = new List<FabricResourceUsageData<int>>();
+            this.targetList = new List<ApplicationInfo>();
+            this.stopwatch = new Stopwatch();
         }
 
         /// <inheritdoc/>
@@ -59,20 +65,21 @@ namespace FabricObserver.Observers
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
             {
                 return;
             }
 
-            bool initialized = Initialize();
-            Token = token;
+            this.stopwatch.Start();
+            bool initialized = this.Initialize();
+            this.Token = token;
 
             if (!initialized)
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                    FabricServiceContext.ServiceName.OriginalString,
-                    ObserverName,
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
                     HealthState.Warning,
                     "This observer was unable to initialize correctly due to missing configuration info.");
 
@@ -81,38 +88,44 @@ namespace FabricObserver.Observers
 
             try
             {
-                perfCounters = new WindowsPerfCounters();
-                diskUsage = new DiskUsage();
+                this.perfCounters = new WindowsPerfCounters();
+                this.diskUsage = new DiskUsage();
 
-                foreach (var app in targetList)
+                foreach (var app in this.targetList)
                 {
-                    Token.ThrowIfCancellationRequested();
+                    this.Token.ThrowIfCancellationRequested();
 
-                    if (string.IsNullOrWhiteSpace(app.Target)
-                        && string.IsNullOrWhiteSpace(app.TargetType))
+                    if (string.IsNullOrWhiteSpace(app.TargetApp)
+                        && string.IsNullOrWhiteSpace(app.TargetAppType))
                     {
                         continue;
                     }
 
-                    await MonitorAppAsync(app).ConfigureAwait(true);
+                    await this.MonitorAppAsync(app).ConfigureAwait(true);
                 }
 
-                await ReportAsync(token).ConfigureAwait(true);
-                LastRunDateTime = DateTime.Now;
+                // The time it took to get to ReportAsync.
+                // For use in computing actual HealthReport TTL.
+                this.stopwatch.Stop();
+                this.RunDuration = this.stopwatch.Elapsed;
+                this.stopwatch.Reset();
+
+                await this.ReportAsync(token).ConfigureAwait(true);
+                this.LastRunDateTime = DateTime.Now;
             }
             finally
             {
                 // Clean up.
-                diskUsage?.Dispose();
-                diskUsage = null;
-                perfCounters?.Dispose();
-                perfCounters = null;
+                this.diskUsage?.Dispose();
+                this.diskUsage = null;
+                this.perfCounters?.Dispose();
+                this.perfCounters = null;
             }
         }
 
         private static string GetAppNameOrType(ReplicaOrInstanceMonitoringInfo repOrInst)
         {
-            // targetType specified as AppTargetType name, which means monitor all apps of specified type.
+            // targetType specified as TargetAppType name, which means monitor all apps of specified type.
             var appNameOrType = !string.IsNullOrWhiteSpace(repOrInst.ApplicationTypeName) ? repOrInst.ApplicationTypeName : repOrInst.ApplicationName.OriginalString.Replace("fabric:/", string.Empty);
 
             return appNameOrType;
@@ -123,33 +136,29 @@ namespace FabricObserver.Observers
         // be up to date across observer loop iterations.
         private bool Initialize()
         {
-            if (replicaOrInstanceList == null)
+            if (this.ReplicaOrInstanceList == null)
             {
-                replicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
+                this.ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             }
 
-            // Is this a unit test run?
-            if (IsTestRun)
+            if (!IsTestRun)
             {
-                replicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
-                {
-                    ApplicationName = new Uri("fabric:/TestApp"),
-                    PartitionId = Guid.NewGuid(),
-                    HostProcessId = 0,
-                    ReplicaOrInstanceId = default(long),
-                });
-
-                return true;
+                ConfigSettings.Initialize(
+                    this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
+                        ObserverConstants.ObserverConfigurationPackageName)?.Settings,
+                    ObserverConstants.AppObserverConfigurationSectionName,
+                    "AppObserverDataFileName");
             }
 
-            ConfigSettings.Initialize(FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Settings, ObserverConstants.AppObserverConfigurationSectionName, "AppObserverDataFileName");
-            var appObserverConfigFileName = Path.Combine(configPackagePath, ConfigSettings.AppObserverDataFileName);
+            var appObserverConfigFileName = Path.Combine(
+                this.ConfigPackagePath,
+                ConfigSettings.AppObserverDataFileName != null ? ConfigSettings.AppObserverDataFileName : string.Empty);
 
             if (!File.Exists(appObserverConfigFileName))
             {
-                WriteToLogWithLevel(
-                    ObserverName,
-                    $"Will not observe resource consumption as no configuration parameters have been supplied. | {NodeName}",
+                this.WriteToLogWithLevel(
+                    this.ObserverName,
+                    $"Will not observe resource consumption as no configuration parameters have been supplied. | {this.NodeName}",
                     LogLevel.Information);
 
                 return false;
@@ -157,27 +166,31 @@ namespace FabricObserver.Observers
 
             // this code runs each time ObserveAsync is called,
             // so clear app list and deployed replica/instance list in case a new app has been added to watch list.
-            if (targetList.Count > 0)
+            if (this.targetList.Count > 0)
             {
-                targetList.Clear();
-                replicaOrInstanceList.Clear();
+                this.targetList.Clear();
+                this.ReplicaOrInstanceList.Clear();
             }
 
-            using (Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (Stream stream = new FileStream(
+                appObserverConfigFileName,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read))
             {
-                if (stream.Length > 42
+                if (stream.Length > 0
                     && JsonHelper.IsJson<List<ApplicationInfo>>(File.ReadAllText(appObserverConfigFileName)))
                 {
-                    targetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
+                    this.targetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
                 }
             }
 
             // Are any of the config-supplied apps deployed?.
-            if (targetList.Count == 0)
+            if (this.targetList.Count == 0)
             {
-                WriteToLogWithLevel(
-                    ObserverName,
-                    $"Will not observe resource consumption as no configuration parameters have been supplied. | {NodeName}",
+                this.WriteToLogWithLevel(
+                    this.ObserverName,
+                    $"Will not observe resource consumption as no configuration parameters have been supplied. | {this.NodeName}",
                     LogLevel.Information);
 
                 return false;
@@ -185,16 +198,16 @@ namespace FabricObserver.Observers
 
             int settingsFail = 0;
 
-            foreach (var application in targetList)
+            foreach (var application in this.targetList)
             {
-                if (string.IsNullOrWhiteSpace(application.Target)
-                    && string.IsNullOrWhiteSpace(application.TargetType))
+                if (string.IsNullOrWhiteSpace(application.TargetApp)
+                    && string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                        FabricServiceContext.ServiceName.ToString(),
-                        ObserverName,
+                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                        this.FabricServiceContext.ServiceName.ToString(),
+                        this.ObserverName,
                         HealthState.Warning,
-                        $"Initialize() | {application.Target}: Required setting, target, is not set.");
+                        $"Initialize() | {application.TargetApp}: Required setting, target, is not set.");
 
                     settingsFail++;
 
@@ -202,14 +215,14 @@ namespace FabricObserver.Observers
                 }
 
                 // No required settings supplied for deployed application(s).
-                if (settingsFail == targetList.Count)
+                if (settingsFail == this.targetList.Count)
                 {
                     return false;
                 }
 
-                ObserverLogger.LogInfo(
-                    $"Will observe resource consumption by {application.Target ?? application.TargetType} " +
-                    $"on Node {NodeName}.");
+                this.ObserverLogger.LogInfo(
+                    $"Will observe resource consumption by {application.TargetApp ?? application.TargetAppType} " +
+                    $"on Node {this.NodeName}.");
             }
 
             return true;
@@ -219,36 +232,47 @@ namespace FabricObserver.Observers
         {
             List<ReplicaOrInstanceMonitoringInfo> repOrInstList;
 
-            if (!string.IsNullOrEmpty(application.TargetType))
+            if (IsTestRun)
             {
-                repOrInstList = await GetDeployedApplicationReplicaOrInstanceListAsync(null, application.TargetType).ConfigureAwait(true);
+                repOrInstList = ReplicaOrInstanceList;
             }
             else
             {
-                repOrInstList = await GetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.Target)).ConfigureAwait(true);
-            }
+                if (!string.IsNullOrEmpty(application.TargetAppType))
+                {
+                    repOrInstList = await this
+                        .GetDeployedApplicationReplicaOrInstanceListAsync(null, application.TargetAppType)
+                        .ConfigureAwait(true);
+                }
+                else
+                {
+                    repOrInstList = await this
+                        .GetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.TargetApp))
+                        .ConfigureAwait(true);
+                }
 
-            if (repOrInstList.Count == 0)
-            {
-                ObserverLogger.LogInfo("No target or targetType specified.");
-                return;
+                if (repOrInstList.Count == 0)
+                {
+                    this.ObserverLogger.LogInfo("No targetApp or targetAppType specified.");
+                    return;
+                }
             }
 
             Process currentProcess = null;
 
             foreach (var repOrInst in repOrInstList)
             {
-                Token.ThrowIfCancellationRequested();
+                this.Token.ThrowIfCancellationRequested();
 
-                int processid = (int)repOrInst.HostProcessId;
+                int processId = (int)repOrInst.HostProcessId;
                 var cpuUsage = new CpuUsage();
 
                 try
                 {
                     // App level.
-                    currentProcess = Process.GetProcessById(processid);
+                    currentProcess = Process.GetProcessById(processId);
 
-                    Token.ThrowIfCancellationRequested();
+                    this.Token.ThrowIfCancellationRequested();
 
                     var procName = currentProcess.ProcessName;
                     string appNameOrType = GetAppNameOrType(repOrInst);
@@ -256,32 +280,32 @@ namespace FabricObserver.Observers
                     var id = $"{appNameOrType}:{procName}";
 
                     // Add new resource data structures for each app service process.
-                    if (!allAppCpuData.Any(list => list.Id == id))
+                    if (this.allAppCpuData.All(list => list.Id != id))
                     {
-                        allAppCpuData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, id));
-                        allAppMemDataMB.Add(new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionMb, id));
-                        allAppMemDataPercent.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id));
-                        allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id));
-                        allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id));
+                        this.allAppCpuData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, id, DataListCapacity));
+                        this.allAppMemDataMb.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, DataListCapacity));
+                        this.allAppMemDataPercent.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id, DataListCapacity));
+                        this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id, 1));
+                        this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1));
                     }
 
                     // CPU (all cores).
-                    int i = Environment.ProcessorCount + 10;
+                    int i = DataListCapacity;
 
                     while (!currentProcess.HasExited && i > 0)
                     {
-                        Token.ThrowIfCancellationRequested();
+                        this.Token.ThrowIfCancellationRequested();
 
                         int cpu = cpuUsage.GetCpuUsageProcess(currentProcess);
 
                         if (cpu >= 0)
                         {
-                            allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
+                            this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
                         }
 
                         // Memory (private working set (process)).
-                        var processMem = perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(currentProcess.ProcessName);
-                        allAppMemDataMB.FirstOrDefault(x => x.Id == id).Data.Add((long)processMem);
+                        var processMem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(currentProcess.ProcessName);
+                        this.allAppMemDataMb.FirstOrDefault(x => x.Id == id).Data.Add(processMem);
 
                         // Memory (percent in use (total)).
                         var memInfo = ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
@@ -290,7 +314,7 @@ namespace FabricObserver.Observers
                         if (totalMem > -1)
                         {
                             double usedPct = Math.Round(((double)(processMem * 100)) / (totalMem * 1024), 2);
-                            allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(usedPct);
+                            this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
                         }
 
                         --i;
@@ -299,27 +323,27 @@ namespace FabricObserver.Observers
                     }
 
                     // Total and Ephemeral ports..
-                    allAppTotalActivePortsData.FirstOrDefault(x => x.Id == id)
+                    this.allAppTotalActivePortsData.FirstOrDefault(x => x.Id == id)
                         .Data.Add(NetworkUsage.GetActivePortCount(currentProcess.Id));
 
-                    allAppEphemeralPortsData.FirstOrDefault(x => x.Id == id)
+                    this.allAppEphemeralPortsData.FirstOrDefault(x => x.Id == id)
                         .Data.Add(NetworkUsage.GetActiveEphemeralPortCount(currentProcess.Id));
                 }
                 catch (Exception e)
                 {
                     if (e is Win32Exception || e is ArgumentException || e is InvalidOperationException)
                     {
-                        WriteToLogWithLevel(
-                            ObserverName,
-                            $"MonitorAsync failed to find current service process for {application.Target}/n{e}",
+                        this.WriteToLogWithLevel(
+                            this.ObserverName,
+                            $"MonitorAsync failed to find current service process for {application.TargetApp}/n{e}",
                             LogLevel.Information);
                     }
                     else
                     {
                         if (!(e is OperationCanceledException))
                         {
-                            WriteToLogWithLevel(
-                                ObserverName,
+                            this.WriteToLogWithLevel(
+                                this.ObserverName,
                                 $"Unhandled exception in MonitorAsync: \n {e}",
                                 LogLevel.Warning);
                         }
@@ -343,22 +367,23 @@ namespace FabricObserver.Observers
 
             if (applicationNameFilter != null)
             {
-                deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter).ConfigureAwait(true);
+                deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(this.NodeName, applicationNameFilter).ConfigureAwait(true);
             }
             else
             {
-                deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName).ConfigureAwait(true);
+                deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(this.NodeName).ConfigureAwait(true);
 
                 if (deployedApps.Count > 0 && !string.IsNullOrEmpty(applicationType))
                 {
                     for (int i = 0; i < deployedApps.Count; i++)
                     {
-                        var app = deployedApps[i];
-
-                        if (app.ApplicationTypeName?.ToLower() != applicationType.ToLower())
+                        if (deployedApps[i].ApplicationTypeName == applicationType)
                         {
-                            _ = deployedApps.Remove(app);
+                            continue;
                         }
+
+                        deployedApps.Remove(deployedApps[i]);
+                        --i;
                     }
                 }
             }
@@ -369,12 +394,11 @@ namespace FabricObserver.Observers
             {
                 List<string> filteredServiceList = null;
 
-                var appFilter = targetList.Where(x => (x.Target != null || x.TargetType != null)
-                                                     && (x.Target?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                         || x.TargetType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
-                                                     && (!string.IsNullOrEmpty(x.ServiceExcludeList)
-                                                     || !string.IsNullOrEmpty(x.ServiceIncludeList)))
-                    .FirstOrDefault();
+                var appFilter = this.targetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
+                                                           && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
+                                                               || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
+                                                           && (!string.IsNullOrEmpty(x.ServiceExcludeList)
+                                                               || !string.IsNullOrEmpty(x.ServiceIncludeList)))?.FirstOrDefault();
 
                 // Filter service list if include/exclude service(s) config setting is supplied.
                 var filterType = ServiceFilterType.None;
@@ -393,7 +417,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
+                var replicasOrInstances = await this.GetDeployedPrimaryReplicaAsync(
                     deployedApp.ApplicationName,
                     filteredServiceList,
                     filterType,
@@ -402,7 +426,7 @@ namespace FabricObserver.Observers
                 currentReplicaInfoList.AddRange(replicasOrInstances);
 
                 // This is for reporting.
-                replicaOrInstanceList.AddRange(replicasOrInstances);
+                this.ReplicaOrInstanceList.AddRange(replicasOrInstances);
             }
 
             return currentReplicaInfoList;
@@ -414,10 +438,10 @@ namespace FabricObserver.Observers
             ServiceFilterType filterType = ServiceFilterType.None,
             string appTypeName = null)
         {
-            var deployedReplicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName).ConfigureAwait(true);
+            var deployedReplicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, appName).ConfigureAwait(true);
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>();
 
-            SetInstanceOrReplicaMonitoringList(
+            this.SetInstanceOrReplicaMonitoringList(
                 appName,
                 serviceFilterList,
                 filterType,
@@ -459,15 +483,9 @@ namespace FabricObserver.Observers
 
                         switch (filterType)
                         {
-                            // Include
                             case ServiceFilterType.Include when !isInFilterList:
-                            // Exclude
                             case ServiceFilterType.Exclude when isInFilterList:
                                 continue;
-                            case ServiceFilterType.None:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(filterType), filterType, null);
                         }
                     }
                 }
@@ -487,18 +505,11 @@ namespace FabricObserver.Observers
                     {
                         bool isInFilterList = serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
-                        // Include
-                        if (filterType == ServiceFilterType.Include
-                            && !isInFilterList)
+                        switch (filterType)
                         {
-                            continue;
-                        }
-
-                        // Exclude
-                        if (filterType == ServiceFilterType.Exclude
-                            && isInFilterList)
-                        {
-                            continue;
+                            case ServiceFilterType.Include when !isInFilterList:
+                            case ServiceFilterType.Exclude when isInFilterList:
+                                continue;
                         }
                     }
                 }
@@ -515,20 +526,36 @@ namespace FabricObserver.Observers
         {
             try
             {
-                Token.ThrowIfCancellationRequested();
-                var timeToLiveWarning = SetTimeToLiveWarning();
+                this.Token.ThrowIfCancellationRequested();
+                var healthReportTimeToLive = this.SetHealthReportTimeToLive();
 
                 // App-specific reporting.
-                foreach (var app in targetList.Where(x => !string.IsNullOrWhiteSpace(x.Target)
-                                                               || !string.IsNullOrWhiteSpace(x.TargetType)))
+                foreach (var app in this.targetList)
                 {
-                    Token.ThrowIfCancellationRequested();
+                    this.Token.ThrowIfCancellationRequested();
 
                     // Process data for reporting.
-                    foreach (var repOrInst in replicaOrInstanceList.Where(x => (!string.IsNullOrWhiteSpace(app.Target) && x.ApplicationName.OriginalString == app.Target)
-                                                                                    || (!string.IsNullOrWhiteSpace(app.TargetType) && x.ApplicationTypeName == app.TargetType)))
+                    foreach (var repOrInst in this.ReplicaOrInstanceList)
                     {
-                        Token.ThrowIfCancellationRequested();
+                        this.Token.ThrowIfCancellationRequested();
+
+                        if (!string.IsNullOrEmpty(app.TargetAppType)
+                            && !string.Equals(
+                                repOrInst.ApplicationTypeName,
+                                app.TargetAppType,
+                                StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        if (!string.IsNullOrEmpty(app.TargetApp)
+                            && !string.Equals(
+                                repOrInst.ApplicationName.OriginalString,
+                                app.TargetApp,
+                                StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            continue;
+                        }
 
                         Process p;
 
@@ -560,55 +587,55 @@ namespace FabricObserver.Observers
                         var id = $"{appNameOrType}:{p.ProcessName}";
 
                         // Log (csv) CPU/Mem/DiskIO per app.
-                        if (CsvFileLogger.EnableCsvLogging || IsTelemetryEnabled)
+                        if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryEnabled)
                         {
-                            LogAllAppResourceDataToCsv(id);
+                            this.LogAllAppResourceDataToCsv(id);
                         }
 
                         // CPU
-                        ProcessResourceDataReportHealth(
-                            allAppCpuData.Where(x => x.Id == id).FirstOrDefault(),
-                            app.CpuErrorLimitPct,
-                            app.CpuWarningLimitPct,
-                            timeToLiveWarning,
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppCpuData.FirstOrDefault(x => x.Id == id),
+                            app.CpuErrorLimitPercent,
+                            app.CpuWarningLimitPercent,
+                            healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
                             app.DumpProcessOnError);
 
                         // Memory
-                        ProcessResourceDataReportHealth(
-                            allAppMemDataMB.FirstOrDefault(x => x.Id == id),
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppMemDataMb.FirstOrDefault(x => x.Id == id),
                             app.MemoryErrorLimitMb,
                             app.MemoryWarningLimitMb,
-                            timeToLiveWarning,
+                            healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
                             app.DumpProcessOnError);
 
-                        ProcessResourceDataReportHealth(
-                            allAppMemDataPercent.FirstOrDefault(x => x.Id == id),
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id),
                             app.MemoryErrorLimitPercent,
                             app.MemoryWarningLimitPercent,
-                            timeToLiveWarning,
+                            healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
                             app.DumpProcessOnError);
 
                         // Ports
-                        ProcessResourceDataReportHealth(
-                            allAppTotalActivePortsData.FirstOrDefault(x => x.Id == id),
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppTotalActivePortsData.FirstOrDefault(x => x.Id == id),
                             app.NetworkErrorActivePorts,
                             app.NetworkWarningActivePorts,
-                            timeToLiveWarning,
+                            healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst);
 
                         // Ports
-                        ProcessResourceDataReportHealth(
-                            allAppEphemeralPortsData.FirstOrDefault(x => x.Id == id),
+                        this.ProcessResourceDataReportHealth(
+                            this.allAppEphemeralPortsData.FirstOrDefault(x => x.Id == id),
                             app.NetworkErrorEphemeralPorts,
                             app.NetworkWarningEphemeralPorts,
-                            timeToLiveWarning,
+                            healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst);
                     }
@@ -618,8 +645,8 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                WriteToLogWithLevel(
-                    ObserverName,
+                this.WriteToLogWithLevel(
+                    this.ObserverName,
                     $"Unhandled exception in ReportAsync: \n{e}",
                     LogLevel.Error);
 
@@ -629,92 +656,92 @@ namespace FabricObserver.Observers
 
         protected override void Dispose(bool disposing)
         {
-            if (disposed || !disposing)
+            if (this.disposed || !disposing)
             {
                 return;
             }
 
-            if (perfCounters != null)
+            if (this.perfCounters != null)
             {
-                perfCounters.Dispose();
-                perfCounters = null;
+                this.perfCounters.Dispose();
+                this.perfCounters = null;
             }
 
-            if (diskUsage != null)
+            if (this.diskUsage != null)
             {
-                diskUsage.Dispose();
-                diskUsage = null;
+                this.diskUsage.Dispose();
+                this.diskUsage = null;
             }
 
-            disposed = true;
+            this.disposed = true;
         }
 
         private void LogAllAppResourceDataToCsv(string appName)
         {
-            if (!CsvFileLogger.EnableCsvLogging && !IsTelemetryEnabled)
+            if (!this.CsvFileLogger.EnableCsvLogging && !this.IsTelemetryEnabled)
             {
                 return;
             }
 
-            var fileName = $"{appName.Replace(":", string.Empty)}{NodeName}";
+            var fileName = $"{appName.Replace(":", string.Empty)}{this.NodeName}";
 
             // CPU Time
-            CsvFileLogger.LogData(
+            this.CsvFileLogger.LogData(
                 fileName,
                 appName,
-                "% CPU Time",
+                ErrorWarningProperty.TotalCpuTime,
                 "Average",
-                Math.Round(allAppCpuData
+                Math.Round((double)this.allAppCpuData
                     .FirstOrDefault(x => x.Id == appName).AverageDataValue));
 
-            CsvFileLogger.LogData(
+            this.CsvFileLogger.LogData(
                 fileName,
                 appName,
-                "% CPU Time",
+                ErrorWarningProperty.TotalCpuTime,
                 "Peak",
-                Math.Round(Convert.ToDouble(allAppCpuData
+                Math.Round(Convert.ToDouble(this.allAppCpuData
                     .FirstOrDefault(x => x.Id == appName).MaxDataValue)));
 
             // Memory
-            CsvFileLogger.LogData(
+            this.CsvFileLogger.LogData(
                 fileName,
                 appName,
-                "Memory (Working set) MB",
+                ErrorWarningProperty.TotalMemoryConsumptionMb,
                 "Average",
-                Math.Round(allAppMemDataMB
+                Math.Round((double)this.allAppMemDataMb
                     .FirstOrDefault(x => x.Id == appName).AverageDataValue));
 
-            CsvFileLogger.LogData(
+            this.CsvFileLogger.LogData(
                 fileName,
                 appName,
-                "Memory (Working set) MB",
+                ErrorWarningProperty.TotalMemoryConsumptionMb,
                 "Peak",
-                Math.Round(Convert.ToDouble(allAppMemDataMB
+                Math.Round(Convert.ToDouble(this.allAppMemDataMb
                     .FirstOrDefault(x => x.Id == appName).MaxDataValue)));
 
-            CsvFileLogger.LogData(
+            this.CsvFileLogger.LogData(
                fileName,
                appName,
-               "Memory (Percent in use)",
+               ErrorWarningProperty.TotalMemoryConsumptionPct,
                "Average",
-               Math.Round(allAppMemDataPercent
+               Math.Round(this.allAppMemDataPercent
                    .FirstOrDefault(x => x.Id == appName).AverageDataValue));
 
-            CsvFileLogger.LogData(
+            this.CsvFileLogger.LogData(
                 fileName,
                 appName,
-                "Memory (Percent in use)",
+                ErrorWarningProperty.TotalMemoryConsumptionPct,
                 "Peak",
-                Math.Round(Convert.ToDouble(allAppMemDataPercent
+                Math.Round(Convert.ToDouble(this.allAppMemDataPercent
                     .FirstOrDefault(x => x.Id == appName).MaxDataValue)));
 
             // Network
-            CsvFileLogger.LogData(
+            this.CsvFileLogger.LogData(
                 fileName,
                 appName,
-                "Active Ports",
+                ErrorWarningProperty.TotalActivePorts,
                 "Total",
-                Math.Round(Convert.ToDouble(allAppTotalActivePortsData
+                Math.Round(Convert.ToDouble(this.allAppTotalActivePortsData
                     .FirstOrDefault(x => x.Id == appName).MaxDataValue)));
 
             DataTableFileLogger.Flush();

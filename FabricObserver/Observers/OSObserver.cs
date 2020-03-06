@@ -73,7 +73,7 @@ namespace FabricObserver.Observers
                         NodeName = this.NodeName,
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
-                        HealthReportTimeToLive = this.SetTimeToLiveWarning(),
+                        HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
                     };
 
                     this.HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -135,7 +135,7 @@ namespace FabricObserver.Observers
                     HealthMessage = this.osReport,
                     State = HealthState.Ok,
                     NodeName = this.NodeName,
-                    HealthReportTimeToLive = this.SetTimeToLiveWarning(),
+                    HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
                 };
 
                 this.HealthReporter.ReportHealthToServiceFabric(report);

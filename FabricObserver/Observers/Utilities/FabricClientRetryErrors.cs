@@ -10,12 +10,12 @@ using System.Fabric;
 namespace FabricObserver.Observers.Utilities
 {
     /// <summary>
-    /// Class to define retry-able fabric client errors
+    /// Class to define retry-able fabric client errors.
     /// </summary>
     public class FabricClientRetryErrors
     {
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client GetEntityHealth commands
+        /// Fabric errors that are retry-able for fabric client GetEntityHealth commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> GetEntityHealthFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -25,7 +25,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client MoveSecondary commands
+        /// Fabric errors that are retry-able for fabric client MoveSecondary commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> MoveSecondaryFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -36,7 +36,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client MovePrimary commands
+        /// Fabric errors that are retry-able for fabric client MovePrimary commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> MovePrimaryFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -47,7 +47,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client RemoveReplica commands
+        /// Fabric errors that are retry-able for fabric client RemoveReplica commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> RemoveReplicaErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -57,7 +57,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client RestartReplica commands
+        /// Fabric errors that are retry-able for fabric client RestartReplica commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> RestartReplicaErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -67,7 +67,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client GetPartitionList commands
+        /// Fabric errors that are retry-able for fabric client GetPartitionList commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> GetPartitionListFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -78,7 +78,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client GetClusterManifest commands
+        /// Fabric errors that are retry-able for fabric client GetClusterManifest commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> GetClusterManifestFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -87,7 +87,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client Provision commands
+        /// Fabric errors that are retry-able for fabric client Provision commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> ProvisionFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -97,7 +97,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client Upgrade commands
+        /// Fabric errors that are retry-able for fabric client Upgrade commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> UpgradeFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -108,7 +108,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Fabric errors that are retry-able for fabric client RemoveUnreliableTransportBehavior commands
+        /// Fabric errors that are retry-able for fabric client RemoveUnreliableTransportBehavior commands.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> RemoveUnreliableTransportBehaviorErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -118,7 +118,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Setting SuccessFabricErrorCodes while performing CreateApp
+        /// Setting SuccessFabricErrorCodes while performing CreateApp.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> CreateAppErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -128,7 +128,7 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Setting SuccessFabricErrorCodes while performing DeleteApp
+        /// Setting SuccessFabricErrorCodes while performing DeleteApp.
         /// </summary>
         public static readonly Lazy<FabricClientRetryErrors> DeleteAppErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
@@ -138,7 +138,8 @@ namespace FabricObserver.Observers.Utilities
         });
 
         /// <summary>
-        /// Constructor that populates default retry-able errors
+        /// Initializes a new instance of the <see cref="FabricClientRetryErrors"/> class.
+        /// Constructor that populates default retry-able errors.
         /// </summary>
         public FabricClientRetryErrors()
         {
@@ -153,27 +154,27 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// List of exceptions that are retry-able
+        /// Gets list of exceptions that are retry-able.
         /// </summary>
         public IList<Type> RetryableExceptions { get; private set; }
 
         /// <summary>
-        /// List of Fabric error codes that are retry-able
+        /// Gets list of Fabric error codes that are retry-able.
         /// </summary>
         public IList<FabricErrorCode> RetryableFabricErrorCodes { get; private set; }
 
         /// <summary>
-        /// List of success exceptions that are retry-able
+        /// Gets list of success exceptions that are retry-able.
         /// </summary>
         public IList<Type> RetrySuccessExceptions { get; private set; }
 
         /// <summary>
-        /// List of success error codes that are retry-able
+        /// Gets list of success error codes that are retry-able.
         /// </summary>
         public IList<FabricErrorCode> RetrySuccessFabricErrorCodes { get; private set; }
 
         /// <summary>
-        /// List of internal success error codes that are retry-able
+        /// Gets list of internal success error codes that are retry-able.
         /// </summary>
         internal IList<uint> InternalRetrySuccessFabricErrorCodes { get; private set; }
 
@@ -184,9 +185,6 @@ namespace FabricObserver.Observers.Utilities
             this.RetryableExceptions.Add(typeof(FabricNotReadableException));
             this.RetryableFabricErrorCodes.Add(FabricErrorCode.OperationTimedOut);
             this.RetryableFabricErrorCodes.Add(FabricErrorCode.CommunicationError);
-
-            // TODO: Enable after updating ServiceFabricClientPackage in SF-AppStore Repo
-            // this.RetryableFabricErrorCodes.Add(FabricErrorCode.GatewayNotReachable);
             this.RetryableFabricErrorCodes.Add(FabricErrorCode.ServiceTooBusy);
         }
     }

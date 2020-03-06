@@ -188,18 +188,21 @@ namespace FabricObserver.Observers
                     var fMparameterNodes = xdoc.SelectNodes("//sf:Section[@Name='FailoverManager']//sf:Parameter", nsmgr);
                     _ = sb.AppendLine("\nCluster Information:\n");
 
-                    foreach (XmlNode node in fMparameterNodes)
+                    if (fMparameterNodes != null)
                     {
-                        token.ThrowIfCancellationRequested();
+                        foreach (XmlNode node in fMparameterNodes)
+                        {
+                            token.ThrowIfCancellationRequested();
 
-                        _ = sb.AppendLine(node.Attributes.Item(0).Value + ": " + node.Attributes.Item(1).Value);
+                            _ = sb.AppendLine(node?.Attributes?.Item(0).Value + ": " + node?.Attributes?.Item(1).Value);
+                        }
                     }
                 }
 
                 token.ThrowIfCancellationRequested();
 
                 // Node Information.
-                _ = sb.AppendLine($"\nNode Info:\n");
+                _ = sb.AppendLine("\nNode Info:\n");
                 _ = sb.AppendLine($"Node Name: {this.NodeName}");
                 _ = sb.AppendLine($"Node Id: {this.FabricServiceContext.NodeContext.NodeId}");
                 _ = sb.AppendLine($"Node Instance Id: {this.FabricServiceContext.NodeContext.NodeInstanceId}");
@@ -215,9 +218,9 @@ namespace FabricObserver.Observers
 
                 if (infraNode != null)
                 {
-                    _ = sb.AppendLine("Is Seed Node: " + infraNode.Attributes["IsSeedNode"]?.Value);
-                    _ = sb.AppendLine("Fault Domain: " + infraNode.Attributes["FaultDomain"]?.Value);
-                    _ = sb.AppendLine("Upgrade Domain: " + infraNode.Attributes["UpgradeDomain"]?.Value);
+                    _ = sb.AppendLine("Is Seed Node: " + infraNode.Attributes?["IsSeedNode"]?.Value);
+                    _ = sb.AppendLine("Fault Domain: " + infraNode.Attributes?["FaultDomain"]?.Value);
+                    _ = sb.AppendLine("Upgrade Domain: " + infraNode.Attributes?["UpgradeDomain"]?.Value);
                 }
 
                 token.ThrowIfCancellationRequested();
@@ -310,7 +313,7 @@ namespace FabricObserver.Observers
                                 if (this.IsEtwEnabled)
                                 {
                                     Logger.EtwLogger?.Write(
-                                        $"FabricObserverDataEvent",
+                                        "FabricObserverDataEvent",
                                         new
                                         {
                                             Level = 0, // Info

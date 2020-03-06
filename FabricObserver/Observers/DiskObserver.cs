@@ -31,6 +31,7 @@ namespace FabricObserver.Observers
         private StringBuilder diskInfo = new StringBuilder();
         private TimeSpan monitorDuration = TimeSpan.FromSeconds(5);
         private readonly Stopwatch stopWatch;
+        private int dataCapacity = 2;
 
         public int DiskSpacePercentErrorThreshold { get; set; }
 
@@ -117,31 +118,31 @@ namespace FabricObserver.Observers
                     // Disk space %.
                     if (this.diskSpacePercentageUsageData.All(data => data.Id != id))
                     {
-                        this.diskSpacePercentageUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id));
+                        this.diskSpacePercentageUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id, dataCapacity));
                     }
 
                     if (this.diskSpaceUsageData.All(data => data.Id != id))
                     {
-                        this.diskSpaceUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsageMb, id));
+                        this.diskSpaceUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsageMb, id, dataCapacity));
                     }
 
                     if (this.diskSpaceAvailableData.All(data => data.Id != id))
                     {
-                        this.diskSpaceAvailableData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMb, id));
+                        this.diskSpaceAvailableData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMb, id, dataCapacity));
                     }
 
                     if (this.diskSpaceTotalData.All(data => data.Id != id))
                     {
-                        this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMb, id));
+                        this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMb, id, dataCapacity));
                     }
 
                     // Current disk queue length.
                     if (this.diskAverageQueueLengthData.All(data => data.Id != id))
                     {
-                        this.diskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id));
+                        this.diskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, dataCapacity));
                     }
 
-                    // Generate data over time (_monitorDuration.) for use in ReportAsync health analysis.
+                    // Generate data over time (monitorDuration.) for use in ReportAsync health analysis.
                     this.stopWatch?.Start();
 
                     while (this.stopWatch?.Elapsed <= this.monitorDuration)
@@ -183,8 +184,9 @@ namespace FabricObserver.Observers
                                 "Avg. Disk Queue Length"));
                     }
 
-                    this.stopWatch?.Stop();
-                    this.stopWatch?.Reset();
+                    this.stopWatch.Stop();
+                    this.RunDuration = this.stopWatch.Elapsed;
+                    this.stopWatch.Reset();
                 }
             }
             finally
@@ -273,7 +275,7 @@ namespace FabricObserver.Observers
         }
 
         private static string GetWindowsPerfCounterDetailsText(
-            IReadOnlyCollection<float> data,
+            ICollection<float> data,
             string counter)
         {
             if (data == null || data.Count == 0)
@@ -303,7 +305,7 @@ namespace FabricObserver.Observers
         {
             try
             {
-                var timeToLiveWarning = this.SetTimeToLiveWarning(this.monitorDuration.Seconds);
+                var timeToLiveWarning = this.SetHealthReportTimeToLive();
 
                 // Disk Space Usage % from Settings.xml.
                 foreach (var data in this.diskSpacePercentageUsageData)

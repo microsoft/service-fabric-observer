@@ -1,6 +1,6 @@
 [
   {
-    "appTarget": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp",
     "endpoints": [
       {
         "hostname": "google.com",
@@ -17,7 +17,7 @@
     ]
   },
   {
-    "appTarget": "fabric:/MyApp2",
+    "targetApp": "fabric:/MyApp2",
     "endpoints": [
       {
         "hostname": "google.com",

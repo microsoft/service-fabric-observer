@@ -52,8 +52,8 @@ folder (AppObserver.config.json):
 ```JSON
 [
   {
-    "target": "fabric:/MyApp",
-    "cpuErrorLimitPct": 0,
+    "targetApp": "fabric:/MyApp",
+    "cpuErrorLimitPercent": 0,
     "dumpProcessOnError": false,
     "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 60,
@@ -63,10 +63,10 @@ folder (AppObserver.config.json):
     "networkWarningEphemeralPorts": 400
   },
   {
-    "target": "fabric:/MyApp1",
+    "targetApp": "fabric:/MyApp1",
     "serviceIncludeList": "MyService42, MyOtherService42",
-    "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 8,
+    "cpuErrorLimitPercent": 0,
+    "cpuWarningLimitPercent": 8,
     "dumpProcessOnError": false,
     "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 60,
@@ -76,9 +76,9 @@ folder (AppObserver.config.json):
     "networkWarningEphemeralPorts": 400
   },
   {
-    "target": "fabric:/FabricObserver",
-    "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 30,
+    "targetApp": "fabric:/FabricObserver",
+    "cpuErrorLimitPercent": 0,
+    "cpuWarningLimitPercent": 30,
     "dumpProcessOnError": false,
     "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 30,
@@ -88,9 +88,9 @@ folder (AppObserver.config.json):
     "networkWarningEphemeralPorts": 400
   },
   {
-    "target": "fabric:/FabricObserverWebApi",
-    "cpuErrorLimitPct": 0,
-    "cpuWarningLimitPct": 30,
+    "targetApp": "fabric:/FabricObserverWebApi",
+    "cpuErrorLimitPercent": 0,
+    "cpuWarningLimitPercent": 30,
     "dumpProcessOnError": false,
     "memoryErrorLimitPercent": 0,
     "memoryWarningLimitPercent": 30,
@@ -107,8 +107,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 
 | Setting | Description |
 | :--- | :--- |
-| **target** | App URI string to observe. Optional (Required if targetType not specified). | 
-| **targetType** | ApplicationType name. FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
+| **targetApp** | App URI string to observe. Optional (Required if targetType not specified). | 
+| **targetAppType** | ApplicationType name (this is not a Uri format). FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
 | **memoryErrorLimitMB** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log) |  
@@ -300,7 +300,7 @@ Example NetworkObserver.config.json configuration:
 ```javascript
 [
   {
-      "appTarget": "fabric:/MyApp",
+      "targetApp": "fabric:/MyApp",
       "endpoints": [
         {
           "hostname": "google.com",
@@ -317,7 +317,7 @@ Example NetworkObserver.config.json configuration:
      ]
   },
   {
-      "appTarget": "fabric:/MyApp2",
+      "targetApp": "fabric:/MyApp2",
       "endpoints": [
         {
           "hostname": "google.com",

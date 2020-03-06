@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -33,7 +34,7 @@ namespace FabricObserver.Observers
         {
             new NetworkObserverConfig
             {
-                AppTarget = "test",
+                TargetApp = "fabric:/test",
                 Endpoints = new List<Endpoint>
                 {
                     new Endpoint
@@ -57,10 +58,11 @@ namespace FabricObserver.Observers
 
         private readonly string dataPackagePath;
         private readonly InternetProtocol protocol = InternetProtocol.Tcp;
-        private List<NetworkObserverConfig> userEndpoints = new List<NetworkObserverConfig>();
-        private List<ConnectionState> connectionStatus = new List<ConnectionState>();
+        private readonly List<NetworkObserverConfig> userEndpoints = new List<NetworkObserverConfig>();
+        private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;
+        private Stopwatch stopwatch;
         private CancellationToken cancellationToken;
 
         /// <summary>
@@ -70,6 +72,7 @@ namespace FabricObserver.Observers
             : base(ObserverConstants.NetworkObserverName)
         {
             this.dataPackagePath = ConfigSettings.ConfigPackagePath;
+            this.stopwatch = new Stopwatch();
         }
 
         /// <inheritdoc/>
@@ -85,6 +88,9 @@ namespace FabricObserver.Observers
 
             if (!await this.Initialize().ConfigureAwait(true) || token.IsCancellationRequested)
             {
+                this.stopwatch.Stop();
+                this.stopwatch.Reset();
+
                 return;
             }
 
@@ -96,7 +102,12 @@ namespace FabricObserver.Observers
                 TimeSpan.FromSeconds(10),
                 token);
 
+            this.stopwatch.Stop();
+            this.RunDuration = this.stopwatch.Elapsed;
+            this.stopwatch.Reset();
+
             await this.ReportAsync(token).ConfigureAwait(true);
+
             this.LastRunDateTime = DateTime.Now;
             this.hasRun = true;
         }
@@ -113,9 +124,8 @@ namespace FabricObserver.Observers
                     return string.Empty;
                 }
 
-                var interfaceInfo = new StringBuilder(string.Format(
-                    "Network Interface information for {0}:\n     ",
-                    iPGlobalProperties.HostName));
+                var interfaceInfo = new StringBuilder(
+                    $"Network Interface information for {iPGlobalProperties.HostName}:\n     ");
 
                 foreach (var nic in nics)
                 {
@@ -126,18 +136,20 @@ namespace FabricObserver.Observers
                     _ = interfaceInfo.AppendFormat("  Operational status: {0}\n", nic.OperationalStatus);
 
                     // Traffic.
-                    if (nic.OperationalStatus == OperationalStatus.Up)
+                    if (nic.OperationalStatus != OperationalStatus.Up)
                     {
-                        _ = interfaceInfo.AppendLine("  Traffic Info:");
-
-                        var stats = nic.GetIPv4Statistics();
-
-                        _ = interfaceInfo.AppendFormat("    Bytes received: {0}\n", stats.BytesReceived);
-                        _ = interfaceInfo.AppendFormat("    Bytes sent: {0}\n", stats.BytesSent);
-                        _ = interfaceInfo.AppendFormat("    Incoming Packets With Errors: {0}\n", stats.IncomingPacketsWithErrors);
-                        _ = interfaceInfo.AppendFormat("    Outgoing Packets With Errors: {0}\n", stats.OutgoingPacketsWithErrors);
-                        _ = interfaceInfo.AppendLine();
+                        continue;
                     }
+
+                    _ = interfaceInfo.AppendLine("  Traffic Info:");
+
+                    var stats = nic.GetIPv4Statistics();
+
+                    _ = interfaceInfo.AppendFormat("    Bytes received: {0}\n", stats.BytesReceived);
+                    _ = interfaceInfo.AppendFormat("    Bytes sent: {0}\n", stats.BytesSent);
+                    _ = interfaceInfo.AppendFormat("    Incoming Packets With Errors: {0}\n", stats.IncomingPacketsWithErrors);
+                    _ = interfaceInfo.AppendFormat("    Outgoing Packets With Errors: {0}\n", stats.OutgoingPacketsWithErrors);
+                    _ = interfaceInfo.AppendLine();
                 }
 
                 var s = interfaceInfo.ToString();
@@ -153,6 +165,8 @@ namespace FabricObserver.Observers
 
         private async Task<bool> Initialize()
         {
+            this.stopwatch.Start();
+
             this.WriteToLogWithLevel(
                 this.ObserverName,
                 $"Initializing {this.ObserverName} for network monitoring. | {this.NodeName}",
@@ -234,7 +248,7 @@ namespace FabricObserver.Observers
 
                 var deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
                     this.NodeName,
-                    new Uri(config.AppTarget)).ConfigureAwait(true);
+                    new Uri(config.TargetApp)).ConfigureAwait(true);
 
                 if (deployedApps == null || deployedApps.Count < 1)
                 {
@@ -261,18 +275,13 @@ namespace FabricObserver.Observers
 
                     this.WriteToLogWithLevel(
                         this.ObserverName,
-                        $"Monitoring outbound connection state to {endpoint.HostName} on Node {this.NodeName} for app {config.AppTarget}",
+                        $"Monitoring outbound connection state to {endpoint.HostName} on Node {this.NodeName} for app {config.TargetApp}",
                         LogLevel.Information);
                 }
             }
 
             // This observer shouldn't run if there are no app-specific endpoint/port pairs provided.
-            if (configCount < 1)
-            {
-                return false;
-            }
-
-            return true;
+            return configCount >= 1;
         }
 
         // x-plat?
@@ -393,7 +402,7 @@ namespace FabricObserver.Observers
         /// <inheritdoc/>
         public override async Task ReportAsync(CancellationToken token)
         {
-            var timeToLiveWarning = this.SetTimeToLiveWarning();
+            var timeToLiveWarning = this.SetHealthReportTimeToLive();
 
             // Report on connection state.
             foreach (var t in this.userEndpoints)
@@ -403,7 +412,7 @@ namespace FabricObserver.Observers
                 var deployedApps = await this.FabricClientInstance.QueryManager
                     .GetDeployedApplicationListAsync(
                         this.NodeName,
-                        new Uri(t.AppTarget)).ConfigureAwait(true);
+                        new Uri(t.TargetApp)).ConfigureAwait(true);
 
                 // We only care about deployed apps.
                 if (deployedApps == null || deployedApps.Count < 1)
@@ -424,7 +433,7 @@ namespace FabricObserver.Observers
 
                         var report = new HealthReport
                         {
-                            AppName = new Uri(t.AppTarget),
+                            AppName = new Uri(t.TargetApp),
                             Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EmitLogEvent = true,
                             HealthMessage = healthMessage,
@@ -447,7 +456,7 @@ namespace FabricObserver.Observers
                         {
                             _ = this.ObserverTelemetryClient?.ReportHealthAsync(
                                 HealthScope.Application,
-                                t.AppTarget,
+                                t.TargetApp,
                                 HealthState.Warning,
                                 $"{this.NodeName}/{FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable}: {healthMessage}",
                                 this.ObserverName,
@@ -467,7 +476,7 @@ namespace FabricObserver.Observers
                         // Clear existing Health Warning.
                         var report = new HealthReport
                         {
-                            AppName = new Uri(t.AppTarget),
+                            AppName = new Uri(t.TargetApp),
                             EmitLogEvent = true,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = default(TimeSpan),

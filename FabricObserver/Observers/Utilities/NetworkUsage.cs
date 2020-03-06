@@ -84,7 +84,7 @@ namespace FabricObserver.Observers.Utilities
         ///  on node as a List of tuple (int, int) containing process id and port count in use by said process) ordered by port count, descending.
         ///  On failure, for handled exceptions., this function returns a list of one (int, int) of value (-1, -1).
         /// </summary>
-        /// <param name="procId" type="int">Optional int process ID</param>
+        /// <param name="procId" type="int">Optional int process ID.</param>
         /// <param name="protocol" type="Protocol">Optional Protocol (defaults to TCP. Cannot be None.)</param>
         /// <returns>List of tuple (int, int).</returns>
         internal static List<(int ProcessId, int PortCount)>

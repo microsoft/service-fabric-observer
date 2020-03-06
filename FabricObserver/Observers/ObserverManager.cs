@@ -116,7 +116,7 @@ namespace FabricObserver.Observers
             }
 
             // this logs metrics from observers, if enabled, and/or sends
-            // telemetry data to your implemented provider.
+            // resource usage telemetry data to your implemented provider.
             this.DataLogger = new DataTableFileLogger();
 
             // this logs error/warning/info messages for ObserverManager.
@@ -718,7 +718,7 @@ namespace FabricObserver.Observers
                 this.StopObservers();
             }
 
-            globalShutdownEventHandle?.Dispose();
+            this.globalShutdownEventHandle?.Dispose();
 
             if (this.observers?.Count > 0)
             {

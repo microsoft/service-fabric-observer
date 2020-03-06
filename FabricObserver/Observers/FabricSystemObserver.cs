@@ -31,6 +31,8 @@ namespace FabricObserver.Observers
     // As with all observers, you should first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy states.
     public class FabricSystemObserver : ObserverBase
     {
+        private const int DataListCapacity = 10;
+
         private readonly List<string> processWatchList = new List<string>
         {
             "Fabric",
@@ -45,14 +47,12 @@ namespace FabricObserver.Observers
             "FabricUS",
         };
 
-        // amount of time, in seconds, it took this observer to complete run run.
-        private TimeSpan runtime = TimeSpan.MinValue;
-        private Stopwatch stopWatch;
+        private Stopwatch stopwatch;
         private bool disposed;
 
         // Health Report data container - For use in analysis to deterWarne health state.
         private List<FabricResourceUsageData<int>> allCpuData;
-        private List<FabricResourceUsageData<long>> allMemData;
+        private List<FabricResourceUsageData<float>> allMemData;
 
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList;
@@ -90,32 +90,62 @@ namespace FabricObserver.Observers
 
         private void Initialize()
         {
-            if (this.stopWatch == null)
+            if (this.stopwatch == null)
             {
-                this.stopWatch = new Stopwatch();
+                this.stopwatch = new Stopwatch();
             }
 
             this.Token.ThrowIfCancellationRequested();
 
-            this.stopWatch.Start();
+            this.stopwatch.Start();
 
             this.SetThresholdsFromConfiguration();
 
             if (this.allMemData == null)
             {
-                this.allMemData = new List<FabricResourceUsageData<long>>
+                this.allMemData = new List<FabricResourceUsageData<float>>
                 {
                     // Mem data.
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "Fabric"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricApplicationGateway"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricCAS"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricDCA"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricDnsService"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricGateway"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricHost"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricIS"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricRM"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricUS"),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "Fabric",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricApplicationGateway",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricCAS",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricDCA",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricDnsService",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricGateway",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricHost",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricIS",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricRM",
+                        DataListCapacity),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricUS",
+                        DataListCapacity),
                 };
             }
 
@@ -124,16 +154,46 @@ namespace FabricObserver.Observers
                 this.allCpuData = new List<FabricResourceUsageData<int>>
                 {
                     // Cpu data.
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "Fabric"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricApplicationGateway"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricCAS"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricDCA"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricDnsService"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricGateway"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricHost"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricIS"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricRM"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricUS"),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "Fabric",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricApplicationGateway",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricCAS",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricDCA",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricDnsService",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricGateway",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricHost",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricIS",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricRM",
+                        DataListCapacity),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricUS",
+                        DataListCapacity),
                 };
             }
 
@@ -324,9 +384,10 @@ namespace FabricObserver.Observers
                 }
 
                 // Set TTL.
-                this.stopWatch.Stop();
-                this.runtime = this.stopWatch.Elapsed;
-                this.stopWatch.Reset();
+                this.stopwatch.Stop();
+                this.RunDuration = this.stopwatch.Elapsed;
+                this.stopwatch.Reset();
+
                 await this.ReportAsync(token).ConfigureAwait(true);
 
                 // No need to keep these objects in memory aross healthy iterations.
@@ -370,23 +431,24 @@ namespace FabricObserver.Observers
                     this.TotalActivePortCount += NetworkUsage.GetActivePortCount(process.Id);
                     this.TotalActiveEphemeralPortCount += NetworkUsage.GetActiveEphemeralPortCount(process.Id);
 
-                    int procCount = Environment.ProcessorCount;
+                    int count = 15;
 
-                    while (!process.HasExited && procCount > 0)
+                    while (!process.HasExited && count > 0)
                     {
                         this.Token.ThrowIfCancellationRequested();
 
                         try
                         {
+                            // CPU Time for service process.
                             int cpu = (int)this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
-
                             this.allCpuData.FirstOrDefault(x => x.Id == procName)?.Data.Add(cpu);
 
-                            // Memory - Private WS for proc.
-                            var workingset = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
-                            this.allMemData.FirstOrDefault(x => x.Id == procName)?.Data.Add((long)workingset);
+                            // Private Working Set for service process.
+                            float mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
+                            this.allMemData.FirstOrDefault(x => x.Id == procName)?.Data.Add(mem);
 
-                            --procCount;
+                            --count;
+
                             Thread.Sleep(250);
                         }
                         catch (Exception e)
@@ -395,6 +457,7 @@ namespace FabricObserver.Observers
                                 this.ObserverName,
                                 $"Can't observe {process} details due to {e.Message} - {e.StackTrace}",
                                 LogLevel.Warning);
+
                             throw;
                         }
                     }
@@ -407,6 +470,7 @@ namespace FabricObserver.Observers
                         this.ObserverName,
                         $"Can't observe {process} due to it's privilege level - " + "FabricObserver must be running as System or Admin for this specific task.",
                         LogLevel.Information);
+
                     break;
                 }
                 finally
@@ -508,7 +572,7 @@ namespace FabricObserver.Observers
         public override Task ReportAsync(CancellationToken token)
         {
             this.Token.ThrowIfCancellationRequested();
-            var timeToLiveWarning = this.SetTimeToLiveWarning(this.runtime.Seconds);
+            var timeToLiveWarning = this.SetHealthReportTimeToLive();
             var portInformationReport = new HealthReport
             {
                 Observer = this.ObserverName,
@@ -659,7 +723,7 @@ namespace FabricObserver.Observers
             {
                 this.Token.ThrowIfCancellationRequested();
 
-                if (dataItem.Data.Count == 0 || dataItem.AverageDataValue < 0)
+                if (dataItem.Data.Count == 0 || Convert.ToDouble(dataItem.AverageDataValue) < 0)
                 {
                     continue;
                 }
@@ -683,7 +747,7 @@ namespace FabricObserver.Observers
                             break;
                     }
 
-                    this.CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
+                    this.CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(Convert.ToDouble(dataItem.AverageDataValue), 2));
                     this.CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
                 }
 
@@ -691,7 +755,7 @@ namespace FabricObserver.Observers
                     dataItem,
                     thresholdError,
                     thresholdWarning,
-                    this.SetTimeToLiveWarning(this.runtime.Seconds));
+                    this.SetHealthReportTimeToLive());
             }
         }
 
