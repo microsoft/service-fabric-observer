@@ -8,19 +8,26 @@
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 30 minutes. -->
     <Parameter Name="ObserverExecutionTimeout" Value="1800" />
+    <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large clusters. -->
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          ClusterObserver will write to its own directory on this path.-->
     <Parameter Name="ObserverLogPath" Value="C:\observer_logs" />
     <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
-    <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- Required: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
-         but you can implement whatever provider you want. See IObserverTelemetryProvider interface.
-         Disabling this would render ClusterObserver useless, as it is designed specifically to 
-         emit aggregated cluster health state telemetry to a log analytics service. -->
+    <!-- Optional: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
+         but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="True" />
-    <!-- Required: Your ApplicationInsights instrumentation key. -->
+    <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
+    <Parameter Name="TelemetryProvider" Value="" />
+    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
+    <Parameter Name="LogAnalyticsSharedKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
+    <Parameter Name="LogAnalyticsLogType" Value="Application" />
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
   </Section>
@@ -32,11 +39,9 @@
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large clusters. -->
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
-    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="False" />
+    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
     <!-- Optional: Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
     <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
     <!-- Optional: Emit the string representation of ClusterHealth.HealthStatistics structure when Warning or Error 

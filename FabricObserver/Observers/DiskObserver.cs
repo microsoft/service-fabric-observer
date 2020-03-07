@@ -29,9 +29,9 @@ namespace FabricObserver.Observers
         private readonly List<FabricResourceUsageData<double>> diskSpaceAvailableData;
         private readonly List<FabricResourceUsageData<double>> diskSpaceTotalData;
         private StringBuilder diskInfo = new StringBuilder();
-        private TimeSpan monitorDuration = TimeSpan.FromSeconds(5);
+        private readonly TimeSpan monitorDuration = TimeSpan.FromSeconds(5);
         private readonly Stopwatch stopWatch;
-        private int dataCapacity = 2;
+        private readonly int dataCapacity = 2;
 
         public int DiskSpacePercentErrorThreshold { get; set; }
 
@@ -184,9 +184,12 @@ namespace FabricObserver.Observers
                                 "Avg. Disk Queue Length"));
                     }
 
-                    this.stopWatch.Stop();
-                    this.RunDuration = this.stopWatch.Elapsed;
-                    this.stopWatch.Reset();
+                    if (this.stopWatch != null)
+                    {
+                        this.stopWatch?.Stop();
+                        this.RunDuration = stopWatch.Elapsed;
+                        this.stopWatch.Reset();
+                    }
                 }
             }
             finally

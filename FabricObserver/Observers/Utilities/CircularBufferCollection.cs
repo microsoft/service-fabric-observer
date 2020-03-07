@@ -11,7 +11,7 @@ namespace FabricObserver.Observers.Utilities
 {
     /// <summary>
     /// Generic Circular buffer implementation for IList of numeric type T.
-    /// Based on public code: http://www.geekswithblogs.net/blackrob/archive/2014/09/01/circular-buffer-in-c.aspx
+    /// CircularBufferCollection class based on public (non-license-protected) sample: http://www.geekswithblogs.net/blackrob/archive/2014/09/01/circular-buffer-in-c.aspx
     /// All observers that produce numeric data as part of their resource usage monitoring
     /// use this class to store their data (held within instances of FabricResourceUsageData,
     /// see FRUD's Data member). Constraint on struct is partial, but useful.

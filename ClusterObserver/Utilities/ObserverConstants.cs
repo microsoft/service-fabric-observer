@@ -47,5 +47,16 @@ namespace FabricClusterObserver.Utilities
         public const string EmitOkHealthState = "EmitOkHealthStateTelemetry";
         public const string IgnoreSystemAppWarnings = "IgnoreFabricSystemAppWarnings";
         public const string EmitHealthStatistics = "EmitHealthStatistics";
+
+        // Telemetry Settings Parameters.
+        public const string TelemetryProviderType = "TelemetryProvider";
+        public const string LogAnalyticsLogTypeParameter = "LogAnalyticsLogType";
+        public const string LogAnalyticsSharedKeyParameter = "LogAnalyticsSharedKey";
+        public const string LogAnalyticsWorkspaceIdParameter = "LogAnalyticsWorkspaceId";
+        public const string InfrastructureServiceType = "InfrastructureServiceType";
+        public const string ClusterTypeSfrp = "SFRP";
+        public const string Undefined = "Undefined";
+        public const string ClusterTypePaasV1 = "PaasV1";
+        public const string ClusterTypeStandalone = "Standalone";
     }
 }

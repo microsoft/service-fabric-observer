@@ -86,7 +86,6 @@ namespace FabricClusterObserver.Observers
 
             try
             {
-                
                 var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
                                                 this.AsyncClusterOperationTimeoutSeconds,
                                                 token).ConfigureAwait(true);
@@ -287,44 +286,6 @@ namespace FabricClusterObserver.Observers
 
                                 break;
                             }
-                            case HealthEvaluationKind.Invalid:
-                                break;
-                            case HealthEvaluationKind.Event:
-                                break;
-                            case HealthEvaluationKind.Replicas:
-                                break;
-                            case HealthEvaluationKind.Partitions:
-                                break;
-                            case HealthEvaluationKind.DeployedServicePackages:
-                                break;
-                            case HealthEvaluationKind.DeployedApplications:
-                                break;
-                            case HealthEvaluationKind.Services:
-                                break;
-                            case HealthEvaluationKind.SystemApplication:
-                                break;
-                            case HealthEvaluationKind.UpgradeDomainDeployedApplications:
-                                break;
-                            case HealthEvaluationKind.UpgradeDomainNodes:
-                                break;
-                            case HealthEvaluationKind.Replica:
-                                break;
-                            case HealthEvaluationKind.Partition:
-                                break;
-                            case HealthEvaluationKind.DeployedServicePackage:
-                                break;
-                            case HealthEvaluationKind.DeployedApplication:
-                                break;
-                            case HealthEvaluationKind.Service:
-                                break;
-                            case HealthEvaluationKind.DeltaNodesCheck:
-                                break;
-                            case HealthEvaluationKind.UpgradeDomainDeltaNodesCheck:
-                                break;
-                            case HealthEvaluationKind.ApplicationTypeApplications:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
                         }
                     }
 
