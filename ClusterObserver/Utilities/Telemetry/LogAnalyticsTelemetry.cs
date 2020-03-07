@@ -145,7 +145,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
                 {
                     id = $"FCO_{Guid.NewGuid().ToString()}",
                     datetime = DateTime.Now,
-                    clusterId = clusterId ?? "",
+                    clusterId = clusterId ?? string.Empty,
                     source = ObserverConstants.ClusterObserverName,
                     property = propertyName,
                     healthScope = scope.ToString(),

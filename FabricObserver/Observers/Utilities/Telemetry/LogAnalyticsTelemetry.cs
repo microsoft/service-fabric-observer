@@ -143,7 +143,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string json = JsonConvert.SerializeObject(
                 new
                 {
-                    id = $"FCO_{Guid.NewGuid().ToString()}",
+                    id = $"FO_{Guid.NewGuid().ToString()}",
                     datetime = DateTime.Now,
                     clusterId = clusterId ?? string.Empty,
                     source = ObserverConstants.FabricObserverName,

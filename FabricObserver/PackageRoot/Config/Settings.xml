@@ -31,9 +31,9 @@
     <Parameter Name="FQDN" Value="" />
     <!-- Optional: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="True" />
+    <Parameter Name="EnableTelemetryProvider" Value="False" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
-    <Parameter Name="TelemetryProvider" Value="" />
+    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
