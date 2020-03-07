@@ -23,6 +23,7 @@ namespace FabricObserver.Observers.Utilities
         public const string EventSourceProviderName = "EventSourceProviderName";
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
+        public const string FabricObserverName = "FabricObserver";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";
@@ -110,5 +111,16 @@ namespace FabricObserver.Observers.Utilities
         public const string SfConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
         public const string SfConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
         public const string SfConfigurationObserverRunIntervalParameterName = "RunInterval";
+
+        // Telemetry Settings Parameters.
+        public const string TelemetryProviderType = "TelemetryProvider";
+        public const string LogAnalyticsLogTypeParameter = "LogAnalyticsLogType";
+        public const string LogAnalyticsSharedKeyParameter = "LogAnalyticsSharedKey";
+        public const string LogAnalyticsWorkspaceIdParameter = "LogAnalyticsWorkspaceId";
+        public const string InfrastructureServiceType = "InfrastructureServiceType";
+        public const string ClusterTypeSfrp = "SFRP";
+        public const string Undefined = "Undefined";
+        public const string ClusterTypePaasV1 = "PaasV1";
+        public const string ClusterTypeStandalone = "Standalone";
     }
 }

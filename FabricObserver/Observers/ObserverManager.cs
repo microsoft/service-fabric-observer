@@ -455,11 +455,60 @@ namespace FabricObserver.Observers
 
             if (TelemetryEnabled)
             {
-                string key = GetConfigSettingValue(ObserverConstants.AiKey);
+                string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderType);
 
-                if (!string.IsNullOrEmpty(key))
+                if (string.IsNullOrEmpty(telemetryProviderType))
                 {
-                    TelemetryClient = new AppInsightsTelemetry(key);
+                    TelemetryEnabled = false;
+
+                    return;
+                }
+
+                if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
+                {
+                    return;
+                }
+
+                switch (telemetryProvider)
+                {
+                    case TelemetryProviderType.AzureLogAnalytics:
+                    {
+                        var logAnalyticsLogType =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter);
+
+                        var logAnalyticsSharedKey =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
+
+                        var logAnalyticsWorkspaceId =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+
+                        TelemetryClient = new LogAnalyticsTelemetry(
+                            logAnalyticsWorkspaceId,
+                            logAnalyticsSharedKey,
+                            logAnalyticsLogType,
+                            FabricClientInstance,
+                            token);
+
+                        break;
+                    }
+
+                    case TelemetryProviderType.AzureApplicationInsights:
+                    {
+                        string aiKey = GetConfigSettingValue(ObserverConstants.AiKey);
+
+                        if (string.IsNullOrEmpty(aiKey))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+
+                        TelemetryClient = new AppInsightsTelemetry(aiKey);
+                        break;
+                    }
+
+                    default:
+                        TelemetryEnabled = false;
+                        break;
                 }
             }
 

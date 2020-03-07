@@ -13,10 +13,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricClusterObserver.Interfaces;
+using FabricObserver.Observers.Interfaces;
+using Microsoft.ServiceFabric.TelemetryLib;
 using Newtonsoft.Json;
 
-namespace FabricClusterObserver.Utilities.Telemetry
+namespace FabricObserver.Observers.Utilities.Telemetry
 {
     // LogAnalyticsTelemetry class based on public (non-license-protected) sample https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : IObserverTelemetryProvider
@@ -34,9 +35,9 @@ namespace FabricClusterObserver.Utilities.Telemetry
         public string LogType { get; set; }
 
         public LogAnalyticsTelemetry(
-            string workspaceId, 
-            string sharedKey, 
-            string logType, 
+            string workspaceId,
+            string sharedKey,
+            string logType,
             FabricClient fabricClient,
             CancellationToken token,
             string apiVersion = "2016-04-01")
@@ -52,15 +53,20 @@ namespace FabricClusterObserver.Utilities.Telemetry
 
         public Task ReportHealthAsync(string json)
         {
-            string requestUri = $"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}";
-            string date = DateTime.UtcNow.ToString("r");
-            string signature = GetSignature("POST", json.Length, "application/json", date, "/api/logs");
+            if (string.IsNullOrEmpty(json))
+            {
+                return Task.CompletedTask;
+            }
 
-            var request = (HttpWebRequest) WebRequest.Create(new Uri(requestUri));
+            string requestUri = $"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}";
+            string dateString = DateTime.UtcNow.ToString("r");
+            string signature = GetSignature("POST", json.Length, "application/json", dateString, "/api/logs");
+
+            var request = (HttpWebRequest)WebRequest.Create(new Uri(requestUri));
             request.ContentType = "application/json";
             request.Method = "POST";
             request.Headers["Log-Type"] = LogType;
-            request.Headers["x-ms-date"] = date;
+            request.Headers["x-ms-date"] = dateString;
             request.Headers["Authorization"] = signature;
             byte[] content = Encoding.UTF8.GetBytes(json);
 
@@ -69,7 +75,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
                 requestStreamAsync.Write(content, 0, content.Length);
             }
 
-            using (var responseAsync = (HttpWebResponse) request.GetResponse())
+            using (var responseAsync = (HttpWebResponse)request.GetResponse())
             {
                 if (responseAsync.StatusCode == HttpStatusCode.OK ||
                     responseAsync.StatusCode == HttpStatusCode.Accepted)
@@ -93,18 +99,12 @@ namespace FabricClusterObserver.Utilities.Telemetry
                 }
             }
         }
-    
 
-        private string GetSignature(
-            string method,
-            int contentLength,
-            string contentType,
-            string date,
-            string resource)
+        private string GetSignature(string method, int contentLength, string contentType, string date, string resource)
         {
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);
-            
+
             using (var encryptor = new HMACSHA256(Convert.FromBase64String(SharedKey)))
             {
                 return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
@@ -128,34 +128,34 @@ namespace FabricClusterObserver.Utilities.Telemetry
         }
 
         public async Task ReportHealthAsync(
-            HealthScope scope, 
-            string propertyName, 
-            HealthState state, 
+            HealthScope scope,
+            string propertyName,
+            HealthState state,
             string unhealthyEvaluations,
-            string source, 
-            CancellationToken cancellationToken, 
-            string serviceName = null, 
+            string source,
+            CancellationToken cancellationToken,
+            string serviceName = null,
             string instanceName = null)
         {
-            var (clusterId, tenantId, clusterType) = 
-                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token);
-            
+            var (clusterId, tenantId, clusterType) =
+                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
+
             string json = JsonConvert.SerializeObject(
                 new
                 {
                     id = $"FCO_{Guid.NewGuid().ToString()}",
                     datetime = DateTime.Now,
-                    clusterId = clusterId ?? "",
-                    source = ObserverConstants.ClusterObserverName,
+                    clusterId = clusterId ?? string.Empty,
+                    source = ObserverConstants.FabricObserverName,
                     property = propertyName,
                     healthScope = scope.ToString(),
                     healthState = state.ToString(),
                     healthEvaluation = unhealthyEvaluations,
                     serviceName = serviceName ?? "N/A",
-                    instanceName = instanceName ?? "N/A"
+                    instanceName = instanceName ?? "N/A",
                 });
 
-           await  this.ReportHealthAsync(json);
+            await this.ReportHealthAsync(json).ConfigureAwait(false);
         }
 
         // TODO - Implement functions below as you need.

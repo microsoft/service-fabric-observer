@@ -276,6 +276,8 @@
     <Compile Include="Observers\Utilities\Statistics.cs" />
     <Compile Include="Observers\Utilities\LogLevel.cs" />
     <Compile Include="Observers\Utilities\Telemetry\HealthScope.cs" />
+    <Compile Include="Observers\Utilities\Telemetry\LogAnalyticsTelemetry.cs" />
+    <Compile Include="Observers\Utilities\Telemetry\TelemetryProdiverType.cs" />
     <Compile Include="Observers\Utilities\WindowsPerfCounters.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

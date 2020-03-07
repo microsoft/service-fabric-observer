@@ -28,12 +28,20 @@
          It relies on the existence of local log files, across ObserverManager and individual observers (they log to their own folders). 
          This only makes sense if you enable secure (SSL) communication in FabricObserverWebApi. By default, it is an internal(node)-only 
          API service.-->
-    <Parameter Name="FQDN" Value=""/>
+    <Parameter Name="FQDN" Value="" />
     <!-- Optional: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="False" />
-    <!-- Optional: Your ApplicationInsights instrumentation key. -->
+    <Parameter Name="EnableTelemetryProvider" Value="True" />
+    <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
+    <Parameter Name="TelemetryProvider" Value="" />
+    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
+    <Parameter Name="LogAnalyticsSharedKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
+    <Parameter Name="LogAnalyticsLogType" Value="Application" />
     <!-- Optional: EventSource Tracing. -->
     <Parameter Name="EnableEventSourceProvider" Value="True" />
     <Parameter Name="EventSourceProviderName" Value="FabricObserverETWProvider" />
