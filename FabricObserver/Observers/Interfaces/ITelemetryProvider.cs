@@ -13,9 +13,9 @@ using FabricObserver.Observers.Utilities.Telemetry;
 namespace FabricObserver.Observers.Interfaces
 {
     /// <summary>
-    /// IObserverTelemetry interface.
+    /// ITelemetry interface.
     /// </summary>
-    public interface IObserverTelemetryProvider
+    public interface ITelemetryProvider
     {
         /// <summary>
         /// Gets or sets the telemetry API key.

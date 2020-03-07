@@ -42,7 +42,7 @@ namespace FabricObserver.Observers
 
         protected bool IsEtwEnabled { get; set; } = ObserverManager.EtwEnabled;
 
-        protected IObserverTelemetryProvider ObserverTelemetryClient { get; set; }
+        protected ITelemetryProvider TelemetryClient { get; set; }
 
         protected FabricClient FabricClientInstance { get; set; }
 
@@ -112,7 +112,7 @@ namespace FabricObserver.Observers
 
             if (this.IsTelemetryEnabled)
             {
-                this.ObserverTelemetryClient = ObserverManager.TelemetryClient;
+                this.TelemetryClient = ObserverManager.TelemetryClient;
             }
 
             this.Settings = new List<string>();
@@ -526,7 +526,7 @@ namespace FabricObserver.Observers
                 // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
-                    _ = this.ObserverTelemetryClient?.ReportMetricAsync(
+                    _ = this.TelemetryClient?.ReportMetricAsync(
                         $"{this.NodeName}-{name}-{data.Id}-{data.Property}",
                         data.AverageDataValue,
                         this.Token);
@@ -550,7 +550,7 @@ namespace FabricObserver.Observers
                 // Telemetry.
                 if (this.IsTelemetryEnabled)
                 {
-                    _ = this.ObserverTelemetryClient?.ReportMetricAsync(
+                    _ = this.TelemetryClient?.ReportMetricAsync(
                         $"{this.NodeName}-{data.Id}-{data.Property}",
                         data.AverageDataValue,
                         this.Token);
@@ -743,7 +743,7 @@ namespace FabricObserver.Observers
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (this.IsTelemetryEnabled)
                 {
-                    _ = this.ObserverTelemetryClient?.ReportHealthAsync(
+                    _ = this.TelemetryClient?.ReportHealthAsync(
                         !string.IsNullOrEmpty(id) ? HealthScope.Application : HealthScope.Node,
                         $"{(appName != null ? appName.OriginalString : this.NodeName)}",
                         healthState,

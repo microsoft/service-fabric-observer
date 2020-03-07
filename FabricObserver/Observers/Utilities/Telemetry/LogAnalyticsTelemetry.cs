@@ -20,7 +20,7 @@ using Newtonsoft.Json;
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     // LogAnalyticsTelemetry class based on public (non-license-protected) sample https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
-    public class LogAnalyticsTelemetry : IObserverTelemetryProvider
+    public class LogAnalyticsTelemetry : ITelemetryProvider
     {
         private readonly FabricClient fabricClient;
         private readonly CancellationToken token;

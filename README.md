@@ -44,7 +44,7 @@ Most observers will remove the Warning state in cases where the issue is transie
 
 [Read more about Service Fabric Health Reports](https://docs.microsoft.com/azure/service-fabric/service-fabric-report-health)
 
-FO ships with an AppInsights telemetry implementation, other providers can be used by implementing the [IObserverTelemetryProvider interface](/FabricObserver/Observers/Interfaces/IObserverTelemetryProvider.cs). 
+FO ships with both an Azure ApplicationInsights and Azure LogAnalytics telemetry implementation. Other providers can be used by implementing the [ITelemetryProvider interface](/FabricObserver/Observers/Interfaces/ITelemetryProvider.cs). 
 
 For more information about **the design of FabricObserver**, please see the [Design readme](./Documentation/Design.md). 
 

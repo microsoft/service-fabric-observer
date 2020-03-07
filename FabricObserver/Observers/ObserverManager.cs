@@ -48,7 +48,7 @@ namespace FabricObserver.Observers
 
         public static StatelessServiceContext FabricServiceContext { get; set; }
 
-        public static IObserverTelemetryProvider TelemetryClient { get; set; }
+        public static ITelemetryProvider TelemetryClient { get; set; }
 
         public static bool TelemetryEnabled { get; set; }
 

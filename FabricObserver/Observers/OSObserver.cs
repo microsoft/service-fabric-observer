@@ -84,7 +84,7 @@ namespace FabricObserver.Observers
                     // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
                     if (this.IsTelemetryEnabled)
                     {
-                        _ = this.ObserverTelemetryClient?.ReportHealthAsync(
+                        _ = this.TelemetryClient?.ReportHealthAsync(
                             HealthScope.Application,
                             FabricRuntime.GetActivationContext().ApplicationName,
                             HealthState.Error,

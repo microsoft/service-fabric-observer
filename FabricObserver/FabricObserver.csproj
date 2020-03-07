@@ -235,6 +235,7 @@
   <ItemGroup>
     <Compile Include="Observers\CertificateObserver.cs" />
     <Compile Include="Observers\DumpType.cs" />
+    <Compile Include="Observers\Interfaces\ITelemetryProvider.cs" />
     <Compile Include="Observers\Utilities\CircularBufferCollection.cs" />
     <Compile Include="Observers\Utilities\ConnectionState.cs" />
     <Compile Include="Observers\DiskObserver.cs" />
@@ -242,7 +243,6 @@
     <Compile Include="Observers\Interfaces\IObserverLogger.cs" />
     <Compile Include="Observers\Interfaces\IObserver.cs" />
     <Compile Include="Observers\Interfaces\IObserverBase.cs" />
-    <Compile Include="Observers\Interfaces\IObserverTelemetryProvider.cs" />
     <Compile Include="Observers\MachineInfoModel\Endpoint.cs" />
     <Compile Include="Observers\MachineInfoModel\NetworkObserverConfig.cs" />
     <Compile Include="Observers\NetworkObserver.cs" />
