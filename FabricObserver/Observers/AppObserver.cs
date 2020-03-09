@@ -288,7 +288,7 @@ namespace FabricObserver.Observers
                         this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1));
                     }
 
-                    TimeSpan duration = TimeSpan.FromSeconds(10);
+                    TimeSpan duration = TimeSpan.FromSeconds(15);
 
                     if (this.MonitorDuration > TimeSpan.MinValue)
                     {

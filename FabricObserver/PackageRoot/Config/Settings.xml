@@ -64,6 +64,10 @@
   <Section Name="AppObserverConfiguration">
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="True" />
+    <!-- Optional: The amount of time this observer conducts resource usage probing. 
+         Each observer has a default value set, but you should override by setting this
+         parameter to what makes sense for your service(s). Note that this value represents
+         the time spent monitoring for each service you specify in configuration. -->
     <Parameter Name="MonitorDuration" Value="00:00:15" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
