@@ -19,7 +19,7 @@ namespace FabricClusterObserver.Observers
     {
         protected bool IsTelemetryEnabled { get; set; } = ObserverManager.TelemetryEnabled;
 
-        protected IObserverTelemetryProvider ObserverTelemetryClient { get; set; }
+        protected ITelemetryProvider ObserverTelemetryClient { get; set; }
 
         protected FabricClient FabricClientInstance { get; set; }
 

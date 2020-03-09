@@ -38,3 +38,6 @@ dotnet_diagnostic.SA1214.severity = none
 
 # CA1710: Identifiers should have correct suffix
 dotnet_diagnostic.CA1710.severity = none
+
+# SA1118: Parameter should not span multiple lines
+dotnet_diagnostic.SA1118.severity = none

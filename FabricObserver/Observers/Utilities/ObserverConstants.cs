@@ -10,15 +10,8 @@ namespace FabricObserver.Observers.Utilities
         public const string ObserverManagerName = "ObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
         public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
-        public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
-        public const string ObserverLogPath = "ObserverLogPath";
-        public const string DataLogPath = "DataLogPath";
         public const string Fqdn = "FQDN";
-        public const string ObserverRunIntervalParameterName = "RunInterval";
-        public const string ObserverEnabled = "Enabled";
-        public const string AiKey = "AppInsightsInstrumentationKey";
-        public const string TelemetryEnabled = "EnableTelemetryProvider";
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
         public const string EventSourceProviderName = "EventSourceProviderName";
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
@@ -41,6 +34,16 @@ namespace FabricObserver.Observers.Utilities
 
         // Setting name for Maximum time an observer should run before being considered hung or in some failure state.
         public const string ObserverExecutionTimeout = "ObserverExecutionTimeout";
+
+        // Common Observer Settings Parameters.
+        public const string ObserverLogPath = "ObserverLogPath";
+        public const string DataLogPath = "DataLogPath";
+        public const string ObserverRunIntervalParameterName = "RunInterval";
+        public const string ObserverEnabled = "Enabled";
+        public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
+        public const string DataCapacityParameter = "ResourceUsageDataCapacity";
+        public const string UseCircularBufferParameter = "UseCircularBuffer";
+        public const string MonitorDurationParameter = "MonitorDuration";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";
@@ -113,6 +116,8 @@ namespace FabricObserver.Observers.Utilities
         public const string SfConfigurationObserverRunIntervalParameterName = "RunInterval";
 
         // Telemetry Settings Parameters.
+        public const string AiKey = "AppInsightsInstrumentationKey";
+        public const string TelemetryEnabled = "EnableTelemetryProvider";
         public const string TelemetryProviderType = "TelemetryProvider";
         public const string LogAnalyticsLogTypeParameter = "LogAnalyticsLogType";
         public const string LogAnalyticsSharedKeyParameter = "LogAnalyticsSharedKey";

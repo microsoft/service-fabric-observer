@@ -20,7 +20,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
     /// Abstracts the ApplicationInsights telemetry API calls allowing
     /// other telemetry providers to be plugged in.
     /// </summary>
-    public class AppInsightsTelemetry : IObserverTelemetryProvider, IDisposable
+    public class AppInsightsTelemetry : ITelemetryProvider, IDisposable
     {
         /// <summary>
         /// ApplicationInsights telemetry client.

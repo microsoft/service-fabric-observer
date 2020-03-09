@@ -19,7 +19,7 @@ using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
-    // LogAnalyticsTelemetry class based on public (non-license-protected) sample https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
+    // LogAnalyticsTelemetry class is partially based on public (non-license-protected) sample https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
         private readonly FabricClient fabricClient;
@@ -28,7 +28,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         public string WorkspaceId { get; set; }
 
-        public string SharedKey { get; set; }
+        public string Key { get; set; }
 
         public string ApiVersion { get; set; }
 
@@ -43,7 +43,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string apiVersion = "2016-04-01")
         {
             this.WorkspaceId = workspaceId;
-            this.SharedKey = sharedKey;
+            this.Key = sharedKey;
             this.LogType = logType;
             this.fabricClient = fabricClient;
             this.token = token;
@@ -51,24 +51,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             logger = new Logger("TelemetryLogger");
         }
 
-        public Task ReportHealthAsync(string json)
+        /// <summary>
+        /// Sends telemetry data to Azure LogAnalytics via REST.
+        /// </summary>
+        /// <param name="payload">Json string containing telemetry data.</param>
+        /// <returns>A completed task or task containing exception info.</returns>
+        private Task SendTelemetryAsync(string payload)
         {
-            if (string.IsNullOrEmpty(json))
-            {
-                return Task.CompletedTask;
-            }
+            var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
+            string date = DateTime.UtcNow.ToString("r");
+            string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
 
-            string requestUri = $"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}";
-            string dateString = DateTime.UtcNow.ToString("r");
-            string signature = GetSignature("POST", json.Length, "application/json", dateString, "/api/logs");
-
-            var request = (HttpWebRequest)WebRequest.Create(new Uri(requestUri));
+            var request = (HttpWebRequest)WebRequest.Create(requestUri);
             request.ContentType = "application/json";
             request.Method = "POST";
             request.Headers["Log-Type"] = LogType;
-            request.Headers["x-ms-date"] = dateString;
+            request.Headers["x-ms-date"] = date;
             request.Headers["Authorization"] = signature;
-            byte[] content = Encoding.UTF8.GetBytes(json);
+            byte[] content = Encoding.UTF8.GetBytes(payload);
 
             using (var requestStreamAsync = request.GetRequestStream())
             {
@@ -100,31 +100,20 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
         }
 
-        private string GetSignature(string method, int contentLength, string contentType, string date, string resource)
+        private string GetSignature(
+            string method,
+            int contentLength,
+            string contentType,
+            string date,
+            string resource)
         {
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);
 
-            using (var encryptor = new HMACSHA256(Convert.FromBase64String(SharedKey)))
+            using (var encryptor = new HMACSHA256(Convert.FromBase64String(Key)))
             {
                 return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
             }
-        }
-
-        public string Key { get; set; }
-
-        public Task ReportAvailabilityAsync(
-            Uri serviceUri,
-            string instance,
-            string testName,
-            DateTimeOffset captured,
-            TimeSpan duration,
-            string location,
-            bool success,
-            CancellationToken cancellationToken,
-            string message = null)
-        {
-            return Task.CompletedTask;
         }
 
         public async Task ReportHealthAsync(
@@ -140,31 +129,63 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             var (clusterId, tenantId, clusterType) =
                 await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
 
-            string json = JsonConvert.SerializeObject(
+            string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
                     id = $"FO_{Guid.NewGuid().ToString()}",
-                    datetime = DateTime.Now,
+                    datetime = DateTime.UtcNow,
                     clusterId = clusterId ?? string.Empty,
+                    clusterType = clusterType ?? string.Empty,
                     source = ObserverConstants.FabricObserverName,
                     property = propertyName,
                     healthScope = scope.ToString(),
                     healthState = state.ToString(),
                     healthEvaluation = unhealthyEvaluations,
-                    serviceName = serviceName ?? "N/A",
-                    instanceName = instanceName ?? "N/A",
+                    serviceName = serviceName ?? string.Empty,
+                    instanceName = instanceName ?? string.Empty,
                 });
 
-            await this.ReportHealthAsync(json).ConfigureAwait(false);
+            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
         }
 
-        // TODO - Implement functions below as you need.
-        public Task<bool> ReportMetricAsync<T>(
+        public async Task<bool> ReportMetricAsync<T>(
             string name,
             T value,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(true);
+            var (clusterId, tenantId, clusterType) =
+                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
+
+            string jsonPayload = JsonConvert.SerializeObject(
+                new
+                {
+                    id = $"FO_{Guid.NewGuid().ToString()}",
+                    datetime = DateTime.UtcNow,
+                    clusterId = clusterId ?? string.Empty,
+                    clusterType = clusterType ?? string.Empty,
+                    source = ObserverConstants.FabricObserverName,
+                    property = name,
+                    value,
+                });
+
+            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+
+            return await Task.FromResult(true).ConfigureAwait(false);
+        }
+
+        // TODO - Implement functions below as you need them.
+        public Task ReportAvailabilityAsync(
+            Uri serviceUri,
+            string instance,
+            string testName,
+            DateTimeOffset captured,
+            TimeSpan duration,
+            string location,
+            bool success,
+            CancellationToken cancellationToken,
+            string message = null)
+        {
+            return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(

@@ -45,7 +45,7 @@ namespace FabricClusterObserver.Observers
 
         public static StatelessServiceContext FabricServiceContext { get; set; }
 
-        public static IObserverTelemetryProvider TelemetryClient { get; set; }
+        public static ITelemetryProvider TelemetryClient { get; set; }
 
         public static bool TelemetryEnabled { get; set; }
 
@@ -81,7 +81,7 @@ namespace FabricClusterObserver.Observers
 
             // This logs error/warning/info messages for ObserverManager.
             this.Logger = new Logger(ObserverConstants.ObserverManagerName, logFolderBasePath);
-           
+
             this.SetPropertiesFromConfigurationParameters();
 
             // Populate the Observer list for the sequential run loop.
@@ -255,45 +255,57 @@ namespace FabricClusterObserver.Observers
 
                 if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
                 {
+                    TelemetryEnabled = false;
+
                     return;
                 }
 
                 switch (telemetryProvider)
                 {
-                    case TelemetryProviderType.AzureLogAnalytics:
-                    {
-                        var logAnalyticsLogType = 
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter);
-
-                        var logAnalyticsSharedKey = 
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
-
-                        var logAnalyticsWorkspaceId =
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
-
-                        TelemetryClient = new LogAnalyticsTelemetry(
-                            logAnalyticsWorkspaceId,
-                            logAnalyticsSharedKey,
-                            logAnalyticsLogType,
-                            FabricClientInstance,
-                            token);
-                        
-                        break;
-                    }
-                    case TelemetryProviderType.AzureApplicationInsights:
-                    {
-                        string aiKey = GetConfigSettingValue(ObserverConstants.AiKey);
-
-                        if (string.IsNullOrEmpty(aiKey))
+                     case TelemetryProviderType.AzureLogAnalytics:
                         {
-                            TelemetryEnabled = false;
-                            return;
+                            var logAnalyticsLogType =
+                                GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter) ?? "Application";
+
+                            var logAnalyticsSharedKey =
+                                GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
+
+                            var logAnalyticsWorkspaceId =
+                                GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+
+                            if (string.IsNullOrEmpty(logAnalyticsSharedKey)
+                                || string.IsNullOrEmpty(logAnalyticsWorkspaceId))
+                            {
+                                TelemetryEnabled = false;
+
+                                return;
+                            }
+
+                            TelemetryClient = new LogAnalyticsTelemetry(
+                                logAnalyticsWorkspaceId,
+                                logAnalyticsSharedKey,
+                                logAnalyticsLogType,
+                                FabricClientInstance,
+                                token);
+
+                            break;
                         }
 
-                        TelemetryClient = new AppInsightsTelemetry(aiKey);
-                        
-                        break;
-                    }
+                    case TelemetryProviderType.AzureApplicationInsights:
+                        {
+                            string aiKey = GetConfigSettingValue(ObserverConstants.AiKey);
+
+                            if (string.IsNullOrEmpty(aiKey))
+                            {
+                                TelemetryEnabled = false;
+
+                                return;
+                            }
+
+                            TelemetryClient = new AppInsightsTelemetry(aiKey);
+
+                            break;
+                        }
                 }
             }
         }

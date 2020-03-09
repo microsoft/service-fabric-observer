@@ -31,8 +31,6 @@ namespace FabricObserver.Observers
     // As with all observers, you should first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy states.
     public class FabricSystemObserver : ObserverBase
     {
-        private const int DataListCapacity = 10;
-
         private readonly List<string> processWatchList = new List<string>
         {
             "Fabric",
@@ -109,43 +107,43 @@ namespace FabricObserver.Observers
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "Fabric",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricApplicationGateway",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricCAS",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricDCA",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricDnsService",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricGateway",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricHost",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricIS",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricRM",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricUS",
-                        DataListCapacity),
+                        DataCapacity),
                 };
             }
 
@@ -157,43 +155,43 @@ namespace FabricObserver.Observers
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "Fabric",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricApplicationGateway",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricCAS",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricDCA",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricDnsService",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricGateway",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricHost",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricIS",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricRM",
-                        DataListCapacity),
+                        DataCapacity),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricUS",
-                        DataListCapacity),
+                        DataCapacity),
                 };
             }
 
@@ -421,6 +419,8 @@ namespace FabricObserver.Observers
                 return;
             }
 
+            Stopwatch timer = new Stopwatch();
+
             foreach (var process in processes)
             {
                 try
@@ -431,9 +431,20 @@ namespace FabricObserver.Observers
                     this.TotalActivePortCount += NetworkUsage.GetActivePortCount(process.Id);
                     this.TotalActiveEphemeralPortCount += NetworkUsage.GetActiveEphemeralPortCount(process.Id);
 
-                    int count = 15;
+                    TimeSpan duration = TimeSpan.FromSeconds(15);
 
-                    while (!process.HasExited && count > 0)
+                    if (this.MonitorDuration > TimeSpan.MinValue)
+                    {
+                        duration = this.MonitorDuration;
+                    }
+
+                    // Warm up the counters.
+                    _ = this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
+                    _ = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
+                    
+                    timer.Start();
+
+                    while (!process.HasExited && timer.Elapsed <= duration)
                     {
                         this.Token.ThrowIfCancellationRequested();
 
@@ -446,8 +457,6 @@ namespace FabricObserver.Observers
                             // Private Working Set for service process.
                             float mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
                             this.allMemData.FirstOrDefault(x => x.Id == procName)?.Data.Add(mem);
-
-                            --count;
 
                             Thread.Sleep(250);
                         }
@@ -477,6 +486,9 @@ namespace FabricObserver.Observers
                 {
                     process?.Dispose();
                 }
+
+                timer.Stop();
+                timer.Reset();
             }
         }
 

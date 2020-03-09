@@ -15,7 +15,7 @@ namespace FabricClusterObserver.Interfaces
     /// <summary>
     /// IObserverTelemetry interface.
     /// </summary>
-    public interface IObserverTelemetryProvider
+    public interface ITelemetryProvider
     {
         /// <summary>
         /// Gets or sets the telemetry API key.
@@ -23,7 +23,7 @@ namespace FabricClusterObserver.Interfaces
         string Key { get; set; }
 
         /// <summary>
-        /// Calls telemetry provider to track the availability.
+        /// Calls telemetry provider to track availability.
         /// </summary>
         /// <param name="serviceUri">Service name.</param>
         /// <param name="instance">Instance identifier.</param>
@@ -92,7 +92,7 @@ namespace FabricClusterObserver.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="service">Name of the service.</param>
         /// <param name="partition">Partition id.</param>
@@ -108,7 +108,7 @@ namespace FabricClusterObserver.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="role">Name of the role.</param>
         /// <param name="id">Replica or instance identifier.</param>
@@ -124,7 +124,7 @@ namespace FabricClusterObserver.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="roleName">Name of the role.</param>
         /// <param name="instance">Instance idenfitier.</param>

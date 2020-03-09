@@ -126,7 +126,7 @@
   <ItemGroup>
     <Compile Include="Interfaces\IObserver.cs" />
     <Compile Include="Interfaces\IObserverBase.cs" />
-    <Compile Include="Interfaces\IObserverTelemetryProvider.cs" />
+    <Compile Include="Interfaces\ITelemetryProvider.cs" />
     <Compile Include="Observers\ClusterObserver.cs" />
     <Compile Include="Observers\ObserverBase.cs" />
     <Compile Include="Observers\ObserverManager.cs" />

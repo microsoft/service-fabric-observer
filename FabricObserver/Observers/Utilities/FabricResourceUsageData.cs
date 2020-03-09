@@ -24,7 +24,8 @@ namespace FabricObserver.Observers.Utilities
         public FabricResourceUsageData(
             string property,
             string id,
-            int dataCapacity = 30)
+            int dataCapacity = 30,
+            bool useCircularBuffer = false)
         {
             if (string.IsNullOrEmpty(property))
             {
@@ -36,7 +37,16 @@ namespace FabricObserver.Observers.Utilities
                 throw new ArgumentException($"Must provide a non-empty {id}.");
             }
 
-            this.Data = new CircularBufferCollection<T>(dataCapacity);
+            // This can be either a straight List<T> or a CircularBufferCollection<T>.
+            if (useCircularBuffer)
+            {
+                this.Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 30);
+            }
+            else
+            {
+                this.Data = new List<T>(dataCapacity > 0 ? dataCapacity : 30);
+            }
+
             this.Property = property;
             this.Id = id;
             this.Units = string.Empty;
@@ -76,6 +86,7 @@ namespace FabricObserver.Observers.Utilities
         public IList<T> Data { get; }
 
         private bool isInWarningState;
+        private string foErrorCode;
 
         /// <summary>
         /// Gets count of warnings per observer instance across iterations for the lifetime of the Observer.
@@ -135,6 +146,19 @@ namespace FabricObserver.Observers.Utilities
                 {
                     this.LifetimeWarningCount++;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the active error or warning code (FOErorrWarningCode).
+        /// </summary>
+        public string ActiveErrorOrWarningCode
+        {
+            get => this.foErrorCode;
+
+            set
+            {
+                this.foErrorCode = value;
             }
         }
 

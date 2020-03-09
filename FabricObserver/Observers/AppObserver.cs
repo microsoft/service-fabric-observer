@@ -25,8 +25,6 @@ namespace FabricObserver.Observers
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class AppObserver : ObserverBase
     {
-        private const int DataListCapacity = 30;
-
         // Health Report data containers - For use in analysis to determine health state.
         // These lists are cleared after each healthy iteration.
         private readonly List<FabricResourceUsageData<int>> allAppCpuData;
@@ -264,6 +262,7 @@ namespace FabricObserver.Observers
             {
                 this.Token.ThrowIfCancellationRequested();
 
+                var timer = new Stopwatch();
                 int processId = (int)repOrInst.HostProcessId;
                 var cpuUsage = new CpuUsage();
 
@@ -282,20 +281,31 @@ namespace FabricObserver.Observers
                     // Add new resource data structures for each app service process.
                     if (this.allAppCpuData.All(list => list.Id != id))
                     {
-                        this.allAppCpuData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, id, DataListCapacity));
-                        this.allAppMemDataMb.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, DataListCapacity));
-                        this.allAppMemDataPercent.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id, DataListCapacity));
+                        this.allAppCpuData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, id, DataCapacity));
+                        this.allAppMemDataMb.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, DataCapacity));
+                        this.allAppMemDataPercent.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id, DataCapacity));
                         this.allAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id, 1));
                         this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1));
                     }
 
-                    // CPU (all cores).
-                    int i = DataListCapacity;
+                    TimeSpan duration = TimeSpan.FromSeconds(10);
 
-                    while (!currentProcess.HasExited && i > 0)
+                    if (this.MonitorDuration > TimeSpan.MinValue)
+                    {
+                        duration = this.MonitorDuration;
+                    }
+
+                    // Warm up the counters.
+                    _ = cpuUsage.GetCpuUsageProcess(currentProcess);
+                    _ = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(currentProcess.ProcessName);
+
+                    timer.Start();
+
+                    while (!currentProcess.HasExited && timer.Elapsed <= duration)
                     {
                         this.Token.ThrowIfCancellationRequested();
 
+                        // CPU (all cores).
                         int cpu = cpuUsage.GetCpuUsageProcess(currentProcess);
 
                         if (cpu >= 0)
@@ -317,10 +327,11 @@ namespace FabricObserver.Observers
                             this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
                         }
 
-                        --i;
-
                         Thread.Sleep(250);
                     }
+
+                    timer.Stop();
+                    timer.Reset();
 
                     // Total and Ephemeral ports..
                     this.allAppTotalActivePortsData.FirstOrDefault(x => x.Id == id)

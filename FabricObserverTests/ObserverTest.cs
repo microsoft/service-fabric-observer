@@ -313,6 +313,7 @@ namespace FabricObserverTests
             var obs = new AppObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
@@ -356,6 +357,7 @@ namespace FabricObserverTests
             var obs = new AppObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
@@ -888,9 +890,15 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                UseCircularBuffer = true,
+                DataCapacity = 5,
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // Verify that the type of data structure is CircularBufferCollection.
+            Assert.IsTrue(obs.allCpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1036,10 +1044,15 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
+                DataCapacity = 2,
+                MonitorDuration = TimeSpan.FromSeconds(2),
                 CpuWarningUsageThresholdPct = 10000,
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // Verify that the type of data structure is the default type, IList<T>.
+            Assert.IsTrue(obs.allCpuTimeData.Data.GetType() == typeof(List<float>));
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1075,6 +1088,8 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
+                DataCapacity = 2,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
                 EphemeralPortsErrorThreshold = -42,
@@ -1160,7 +1175,11 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new DiskObserver();
+            var obs = new DiskObserver
+            {
+                MonitorDuration = TimeSpan.FromSeconds(5),
+            };
+
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
@@ -1207,7 +1226,9 @@ namespace FabricObserverTests
 
             var obs = new DiskObserver
             {
-                DiskSpacePercentWarningThreshold = 10, // This should cause a Warning on most dev machines.
+                // This should cause a Warning on most dev machines.
+                DiskSpacePercentWarningThreshold = 10,
+                MonitorDuration = TimeSpan.FromSeconds(5),
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1347,6 +1368,9 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                DataCapacity = 5,
+                UseCircularBuffer = true,
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
             };
 
@@ -1354,6 +1378,9 @@ namespace FabricObserverTests
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Verify that the type of data structure is CircularBufferCollection.
+            Assert.IsTrue(obs.allCpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
 
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
@@ -1440,6 +1467,8 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
+                DataCapacity = 5,
+                MonitorDuration = TimeSpan.FromSeconds(5),
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1486,6 +1515,7 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 MemWarnUsageThresholdMb = 20, // This will definitely cause Warning alerts.
             };
 
@@ -1532,6 +1562,7 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 CpuWarnUsageThresholdPct = -42,
             };
 
@@ -1577,6 +1608,7 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 CpuWarnUsageThresholdPct = 420,
             };
 

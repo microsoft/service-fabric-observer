@@ -92,7 +92,7 @@ namespace FabricObserver.Observers.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="service">Name of the service.</param>
         /// <param name="partition">Partition id.</param>
@@ -108,7 +108,7 @@ namespace FabricObserver.Observers.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="role">Name of the role.</param>
         /// <param name="id">Replica or instance identifier.</param>
@@ -124,12 +124,12 @@ namespace FabricObserver.Observers.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="roleName">Name of the role.</param>
         /// <param name="instance">Instance idenfitier.</param>
         /// <param name="name">Name of the metric.</param>
-        /// <param name="value">Value if the metric.</param>
+        /// <param name="value">Value of the metric.</param>
         /// <param name="count">Number of samples for this metric.</param>
         /// <param name="min">Minimum value of the samples.</param>
         /// <param name="max">Maximum value of the samples.</param>

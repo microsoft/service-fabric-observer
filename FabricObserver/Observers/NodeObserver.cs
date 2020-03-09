@@ -17,8 +17,8 @@ namespace FabricObserver.Observers
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class NodeObserver : ObserverBase
     {
-        private const int DataListCapacity = 42;
-        private FabricResourceUsageData<float> allCpuTimeData;
+        // public because unit test.
+        public FabricResourceUsageData<float> allCpuTimeData;
         private FabricResourceUsageData<float> allMemDataCommittedBytes;
         private FabricResourceUsageData<int> firewallData;
         private FabricResourceUsageData<int> activePortsData;
@@ -112,17 +112,17 @@ namespace FabricObserver.Observers
         {
             if (this.allCpuTimeData == null)
             {
-                this.allCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataListCapacity);
+                this.allCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
             }
 
             if (this.allMemDataCommittedBytes == null)
             {
-                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", DataListCapacity);
+                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", DataCapacity, UseCircularBuffer);
             }
 
             if (this.allMemDataPercentUsed == null)
             {
-                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataListCapacity);
+                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataCapacity, UseCircularBuffer);
             }
 
             if (this.firewallData == null)
@@ -260,70 +260,79 @@ namespace FabricObserver.Observers
             }
         }
 
-        private async Task GetSystemCpuMemoryValuesAsync(CancellationToken token)
+        private Task GetSystemCpuMemoryValuesAsync(CancellationToken token)
         {
-            await Task.Run(
-            () =>
+            token.ThrowIfCancellationRequested();
+
+            try
             {
-                token.ThrowIfCancellationRequested();
+                // Ports.
+                int activePortCountTotal = NetworkUsage.GetActivePortCount();
+                int ephemeralPortCountTotal = NetworkUsage.GetActiveEphemeralPortCount();
+                this.activePortsData.Data.Add(activePortCountTotal);
+                this.ephemeralPortsData.Data.Add(ephemeralPortCountTotal);
 
-                try
+                // Firewall rules.
+                int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
+                this.firewallData.Data.Add(firewalls);
+
+                // CPU and Memory.
+                // Note: Please make sure you understand the normal state of your nodes
+                // with respect to the machine resource use and/or abuse by your service(s).
+                // For example, if it is normal for your services to consume 90% of available CPU and memory
+                // as part of the work they perform under normal traffic flow, then it doesn't make sense to warn or
+                // error on these conditions.
+                // TODO: Look into making this a long running background task with signaling.
+                TimeSpan duration = TimeSpan.FromSeconds(30);
+
+                if (this.MonitorDuration > TimeSpan.MinValue)
                 {
-                    // Ports.
-                    int activePortCountTotal = NetworkUsage.GetActivePortCount();
-                    int ephemeralPortCountTotal = NetworkUsage.GetActiveEphemeralPortCount();
-                    this.activePortsData.Data.Add(activePortCountTotal);
-                    this.ephemeralPortsData.Data.Add(ephemeralPortCountTotal);
+                    duration = this.MonitorDuration;
+                }
 
-                    // Firewall rules.
-                    int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
-                    this.firewallData.Data.Add(firewalls);
+                // Warn up the counters.
+                _ = this.perfCounters.PerfCounterGetProcessorInfo();
+                _ = this.perfCounters.PerfCounterGetMemoryInfoMb();
 
-                    // CPU and Memory.
-                    // Note: Please make sure you understand the normal state of your nodes
-                    // with respect to the machine resource use and/or abuse by your service(s).
-                    // For example, if it is normal for your services to consume 90% of available CPU and memory
-                    // as part of the work they perform under normal traffic flow, then it doesn't make sense to warn or
-                    // error on these conditions.
-                    // TODO: Look into making this a long running background task with signaling.
-                    for (int i = 0; i < 120; i++)
+                while (this.stopwatch.Elapsed <= duration)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    if (this.CpuWarningUsageThresholdPct > 0
+                        && this.CpuWarningUsageThresholdPct <= 100)
                     {
-                        token.ThrowIfCancellationRequested();
-
-                        if (this.CpuWarningUsageThresholdPct > 0
-                            && this.CpuWarningUsageThresholdPct <= 100)
-                        {
-                            this.allCpuTimeData.Data.Add(this.perfCounters.PerfCounterGetProcessorInfo());
-                        }
-
-                        if (this.MemWarningUsageThresholdMb > 0)
-                        {
-                            this.allMemDataCommittedBytes.Data.Add(this.perfCounters.PerfCounterGetMemoryInfoMb());
-                        }
-
-                        if (this.MemoryWarningLimitPercent > 0)
-                        {
-                            this.allMemDataPercentUsed.Data.Add(
-                                ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
-                        }
-
-                        Thread.Sleep(250);
+                        this.allCpuTimeData.Data.Add(this.perfCounters.PerfCounterGetProcessorInfo());
                     }
-                }
-                catch (OperationCanceledException)
-                {
-                }
-                catch (Exception e)
-                {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                            this.FabricServiceContext.ServiceName.OriginalString,
-                            this.ObserverName,
-                            HealthState.Warning,
-                            $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
-                    throw;
+                    if (this.MemWarningUsageThresholdMb > 0)
+                    {
+                        this.allMemDataCommittedBytes.Data.Add(this.perfCounters.PerfCounterGetMemoryInfoMb());
+                    }
+
+                    if (this.MemoryWarningLimitPercent > 0)
+                    {
+                        this.allMemDataPercentUsed.Data.Add(
+                            ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
+                    }
+
+                    Thread.Sleep(250);
                 }
-            }, token).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                        this.FabricServiceContext.ServiceName.OriginalString,
+                        this.ObserverName,
+                        HealthState.Warning,
+                        $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+
+                throw;
+            }
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>

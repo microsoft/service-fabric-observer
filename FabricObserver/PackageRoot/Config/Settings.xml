@@ -64,6 +64,7 @@
   <Section Name="AppObserverConfiguration">
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="MonitorDuration" Value="00:00:15" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -73,6 +74,16 @@
     <Parameter Name="AppObserverDataFileName" Value="AppObserver.config.json" />
     <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <!-- Optional: This represents the number of items to hold in the data collection instance for
+    the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
+    The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
+    if you want a List<T>. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter. -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="15" />
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="True"/>
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
@@ -91,13 +102,19 @@
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="MonitorDuration" Value="00:00:10"/>
+    <!-- Optional: This represents the number of items to hold in the data collection instance for
+    the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
+    The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
+    if you want a List<T>. -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="5" />
     <!-- For all Observers where thresholds are housed in this settings file 
          you can either omit them or set values to "" or "0" if you don't need them.
          They are all in place here for your reference. -->
     <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
     <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
-    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="8" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="12" />
   </Section>
   <!-- Only enable FabricSystemObserver after you get a sense of what impact your services have on the SF runtime. 
        This is very important because there is no "one threshold fits all" across warning/error thresholds for any of the SF system services. 
@@ -109,6 +126,17 @@
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="False" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="MonitorDuration" Value="00:00:10"/>
+    <!-- Optional: This represents the number of items to hold in the data collection instance for
+    the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
+    The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
+    if you want a List<T>. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter. -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="10" />
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="True"/>
     <!-- Optional: SF Event Log can be noisy and full of non-error errors., 
          so it's recommended that you only enable this for debugging purposes.-->
     <Parameter Name="MonitorWindowsEventLog" Value="False" />
@@ -130,6 +158,17 @@
   </Section>
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <!-- Optional: This represents the number of items to hold in the data collection instance for
+         the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
+         The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
+         if you want a List<T>. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter. -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="45" />
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="True"/>
+    <Parameter Name="MonitorDuration" Value="00:01:00" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="CpuErrorLimitPercent" Value="" />
     <Parameter Name="CpuWarningLimitPercent" Value="80" />

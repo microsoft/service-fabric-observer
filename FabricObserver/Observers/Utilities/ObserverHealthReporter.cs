@@ -126,7 +126,7 @@ namespace FabricObserver.Observers.Utilities
                 RemoveWhenExpired = true,
             };
 
-            // Log event only if ObserverWebApi (REST Log reader.) app is deployed.
+            // Log event only if ObserverWebApi (REST API Log reader service) app is deployed.
             if (ObserverManager.ObserverWebAppDeployed
                 && healthReport.EmitLogEvent)
             {
