@@ -5,6 +5,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Fabric;
+using System.Fabric.Health;
 using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
@@ -40,11 +42,29 @@ namespace FabricObserver.Observers.Utilities
             // This can be either a straight List<T> or a CircularBufferCollection<T>.
             if (useCircularBuffer)
             {
+                if (dataCapacity <= 0)
+                {
+                    var healthReporter = new ObserverHealthReporter(new Logger("FabricResourceUsageData"));
+                    var healthReport = new HealthReport
+                    {
+                        AppName = new Uri("fabric:/FabricObserver"),
+                        HealthMessage = $"Incorrect CircularBuffer data capacity specified for FRUD instance: {dataCapacity}. " +
+                        "Using default value 30. Please use a number greater than 0 for ResourceUsageDataCapacity setting in Settings.xml.",
+                        State = HealthState.Ok,
+                        ReportType = HealthReportType.Application,
+                        NodeName = FabricRuntime.GetNodeContext()?.NodeName,
+                        HealthReportTimeToLive = TimeSpan.MaxValue,
+                        Observer = ObserverConstants.FabricObserverName,
+                    };
+
+                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                }
+
                 this.Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 30);
             }
             else
             {
-                this.Data = new List<T>(dataCapacity > 0 ? dataCapacity : 30);
+                this.Data = new List<T>();
             }
 
             this.Property = property;

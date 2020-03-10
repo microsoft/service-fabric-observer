@@ -17,8 +17,6 @@ namespace FabricObserver.Observers
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class NodeObserver : ObserverBase
     {
-        // public because unit test.
-        public FabricResourceUsageData<float> allCpuTimeData;
         private FabricResourceUsageData<float> allMemDataCommittedBytes;
         private FabricResourceUsageData<int> firewallData;
         private FabricResourceUsageData<int> activePortsData;
@@ -27,6 +25,9 @@ namespace FabricObserver.Observers
         private WindowsPerfCounters perfCounters;
         private bool disposed;
         private readonly Stopwatch stopwatch;
+
+        // public because unit test.
+        public FabricResourceUsageData<float> AllCpuTimeData { get; set; }
 
         public int CpuErrorUsageThresholdPct { get; set; }
 
@@ -110,9 +111,9 @@ namespace FabricObserver.Observers
 
         private void InitializeDataContainers()
         {
-            if (this.allCpuTimeData == null)
+            if (this.AllCpuTimeData == null)
             {
-                this.allCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
+                this.AllCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
             }
 
             if (this.allMemDataCommittedBytes == null)
@@ -301,7 +302,7 @@ namespace FabricObserver.Observers
                     if (this.CpuWarningUsageThresholdPct > 0
                         && this.CpuWarningUsageThresholdPct <= 100)
                     {
-                        this.allCpuTimeData.Data.Add(this.perfCounters.PerfCounterGetProcessorInfo());
+                        this.AllCpuTimeData.Data.Add(this.perfCounters.PerfCounterGetProcessorInfo());
                     }
 
                     if (this.MemWarningUsageThresholdMb > 0)
@@ -352,14 +353,14 @@ namespace FabricObserver.Observers
                         this.NodeName,
                         "CPU Time",
                         "Average",
-                        Math.Round(this.allCpuTimeData.AverageDataValue));
+                        Math.Round(this.AllCpuTimeData.AverageDataValue));
 
                     this.CsvFileLogger.LogData(
                         fileName,
                         this.NodeName,
                         "CPU Time",
                         "Peak",
-                        Math.Round(this.allCpuTimeData.MaxDataValue));
+                        Math.Round(this.AllCpuTimeData.MaxDataValue));
 
                     this.CsvFileLogger.LogData(
                         fileName,
@@ -404,10 +405,10 @@ namespace FabricObserver.Observers
                 var timeToLiveWarning = this.SetHealthReportTimeToLive();
 
                 // CPU
-                if (this.allCpuTimeData.AverageDataValue > 0)
+                if (this.AllCpuTimeData.AverageDataValue > 0)
                 {
                     this.ProcessResourceDataReportHealth(
-                        this.allCpuTimeData,
+                        this.AllCpuTimeData,
                         this.CpuErrorUsageThresholdPct,
                         this.CpuWarningUsageThresholdPct,
                         timeToLiveWarning);

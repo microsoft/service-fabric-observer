@@ -898,7 +898,7 @@ namespace FabricObserverTests
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
             // Verify that the type of data structure is CircularBufferCollection.
-            Assert.IsTrue(obs.allCpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
+            Assert.IsTrue(obs.AllCpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1052,7 +1052,7 @@ namespace FabricObserverTests
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
             // Verify that the type of data structure is the default type, IList<T>.
-            Assert.IsTrue(obs.allCpuTimeData.Data.GetType() == typeof(List<float>));
+            Assert.IsTrue(obs.AllCpuTimeData.Data.GetType() == typeof(List<float>));
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1380,7 +1380,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             // Verify that the type of data structure is CircularBufferCollection.
-            Assert.IsTrue(obs.allCpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
+            Assert.IsTrue(obs.AllCpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
 
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 

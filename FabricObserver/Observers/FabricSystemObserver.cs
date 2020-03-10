@@ -107,43 +107,53 @@ namespace FabricObserver.Observers
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "Fabric",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricApplicationGateway",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricCAS",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricDCA",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricDnsService",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricGateway",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricHost",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricIS",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricRM",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricUS",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                 };
             }
 
@@ -155,43 +165,53 @@ namespace FabricObserver.Observers
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "Fabric",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricApplicationGateway",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricCAS",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricDCA",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricDnsService",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricGateway",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricHost",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricIS",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricRM",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricUS",
-                        DataCapacity),
+                        DataCapacity,
+                        UseCircularBuffer),
                 };
             }
 
@@ -441,7 +461,7 @@ namespace FabricObserver.Observers
                     // Warm up the counters.
                     _ = this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
                     _ = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
-                    
+
                     timer.Start();
 
                     while (!process.HasExited && timer.Elapsed <= duration)

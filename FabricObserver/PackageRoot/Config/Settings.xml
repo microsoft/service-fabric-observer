@@ -78,16 +78,15 @@
     <Parameter Name="AppObserverDataFileName" Value="AppObserver.config.json" />
     <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-    <!-- Optional: This represents the number of items to hold in the data collection instance for
-    the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
-    The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
-    if you want a List<T>. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter. -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="" />
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about
          the most recent data (where number of most recent items in collection 
          type equals the ResourceUsageDataCapacity you specify). -->
     <Parameter Name="UseCircularBuffer" Value="False"/>
+    <!-- Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for
+         the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
+         like 0 or a negative number (or omit the parameter altogether). -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" />
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
@@ -106,15 +105,7 @@
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="MonitorDuration" Value="00:00:10"/>
-    <!-- Optional: This represents the number of items to hold in the data collection instance for
-    the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
-    The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
-    if you want a List<T>. -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="5" />
-    <!-- For all Observers where thresholds are housed in this settings file 
-         you can either omit them or set values to "" or "0" if you don't need them.
-         They are all in place here for your reference. -->
+    <Parameter Name="MonitorDuration" Value="00:00:05"/>
     <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
     <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
@@ -135,7 +126,7 @@
     the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
     The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
     if you want a List<T>. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter. -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="10" />
+    <Parameter Name="ResourceUsageDataCapacity" Value="5" />
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about
          the most recent data (where number of most recent items in collection 
@@ -162,17 +153,10 @@
   </Section>
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <!-- Optional: This represents the number of items to hold in the data collection instance for
-         the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
-         The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
-         if you want a List<T>. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter. -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="45" />
-    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
-         It just depends upon how much data you are collecting per observer run and if you only care about
-         the most recent data (where number of most recent items in collection 
-         type equals the ResourceUsageDataCapacity you specify). -->
-    <Parameter Name="UseCircularBuffer" Value="True"/>
     <Parameter Name="MonitorDuration" Value="00:01:00" />
+    <Parameter Name="UseCircularBuffer" Value="True"/>
+    <!-- Required-If UseCircularBuffer = True -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="35" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="CpuErrorLimitPercent" Value="" />
     <Parameter Name="CpuWarningLimitPercent" Value="80" />
