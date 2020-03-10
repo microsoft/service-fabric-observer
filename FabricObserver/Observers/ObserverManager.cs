@@ -362,6 +362,17 @@ namespace FabricObserver.Observers
                 // for use in upstream analysis, etc.
                 new DiskObserver(),
 
+                // Observes, records and reports on CPU/Mem usage, established port count, Disk IO (r/w) for Service Fabric System services
+                // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc.). Long-running data is stored in app-specific CSVs (optional)
+                // or sent to diagnostic/telemetry service, for use in upstream analysis, etc.
+                // ***NOTE***: Use this observer (like all observers that focus on resource usage) to help you arrive at the thresholds you're looking for - in test, under load and other chaos
+                // experiments you run. It's not possible to reliably predict the early signs of real misbehavior of unknown workloads.
+                //new FabricSystemObserver(),
+
+                // User-configurable, App-level (app service processes) machine resource observer that records and reports on service-level resource usage.
+                // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service, for use in upstream analysis, etc.
+                new AppObserver(),
+                
                 // User-configurable, VM-level machine resource observer that records and reports on node-level resource usage conditions,
                 // recording data in CSVs. Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service,
                 // for use in upstream analysis, etc.
@@ -369,18 +380,7 @@ namespace FabricObserver.Observers
 
                 // This observer only collects basic SF information for use in reporting (from Windows Registry.) in user-configurable intervals.
                 new SfConfigurationObserver(),
-
-                // Observes, records and reports on CPU/Mem usage, established port count, Disk IO (r/w) for Service Fabric System services
-                // (Fabric, FabricApplicationGateway, FabricDNS, FabricRM, etc.). Long-running data is stored in app-specific CSVs (optional)
-                // or sent to diagnostic/telemetry service, for use in upstream analysis, etc.
-                // ***NOTE***: Use this observer (like all observers that focus on resource usage) to help you arrive at the thresholds you're looking for - in test, under load and other chaos
-                // experiments you run. It's not possible to reliably predict the early signs of real misbehavior of unknown workloads.
-                new FabricSystemObserver(),
-
-                // User-configurable, App-level (app service processes) machine resource observer that records and reports on service-level resource usage.
-                // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service, for use in upstream analysis, etc.
-                new AppObserver(),
-
+                
                 // NetworkObserver for Internet connection state of user-supplied host/port pairs, active port and firewall rule count monitoring.
                 new NetworkObserver(),
             });

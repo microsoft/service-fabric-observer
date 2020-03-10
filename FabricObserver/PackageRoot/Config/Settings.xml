@@ -82,12 +82,12 @@
     the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
     The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
     if you want a List<T>. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter. -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="15" />
+    <Parameter Name="ResourceUsageDataCapacity" Value="" />
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about
          the most recent data (where number of most recent items in collection 
          type equals the ResourceUsageDataCapacity you specify). -->
-    <Parameter Name="UseCircularBuffer" Value="True"/>
+    <Parameter Name="UseCircularBuffer" Value="False"/>
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
