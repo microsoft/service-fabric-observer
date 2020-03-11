@@ -7,6 +7,7 @@ using System;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Query;
+using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -102,9 +103,10 @@ namespace FabricClusterObserver.Observers
                 {
                     telemetryDescription += "Cluster has recovered from previous Error/Warning state.";
                 }
-                else // Construct unhealthy state information.
+                else
                 {
-                    // Node Status Check
+                    /* Node Status Check, Active Repair Tasks Check */
+
                     // If a node's NodeStatus is Disabling, Disabled, Down, Invalid, or Unknown CO will emit a Warning signal.
                     var nodeList =
                     await this.FabricClientInstance.QueryManager.GetNodeListAsync(
@@ -146,6 +148,25 @@ namespace FabricClusterObserver.Observers
 
                         this.NodeStatus = NodeStatus.Up;
                     }
+
+                    // Check for active repairs in the cluster.
+                    var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
+                    
+                    if (repairsInProgress?.Count > 0)
+                    {
+                        string ids = string.Empty;
+
+                        foreach (var repair in repairsInProgress)
+                        {
+                            ids += $"TaskId: {repair.TaskId}{Environment.NewLine}State: {repair.State}{Environment.NewLine}";
+                        }
+
+                        telemetryDescription += 
+                        $"Note: There are Active Fabric Repair Tasks running in cluster. " +
+                        $"Count: {repairsInProgress?.Count}.{Environment.NewLine}Repairs:   {Environment.NewLine}{ids}";
+                    }
+
+                    /* Health State Monitoring */
 
                     // If in Warning and you are not sending Warning state reports, then end here.
                     if (!emitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning)
@@ -352,6 +373,13 @@ namespace FabricClusterObserver.Observers
             }
         }
 
+        /// <summary>
+        /// This function determines if a health event was created by FabricObserver.
+        /// If so, then it constructs a string that CO will use as part of the telemetry post.
+        /// </summary>
+        /// <param name="healthEvent">A Fabric Health event.</param>
+        /// <returns>A formatted string that contains the FabricObserver error/warning code 
+        /// and description of the detected issue.</returns>
         private string TryGetFOHealthStateEventData(HealthEvent healthEvent)
         {
             if (!FoErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId))
@@ -371,6 +399,25 @@ namespace FabricClusterObserver.Observers
                 $"  {errorWarning} Details: {healthEvent.HealthInformation.Description}{Environment.NewLine}";
 
             return telemetryDescription;
+        }
+
+        /// <summary>
+        /// This function returns the list of active repair tasks.
+        /// </summary>
+        /// <returns>List of repair tasks in Active, Approved, or Executing State.</returns>
+        internal async Task<RepairTaskList> GetRepairTasksCurrentlyProcessingAsync(
+            CancellationToken cancellationToken)
+        {
+            var repairTasks = await FabricClientInstance.RepairManager.GetRepairTaskListAsync(
+                null,
+                RepairTaskStateFilter.Active |
+                RepairTaskStateFilter.Approved |
+                RepairTaskStateFilter.Executing,
+                null,
+                this.AsyncClusterOperationTimeoutSeconds,
+                cancellationToken);
+
+            return repairTasks;
         }
     }
 }
