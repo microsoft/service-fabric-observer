@@ -194,15 +194,17 @@ namespace FabricClusterObserver.Observers
 
                         foreach (var repair in repairsInProgress)
                         {
-                            ids += $"TaskId: {repair.TaskId}{Environment.NewLine}State: {repair.State}{Environment.NewLine}";
+                            ids += $"TaskId: {repair.TaskId}{Environment.NewLine}" +
+                                   $"State: {repair.State}{Environment.NewLine}";
                         }
 
                         telemetryDescription += 
-                        $"Note: There are Active Fabric Repair Tasks running in cluster. " +
-                        $"Count: {repairsInProgress?.Count}.{Environment.NewLine}Repairs:   {Environment.NewLine}{ids}";
+                        $"Note: There are currently {repairsInProgress?.Count} Active Fabric Repair Tasks in cluster.{Environment.NewLine}" +
+                        $"Repair Info:{Environment.NewLine}" +
+                        $"{ids}";
                     }
 
-                    /* Health State Monitoring */
+                    /* Cluster Health State Monitoring - App/Node */
 
                     // If in Warning and you are not sending Warning state reports, then end here.
                     if (!emitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning)
@@ -281,11 +283,11 @@ namespace FabricClusterObserver.Observers
                                             // check the logs for what went wrong, then fix the bug (if it's a bug you can fix).
                                             if (udInAppUpgrade.Any(ud => ud > -1 && ud < int.MaxValue))
                                             {
-                                                udText = $" in UD {udInAppUpgrade.First(ud => ud > -1 && ud < int.MaxValue)}";
+                                                udText = $"in UD {udInAppUpgrade.First(ud => ud > -1 && ud < int.MaxValue)}";
                                             }
 
                                             telemetryDescription +=
-                                                $"Note: {app.ApplicationName} is currently upgrading{udText}, " +
+                                                $"Note: {app.ApplicationName} is currently upgrading {udText}, " +
                                                 $"which may be why it's in a transient error or warning state.{Environment.NewLine}";
                                         }
 
@@ -415,9 +417,9 @@ namespace FabricClusterObserver.Observers
             catch (Exception e) when
                   (e is FabricException || e is OperationCanceledException || e is TimeoutException)
             {
-                this.ObserverLogger.LogError(
+                this.ObserverLogger.LogWarning(
                    $"ProbeClusterHealthAsync threw {e.Message}{Environment.NewLine}" +
-                    "Unable to determine Cluster Health. Probing will continue.");
+                    "Probing will continue.");
             }
         }
 
@@ -450,7 +452,8 @@ namespace FabricClusterObserver.Observers
         }
 
         /// <summary>
-        /// This function returns the list of active repair tasks.
+        /// This function returns the list of active Fabric repair tasks (RM).
+        /// These could be custom repair tasks, Azure Tenant repair tasks, etc.
         /// </summary>
         /// <returns>List of repair tasks in Active, Approved, or Executing State.</returns>
         internal async Task<RepairTaskList> GetRepairTasksCurrentlyProcessingAsync(
