@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace FabricClusterObserver
 {
-    [EventSource(Name = "Microsoft-ClusterObserverApp-ClusterObserver")]
+    [EventSource(Name = "Service-Fabric-ClusterObserver", Guid = "d0103e75-a77d-5fcf-004b-9ee8b258f51f")]
     internal sealed class ServiceEventSource : EventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();

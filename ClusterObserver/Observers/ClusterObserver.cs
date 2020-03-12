@@ -4,6 +4,8 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Query;
@@ -18,6 +20,8 @@ namespace FabricClusterObserver.Observers
 {
     public class ClusterObserver : ObserverBase
     {
+        public EventSource EtwLogger { get; private set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
         /// This observer is a singleton (one partition) stateless service that runs on one node in an SF cluster.
@@ -26,11 +30,20 @@ namespace FabricClusterObserver.Observers
         public ClusterObserver()
             : base(ObserverConstants.ClusterObserverName)
         {
+            if (ObserverManager.EtwEnabled 
+                && !string.IsNullOrEmpty(ObserverManager.EtwProviderName))
+            {
+                EtwLogger = new EventSource(ObserverManager.EtwProviderName);
+            }
         }
 
         private HealthState ClusterHealthState { get; set; } = HealthState.Unknown;
 
-        private NodeStatus NodeStatus { get; set; } = NodeStatus.Up;
+        /// <summary>
+        /// Dictionary that holds node names and their status. It makes sense for this 
+        /// to be a dictionary for future work.
+        /// </summary>
+        private Dictionary<string, NodeStatus> NodeStatusDictionary { get; set; } = new Dictionary<string, NodeStatus>();
 
         public override async Task ObserveAsync(CancellationToken token)
         {
@@ -56,7 +69,6 @@ namespace FabricClusterObserver.Observers
             await ProbeClusterHealthAsync(token).ConfigureAwait(true);
         }
 
-        // TODO: Check for active fabric repairs (RM) in cluster.
         private async Task ProbeClusterHealthAsync(CancellationToken token)
         {
             // The point of this service is to emit SF Health telemetry to your external log analytics service, so
@@ -123,7 +135,7 @@ namespace FabricClusterObserver.Observers
                         foreach (var n in nodeList.Where(x => x.NodeStatus != NodeStatus.Up))
                         {
                             message += $"Node {n.NodeName} is {n.NodeStatus}.{Environment.NewLine}";
-                            this.NodeStatus = n.NodeStatus;
+                            this.NodeStatusDictionary.Add(n.NodeName, n.NodeStatus);
                         }
 
                         // Telemetry.
@@ -134,8 +146,20 @@ namespace FabricClusterObserver.Observers
                                 message,
                                 this.ObserverName,
                                 this.Token);
+
+                        // ETW.
+                        this.EtwLogger?.Write(
+                            "ClusterObserverDataEvent",
+                            new
+                            {
+                                Scope = HealthScope.Cluster.ToString(),
+                                Property = "AggregatedClusterHealth",
+                                healthState = HealthState.Warning.ToString(),
+                                description = message,
+                                source = this.ObserverName
+                            });
                     }
-                    else if (this.NodeStatus != NodeStatus.Up)
+                    else if (this.NodeStatusDictionary.Count > 0)
                     {
                         // Telemetry.
                         await this.ObserverTelemetryClient?.ReportHealthAsync(
@@ -146,7 +170,19 @@ namespace FabricClusterObserver.Observers
                                 this.ObserverName,
                                 this.Token);
 
-                        this.NodeStatus = NodeStatus.Up;
+                        // ETW.
+                        this.EtwLogger?.Write(
+                            "ClusterObserverDataEvent",
+                            new
+                            {
+                                Scope = HealthScope.Cluster.ToString(),
+                                Property = "AggregatedClusterHealth",
+                                healthState = HealthState.Ok.ToString(),
+                                description = "All nodes are now Up.",
+                                source = this.ObserverName
+                            });
+
+                        this.NodeStatusDictionary.Clear();
                     }
 
                     // Check for active repairs in the cluster.
@@ -363,6 +399,18 @@ namespace FabricClusterObserver.Observers
                         telemetryDescription,
                         this.ObserverName,
                         this.Token);
+
+                // ETW.
+                this.EtwLogger?.Write(
+                    "ClusterObserverDataEvent",
+                    new
+                    {
+                        Scope = HealthScope.Cluster.ToString(),
+                        Property = "AggregatedClusterHealth",
+                        healthState = clusterHealth.AggregatedHealthState,
+                        description = telemetryDescription,
+                        source = this.ObserverName
+                    });
             }
             catch (Exception e) when
                   (e is FabricException || e is OperationCanceledException || e is TimeoutException)

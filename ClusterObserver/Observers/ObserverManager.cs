@@ -32,6 +32,7 @@ namespace FabricClusterObserver.Observers
         private CancellationToken token;
         private CancellationTokenSource cts;
         private bool hasDisposed;
+        private static bool etwEnabled;
 
         public string ApplicationName { get; set; }
 
@@ -49,7 +50,30 @@ namespace FabricClusterObserver.Observers
 
         public static bool TelemetryEnabled { get; set; }
 
+        public static bool EtwEnabled
+        {
+            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
+
+            set => etwEnabled = value;
+        }
+
+        public static string EtwProviderName
+        {
+            get
+            {
+                if (!EtwEnabled)
+                {
+                    return null;
+                }
+
+                string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
+
+                return !string.IsNullOrEmpty(key) ? key : null;
+            }
+        }
+
         private Logger Logger { get; }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.

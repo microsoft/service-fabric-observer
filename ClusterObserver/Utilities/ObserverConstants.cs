@@ -58,5 +58,7 @@ namespace FabricClusterObserver.Utilities
         public const string Undefined = "Undefined";
         public const string ClusterTypePaasV1 = "PaasV1";
         public const string ClusterTypeStandalone = "Standalone";
+        public const string EnableEventSourceProvider = "EnableEventSourceProvider";
+        public const string EventSourceProviderName = "EventSourceProviderName";
     }
 }
