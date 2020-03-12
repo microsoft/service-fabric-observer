@@ -102,11 +102,100 @@ namespace FabricClusterObserver.Observers
 
             try
             {
+                string telemetryDescription = string.Empty;
+
+                /* Node Status Check, Active Repair Tasks Check */
+
+                // If a node's NodeStatus is Disabling, Disabled, Down, Invalid, or Unknown CO will emit a Warning signal.
+                var nodeList =
+                await this.FabricClientInstance.QueryManager.GetNodeListAsync(
+                        null,
+                        this.AsyncClusterOperationTimeoutSeconds,
+                        token).ConfigureAwait(true);
+
+                var message = string.Empty;
+
+                if (!nodeList.All(
+                        n =>
+                        n.NodeStatus == NodeStatus.Up))
+                {
+                    foreach (var n in nodeList.Where(x => x.NodeStatus != NodeStatus.Up))
+                    {
+                        message += $"Node {n.NodeName} is {n.NodeStatus}.{Environment.NewLine}";
+                        this.NodeStatusDictionary.Add(n.NodeName, n.NodeStatus);
+                    }
+
+                    // Telemetry.
+                    await this.ObserverTelemetryClient?.ReportHealthAsync(
+                            HealthScope.Cluster,
+                            "AggregatedClusterHealth",
+                            HealthState.Warning,
+                            message,
+                            this.ObserverName,
+                            this.Token);
+
+                    // ETW.
+                    this.EtwLogger?.Write(
+                        "ClusterObserverDataEvent",
+                        new
+                        {
+                            Scope = HealthScope.Cluster.ToString(),
+                            Property = "AggregatedClusterHealth",
+                            healthState = HealthState.Warning.ToString(),
+                            description = message,
+                            source = this.ObserverName
+                        });
+                }
+                else if (this.NodeStatusDictionary.Count > 0)
+                {
+                    // Telemetry.
+                    await this.ObserverTelemetryClient?.ReportHealthAsync(
+                            HealthScope.Cluster,
+                            "AggregatedClusterHealth",
+                            HealthState.Ok,
+                            "All nodes are now Up.",
+                            this.ObserverName,
+                            this.Token);
+
+                    // ETW.
+                    this.EtwLogger?.Write(
+                        "ClusterObserverDataEvent",
+                        new
+                        {
+                            Scope = HealthScope.Cluster.ToString(),
+                            Property = "AggregatedClusterHealth",
+                            healthState = HealthState.Ok.ToString(),
+                            description = "All nodes are now Up.",
+                            source = this.ObserverName
+                        });
+
+                    this.NodeStatusDictionary.Clear();
+                }
+
+                // Check for active repairs in the cluster.
+                var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
+
+                if (repairsInProgress?.Count > 0)
+                {
+                    string ids = string.Empty;
+
+                    foreach (var repair in repairsInProgress)
+                    {
+                        ids += $"TaskId: {repair.TaskId}{Environment.NewLine}" +
+                               $"State: {repair.State}{Environment.NewLine}";
+                    }
+
+                    telemetryDescription +=
+                    $"Note: There are currently {repairsInProgress?.Count} Active Fabric Repair Tasks in cluster.{Environment.NewLine}" +
+                    $"Repair Info:{Environment.NewLine}" +
+                    $"{ids}";
+                }
+
+                /* Cluster Health State Monitoring - App/Node */
+
                 var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
                                                 this.AsyncClusterOperationTimeoutSeconds,
                                                 token).ConfigureAwait(true);
-
-                string telemetryDescription = string.Empty;
 
                 // Previous run generated unhealthy evaluation report. Clear it (send Ok) .
                 if (emitOkHealthState && clusterHealth.AggregatedHealthState == HealthState.Ok
@@ -117,95 +206,6 @@ namespace FabricClusterObserver.Observers
                 }
                 else
                 {
-                    /* Node Status Check, Active Repair Tasks Check */
-
-                    // If a node's NodeStatus is Disabling, Disabled, Down, Invalid, or Unknown CO will emit a Warning signal.
-                    var nodeList =
-                    await this.FabricClientInstance.QueryManager.GetNodeListAsync(
-                            null,
-                            this.AsyncClusterOperationTimeoutSeconds,
-                            token).ConfigureAwait(true);
-                    
-                    var message = string.Empty;
-
-                    if (!nodeList.All(
-                            n =>
-                            n.NodeStatus == NodeStatus.Up))
-                    {
-                        foreach (var n in nodeList.Where(x => x.NodeStatus != NodeStatus.Up))
-                        {
-                            message += $"Node {n.NodeName} is {n.NodeStatus}.{Environment.NewLine}";
-                            this.NodeStatusDictionary.Add(n.NodeName, n.NodeStatus);
-                        }
-
-                        // Telemetry.
-                        await this.ObserverTelemetryClient?.ReportHealthAsync(
-                                HealthScope.Cluster,
-                                "AggregatedClusterHealth",
-                                HealthState.Warning,
-                                message,
-                                this.ObserverName,
-                                this.Token);
-
-                        // ETW.
-                        this.EtwLogger?.Write(
-                            "ClusterObserverDataEvent",
-                            new
-                            {
-                                Scope = HealthScope.Cluster.ToString(),
-                                Property = "AggregatedClusterHealth",
-                                healthState = HealthState.Warning.ToString(),
-                                description = message,
-                                source = this.ObserverName
-                            });
-                    }
-                    else if (this.NodeStatusDictionary.Count > 0)
-                    {
-                        // Telemetry.
-                        await this.ObserverTelemetryClient?.ReportHealthAsync(
-                                HealthScope.Cluster,
-                                "AggregatedClusterHealth",
-                                HealthState.Ok,
-                                "All nodes are now Up.",
-                                this.ObserverName,
-                                this.Token);
-
-                        // ETW.
-                        this.EtwLogger?.Write(
-                            "ClusterObserverDataEvent",
-                            new
-                            {
-                                Scope = HealthScope.Cluster.ToString(),
-                                Property = "AggregatedClusterHealth",
-                                healthState = HealthState.Ok.ToString(),
-                                description = "All nodes are now Up.",
-                                source = this.ObserverName
-                            });
-
-                        this.NodeStatusDictionary.Clear();
-                    }
-
-                    // Check for active repairs in the cluster.
-                    var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
-                    
-                    if (repairsInProgress?.Count > 0)
-                    {
-                        string ids = string.Empty;
-
-                        foreach (var repair in repairsInProgress)
-                        {
-                            ids += $"TaskId: {repair.TaskId}{Environment.NewLine}" +
-                                   $"State: {repair.State}{Environment.NewLine}";
-                        }
-
-                        telemetryDescription += 
-                        $"Note: There are currently {repairsInProgress?.Count} Active Fabric Repair Tasks in cluster.{Environment.NewLine}" +
-                        $"Repair Info:{Environment.NewLine}" +
-                        $"{ids}";
-                    }
-
-                    /* Cluster Health State Monitoring - App/Node */
-
                     // If in Warning and you are not sending Warning state reports, then end here.
                     if (!emitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning)
                     {
@@ -452,8 +452,12 @@ namespace FabricClusterObserver.Observers
         }
 
         /// <summary>
-        /// This function returns the list of active Fabric repair tasks (RM).
-        /// These could be custom repair tasks, Azure Tenant repair tasks, etc.
+        /// This function returns a list of active Fabric repair tasks (RM) in the cluster.
+        /// If a VM is being updated by VMSS, for example, then there will be a Fabric Repair task in play and
+        /// this will cause changes in Fabric node status like Disabling, Disabled, Down, Enabling, etc.
+        /// These are expected, so you should make action decisions based on this information to ensure you don't
+        /// try and heal where no healing is needed.
+        /// These could be custom repair tasks, Azure Tenant repair tasks (like Azure platform updates), etc.
         /// </summary>
         /// <returns>List of repair tasks in Active, Approved, or Executing State.</returns>
         internal async Task<RepairTaskList> GetRepairTasksCurrentlyProcessingAsync(
