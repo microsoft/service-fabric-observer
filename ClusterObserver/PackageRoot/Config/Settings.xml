@@ -21,7 +21,7 @@
     <Parameter Name="EventSourceProviderName" Value="ClusterObserverETWProvider" />
     <!-- Optional: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="False" />
+    <Parameter Name="EnableTelemetryProvider" Value="True" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
@@ -51,5 +51,8 @@
     <!-- Optional: Emit the string representation of ClusterHealth.HealthStatistics structure when Warning or Error 
          AggregatedHealthState is detected.-->
     <Parameter Name="EmitHealthStatistics" Value="False"/>
+    <!-- Maximum amount of time a node can be in disabling/disabled/down state before
+         emitting a Warning signal.-->
+    <Parameter Name="MaxTimeNodeStatusNotOk" Value="02:00:00"/>
   </Section>
 </Settings>

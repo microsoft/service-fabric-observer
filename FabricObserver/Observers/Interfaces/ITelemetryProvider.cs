@@ -73,9 +73,14 @@ namespace FabricObserver.Observers.Interfaces
         /// </summary>
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
+        /// <param name="source">Name of the observer omitting the signal.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A completed task of bool.</returns>
-        Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken);
+        Task<bool> ReportMetricAsync<T>(
+            string name,
+            T value,
+            string source,
+            CancellationToken cancellationToken);
 
         /// <summary>
         /// Calls telemetry provider to report a metric.

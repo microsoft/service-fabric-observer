@@ -672,6 +672,7 @@ namespace FabricObserver.Observers
                             _ = TelemetryClient?.ReportMetricAsync(
                                 $"ObserverHealthError",
                                 observerHealthWarning,
+                                ObserverConstants.ObserverManagerName,
                                 this.token);
                         }
 

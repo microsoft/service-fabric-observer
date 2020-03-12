@@ -159,7 +159,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="value">Value of the property.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>Task of bool.</returns>
-        public Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken)
+        public Task<bool> ReportMetricAsync<T>(
+            string name,
+            T value,
+            string source,
+            CancellationToken cancellationToken)
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -168,7 +172,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             var metricTelemetry = new MetricTelemetry
             {
-                Name = name,
+                Name = $"{source}: {name}",
                 Sum = Convert.ToDouble(value),
             };
 

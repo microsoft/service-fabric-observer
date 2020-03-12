@@ -151,10 +151,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public async Task<bool> ReportMetricAsync<T>(
             string name,
             T value,
+            string source,
             CancellationToken cancellationToken)
         {
             var (clusterId, tenantId, clusterType) =
-                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
+               await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
 
             string jsonPayload = JsonConvert.SerializeObject(
                 new
@@ -163,7 +164,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     datetime = DateTime.UtcNow,
                     clusterId = clusterId ?? string.Empty,
                     clusterType = clusterType ?? string.Empty,
-                    source = ObserverConstants.FabricObserverName,
+                    source,
                     property = name,
                     value,
                 });

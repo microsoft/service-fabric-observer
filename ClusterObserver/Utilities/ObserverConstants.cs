@@ -44,9 +44,9 @@ namespace FabricClusterObserver.Utilities
 
         // Settings.
         public const string ClusterObserverConfigurationSectionName = "ClusterObserverConfiguration";
-        public const string EmitOkHealthState = "EmitOkHealthStateTelemetry";
-        public const string IgnoreSystemAppWarnings = "IgnoreFabricSystemAppWarnings";
-        public const string EmitHealthStatistics = "EmitHealthStatistics";
+        public const string EmitOkHealthStateSetting = "EmitOkHealthStateTelemetry";
+        public const string EmitHealthStatisticsSetting = "EmitHealthStatistics";
+        public const string MaxTimeNodeStatusNotOkSetting = "MaxTimeNodeStatusNotOk";
 
         // Telemetry Settings Parameters.
         public const string TelemetryProviderType = "TelemetryProvider";

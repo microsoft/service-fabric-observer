@@ -562,6 +562,7 @@ namespace FabricObserver.Observers
                     _ = this.TelemetryClient?.ReportMetricAsync(
                         $"{this.NodeName}/{id}",
                         data.AverageDataValue,
+                        this.ObserverName,
                         this.Token);
                 }
 
@@ -586,6 +587,7 @@ namespace FabricObserver.Observers
                     _ = this.TelemetryClient?.ReportMetricAsync(
                         $"{this.NodeName}/{data.Id}/{data.Property}",
                         Math.Round(Convert.ToDouble(data.AverageDataValue)),
+                        this.ObserverName,
                         this.Token);
                 }
             }
