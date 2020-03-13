@@ -137,8 +137,8 @@
     <Parameter Name="MonitorWindowsEventLog" Value="False" />
     <Parameter Name="ErrorCpuThresholdPercent" Value="" />
     <Parameter Name="WarnCpuThresholdPercent" Value="80" />
-    <Parameter Name="ErrorMemoryThresholdMB" Value="" />
-    <Parameter Name="WarnMemoryThresholdMB" Value="1024" />
+    <Parameter Name="ErrorMemoryThresholdMb" Value="" />
+    <Parameter Name="WarnMemoryThresholdMb" Value="1024" />
     <Parameter Name="PercentUnhealthyNodesWarnThreshold" Value="" />
     <Parameter Name="PercentUnhealthyNodesErrorThreshold" Value="" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
@@ -160,8 +160,8 @@
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="CpuErrorLimitPercent" Value="" />
     <Parameter Name="CpuWarningLimitPercent" Value="80" />
-    <Parameter Name="MemoryErrorLimitMB" Value="" />
-    <Parameter Name="MemoryWarningLimitMB" Value ="" />
+    <Parameter Name="MemoryErrorLimitMb" Value="" />
+    <Parameter Name="MemoryWarningLimitMb" Value ="" />
     <Parameter Name="MemoryErrorLimitPercent" Value="" />
     <Parameter Name="MemoryWarningLimitPercent" Value ="80" />
     <Parameter Name="NetworkErrorActivePorts" Value="" />
