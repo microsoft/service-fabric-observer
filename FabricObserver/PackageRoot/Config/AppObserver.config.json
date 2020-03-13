@@ -15,7 +15,8 @@
   },
   {
     "targetAppType": "CpuStressType",
-    "cpuWarningLimitPercent": 25
+    "cpuWarningLimitPercent": 20,
+    "memoryWarningLimitMb": 150
   },
   {
     "targetApp": "fabric:/FabricObserver",

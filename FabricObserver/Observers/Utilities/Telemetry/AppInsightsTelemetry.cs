@@ -159,7 +159,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="value">Value of the property.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>Task of bool.</returns>
-        public Task<bool> ReportMetricAsync<T>(
+        public async Task<bool> ReportMetricAsync<T>(
             string name,
             T value,
             string source,
@@ -167,7 +167,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             var metricTelemetry = new MetricTelemetry
@@ -178,7 +178,28 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             this.telemetryClient.TrackMetric(metricTelemetry);
 
-            return Task.FromResult(true);
+            return await Task.FromResult(true).ConfigureAwait(false);
+        }
+
+        // TODO - Implement functions below as you need them.
+        public async Task<bool> ReportMetricAsync(
+          TelemetryData telemetryData,
+          CancellationToken cancellationToken)
+        {
+            if (telemetryData == null)
+            {
+                return await Task.FromResult(false).ConfigureAwait(false);
+            }
+
+            var metricTelemetry = new MetricTelemetry
+            {
+                Name = telemetryData.Metric,
+                Sum = Convert.ToDouble(telemetryData.Value),
+            };
+
+            this.telemetryClient.TrackMetric(metricTelemetry);
+
+            return await Task.FromResult(true).ConfigureAwait(false);
         }
 
         /// <summary>

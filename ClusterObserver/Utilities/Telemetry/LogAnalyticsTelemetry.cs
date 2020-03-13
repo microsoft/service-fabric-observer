@@ -138,8 +138,6 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     id = $"CO_{Guid.NewGuid().ToString()}",
                     datetime = DateTime.UtcNow,
                     clusterId = clusterId ?? string.Empty,
-                    clusterType = clusterType ?? string.Empty,
-                    tenantId = tenantId ?? string.Empty,
                     source = ObserverConstants.ClusterObserverName,
                     property = propertyName,
                     healthScope = scope.ToString(),

@@ -148,6 +148,22 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
         }
 
+        public async Task<bool> ReportMetricAsync(
+          TelemetryData telemetryData,
+          CancellationToken cancellationToken)
+        {
+            if (telemetryData == null)
+            {
+                return false;
+            }
+
+            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
+
+            await SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+
+            return true;
+        }
+
         public async Task<bool> ReportMetricAsync<T>(
             string name,
             T value,
@@ -163,7 +179,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     id = $"FO_{Guid.NewGuid().ToString()}",
                     datetime = DateTime.UtcNow,
                     clusterId = clusterId ?? string.Empty,
-                    clusterType = clusterType ?? string.Empty,
                     source,
                     property = name,
                     value,
@@ -174,7 +189,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             return await Task.FromResult(true).ConfigureAwait(false);
         }
 
-        // TODO - Implement functions below as you need them.
+        // Implement functions below as you need.
         public Task ReportAvailabilityAsync(
             Uri serviceUri,
             string instance,

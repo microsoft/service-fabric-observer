@@ -111,12 +111,12 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **targetAppType** | ApplicationType name (this is not a Uri format). FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
-| **memoryErrorLimitMB** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log) |  
-| **memoryWarningLimitMB**| Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log) |  
+| **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log) |  
+| **memoryWarningLimitMb**| Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log) |  
 | **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate a Fabric Error (SFX and local log) |  
 | **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) | 
-| **cpuErrorLimitPct** | Maximum CPU percentage that should generate a Fabric Error |
-| **cpuWarningLimitPct** | Minimum CPU percentage that should generate a Fabric Warning |
+| **cpuErrorLimitPercent** | Maximum CPU percentage that should generate a Fabric Error |
+| **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Fabric Warning |
 | **dumpProcessOnError** | Instructs whether or not FabricObserver should   dump your service process when service health is detected to be in an  Error (critical) state... |  
 | **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate a Fabric Error. |
 | **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning. |
@@ -253,7 +253,7 @@ namespace FabricObserver.Utilities
         public int LifetimeWarningCount { get; set; } = 0;
         public bool IsUnhealthy<U>(U threshold){ ... }
         public double StandardDeviation { get; }
-	public FabricResourceUsageData(string property, string id){ ... }
+        public FabricResourceUsageData(string property, string id){ ... }
     }
 }
 ```
@@ -356,8 +356,8 @@ until the observer runs again...
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="CpuErrorLimitPercent" Value="" />
     <Parameter Name="CpuWarningLimitPercent" Value="90" />
-    <Parameter Name="MemoryErrorLimitMB" Value="" />
-    <Parameter Name="MemoryWarningLimitMB" Value="" />
+    <Parameter Name="MemoryErrorLimitMb" Value="" />
+    <Parameter Name="MemoryWarningLimitMb" Value="" />
     <Parameter Name="MemoryErrorLimitPercent" Value="" />
     <Parameter Name="MemoryWarningLimitPercent" Value="90" />
     <Parameter Name="NetworkErrorActivePorts" Value="" />
@@ -370,10 +370,10 @@ until the observer runs again...
 ```  
 | Setting | Description |
 | :--- | :--- | 
-| **CpuErrorLimitPct** | Maximum CPU percentage that should generate an Error |  
-| **CpuWarningLimitPct** | Minimum CPU percentage that should generate a Warning | 
-| **MemoryErrorLimitMB** | Maximum amount of committed memory on virtual machine that will generate an Error. | 
-| **MemoryWarningLimitMB** | Minimum amount of committed memory that will generate a Warning. |  
+| **CpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |  
+| **CpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning | 
+| **MemoryErrorLimitMb** | Maximum amount of committed memory on virtual machine that will generate an Error. | 
+| **MemoryWarningLimitMb** | Minimum amount of committed memory that will generate a Warning. |  
 | **MemoryErrorLimitPercent** | Maximum percentage of memory in use on virtual machine that will generate an Error. | 
 | **MemoryWarningLimitPercent** | Minimum percentage of memory in use on virtual machine that will generate a Warning. |  
 | **NetworkErrorFirewallRules** | Number of established Firewall Rules that will generate a Health Warning. |  

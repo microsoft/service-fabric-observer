@@ -75,8 +75,8 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricSystemObserverConfigurationSectionName = "FabricSystemObserverConfiguration";
         public const string FabricSystemObserverErrorCpu = "ErrorCpuThresholdPercent";
         public const string FabricSystemObserverWarnCpu = "WarnCpuThresholdPercent";
-        public const string FabricSystemObserverErrorMemory = "ErrorMemoryThresholdMB";
-        public const string FabricSystemObserverWarnMemory = "WarnMemoryThresholdMB";
+        public const string FabricSystemObserverErrorMemory = "ErrorMemoryThresholdMb";
+        public const string FabricSystemObserverWarnMemory = "WarnMemoryThresholdMb";
         public const string FabricSystemObserverErrorDiskIoReads = "ErrorDiskIOReadsThreshold";
         public const string FabricSystemObserverWarnDiskIoReads = "WarnDiskIOReadsThreshold";
         public const string FabricSystemObserverErrorDiskIoWrites = "ErrorDiskIOWritesThreshold";
@@ -94,8 +94,8 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverConfigurationSectionName = "NodeObserverConfiguration";
         public const string NodeObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
         public const string NodeObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
-        public const string NodeObserverMemoryErrorLimitMb = "MemoryErrorLimitMB";
-        public const string NodeObserverMemoryWarningLimitMb = "MemoryWarningLimitMB";
+        public const string NodeObserverMemoryErrorLimitMb = "MemoryErrorLimitMb";
+        public const string NodeObserverMemoryWarningLimitMb = "MemoryWarningLimitMb";
         public const string NodeObserverNetworkErrorActivePorts = "NetworkErrorActivePorts";
         public const string NodeObserverNetworkWarningActivePorts = "NetworkWarningActivePorts";
         public const string NodeObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";

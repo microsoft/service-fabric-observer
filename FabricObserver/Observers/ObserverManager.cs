@@ -361,7 +361,7 @@ namespace FabricObserver.Observers
                 // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service,
                 // for use in upstream analysis, etc.
                 new DiskObserver(),
-                
+
                 // User-configurable, App-level (app service processes) machine resource observer that records and reports on service-level resource usage.
                 // Long-running data is stored in app-specific CSVs (optional) or sent to diagnostic/telemetry service, for use in upstream analysis, etc.
                 new AppObserver(),
