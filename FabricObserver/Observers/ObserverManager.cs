@@ -103,7 +103,7 @@ namespace FabricObserver.Observers
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetConfigSettingValue(
-                ObserverConstants.ObserverLogPath);
+                ObserverConstants.ObserverLogPathParameter);
 
             if (!string.IsNullOrEmpty(observerLogPath))
             {
@@ -425,7 +425,7 @@ namespace FabricObserver.Observers
                 this.DataLogger.EnableCsvLogging = enableCsvLogging;
             }
 
-            string dataLogPath = GetConfigSettingValue(ObserverConstants.DataLogPath);
+            string dataLogPath = GetConfigSettingValue(ObserverConstants.DataLogPathParameter);
             if (!string.IsNullOrEmpty(dataLogPath))
             {
                 this.DataLogger.DataLogFolderPath = dataLogPath;

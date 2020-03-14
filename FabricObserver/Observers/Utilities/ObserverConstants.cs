@@ -36,10 +36,11 @@ namespace FabricObserver.Observers.Utilities
         public const string ObserverExecutionTimeout = "ObserverExecutionTimeout";
 
         // Common Observer Settings Parameters.
-        public const string ObserverLogPath = "ObserverLogPath";
-        public const string DataLogPath = "DataLogPath";
-        public const string ObserverRunIntervalParameterName = "RunInterval";
-        public const string ObserverEnabled = "Enabled";
+        public const string ObserverLogPathParameter = "ObserverLogPath";
+        public const string DataLogPathParameter = "DataLogPath";
+        public const string ObserverRunIntervalParameter = "RunInterval";
+        public const string ObserverEnabledParameter = "Enabled";
+        public const string ObserverTelemetryEnabledParameter = "EnableTelemetry";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string DataCapacityParameter = "ResourceUsageDataCapacity";
         public const string UseCircularBufferParameter = "UseCircularBuffer";

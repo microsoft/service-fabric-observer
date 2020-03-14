@@ -29,6 +29,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         public string ServiceName { get; set; } = "N/A";
 
+        public string Source { get; set; } = "FabricObserver";
+
         public object Value { get; set; }
 
         public TelemetryData(

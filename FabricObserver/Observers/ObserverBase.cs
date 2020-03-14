@@ -38,11 +38,11 @@ namespace FabricObserver.Observers
         private readonly int maxDumps = 5;
         private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
 
-        protected bool IsTelemetryEnabled { get; set; } = ObserverManager.TelemetryEnabled;
-
-        protected bool IsEtwEnabled { get; set; } = ObserverManager.EtwEnabled;
+        protected bool IsTelemetryProviderEnabled { get; set; } = ObserverManager.TelemetryEnabled;
 
         protected ITelemetryProvider TelemetryClient { get; set; }
+
+        protected bool IsEtwEnabled { get; set; } = ObserverManager.EtwEnabled;
 
         protected FabricClient FabricClientInstance { get; set; }
 
@@ -70,14 +70,14 @@ namespace FabricObserver.Observers
         /// <inheritdoc/>
         public bool IsEnabled { get; set; } = true;
 
+        public bool IsObserverTelemetryEnabled { get; set; }
+
         /// <inheritdoc/>
         public bool IsUnhealthy { get; set; } = false;
 
         // Only set for unit test runs.
         public bool IsTestRun { get; set; } = false;
 
-        // Loggers.
-        //
         /// <inheritdoc/>
         public Logger ObserverLogger { get; set; }
 
@@ -114,7 +114,7 @@ namespace FabricObserver.Observers
         {
             this.FabricClientInstance = ObserverManager.FabricClientInstance;
 
-            if (this.IsTelemetryEnabled)
+            if (this.IsTelemetryProviderEnabled)
             {
                 this.TelemetryClient = ObserverManager.TelemetryClient;
             }
@@ -133,7 +133,7 @@ namespace FabricObserver.Observers
             string logFolderBasePath;
             string observerLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
-                ObserverConstants.ObserverLogPath);
+                ObserverConstants.ObserverLogPathParameter);
 
             if (!string.IsNullOrEmpty(observerLogPath))
             {
@@ -151,10 +151,20 @@ namespace FabricObserver.Observers
             if (bool.TryParse(
                 this.GetSettingParameterValue(
                 observerName + "Configuration",
-                ObserverConstants.ObserverEnabled),
+                ObserverConstants.ObserverEnabledParameter),
                 out bool enabled))
             {
                 this.IsEnabled = enabled;
+            }
+
+            // Observer telemetry enabled?
+            if (bool.TryParse(
+                this.GetSettingParameterValue(
+                observerName + "Configuration",
+                ObserverConstants.ObserverTelemetryEnabledParameter),
+                out bool telemetryEnabled))
+            {
+                this.IsObserverTelemetryEnabled = telemetryEnabled;
             }
 
             // Verbose logging?
@@ -171,7 +181,7 @@ namespace FabricObserver.Observers
             if (TimeSpan.TryParse(
                 this.GetSettingParameterValue(
                 observerName + "Configuration",
-                ObserverConstants.ObserverRunIntervalParameterName),
+                ObserverConstants.ObserverRunIntervalParameter),
                 out TimeSpan runInterval))
             {
                 this.RunInterval = runInterval;
@@ -201,7 +211,7 @@ namespace FabricObserver.Observers
             this.CsvFileLogger = new DataTableFileLogger();
             string dataLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
-                ObserverConstants.DataLogPath);
+                ObserverConstants.DataLogPathParameter);
             if (!string.IsNullOrEmpty(observerLogPath))
             {
                 this.CsvFileLogger.DataLogFolderPath = dataLogPath;
@@ -559,7 +569,7 @@ namespace FabricObserver.Observers
                 id = name + "_" + data.Property.Replace(" ", string.Empty);
 
                 // Telemetry.
-                if (this.IsTelemetryEnabled)
+                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
                     telemetryData = new TelemetryData(FabricClientInstance, Token)
                     {
@@ -595,16 +605,16 @@ namespace FabricObserver.Observers
             else
             {
                 // Telemetry.
-                telemetryData = new TelemetryData(FabricClientInstance, Token)
+                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
-                    NodeName = this.NodeName,
-                    ObserverName = this.ObserverName,
-                    Metric = data.Property,
-                    Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
-                };
+                    telemetryData = new TelemetryData(FabricClientInstance, Token)
+                    {
+                        NodeName = this.NodeName,
+                        ObserverName = this.ObserverName,
+                        Metric = data.Property,
+                        Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                    };
 
-                if (this.IsTelemetryEnabled)
-                {
                     _ = this.TelemetryClient?.ReportMetricAsync(
                         telemetryData,
                         this.Token);
@@ -796,7 +806,7 @@ namespace FabricObserver.Observers
                 this.HasActiveFabricErrorOrWarning = true;
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                if (this.IsTelemetryEnabled)
+                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
                     // Telemetry.
                     telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
@@ -853,6 +863,22 @@ namespace FabricObserver.Observers
 
                     // Emit an Ok Health Report to clear Fabric Health warning.
                     this.HealthReporter.ReportHealthToServiceFabric(report);
+
+                    // Telemetry
+                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    {
+                        // Telemetry.
+                        telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
+                        telemetryData.Code = data.ActiveErrorOrWarningCode;
+                        telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
+                        telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
+                        telemetryData.Metric = data.Property;
+                        telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
+
+                        _ = this.TelemetryClient?.ReportMetricAsync(
+                                telemetryData,
+                                this.Token);
+                    }
 
                     // Reset health states.
                     data.ActiveErrorOrWarning = false;

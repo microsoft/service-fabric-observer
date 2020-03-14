@@ -598,7 +598,7 @@ namespace FabricObserver.Observers
                         var id = $"{appNameOrType}:{p.ProcessName}";
 
                         // Log (csv) CPU/Mem/DiskIO per app.
-                        if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryEnabled)
+                        if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryProviderEnabled)
                         {
                             this.LogAllAppResourceDataToCsv(id);
                         }
@@ -689,7 +689,7 @@ namespace FabricObserver.Observers
 
         private void LogAllAppResourceDataToCsv(string appName)
         {
-            if (!this.CsvFileLogger.EnableCsvLogging && !this.IsTelemetryEnabled)
+            if (!this.CsvFileLogger.EnableCsvLogging && !this.IsTelemetryProviderEnabled)
             {
                 return;
             }

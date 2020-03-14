@@ -452,7 +452,7 @@ namespace FabricObserver.Observers
                         this.HasActiveFabricErrorOrWarning = true;
 
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                        if (this.IsTelemetryEnabled)
+                        if (this.IsTelemetryProviderEnabled)
                         {
                             _ = this.TelemetryClient?.ReportHealthAsync(
                                 HealthScope.Application,

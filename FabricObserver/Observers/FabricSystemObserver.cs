@@ -760,7 +760,7 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryEnabled)
+                if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryProviderEnabled)
                 {
                     var fileName = "FabricSystemServices_" + this.NodeName;
                     var propertyName = data.First().Property;
