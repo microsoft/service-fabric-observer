@@ -157,6 +157,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// </summary>
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
+        /// <param name="source">Value for source of telemetry signal.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>Task of bool.</returns>
         public async Task<bool> ReportMetricAsync<T>(
@@ -181,7 +182,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             return await Task.FromResult(true).ConfigureAwait(false);
         }
 
-        // TODO - Implement functions below as you need them.
         public async Task<bool> ReportMetricAsync(
           TelemetryData telemetryData,
           CancellationToken cancellationToken)

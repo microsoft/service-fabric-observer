@@ -49,6 +49,14 @@ namespace FabricClusterObserver.Interfaces
         /// <summary>
         /// Calls telemetry provider to report health.
         /// </summary>
+        /// <param name="telemtryData">TelemetryData instance.</param>
+        /// <param name="token">CancellationToken instance.</param>
+        /// <returns>a Task.</returns>
+        Task ReportHealthAsync(TelemetryData telemtryData, CancellationToken token);
+        
+        ///<summary>
+        /// Calls telemetry provider to report health.
+        /// </summary>
         /// <param name="scope">Scope of health evaluation (Cluster, Node, etc.).</param>
         /// <param name="propertyName">Value of the property.</param>
         /// <param name="state">Health state.</param>

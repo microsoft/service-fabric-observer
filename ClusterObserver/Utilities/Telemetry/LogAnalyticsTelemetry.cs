@@ -147,7 +147,23 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     instanceName = instanceName ?? string.Empty
                 });
 
-            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+        }
+
+        public async Task ReportHealthAsync(
+          TelemetryData telemetryData,
+          CancellationToken cancellationToken)
+        {
+            if (telemetryData == null)
+            {
+                return;
+            }
+
+            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
+
+            await SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+
+            return;
         }
 
         // TODO - Implement functions below as you need them.

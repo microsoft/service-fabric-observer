@@ -142,6 +142,7 @@
     <Compile Include="Utilities\Telemetry\AppInsightsTelemetry.cs" />
     <Compile Include="Utilities\Telemetry\HealthScope.cs" />
     <Compile Include="Utilities\Telemetry\LogAnalyticsTelemetry.cs" />
+    <Compile Include="Utilities\Telemetry\TelemetryData.cs" />
     <Compile Include="Utilities\Telemetry\TelemetryProdiverType.cs" />
     <Compile Include="Utilities\UpgradeChecker.cs" />
   </ItemGroup>

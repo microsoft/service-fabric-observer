@@ -41,3 +41,6 @@ dotnet_diagnostic.CA1710.severity = none
 
 # SA1118: Parameter should not span multiple lines
 dotnet_diagnostic.SA1118.severity = none
+
+# SA1618: Generic type parameters should be documented
+dotnet_diagnostic.SA1618.severity = none
