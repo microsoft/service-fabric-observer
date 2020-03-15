@@ -86,7 +86,7 @@ namespace FabricObserver.Observers.Utilities
             switch (healthReport.Observer)
             {
                 case ObserverConstants.AppObserverName:
-                    property = "AppHealth";
+                    property = "ApplicationHealth";
                     break;
                 case ObserverConstants.CertificateObserverName:
                     property = "SecurityHealth";
@@ -98,7 +98,7 @@ namespace FabricObserver.Observers.Utilities
                     property = "FabricSystemServiceHealth";
                     break;
                 case ObserverConstants.NetworkObserverName:
-                    property = "NetworkingHealth";
+                    property = "NetworkHealth";
                     break;
                 case ObserverConstants.OsObserverName:
                     property = "MachineInformation";

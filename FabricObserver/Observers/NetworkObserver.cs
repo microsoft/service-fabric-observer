@@ -23,10 +23,9 @@ namespace FabricObserver.Observers
 {
     /// <summary>
     /// This observer monitors network conditions related to user-supplied configuration settings in
-    /// networkobserver.json.config. This includes testing the connection state of supplied endpoint/port pairs,
-    /// and measuring network traffic (bytes/sec, up/down).
+    /// NetworkObserver.json.config. This includes testing the connection state (is destination reachable, nothing more) of supplied endpoint/port pairs.
     /// The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
-    /// Health Report processor will also emit ETW telemetry if configured in Settings.xml.
+    /// Health Report processor will also emit diagnostic telemetry if configured in Settings.xml.
     /// </summary>
     public class NetworkObserver : ObserverBase
     {
@@ -86,7 +85,8 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!await this.Initialize().ConfigureAwait(true) || token.IsCancellationRequested)
+            if (!await this.Initialize().ConfigureAwait(true) 
+                || token.IsCancellationRequested)
             {
                 this.stopwatch.Stop();
                 this.stopwatch.Reset();
@@ -196,33 +196,43 @@ namespace FabricObserver.Observers
                 return true;
             }
 
-            var settings = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Settings;
+            var settings = 
+                this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
+                    ObserverConstants.ObserverConfigurationPackageName)?.Settings;
 
-            ConfigSettings.Initialize(settings, ObserverConstants.NetworkObserverConfigurationSectionName, "NetworkObserverDataFileName");
+            ConfigSettings.Initialize(
+                settings, 
+                ObserverConstants.NetworkObserverConfigurationSectionName, 
+                "NetworkObserverDataFileName");
 
-            var networkObserverConfigFileName = Path.Combine(this.dataPackagePath, ConfigSettings.NetworkObserverDataFileName);
+            var networkObserverConfigFileName = 
+                Path.Combine(this.dataPackagePath, ConfigSettings.NetworkObserverDataFileName);
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {
-                this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored.");
+                this.ObserverLogger.LogError(
+                    "Endpoint list file is not specified. " +
+                    "Please Add file containing endpoints that need to be monitored.");
 
                 return false;
             }
-
-            this.cancellationToken.ThrowIfCancellationRequested();
 
             if (!File.Exists(networkObserverConfigFileName))
             {
-                this.ObserverLogger.LogError("Endpoint list file is not specified. Please Add file containing endpoints that need to be monitored. Using default endpoints for connection testing.");
+                this.ObserverLogger.LogError(
+                    "Endpoint list file is not specified. " +
+                    "Please Add file containing endpoints that need to be monitored.");
 
                 return false;
             }
 
-            this.cancellationToken.ThrowIfCancellationRequested();
-
             if (this.userEndpoints.Count == 0)
             {
-                using (Stream stream = new FileStream(networkObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (Stream stream = new FileStream(
+                        networkObserverConfigFileName, 
+                        FileMode.Open, 
+                        FileAccess.Read, 
+                        FileShare.Read))
                 {
                     this.userEndpoints.AddRange(JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream));
                 }
@@ -234,6 +244,7 @@ namespace FabricObserver.Observers
                         this.ObserverName,
                         HealthState.Warning,
                         "Missing required configuration data: endpoints.");
+                    
                     return false;
                 }
             }
@@ -270,6 +281,7 @@ namespace FabricObserver.Observers
                             this.ObserverName,
                             HealthState.Warning,
                             $"Initialize() | Required endpoint parameter not set. Nothing to test.");
+
                         continue;
                     }
 
@@ -284,7 +296,6 @@ namespace FabricObserver.Observers
             return configCount >= 1;
         }
 
-        // x-plat?
         private void InternetConnectionStateIsConnected()
         {
             var configList = this.defaultEndpoints;
@@ -303,9 +314,11 @@ namespace FabricObserver.Observers
                         foreach (var endpoint in config.Endpoints)
                         {
                             bool passed = false;
+
                             try
                             {
                                 var reply = pingSender.Send(endpoint.HostName);
+
                                 if (reply != null && reply.Status == IPStatus.Success)
                                 {
                                     passed = true;
@@ -325,26 +338,25 @@ namespace FabricObserver.Observers
                 foreach (var config in configList)
                 {
                     this.cancellationToken.ThrowIfCancellationRequested();
+
                     foreach (var endpoint in config.Endpoints)
                     {
                         bool passed = false;
 
                         try
                         {
-                            string prefix = "http://";
-
-                            if (endpoint.Port == 443)
-                            {
-                                prefix = "https://";
-                            }
+                            string prefix = endpoint.Port == 443 ? "https://" : "http://";
 
                             if (!string.IsNullOrEmpty(endpoint.HostName))
                             {
                                 var request = (HttpWebRequest)WebRequest.Create(new Uri(prefix + endpoint.HostName));
+                                request.Timeout = 60000;
+
                                 using (var response = (HttpWebResponse)request.GetResponse())
                                 {
-                                    if (response.StatusCode == HttpStatusCode.OK ||
-                                        response.StatusCode == HttpStatusCode.Accepted)
+                                    // The target server responded with something.
+                                    // It doesn't really matter what it "said".
+                                    if (response?.Headers.Count > 0)
                                     {
                                         passed = true;
                                     }
@@ -367,8 +379,6 @@ namespace FabricObserver.Observers
 
                         this.SetHealthState(endpoint, passed);
                     }
-
-                    this.cancellationToken.ThrowIfCancellationRequested();
                 }
             }
         }
@@ -382,11 +392,22 @@ namespace FabricObserver.Observers
                                                       conn.Health == HealthState.Warning))
                 {
                     _ = this.connectionStatus.RemoveAll(conn => conn.HostName == endpoint.HostName);
-                    this.connectionStatus.Add(new ConnectionState { HostName = endpoint.HostName, Connected = true, Health = HealthState.Warning });
+                    
+                    this.connectionStatus.Add(
+                        new ConnectionState 
+                        { HostName = endpoint.HostName, 
+                            Connected = true, 
+                            Health = HealthState.Warning 
+                        });
                 }
                 else
                 {
-                    this.connectionStatus.Add(new ConnectionState { HostName = endpoint.HostName, Connected = true, Health = HealthState.Ok });
+                    this.connectionStatus.Add(
+                        new ConnectionState 
+                        { HostName = endpoint.HostName, 
+                            Connected = true, 
+                            Health = HealthState.Ok 
+                        });
                 }
             }
             else
@@ -394,7 +415,12 @@ namespace FabricObserver.Observers
                 if (!this.connectionStatus.Any(conn => conn.HostName == endpoint.HostName &&
                                                conn.Health == HealthState.Warning))
                 {
-                    this.connectionStatus.Add(new ConnectionState { HostName = endpoint.HostName, Connected = false, Health = HealthState.Warning });
+                    this.connectionStatus.Add(
+                        new ConnectionState 
+                        { HostName = endpoint.HostName, 
+                            Connected = false, 
+                            Health = HealthState.Warning 
+                        });
                 }
             }
         }
@@ -429,7 +455,7 @@ namespace FabricObserver.Observers
                     if (!connStatus.Connected)
                     {
                         this.healthState = HealthState.Warning;
-                        var healthMessage = "Outbound Internet connection failure detected for endpoint " + connStatus.HostName + "\n";
+                        var healthMessage = $"Outbound Internet connection failure detected for endpoint {connStatus.HostName}{Environment.NewLine}";
 
                         var report = new HealthReport
                         {
@@ -442,7 +468,7 @@ namespace FabricObserver.Observers
                             NodeName = this.NodeName,
                             Observer = this.ObserverName,
                             ReportType = HealthReportType.Application,
-                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: connStatus.HostName",
+                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {connStatus.HostName}",
                         };
 
                         // Send health report Warning and log event locally.
@@ -451,16 +477,23 @@ namespace FabricObserver.Observers
                         // This means this observer created a Warning or Error SF Health Report
                         this.HasActiveFabricErrorOrWarning = true;
 
-                        // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                        if (this.IsTelemetryProviderEnabled)
+                        // Send Health Telemetry (perhaps it signals an Alert in AppInsights or LogAnalytics).
+                        if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                         {
-                            _ = this.TelemetryClient?.ReportHealthAsync(
-                                HealthScope.Application,
-                                t.TargetApp,
-                                HealthState.Warning,
-                                $"{this.NodeName}/{FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable}: {healthMessage}",
-                                this.ObserverName,
-                                this.Token);
+                            var telemetryData = new TelemetryData(FabricClientInstance, token)
+                            {
+                                ApplicationName = t.TargetApp,
+                                Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
+                                HealthState = "Warning",
+                                HealthEventDescription = healthMessage,
+                                ObserverName = this.ObserverName,
+                                Metric = ErrorWarningProperty.InternetConnectionFailure,
+                                NodeName = this.NodeName,
+                            };
+
+                            _ = this.TelemetryClient?.ReportMetricAsync(
+                                    telemetryData,
+                                    this.Token);
                         }
                     }
                     else
@@ -496,6 +529,7 @@ namespace FabricObserver.Observers
 
             // Clear
             _ = this.connectionStatus.RemoveAll(conn => conn.Connected);
+            
             this.connectionStatus.TrimExcess();
         }
     }

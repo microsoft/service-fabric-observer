@@ -466,6 +466,8 @@ namespace FabricObserver.Observers
 
                 if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
                 {
+                    TelemetryEnabled = false;
+
                     return;
                 }
 
@@ -481,6 +483,14 @@ namespace FabricObserver.Observers
 
                         var logAnalyticsWorkspaceId =
                             GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+
+                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId)
+                            || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                        {
+                            TelemetryEnabled = false;
+
+                            return;
+                        }
 
                         TelemetryClient = new LogAnalyticsTelemetry(
                             logAnalyticsWorkspaceId,
@@ -499,15 +509,19 @@ namespace FabricObserver.Observers
                         if (string.IsNullOrEmpty(aiKey))
                         {
                             TelemetryEnabled = false;
+                            
                             return;
                         }
 
                         TelemetryClient = new AppInsightsTelemetry(aiKey);
+                        
                         break;
                     }
 
                     default:
+                        
                         TelemetryEnabled = false;
+                        
                         break;
                 }
             }

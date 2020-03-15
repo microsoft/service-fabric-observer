@@ -760,7 +760,7 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryProviderEnabled)
+                if (this.CsvFileLogger.EnableCsvLogging)
                 {
                     var fileName = "FabricSystemServices_" + this.NodeName;
                     var propertyName = data.First().Property;
@@ -829,7 +829,8 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                this.ObserverLogger.LogWarning($"Unhandled Exception querying Cluster health:{Environment.NewLine}{e}");
+                this.ObserverLogger.LogWarning(
+                    $"Unhandled Exception querying Cluster health:{Environment.NewLine}{e}");
 
                 throw;
             }
