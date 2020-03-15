@@ -1,22 +1,23 @@
-﻿using Microsoft.ApplicationInsights.Extensibility;
+﻿// ------------------------------------------------------------
+//  Copyright (c) Microsoft Corporation.  All rights reserved.
+//  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
 using System.Fabric;
-using System.Linq;
-using System.Text;
 using System.Threading;
 
 namespace FabricClusterObserver.Utilities.Telemetry
 {
     public class TelemetryData
     {
-        public string ApplicationName { get; set; } = "N/A";
+        public string ApplicationName { get; set; }
 
         public string ClusterId { get; set; }
 
         public string Code { get; set; }
 
-        public string HealthEventDescription { get; set; } = "N/A";
+        public string HealthEventDescription { get; set; }
 
         public string HealthScope { get; set; } = "Cluster";
 
@@ -34,7 +35,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
 
         public long Replica { get; set; }
 
-        public string ServiceName { get; set; } = "N/A";
+        public string ServiceName { get; set; }
 
         public string Source { get; set; } = "ClusterObserver";
 

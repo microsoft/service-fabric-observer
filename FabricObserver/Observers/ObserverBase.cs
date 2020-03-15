@@ -587,11 +587,14 @@ namespace FabricObserver.Observers
                 {
                     procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId).ProcessName;
 
-                    telemetryData.ServiceName = procName;
+                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    {
+                        telemetryData.ServiceName = procName;
 
-                    _ = this.TelemetryClient?.ReportMetricAsync(
-                        telemetryData,
-                        Token).ConfigureAwait(false);
+                        _ = this.TelemetryClient?.ReportMetricAsync(
+                            telemetryData,
+                            Token).ConfigureAwait(false);
+                    }
                 }
                 catch (ArgumentException)
                 {

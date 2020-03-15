@@ -48,9 +48,6 @@
     <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
     <!-- Optional: Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
     <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
-    <!-- Optional: Emit the string representation of ClusterHealth.HealthStatistics structure when Warning or Error 
-         AggregatedHealthState is detected.-->
-    <Parameter Name="EmitHealthStatistics" Value="False"/>
     <!-- Maximum amount of time a node can be in disabling/disabled/down state before
          emitting a Warning signal.-->
     <Parameter Name="MaxTimeNodeStatusNotOk" Value="02:00:00"/>
