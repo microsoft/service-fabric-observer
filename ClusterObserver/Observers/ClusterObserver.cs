@@ -43,6 +43,10 @@ namespace FabricClusterObserver.Observers
 
         private HealthScope Scope { get; set; } = HealthScope.Cluster;
 
+        private string Application { get; set; } = string.Empty;
+
+        private string Node { get; set; } = string.Empty;
+
         /// <summary>
         /// Dictionary that holds node name (key) and tuple of node status, first detected time, last detected time.
         /// </summary>
@@ -141,7 +145,7 @@ namespace FabricClusterObserver.Observers
                         if (!this.NodeStatusDictionary.ContainsKey(node.NodeName))
                         {
                             this.NodeStatusDictionary.Add(
-                                node.NodeName, 
+                                node.NodeName,
                                 (node.NodeStatus, DateTime.Now, DateTime.Now));
                         }
                         else
@@ -152,43 +156,38 @@ namespace FabricClusterObserver.Observers
                                 this.NodeStatusDictionary[node.NodeName] = (node.NodeStatus, tuple.FirstDetectedTime, DateTime.Now);
                             }
                         }
-                    }
 
-                    if (this.NodeStatusDictionary.Any(
-                        dict => dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime) 
-                                >= this.maxTimeNodeStatusNotOk))
-                    {
-                        var kvp = this.NodeStatusDictionary.FirstOrDefault(
-                            dict => dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime) 
-                                    >= this.maxTimeNodeStatusNotOk);
-
-                        message += 
-                            $"Node {kvp.Key} has been {kvp.Value.NodeStatus} " +
-                            $"for {Math.Round(kvp.Value.LastDetectedTime.Subtract(kvp.Value.FirstDetectedTime).TotalHours, 2)} hours.{Environment.NewLine}";
-
-                        // Telemetry.
-                        var telemetry = new TelemetryData(FabricClientInstance, Token)
+                        // Nodes stuck in Disabled/Disabling/Down?
+                        if (this.NodeStatusDictionary.Any(
+                            dict => dict.Key == node.NodeName && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
+                                    >= this.maxTimeNodeStatusNotOk))
                         {
-                            HealthScope = "Node",
-                            HealthState = "Warning",
-                            HealthEventDescription = message,
-                            Metric = "AggregatedClusterHealth",
-                            Source = this.ObserverName,
-                        };
+                            var kvp = this.NodeStatusDictionary.FirstOrDefault(
+                                dict => dict.Key == node.NodeName && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
+                                        >= this.maxTimeNodeStatusNotOk);
 
-                        await this.ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
+                            message +=
+                                $"Node {kvp.Key} has been {kvp.Value.NodeStatus} " +
+                                $"for {Math.Round(kvp.Value.LastDetectedTime.Subtract(kvp.Value.FirstDetectedTime).TotalHours, 2)} hours.{Environment.NewLine}";
 
-                        // ETW.
-                        this.EtwLogger?.Write(
-                            "ClusterObserverDataEvent",
-                            new
+                            // Telemetry.
+                            var telemetry = new TelemetryData(FabricClientInstance, Token)
                             {
-                                Scope = HealthScope.Cluster.ToString(),
-                                Property = "AggregatedClusterHealth",
-                                healthState = HealthState.Warning.ToString(),
-                                description = message,
-                                source = this.ObserverName
-                            });
+                                HealthScope = "Node",
+                                HealthState = "Warning",
+                                HealthEventDescription = message,
+                                Metric = "AggregatedClusterHealth",
+                                NodeName = kvp.Key,
+                                Source = this.ObserverName,
+                            };
+
+                            await this.ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
+
+                            // ETW.
+                            this.EtwLogger?.Write(
+                                "ClusterObserverDataEvent",
+                                telemetry);
+                        }
                     }
                 }
                 else if (this.NodeStatusDictionary.Count > 0)
@@ -208,14 +207,7 @@ namespace FabricClusterObserver.Observers
                     // ETW.
                     this.EtwLogger?.Write(
                         "ClusterObserverDataEvent",
-                        new
-                        {
-                            Scope = HealthScope.Cluster.ToString(),
-                            Property = "AggregatedClusterHealth",
-                            healthState = HealthState.Ok.ToString(),
-                            description = "All nodes are now Up.",
-                            source = this.ObserverName
-                        });
+                        telemetry);
 
                     this.NodeStatusDictionary.Clear();
                 }
@@ -349,13 +341,18 @@ namespace FabricClusterObserver.Observers
 
                                         // From FO?
                                         foreach (var appHealthEvent in appHealthEvents.Where(
-                                                ev => ev.HealthInformation.HealthState != HealthState.Ok))
+                                                 ev => ev.HealthInformation.HealthState != HealthState.Ok))
                                         {
                                             Token.ThrowIfCancellationRequested();
 
+                                            if (!Application.Contains(application.ApplicationName.OriginalString))
+                                            {
+                                                Application += $"{application.ApplicationName.OriginalString} ";
+                                            }
+                                            
                                             // FabricObservers health event details need to be formatted correctly.
                                             // If FO did not emit this event, then foStats will be null.
-                                            var foStats = TryGetFOHealthStateEventData(appHealthEvent);
+                                            var foStats = TryGetFOHealthStateEventData(appHealthEvent, Scope);
 
                                             if (!string.IsNullOrEmpty(foStats))
                                             {
@@ -365,7 +362,7 @@ namespace FabricClusterObserver.Observers
                                             {
                                                 // This wil be whatever is provided in the health event description set by the emitter, which
                                                 // was not FO.
-                                                telemetryDescription += appHealthEvent.HealthInformation.Description;
+                                                telemetryDescription += $"{appHealthEvent.HealthInformation.Description}{Environment.NewLine}";
                                             }
                                         }
                                     }
@@ -407,10 +404,15 @@ namespace FabricClusterObserver.Observers
                                              ev => ev.HealthInformation.HealthState != HealthState.Ok))
                                     {
                                         Token.ThrowIfCancellationRequested();
-                                            
+
+                                        if (!Node.Contains(node.NodeName))
+                                        {
+                                            Node += $"{node.NodeName} ";
+                                        }
+                                        
                                         // FabricObservers health event details need to be formatted correctly.
                                         // If FO did not emit this event, then foStats will be null.
-                                        var foStats = TryGetFOHealthStateEventData(nodeHealthEvent);
+                                        var foStats = TryGetFOHealthStateEventData(nodeHealthEvent, Scope);
                                             
                                         if (!string.IsNullOrEmpty(foStats))
                                         {
@@ -420,7 +422,7 @@ namespace FabricClusterObserver.Observers
                                         {
                                             // This wil be whatever is provided in the health event description set by the emitter, which
                                             // was not FO.
-                                            telemetryDescription += nodeHealthEvent.HealthInformation.Description;
+                                            telemetryDescription += $"{nodeHealthEvent.HealthInformation.Description}{Environment.NewLine}";
                                         }
                                     }
                                 }
@@ -455,20 +457,28 @@ namespace FabricClusterObserver.Observers
                     Source = this.ObserverName,
                 };
 
+                if (!string.IsNullOrEmpty(Application))
+                {
+                    telemetryData.ApplicationName = Application;
+                }
+
+                if (!string.IsNullOrEmpty(Node))
+                {
+                    telemetryData.NodeName = Node;
+                }
+
                 // Telemetry.
                 await this.ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
 
                 // ETW.
                 this.EtwLogger?.Write(
                     "ClusterObserverDataEvent",
-                    new
-                    {
-                        Scope = Scope.ToString(),
-                        Property = "AggregatedClusterHealth",
-                        healthState = clusterHealth.AggregatedHealthState,
-                        description = telemetryDescription,
-                        source = this.ObserverName
-                    });
+                    telemetryData);
+
+                // Reset Scope, Application, Node
+                Scope = HealthScope.Cluster;
+                Application = string.Empty;
+                Node = string.Empty;
             }
             catch (Exception e) when
                   (e is FabricException || e is OperationCanceledException || e is TimeoutException)
@@ -486,16 +496,22 @@ namespace FabricClusterObserver.Observers
         /// <param name="healthEvent">A Fabric Health event.</param>
         /// <returns>A formatted string that contains the FabricObserver error/warning code 
         /// and description of the detected issue.</returns>
-        private string TryGetFOHealthStateEventData(HealthEvent healthEvent)
+        private string TryGetFOHealthStateEventData(HealthEvent healthEvent, HealthScope scope)
         {
-            if (!FoErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId))
+            if (scope == HealthScope.Node
+                && !FoErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId) 
+                || scope == HealthScope.Application
+                && !FoErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId))
             {
                 return null;
             }
 
             string errorWarning = "Warning";
 
-            if (FoErrorWarningCodes.NodeErrorCodesDictionary[healthEvent.HealthInformation.SourceId].Contains("Error"))
+            if (scope == HealthScope.Node
+                && FoErrorWarningCodes.NodeErrorCodesDictionary[healthEvent.HealthInformation.SourceId].Contains("Error") 
+                || scope == HealthScope.Application
+                && FoErrorWarningCodes.AppErrorCodesDictionary[healthEvent.HealthInformation.SourceId].Contains("Error"))
             {
                 errorWarning = "Error";
             }

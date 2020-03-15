@@ -14,13 +14,13 @@ namespace FabricClusterObserver.Utilities.Telemetry
 
         public string ClusterId { get; set; }
 
-        public string Code { get; set; } = FoErrorWarningCodes.Ok;
+        public string Code { get; set; }
 
         public string HealthEventDescription { get; set; } = "N/A";
 
         public string HealthScope { get; set; } = "Cluster";
 
-        public string HealthState { get; set; } = "Ok";
+        public string HealthState { get; set; }
 
         public string Metric { get; set; }
 
