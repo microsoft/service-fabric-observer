@@ -108,7 +108,7 @@ namespace FabricClusterObserver.Observers
                 string telemetryDescription = string.Empty;
                 
                 // Start monitoring node status.
-                await CheckNodeStatusTasksAsync().ConfigureAwait(false);
+                await MonitorNodeStatusAsync().ConfigureAwait(false);
 
                 // Check for active repairs in the cluster.
                 var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
@@ -392,7 +392,7 @@ namespace FabricClusterObserver.Observers
             }
         }
 
-        private async Task CheckNodeStatusTasksAsync()
+        private async Task MonitorNodeStatusAsync()
         {
             /* Node Status Check, Active Repair Tasks Check */
 
