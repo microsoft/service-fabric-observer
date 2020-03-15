@@ -345,9 +345,16 @@ namespace FabricClusterObserver.Observers
                                         {
                                             Token.ThrowIfCancellationRequested();
 
+                                            string separator = string.Empty;
+
                                             if (!Application.Contains(application.ApplicationName.OriginalString))
                                             {
-                                                Application += $"{application.ApplicationName.OriginalString} ";
+                                                if (Application.Length > 0)
+                                                {
+                                                    separator = ", ";
+                                                }
+
+                                                Application += $"{application.ApplicationName.OriginalString}{separator}";
                                             }
                                             
                                             // FabricObservers health event details need to be formatted correctly.
@@ -405,11 +412,18 @@ namespace FabricClusterObserver.Observers
                                     {
                                         Token.ThrowIfCancellationRequested();
 
+                                        string separator = string.Empty;
+
                                         if (!Node.Contains(node.NodeName))
                                         {
-                                            Node += $"{node.NodeName} ";
+                                            if (Node.Length > 0)
+                                            {
+                                                separator = ", ";
+                                            }
+
+                                            Node += $"{node.NodeName}{separator}";
                                         }
-                                        
+
                                         // FabricObservers health event details need to be formatted correctly.
                                         // If FO did not emit this event, then foStats will be null.
                                         var foStats = TryGetFOHealthStateEventData(nodeHealthEvent, Scope);
@@ -430,6 +444,45 @@ namespace FabricClusterObserver.Observers
                                 break;
                             }
                         }
+
+                        // This means there is no cluster health state data to emit.
+                        if (string.IsNullOrEmpty(telemetryDescription))
+                        {
+                            return;
+                        }
+
+                        var telemetryData = new TelemetryData(FabricClientInstance, Token)
+                        {
+                            HealthScope = Enum.GetName(typeof(HealthScope), Scope),
+                            HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
+                            HealthEventDescription = telemetryDescription,
+                            Metric = "AggregatedClusterHealth",
+                            Source = this.ObserverName,
+                        };
+
+                        if (!string.IsNullOrEmpty(Application))
+                        {
+                            telemetryData.ApplicationName = Application;
+                        }
+
+                        if (!string.IsNullOrEmpty(Node))
+                        {
+                            telemetryData.NodeName = Node;
+                        }
+
+                        // Telemetry.
+                        await this.ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
+
+                        // ETW.
+                        this.EtwLogger?.Write(
+                            "ClusterObserverDataEvent",
+                            telemetryData);
+
+                        // Reset 
+                        Scope = HealthScope.Cluster;
+                        Application = string.Empty;
+                        Node = string.Empty;
+                        telemetryDescription = string.Empty;
                     }
 
                     // HealthStatistics as a string.
@@ -439,46 +492,8 @@ namespace FabricClusterObserver.Observers
                     }
                 }
 
-                // Track current health state for use in next run.
-                this.ClusterHealthState = clusterHealth.AggregatedHealthState;
-
-                // This means there is no cluster health state data to emit.
-                if (string.IsNullOrEmpty(telemetryDescription))
-                {
-                    return;
-                }
-
-                var telemetryData = new TelemetryData(FabricClientInstance, Token)
-                {
-                    HealthScope = Enum.GetName(typeof(HealthScope), Scope),
-                    HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
-                    HealthEventDescription = telemetryDescription,
-                    Metric = "AggregatedClusterHealth",
-                    Source = this.ObserverName,
-                };
-
-                if (!string.IsNullOrEmpty(Application))
-                {
-                    telemetryData.ApplicationName = Application;
-                }
-
-                if (!string.IsNullOrEmpty(Node))
-                {
-                    telemetryData.NodeName = Node;
-                }
-
-                // Telemetry.
-                await this.ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
-
-                // ETW.
-                this.EtwLogger?.Write(
-                    "ClusterObserverDataEvent",
-                    telemetryData);
-
-                // Reset Scope, Application, Node
-                Scope = HealthScope.Cluster;
-                Application = string.Empty;
-                Node = string.Empty;
+                // Track current aggregated health state for use in next run.
+                this.ClusterHealthState = clusterHealth.AggregatedHealthState;  
             }
             catch (Exception e) when
                   (e is FabricException || e is OperationCanceledException || e is TimeoutException)
