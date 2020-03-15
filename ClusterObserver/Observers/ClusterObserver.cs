@@ -225,11 +225,13 @@ namespace FabricClusterObserver.Observers
                                                 this.AsyncClusterOperationTimeoutSeconds,
                                                 token).ConfigureAwait(true);
 
-                // Previous run generated unhealthy evaluation report. Clear it (send Ok) .
+                // Previous run generated unhealthy evaluation report. It's now Ok.
                 if (emitOkHealthState && clusterHealth.AggregatedHealthState == HealthState.Ok
                     && (this.ClusterHealthState == HealthState.Error
                     || (emitWarningDetails && this.ClusterHealthState == HealthState.Warning)))
                 {
+                    this.ClusterHealthState = HealthState.Ok;
+                    
                     // Telemetry.
                     var telemetry = new TelemetryData(FabricClientInstance, Token)
                     {
