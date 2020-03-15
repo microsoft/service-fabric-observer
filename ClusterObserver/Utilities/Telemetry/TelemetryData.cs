@@ -26,6 +26,8 @@ namespace FabricClusterObserver.Utilities.Telemetry
 
         public string NodeName { get; set; }
 
+        public string NodeStatus { get; set; }
+       
         public string ObserverName { get; set; }
 
         public Guid Partition { get; set; }

@@ -175,6 +175,7 @@ namespace FabricClusterObserver.Observers
                             {
                                 HealthScope = "Node",
                                 HealthState = "Warning",
+                                NodeStatus = $"{kvp.Value.NodeStatus}",
                                 HealthEventDescription = message,
                                 Metric = "AggregatedClusterHealth",
                                 NodeName = kvp.Key,
