@@ -11,9 +11,12 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Security;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -335,6 +338,8 @@ namespace FabricObserver.Observers
             }
             else
             {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
+
                 foreach (var config in configList)
                 {
                     this.cancellationToken.ThrowIfCancellationRequested();
@@ -345,26 +350,53 @@ namespace FabricObserver.Observers
 
                         try
                         {
-                            string prefix = endpoint.Port == 443 ? "https://" : "http://";
-
-                            if (!string.IsNullOrEmpty(endpoint.HostName))
+                            if (string.IsNullOrEmpty(endpoint.HostName))
                             {
-                                var request = (HttpWebRequest)WebRequest.Create(new Uri(prefix + endpoint.HostName));
-                                request.Timeout = 60000;
+                                continue;
+                            }
 
-                                using (var response = (HttpWebResponse)request.GetResponse())
+                            string prefix =
+                                (endpoint.Port == 443 || endpoint.Port == 1433) ? "https://" : "http://";
+
+                            if (endpoint.HostName.Contains("://"))
+                            {
+                                prefix = string.Empty;
+                            }
+
+                            var request = (HttpWebRequest)WebRequest.Create(
+                                new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}"));
+
+                            request.AuthenticationLevel = AuthenticationLevel.MutualAuthRequired;
+                            request.ImpersonationLevel = TokenImpersonationLevel.Impersonation;
+                            request.Timeout = 60000;
+                            request.Method = "GET";
+
+                            using (var response = (HttpWebResponse)request.GetResponse())
+                            {
+                                var status = response.StatusCode;
+
+                                // The target server responded with something.
+                                // It doesn't really matter what it "said".
+                                if (response?.Headers.Count > 0)
                                 {
-                                    // The target server responded with something.
-                                    // It doesn't really matter what it "said".
-                                    if (response?.Headers.Count > 0)
-                                    {
-                                        passed = true;
-                                    }
+                                    passed = true;
                                 }
                             }
                         }
-                        catch (WebException)
+                        catch (WebException we)
                         {
+                            if (we.Status == WebExceptionStatus.ProtocolError
+                                || we.Status == WebExceptionStatus.TrustFailure
+                                || we.Response?.Headers?.Count > 0)
+                            {
+                                // Could not establish trust or server doesn't want to hear from you, or... 
+                                // Either way, the Server *responded*. It's reachable.
+                                // You could always add code to grab your app or cluster certs from local store
+                                // and apply it to the request. See CertificateObserver for how to get
+                                // both your App cert(s) and Cluster cert. The goal of NetworkObserver is 
+                                // to test availability. Nothing more.
+                                passed = true;
+                            }
                         }
                         catch (Exception e)
                         {
