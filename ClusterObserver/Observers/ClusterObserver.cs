@@ -106,100 +106,9 @@ namespace FabricClusterObserver.Observers
             try
             {
                 string telemetryDescription = string.Empty;
-
-                /* Node Status Check, Active Repair Tasks Check */
-
-                // If a node's NodeStatus is Disabling, Disabled, or Down 
-                // for at or above the specified maximum time, then CO will emit a Warning signal.
-                var nodeList =
-                await this.FabricClientInstance.QueryManager.GetNodeListAsync(
-                        null,
-                        this.AsyncClusterOperationTimeoutSeconds,
-                        token).ConfigureAwait(true);
-
-                var message = string.Empty;
-
-                if (!nodeList.All(
-                        n =>
-                        n.NodeStatus == NodeStatus.Up))
-                {
-                    var filteredList = nodeList.Where(
-                             node => node.NodeStatus == NodeStatus.Disabled
-                                  || node.NodeStatus == NodeStatus.Disabling
-                                  || node.NodeStatus == NodeStatus.Down);
-
-                    foreach (var node in filteredList)
-                    {
-                        if (!this.NodeStatusDictionary.ContainsKey(node.NodeName))
-                        {
-                            this.NodeStatusDictionary.Add(
-                                node.NodeName,
-                                (node.NodeStatus, DateTime.Now, DateTime.Now));
-                        }
-                        else
-                        {
-                            if (this.NodeStatusDictionary.TryGetValue(
-                                node.NodeName, out var tuple))
-                            {
-                                this.NodeStatusDictionary[node.NodeName] = (node.NodeStatus, tuple.FirstDetectedTime, DateTime.Now);
-                            }
-                        }
-
-                        // Nodes stuck in Disabled/Disabling/Down?
-                        if (this.NodeStatusDictionary.Any(
-                            dict => dict.Key == node.NodeName && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
-                                    >= this.maxTimeNodeStatusNotOk))
-                        {
-                            var kvp = this.NodeStatusDictionary.FirstOrDefault(
-                                dict => dict.Key == node.NodeName && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
-                                        >= this.maxTimeNodeStatusNotOk);
-
-                            message +=
-                                $"Node {kvp.Key} has been {kvp.Value.NodeStatus} " +
-                                $"for {Math.Round(kvp.Value.LastDetectedTime.Subtract(kvp.Value.FirstDetectedTime).TotalHours, 2)} hours.{Environment.NewLine}";
-
-                            // Telemetry.
-                            var telemetry = new TelemetryData(FabricClientInstance, Token)
-                            {
-                                HealthScope = "Node",
-                                HealthState = "Warning",
-                                HealthEventDescription = message,
-                                Metric = "AggregatedClusterHealth",
-                                NodeName = kvp.Key,
-                                NodeStatus = $"{kvp.Value.NodeStatus}",
-                                Source = this.ObserverName,
-                            };
-
-                            await this.ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
-
-                            // ETW.
-                            this.EtwLogger?.Write(
-                                "ClusterObserverDataEvent",
-                                telemetry);
-                        }
-                    }
-                }
-                else if (this.NodeStatusDictionary.Count > 0)
-                {
-                    // Telemetry.
-                    var telemetry = new TelemetryData(FabricClientInstance, Token)
-                    {
-                        HealthScope = "Node",
-                        HealthState = "Ok",
-                        HealthEventDescription = "All nodes are now Up.",
-                        Metric = "AggregatedClusterHealth",
-                        Source = this.ObserverName,
-                    };
-
-                    await this.ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
-
-                    // ETW.
-                    this.EtwLogger?.Write(
-                        "ClusterObserverDataEvent",
-                        telemetry);
-
-                    this.NodeStatusDictionary.Clear();
-                }
+                
+                // Start monitoring node status.
+                await CheckNodeStatusTasksAsync().ConfigureAwait(false);
 
                 // Check for active repairs in the cluster.
                 var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
@@ -269,6 +178,14 @@ namespace FabricClusterObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
 
+                        // System apps will be in warning during node disabled state and upgrades 
+                        // where Fabric nodes restarted are are replicas are rebuilding. Ignore.
+                        // The node status monitor will take care of signalling real problems.
+                        if (evaluation.Kind == HealthEvaluationKind.SystemApplication)
+                        {
+                            continue;
+                        }
+
                         telemetryDescription += $"{Enum.GetName(typeof(HealthEvaluationKind), evaluation.Kind)} - {evaluation.AggregatedHealthState}: {evaluation.Description}{Environment.NewLine}{Environment.NewLine}";
 
                         switch (evaluation.Kind)
@@ -289,7 +206,8 @@ namespace FabricClusterObserver.Observers
                                         continue;
                                     }
 
-                                    telemetryDescription += $"Application in Error or Warning: {application.ApplicationName}{Environment.NewLine}";
+                                    telemetryDescription += $"Application in Error or Warning: " +
+                                        $"{application.ApplicationName}{Environment.NewLine}";
 
                                     var appUpgradeStatus = await FabricClientInstance.ApplicationManager.GetApplicationUpgradeProgressAsync(application.ApplicationName);
 
@@ -299,7 +217,7 @@ namespace FabricClusterObserver.Observers
                                         var udInAppUpgrade = await UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(
                                             FabricClientInstance,
                                             Token,
-                                            appUpgradeStatus.ApplicationName);
+                                            application.ApplicationName);
 
                                         string udText = string.Empty;
 
@@ -444,12 +362,12 @@ namespace FabricClusterObserver.Observers
                             }
                             default:
 
-                                return;
+                                continue;
                         }
                     }
 
                     // Track current aggregated health state for use in next run.
-                    this.ClusterHealthState = clusterHealth.AggregatedHealthState;
+                    ClusterHealthState = clusterHealth.AggregatedHealthState;
                 } 
             }
             catch (Exception e) when
@@ -458,7 +376,7 @@ namespace FabricClusterObserver.Observers
                 this.ObserverLogger.LogWarning(
                    $"ProbeClusterHealthAsync threw {e.Message}{Environment.NewLine}" +
                     "Probing will continue.");
-
+#if DEBUG
                 var telemetryData = new TelemetryData(FabricClientInstance, Token)
                 {
                     HealthScope = "Cluster",
@@ -470,6 +388,104 @@ namespace FabricClusterObserver.Observers
                 };
 
                 await this.ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
+#endif    
+            }
+        }
+
+        private async Task CheckNodeStatusTasksAsync()
+        {
+            /* Node Status Check, Active Repair Tasks Check */
+
+            // If a node's NodeStatus is Disabling, Disabled, or Down 
+            // for at or above the specified maximum time, then CO will emit a Warning signal.
+            var nodeList =
+            await this.FabricClientInstance.QueryManager.GetNodeListAsync(
+                    null,
+                    this.AsyncClusterOperationTimeoutSeconds,
+                    Token).ConfigureAwait(true);
+
+            var message = string.Empty;
+
+            if (!nodeList.All(
+                    n =>
+                    n.NodeStatus == NodeStatus.Up))
+            {
+                var filteredList = nodeList.Where(
+                         node => node.NodeStatus == NodeStatus.Disabled
+                              || node.NodeStatus == NodeStatus.Disabling
+                              || node.NodeStatus == NodeStatus.Down);
+
+                foreach (var node in filteredList)
+                {
+                    if (!this.NodeStatusDictionary.ContainsKey(node.NodeName))
+                    {
+                        this.NodeStatusDictionary.Add(
+                            node.NodeName,
+                            (node.NodeStatus, DateTime.Now, DateTime.Now));
+                    }
+                    else
+                    {
+                        if (this.NodeStatusDictionary.TryGetValue(
+                            node.NodeName, out var tuple))
+                        {
+                            this.NodeStatusDictionary[node.NodeName] = (node.NodeStatus, tuple.FirstDetectedTime, DateTime.Now);
+                        }
+                    }
+
+                    // Nodes stuck in Disabled/Disabling/Down?
+                    if (this.NodeStatusDictionary.Any(
+                        dict => dict.Key == node.NodeName && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
+                                >= this.maxTimeNodeStatusNotOk))
+                    {
+                        var kvp = this.NodeStatusDictionary.FirstOrDefault(
+                            dict => dict.Key == node.NodeName && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
+                                    >= this.maxTimeNodeStatusNotOk);
+
+                        message +=
+                            $"Node {kvp.Key} has been {kvp.Value.NodeStatus} " +
+                            $"for {Math.Round(kvp.Value.LastDetectedTime.Subtract(kvp.Value.FirstDetectedTime).TotalHours, 2)} hours.{Environment.NewLine}";
+
+                        // Telemetry.
+                        var telemetry = new TelemetryData(FabricClientInstance, Token)
+                        {
+                            HealthScope = "Node",
+                            HealthState = "Warning",
+                            HealthEventDescription = message,
+                            Metric = "AggregatedClusterHealth",
+                            NodeName = kvp.Key,
+                            NodeStatus = $"{kvp.Value.NodeStatus}",
+                            Source = this.ObserverName,
+                        };
+
+                        await this.ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
+
+                        // ETW.
+                        this.EtwLogger?.Write(
+                            "ClusterObserverDataEvent",
+                            telemetry);
+                    }
+                }
+            }
+            else if (this.NodeStatusDictionary.Count > 0)
+            {
+                // Telemetry.
+                var telemetry = new TelemetryData(FabricClientInstance, Token)
+                {
+                    HealthScope = "Node",
+                    HealthState = "Ok",
+                    HealthEventDescription = "All nodes are now Up.",
+                    Metric = "AggregatedClusterHealth",
+                    Source = this.ObserverName,
+                };
+
+                await this.ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
+
+                // ETW.
+                this.EtwLogger?.Write(
+                    "ClusterObserverDataEvent",
+                    telemetry);
+
+                this.NodeStatusDictionary.Clear();
             }
         }
 
