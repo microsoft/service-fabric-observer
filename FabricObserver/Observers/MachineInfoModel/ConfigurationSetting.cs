@@ -5,7 +5,6 @@
 
 using System;
 using System.Fabric.Description;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
 
