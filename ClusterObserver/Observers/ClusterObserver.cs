@@ -178,11 +178,21 @@ namespace FabricClusterObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
 
-                        // System apps will be in warning during node disabled state and upgrades 
-                        // where Fabric nodes restarted are are replicas are rebuilding. Ignore.
-                        // The node status monitor will take care of signalling real problems.
+                        // Warn when System applications are in warning, but no need to dig in deeper.
                         if (evaluation.Kind == HealthEvaluationKind.SystemApplication)
                         {
+                            var telemetryData = new TelemetryData(FabricClientInstance, Token)
+                            {
+                                HealthScope = "SystemApplication",
+                                HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
+                                HealthEventDescription = $"{evaluation.AggregatedHealthState}: {evaluation.Description}",
+                                Metric = "AggregatedClusterHealth",
+                                Source = this.ObserverName,
+                            };
+
+                            // Telemetry.
+                            await this.ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
+
                             continue;
                         }
 
