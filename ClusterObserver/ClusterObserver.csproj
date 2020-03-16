@@ -83,6 +83,9 @@
     <Reference Include="Microsoft.ServiceFabric.Services, Version=6.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=AMD64">
       <HintPath>..\packages\Microsoft.ServiceFabric.Services.3.4.664\lib\net472\Microsoft.ServiceFabric.Services.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <HintPath>..\packages\NLog.4.6.8\lib\net45\NLog.dll</HintPath>
     </Reference>
@@ -123,7 +126,7 @@
   <ItemGroup>
     <Compile Include="Interfaces\IObserver.cs" />
     <Compile Include="Interfaces\IObserverBase.cs" />
-    <Compile Include="Interfaces\IObserverTelemetryProvider.cs" />
+    <Compile Include="Interfaces\ITelemetryProvider.cs" />
     <Compile Include="Observers\ClusterObserver.cs" />
     <Compile Include="Observers\ObserverBase.cs" />
     <Compile Include="Observers\ObserverManager.cs" />
@@ -131,12 +134,16 @@
     <Compile Include="FabricClusterObserver.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ServiceEventSource.cs" />
+    <Compile Include="Utilities\ClusterIdentificationUtility.cs" />
     <Compile Include="Utilities\FOErrorWarningCodes.cs" />
     <Compile Include="Utilities\Logger.cs" />
     <Compile Include="Utilities\LogLevel.cs" />
     <Compile Include="Utilities\ObserverConstants.cs" />
     <Compile Include="Utilities\Telemetry\AppInsightsTelemetry.cs" />
     <Compile Include="Utilities\Telemetry\HealthScope.cs" />
+    <Compile Include="Utilities\Telemetry\LogAnalyticsTelemetry.cs" />
+    <Compile Include="Utilities\Telemetry\TelemetryData.cs" />
+    <Compile Include="Utilities\Telemetry\TelemetryProdiverType.cs" />
     <Compile Include="Utilities\UpgradeChecker.cs" />
   </ItemGroup>
   <ItemGroup>

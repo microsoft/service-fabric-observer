@@ -19,7 +19,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     /// Abstracts the ApplicationInsights telemetry API calls allowing
     /// other telemetry providers to be plugged in.
     /// </summary>
-    public class AppInsightsTelemetry : IObserverTelemetryProvider, IDisposable
+    public class AppInsightsTelemetry : ITelemetryProvider, IDisposable
     {
         /// <summary>
         /// ApplicationInsights telemetry client.
@@ -157,24 +157,49 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// </summary>
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
+        /// <param name="source">Value for source of telemetry signal.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>Task of bool.</returns>
-        public Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken)
+        public async Task<bool> ReportMetricAsync<T>(
+            string name,
+            T value,
+            string source,
+            CancellationToken cancellationToken)
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             var metricTelemetry = new MetricTelemetry
             {
-                Name = name,
+                Name = $"{source}: {name}",
                 Sum = Convert.ToDouble(value),
             };
 
             this.telemetryClient.TrackMetric(metricTelemetry);
 
-            return Task.FromResult(true);
+            return await Task.FromResult(true).ConfigureAwait(false);
+        }
+
+        public async Task<bool> ReportMetricAsync(
+          TelemetryData telemetryData,
+          CancellationToken cancellationToken)
+        {
+            if (telemetryData == null)
+            {
+                return await Task.FromResult(false).ConfigureAwait(false);
+            }
+
+            var metricTelemetry = new MetricTelemetry
+            {
+                Name = telemetryData.Metric,
+                Sum = Convert.ToDouble(telemetryData.Value),
+            };
+
+            this.telemetryClient.TrackMetric(metricTelemetry);
+
+            return await Task.FromResult(true).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -192,7 +217,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.FromResult(1);
             }
 
-            this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
+            _ = this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
 
             return Task.FromResult(0);
         }

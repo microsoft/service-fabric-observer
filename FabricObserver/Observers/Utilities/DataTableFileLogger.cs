@@ -41,7 +41,7 @@ namespace FabricObserver.Observers.Utilities
 
             if (Logger == null)
             {
-                Logger = LogManager.GetCurrentClassLogger();
+                Logger = LogManager.GetLogger("FabricObserver.Utilities.DataTableFileLogger");
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
@@ -49,6 +49,10 @@ namespace FabricObserver.Observers.Utilities
             dataLog.FileName = csvPath;
             dataLog.AutoFlush = true;
             dataLog.ConcurrentWrites = true;
+            dataLog.ArchiveEvery = FileArchivePeriod.Day;
+            dataLog.ArchiveNumbering = ArchiveNumberingMode.DateAndSequence;
+            dataLog.AutoFlush = true;
+            dataLog.CreateDirs = true;
 
             LogManager.ReconfigExistingLoggers();
         }

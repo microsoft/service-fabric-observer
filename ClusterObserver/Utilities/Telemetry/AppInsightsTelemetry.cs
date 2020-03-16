@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
+using System.Fabric.Management.ServiceModel;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver.Interfaces;
@@ -20,7 +21,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
     /// Abstracts the ApplicationInsights telemetry API calls allowing
     /// other telemetry providers to be plugged in.
     /// </summary>
-    public class AppInsightsTelemetry : IObserverTelemetryProvider, IDisposable
+    public class AppInsightsTelemetry : ITelemetryProvider, IDisposable
     {
         /// <summary>
         /// ApplicationInsights telemetry client.
@@ -96,6 +97,54 @@ namespace FabricClusterObserver.Utilities.Telemetry
             at.Properties.Add("Instance", instance);
 
             this.telemetryClient.TrackAvailability(at);
+
+            return Task.FromResult(0);
+        }
+
+        /// <summary>
+        /// Calls telemetry provider to report health.
+        /// </summary>
+        /// <param name="telemtryData">TelemetryData instance.</param>
+        /// <param name="token">CancellationToken instance.</param>
+        /// <returns>a Task.</returns>
+        public Task ReportHealthAsync(
+            TelemetryData telemetryData, 
+            CancellationToken cancellationToken)
+        {
+            if (!this.IsEnabled 
+                || cancellationToken.IsCancellationRequested 
+                || telemetryData == null)
+            {
+                return Task.FromResult(1);
+            }
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var sev = (telemetryData.HealthState == "Error") ? SeverityLevel.Error
+                                    : (telemetryData.HealthState == "Warning") ? SeverityLevel.Warning : SeverityLevel.Information;
+
+                string healthInfo = string.Empty;
+
+                if (!string.IsNullOrEmpty(telemetryData.HealthEventDescription))
+                {
+                    healthInfo += $"{Environment.NewLine}{telemetryData.HealthEventDescription}";
+                }
+
+                var tt = new TraceTelemetry(
+                    $"Service Fabric Health Report - {telemetryData.HealthScope}: " +
+                    $"{telemetryData.HealthState} -> {telemetryData.Source}:{telemetryData.Metric}{healthInfo}", 
+                    sev);
+
+                this.telemetryClient.TrackTrace(tt);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                
+                throw;
+            }
 
             return Task.FromResult(0);
         }
@@ -196,7 +245,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
                 return Task.FromResult(1);
             }
 
-            this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
+            _ = this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
 
             return Task.FromResult(0);
         }

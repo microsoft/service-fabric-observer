@@ -10,19 +10,13 @@ namespace FabricObserver.Observers.Utilities
         public const string ObserverManagerName = "ObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
         public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
-        public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
-        public const string ObserverLogPath = "ObserverLogPath";
-        public const string DataLogPath = "DataLogPath";
         public const string Fqdn = "FQDN";
-        public const string ObserverRunIntervalParameterName = "RunInterval";
-        public const string ObserverEnabled = "Enabled";
-        public const string AiKey = "AppInsightsInstrumentationKey";
-        public const string TelemetryEnabled = "EnableTelemetryProvider";
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
         public const string EventSourceProviderName = "EventSourceProviderName";
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
+        public const string FabricObserverName = "FabricObserver";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";
@@ -41,6 +35,17 @@ namespace FabricObserver.Observers.Utilities
         // Setting name for Maximum time an observer should run before being considered hung or in some failure state.
         public const string ObserverExecutionTimeout = "ObserverExecutionTimeout";
 
+        // Common Observer Settings Parameters.
+        public const string ObserverLogPathParameter = "ObserverLogPath";
+        public const string DataLogPathParameter = "DataLogPath";
+        public const string ObserverRunIntervalParameter = "RunInterval";
+        public const string ObserverEnabledParameter = "Enabled";
+        public const string ObserverTelemetryEnabledParameter = "EnableTelemetry";
+        public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
+        public const string DataCapacityParameter = "ResourceUsageDataCapacity";
+        public const string UseCircularBufferParameter = "UseCircularBuffer";
+        public const string MonitorDurationParameter = "MonitorDuration";
+
         // AppObserver.
         public const string AppObserverName = "AppObserver";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
@@ -57,12 +62,8 @@ namespace FabricObserver.Observers.Utilities
         public const string DiskObserverName = "DiskObserver";
         public const string DiskObserverConfigurationSectionName = "DiskObserverConfiguration";
         public const string DiskObserverIntervalParameterName = "RunInterval";
-        public const string DiskObserverDiskSpacePercentError = "DiskSpacePercentErrorThreshold";
-        public const string DiskObserverDiskSpacePercentWarning = "DiskSpacePercentWarningThreshold";
-        public const string DiskObserverIoReadsError = "IOReadsErrorThreshold";
-        public const string DiskObserverIoReadsWarning = "IOReadsWarningThreshold";
-        public const string DiskObserverIoWritesError = "IOWritesErrorThreshold";
-        public const string DiskObserverIoWritesWarning = "IOWritesWarningThreshold";
+        public const string DiskObserverDiskSpacePercentError = "DiskSpacePercentUsageErrorThreshold";
+        public const string DiskObserverDiskSpacePercentWarning = "DiskSpacePercentUsageWarningThreshold";
         public const string DiskObserverAverageQueueLengthError = "AverageQueueLengthErrorThreshold";
         public const string DiskObserverAverageQueueLengthWarning = "AverageQueueLengthWarningThreshold";
 
@@ -71,8 +72,8 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricSystemObserverConfigurationSectionName = "FabricSystemObserverConfiguration";
         public const string FabricSystemObserverErrorCpu = "ErrorCpuThresholdPercent";
         public const string FabricSystemObserverWarnCpu = "WarnCpuThresholdPercent";
-        public const string FabricSystemObserverErrorMemory = "ErrorMemoryThresholdMB";
-        public const string FabricSystemObserverWarnMemory = "WarnMemoryThresholdMB";
+        public const string FabricSystemObserverErrorMemory = "ErrorMemoryThresholdMb";
+        public const string FabricSystemObserverWarnMemory = "WarnMemoryThresholdMb";
         public const string FabricSystemObserverErrorDiskIoReads = "ErrorDiskIOReadsThreshold";
         public const string FabricSystemObserverWarnDiskIoReads = "WarnDiskIOReadsThreshold";
         public const string FabricSystemObserverErrorDiskIoWrites = "ErrorDiskIOWritesThreshold";
@@ -90,8 +91,8 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverConfigurationSectionName = "NodeObserverConfiguration";
         public const string NodeObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
         public const string NodeObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
-        public const string NodeObserverMemoryErrorLimitMb = "MemoryErrorLimitMB";
-        public const string NodeObserverMemoryWarningLimitMb = "MemoryWarningLimitMB";
+        public const string NodeObserverMemoryErrorLimitMb = "MemoryErrorLimitMb";
+        public const string NodeObserverMemoryWarningLimitMb = "MemoryWarningLimitMb";
         public const string NodeObserverNetworkErrorActivePorts = "NetworkErrorActivePorts";
         public const string NodeObserverNetworkWarningActivePorts = "NetworkWarningActivePorts";
         public const string NodeObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";
@@ -110,5 +111,18 @@ namespace FabricObserver.Observers.Utilities
         public const string SfConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
         public const string SfConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
         public const string SfConfigurationObserverRunIntervalParameterName = "RunInterval";
+
+        // Telemetry Settings Parameters.
+        public const string AiKey = "AppInsightsInstrumentationKey";
+        public const string TelemetryEnabled = "EnableTelemetryProvider";
+        public const string TelemetryProviderType = "TelemetryProvider";
+        public const string LogAnalyticsLogTypeParameter = "LogAnalyticsLogType";
+        public const string LogAnalyticsSharedKeyParameter = "LogAnalyticsSharedKey";
+        public const string LogAnalyticsWorkspaceIdParameter = "LogAnalyticsWorkspaceId";
+        public const string InfrastructureServiceType = "InfrastructureServiceType";
+        public const string ClusterTypeSfrp = "SFRP";
+        public const string Undefined = "Undefined";
+        public const string ClusterTypePaasV1 = "PaasV1";
+        public const string ClusterTypeStandalone = "Standalone";
     }
 }

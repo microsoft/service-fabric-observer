@@ -13,9 +13,9 @@ using FabricObserver.Observers.Utilities.Telemetry;
 namespace FabricObserver.Observers.Interfaces
 {
     /// <summary>
-    /// IObserverTelemetry interface.
+    /// ITelemetry interface.
     /// </summary>
-    public interface IObserverTelemetryProvider
+    public interface ITelemetryProvider
     {
         /// <summary>
         /// Gets or sets the telemetry API key.
@@ -73,9 +73,24 @@ namespace FabricObserver.Observers.Interfaces
         /// </summary>
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
+        /// <param name="source">Name of the observer omitting the signal.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A completed task of bool.</returns>
-        Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken);
+        Task<bool> ReportMetricAsync<T>(
+            string name,
+            T value,
+            string source,
+            CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Calls telemetry provider to report a metric.
+        /// </summary>
+        /// <param name="telemetryData">TelemetryData instance.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <returns>A completed task of bool indicating success or failure.</returns>
+        Task<bool> ReportMetricAsync(
+          TelemetryData telemetryData,
+          CancellationToken cancellationToken);
 
         /// <summary>
         /// Calls telemetry provider to report a metric.
@@ -92,12 +107,12 @@ namespace FabricObserver.Observers.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="service">Name of the service.</param>
         /// <param name="partition">Partition id.</param>
         /// <param name="name">Name of the metric.</param>
-        /// <param name="value">Value if the metric.</param>
+        /// <param name="value">Value of the metric.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A completed task.</returns>
         Task ReportMetricAsync(
@@ -108,7 +123,7 @@ namespace FabricObserver.Observers.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="role">Name of the role.</param>
         /// <param name="id">Replica or instance identifier.</param>
@@ -124,12 +139,12 @@ namespace FabricObserver.Observers.Interfaces
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="roleName">Name of the role.</param>
         /// <param name="instance">Instance idenfitier.</param>
         /// <param name="name">Name of the metric.</param>
-        /// <param name="value">Value if the metric.</param>
+        /// <param name="value">Value of the metric.</param>
         /// <param name="count">Number of samples for this metric.</param>
         /// <param name="min">Minimum value of the samples.</param>
         /// <param name="max">Maximum value of the samples.</param>

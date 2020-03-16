@@ -1,28 +1,33 @@
 ﻿[
   {
-    "targetType": "XApplicationType",
-    "cpuWarningLimitPct": 25,
+    "targetApp": "fabric:/BadApp",
+    "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40
   },
   {
-    "target": "fabric:/MyApp42",
-    "cpuWarningLimitPct": 20,
+    "targetApp": "fabric:/ClusterObserver",
+    "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40
   },
   {
-    "target": "fabric:/FabricObserver",
-    "cpuWarningLimitPct": 30,
+    "targetAppType": "CpuStressType",
+    "cpuWarningLimitPercent": 20,
+    "memoryWarningLimitMb": 150
+  },
+  {
+    "targetApp": "fabric:/FabricObserver",
+    "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40
   },
   {
-    "target": "fabric:/CpuStress",
-    "cpuWarningLimitPct": 20,
+    "targetApp": "fabric:/FabricObserverWebApi",
+    "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40

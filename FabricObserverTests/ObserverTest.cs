@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Fabric;
@@ -6,10 +7,9 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricClusterObserver;
 using FabricClusterObserver.Observers;
-using FabricObserver;
 using FabricObserver.Observers;
+using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ClusterObserverManager = FabricClusterObserver.Observers.ObserverManager;
@@ -61,7 +61,7 @@ namespace FabricObserverTests
                     long.MaxValue);
 
         private readonly bool isSFRuntimePresentOnTestMachine;
-        private CancellationToken token = new CancellationToken { };
+        private readonly CancellationToken token = new CancellationToken { };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverTest"/> class.
@@ -118,7 +118,7 @@ namespace FabricObserverTests
                     Directory.Delete(outputFolder, true);
                 }
             }
-            catch
+            catch (IOException)
             {
             }
         }
@@ -310,11 +310,66 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            var obs = new AppObserver
+            {
+                IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
+            };
+
+            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
+            {
+                ApplicationName = new Uri("fabric:/TestApp"),
+                PartitionId = Guid.NewGuid(),
+                HostProcessId = 0,
+                ReplicaOrInstanceId = default(long),
+            });
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            ObserverManager.FabricClientInstance.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy()
+        {
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
 
             var obs = new AppObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
+
+            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
+            {
+                ApplicationName = new Uri("fabric:/TestApp"),
+                ApplicationTypeName = "TestAppType",
+                PartitionId = Guid.NewGuid(),
+                HostProcessId = 0,
+                ReplicaOrInstanceId = default(long),
+            });
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
@@ -823,7 +878,6 @@ namespace FabricObserverTests
         {
             if (!this.isSFRuntimePresentOnTestMachine)
             {
-                Assert.IsTrue(1 == 1);
                 return;
             }
 
@@ -836,9 +890,15 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                UseCircularBuffer = true,
+                DataCapacity = 5,
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // Verify that the type of data structure is CircularBufferCollection.
+            Assert.IsTrue(obs.AllCpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -984,10 +1044,15 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
+                DataCapacity = 2,
+                MonitorDuration = TimeSpan.FromSeconds(2),
                 CpuWarningUsageThresholdPct = 10000,
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // Verify that the type of data structure is the default type, IList<T>.
+            Assert.IsTrue(obs.AllCpuTimeData.Data.GetType() == typeof(List<float>));
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1023,6 +1088,8 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
+                DataCapacity = 2,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
                 EphemeralPortsErrorThreshold = -42,
@@ -1108,7 +1175,11 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new DiskObserver();
+            var obs = new DiskObserver
+            {
+                MonitorDuration = TimeSpan.FromSeconds(5),
+            };
+
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
@@ -1155,7 +1226,9 @@ namespace FabricObserverTests
 
             var obs = new DiskObserver
             {
-                DiskSpacePercentWarningThreshold = 10, // This should cause a Warning on most dev machines.
+                // This should cause a Warning on most dev machines.
+                DiskSpacePercentWarningThreshold = 10,
+                MonitorDuration = TimeSpan.FromSeconds(5),
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1295,6 +1368,9 @@ namespace FabricObserverTests
             var obs = new NodeObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                DataCapacity = 5,
+                UseCircularBuffer = true,
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
             };
 
@@ -1302,6 +1378,9 @@ namespace FabricObserverTests
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Verify that the type of data structure is CircularBufferCollection.
+            Assert.IsTrue(obs.AllCpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
 
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
@@ -1388,6 +1467,8 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
+                DataCapacity = 5,
+                MonitorDuration = TimeSpan.FromSeconds(5),
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1434,7 +1515,8 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
-                MemWarnUsageThresholdMB = 20, // This will definitely cause Warning alerts.
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                MemWarnUsageThresholdMb = 20, // This will definitely cause Warning alerts.
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1480,6 +1562,7 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 CpuWarnUsageThresholdPct = -42,
             };
 
@@ -1525,6 +1608,7 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver
             {
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
                 CpuWarnUsageThresholdPct = 420,
             };
 
@@ -1550,12 +1634,7 @@ namespace FabricObserverTests
             try
             {
                 var ps = Process.GetProcessesByName("Fabric");
-                if (ps?.Length == 0)
-                {
-                    return false;
-                }
-
-                return true;
+                return ps?.Length != 0;
             }
             catch (InvalidOperationException)
             {

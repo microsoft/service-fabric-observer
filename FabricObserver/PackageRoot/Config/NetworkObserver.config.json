@@ -1,14 +1,10 @@
 [
   {
-    "appTarget": "fabric:/MyApp",
+    "targetApp": "fabric:/MyApp0",
     "endpoints": [
       {
-        "hostname": "google.com",
-        "port": 443
-      },
-      {
-        "hostname": "facebook.com",
-        "port": 443
+        "hostname": "https://myazuresrvice42.westus2.cloudapp.azure.com",
+        "port": 19080
       },
       {
         "hostname": "westusserver001.database.windows.net",
@@ -17,16 +13,8 @@
     ]
   },
   {
-    "appTarget": "fabric:/MyApp2",
+    "targetApp": "fabric:/MyApp1",
     "endpoints": [
-      {
-        "hostname": "google.com",
-        "port": 443
-      },
-      {
-        "hostname": "microsoft.com",
-        "port": 443
-      },
       {
         "hostname": "eastusserver007.database.windows.net",
         "port": 1433

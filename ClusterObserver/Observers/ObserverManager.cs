@@ -32,6 +32,7 @@ namespace FabricClusterObserver.Observers
         private CancellationToken token;
         private CancellationTokenSource cts;
         private bool hasDisposed;
+        private static bool etwEnabled;
 
         public string ApplicationName { get; set; }
 
@@ -39,15 +40,40 @@ namespace FabricClusterObserver.Observers
 
         public static int ObserverExecutionLoopSleepSeconds { get; private set; } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
+        public static int AsyncClusterOperationTimeoutSeconds { get; private set; }
+
         public static FabricClient FabricClientInstance { get; set; }
 
         public static StatelessServiceContext FabricServiceContext { get; set; }
 
-        public static IObserverTelemetryProvider TelemetryClient { get; set; }
+        public static ITelemetryProvider TelemetryClient { get; set; }
 
         public static bool TelemetryEnabled { get; set; }
 
+        public static bool EtwEnabled
+        {
+            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
+
+            set => etwEnabled = value;
+        }
+
+        public static string EtwProviderName
+        {
+            get
+            {
+                if (!EtwEnabled)
+                {
+                    return null;
+                }
+
+                string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
+
+                return !string.IsNullOrEmpty(key) ? key : null;
+            }
+        }
+
         private Logger Logger { get; }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
@@ -58,7 +84,7 @@ namespace FabricClusterObserver.Observers
         {
             this.token = token;
             this.cts = new CancellationTokenSource();
-            this.token.Register(() => { this.ShutdownHandler(this, null); });
+            _ = this.token.Register(() => { this.ShutdownHandler(this, null); });
             FabricClientInstance = new FabricClient();
             FabricServiceContext = context;
             this.nodeName = FabricServiceContext?.NodeContext.NodeName;
@@ -79,7 +105,7 @@ namespace FabricClusterObserver.Observers
 
             // This logs error/warning/info messages for ObserverManager.
             this.Logger = new Logger(ObserverConstants.ObserverManagerName, logFolderBasePath);
-           
+
             this.SetPropertiesFromConfigurationParameters();
 
             // Populate the Observer list for the sequential run loop.
@@ -94,7 +120,7 @@ namespace FabricClusterObserver.Observers
         {
             this.cts = new CancellationTokenSource();
             this.token = this.cts.Token;
-            this.token.Register(() => { this.ShutdownHandler(this, null); });
+            _ = this.token.Register(() => { this.ShutdownHandler(this, null); });
             this.Logger = new Logger("ObserverManagerSingleObserverRun");
 
             this.observers = new List<ObserverBase>(new[]
@@ -102,7 +128,6 @@ namespace FabricClusterObserver.Observers
                 observer,
             });
         }
-
 
         private static string GetConfigSettingValue(string parameterName)
         {
@@ -139,7 +164,7 @@ namespace FabricClusterObserver.Observers
             Thread.Sleep(this.shutdownGracePeriodInSeconds * 1000);
 
             this.shutdownSignaled = true;
-            this.globalShutdownEventHandle?.Set();
+            _ = this.globalShutdownEventHandle?.Set();
             this.StopObservers();
         }
 
@@ -165,7 +190,7 @@ namespace FabricClusterObserver.Observers
 
                 // The event can be signaled by CtrlC,
                 // Exit ASAP when the program terminates (i.e., shutdown/abort is signaled.)
-                ewh.WaitOne(timeout.Subtract(elapsedTime));
+                _ = ewh.WaitOne(timeout.Subtract(elapsedTime));
                 stopwatch.Stop();
 
                 elapsedTime = stopwatch.Elapsed;
@@ -229,6 +254,12 @@ namespace FabricClusterObserver.Observers
                 this.shutdownGracePeriodInSeconds = gracePeriodInSeconds;
             }
 
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.AsyncClusterOperationTimeoutSeconds),
+                out int asyncTimeout))
+            {
+                AsyncClusterOperationTimeoutSeconds = asyncTimeout;
+            }
+
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
@@ -237,11 +268,68 @@ namespace FabricClusterObserver.Observers
 
             if (TelemetryEnabled)
             {
-                string key = GetConfigSettingValue(ObserverConstants.AiKey);
+                string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderType);
 
-                if (!string.IsNullOrEmpty(key))
+                if (string.IsNullOrEmpty(telemetryProviderType))
                 {
-                    TelemetryClient = new AppInsightsTelemetry(key);
+                    TelemetryEnabled = false;
+
+                    return;
+                }
+
+                if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
+                {
+                    TelemetryEnabled = false;
+
+                    return;
+                }
+
+                switch (telemetryProvider)
+                {
+                     case TelemetryProviderType.AzureLogAnalytics:
+                        {
+                            var logAnalyticsLogType =
+                                GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter) ?? "Application";
+
+                            var logAnalyticsSharedKey =
+                                GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
+
+                            var logAnalyticsWorkspaceId =
+                                GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+
+                            if (string.IsNullOrEmpty(logAnalyticsSharedKey)
+                                || string.IsNullOrEmpty(logAnalyticsWorkspaceId))
+                            {
+                                TelemetryEnabled = false;
+
+                                return;
+                            }
+
+                            TelemetryClient = new LogAnalyticsTelemetry(
+                                logAnalyticsWorkspaceId,
+                                logAnalyticsSharedKey,
+                                logAnalyticsLogType,
+                                FabricClientInstance,
+                                token);
+
+                            break;
+                        }
+
+                    case TelemetryProviderType.AzureApplicationInsights:
+                        {
+                            string aiKey = GetConfigSettingValue(ObserverConstants.AiKey);
+
+                            if (string.IsNullOrEmpty(aiKey))
+                            {
+                                TelemetryEnabled = false;
+
+                                return;
+                            }
+
+                            TelemetryClient = new AppInsightsTelemetry(aiKey);
+
+                            break;
+                        }
                 }
             }
         }
@@ -264,7 +352,7 @@ namespace FabricClusterObserver.Observers
                 {
                     if (this.shutdownSignaled || this.token.IsCancellationRequested)
                     {
-                        this.globalShutdownEventHandle.Set();
+                        _ = this.globalShutdownEventHandle.Set();
                         this.Logger.LogInfo("Shutdown signaled. Stopping.");
                         break;
                     }
@@ -291,7 +379,7 @@ namespace FabricClusterObserver.Observers
                 // Telemetry.
                 if (TelemetryEnabled)
                 {
-                    TelemetryClient?.ReportHealthAsync(
+                    _ = TelemetryClient?.ReportHealthAsync(
                         HealthScope.Application,
                         "ClusterObserverServiceHealth",
                         HealthState.Warning,
@@ -373,7 +461,7 @@ namespace FabricClusterObserver.Observers
 
                         if (TelemetryEnabled)
                         {
-                            TelemetryClient?.ReportHealthAsync(
+                            _ = TelemetryClient?.ReportHealthAsync(
                                 HealthScope.Application,
                                 "ObserverHealthReport",
                                 HealthState.Warning,
@@ -393,7 +481,7 @@ namespace FabricClusterObserver.Observers
                         continue;
                     }
 
-                    exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:\r\n{ex.InnerException}");
+                    _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:\r\n{ex.InnerException}");
                     allExecuted = false;
                 }
             }
@@ -406,7 +494,7 @@ namespace FabricClusterObserver.Observers
             else
             {
                 this.Logger.LogError(exceptionBuilder.ToString());
-                exceptionBuilder.Clear();
+                _ = exceptionBuilder.Clear();
             }
 
             return allExecuted;

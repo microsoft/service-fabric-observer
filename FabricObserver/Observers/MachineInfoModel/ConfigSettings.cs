@@ -33,7 +33,9 @@ namespace FabricObserver.Observers.MachineInfoModel
                         configurationSectionName,
                         dataFileName,
                         string.Empty).Value;
+
                     break;
+
                 case ObserverConstants.NetworkObserverConfigurationSectionName:
                     NetworkObserverDataFileName = new ConfigurationSetting<string>(
                         configSettings,
@@ -61,12 +63,14 @@ namespace FabricObserver.Observers.MachineInfoModel
                         dataFileName,
                         string.Empty).Value;
                     break;
+
                 case ObserverConstants.NetworkObserverConfigurationSectionName:
                     NetworkObserverDataFileName = new ConfigurationSetting<string>(
                         configurationSettings,
                         configurationSectionName,
                         dataFileName,
                         string.Empty).Value;
+
                     break;
             }
         }

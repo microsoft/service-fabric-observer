@@ -1,0 +1,13 @@
+﻿[
+  {
+    "targetAppType": "AppTestType",
+    "cpuWarningLimitPercent": 20
+  },
+  {
+    "targetApp": "fabric:/TestApp",
+    "cpuWarningLimitPercent": 30,
+    "memoryWarningLimitPercent": 30,
+    "networkWarningActivePorts": 80,
+    "networkWarningEphemeralPorts": 40
+  }
+]

@@ -27,11 +27,11 @@ namespace FabricObserverWeb
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc(options =>
-            {
+            _ = services.AddMvc(options =>
+              {
                 // Added to support HTML output to callers.
                 options.OutputFormatters.Add(new HtmlOutputFormatter());
-            })
+              })
             .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
             .AddJsonOptions(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
         }
@@ -41,16 +41,16 @@ namespace FabricObserverWeb
         {
             if (env.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage();
+                _ = app.UseDeveloperExceptionPage();
             }
             else
             {
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
+                _ = app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
-            app.UseMvc();
+            _ = app.UseHttpsRedirection();
+            _ = app.UseMvc();
         }
     }
 }

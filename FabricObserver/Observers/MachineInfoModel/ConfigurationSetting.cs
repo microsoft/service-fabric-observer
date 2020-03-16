@@ -106,7 +106,8 @@ namespace FabricObserver.Observers.MachineInfoModel
         /// <returns> Result of parsing the string. </returns>
         public object Parse(string value, Type type)
         {
-            if (string.IsNullOrEmpty(value))
+            if (string.IsNullOrEmpty(value)
+            || type == null)
             {
                 return null;
             }
@@ -232,7 +233,6 @@ namespace FabricObserver.Observers.MachineInfoModel
                 this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].DecryptValue());
 
             return new string(paramValueAsCharArray);
-
         }
 
         internal static char[] SecureStringToCharArray(SecureString secureString)

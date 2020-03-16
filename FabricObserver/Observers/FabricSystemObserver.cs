@@ -45,14 +45,12 @@ namespace FabricObserver.Observers
             "FabricUS",
         };
 
-        // amount of time, in seconds, it took this observer to complete run run.
-        private TimeSpan runtime = TimeSpan.MinValue;
-        private Stopwatch stopWatch;
+        private Stopwatch stopwatch;
         private bool disposed;
 
         // Health Report data container - For use in analysis to deterWarne health state.
         private List<FabricResourceUsageData<int>> allCpuData;
-        private List<FabricResourceUsageData<long>> allMemData;
+        private List<FabricResourceUsageData<float>> allMemData;
 
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList;
@@ -72,7 +70,7 @@ namespace FabricObserver.Observers
 
         public int CpuErrorUsageThresholdPct { get; set; } = 90;
 
-        public int MemErrorUsageThresholdMB { get; set; } = 15000;
+        public int MemErrorUsageThresholdMb { get; set; } = 15000;
 
         public int TotalActivePortCount { get; set; }
 
@@ -84,38 +82,78 @@ namespace FabricObserver.Observers
 
         public int CpuWarnUsageThresholdPct { get; set; } = 70;
 
-        public int MemWarnUsageThresholdMB { get; set; } = 14000;
+        public int MemWarnUsageThresholdMb { get; set; } = 14000;
 
-        public string ErorrOrWarningKind { get; set; } = null;
+        public string ErrorOrWarningKind { get; set; } = null;
 
         private void Initialize()
         {
-            if (this.stopWatch == null)
+            if (this.stopwatch == null)
             {
-                this.stopWatch = new Stopwatch();
+                this.stopwatch = new Stopwatch();
             }
 
             this.Token.ThrowIfCancellationRequested();
 
-            this.stopWatch.Start();
+            this.stopwatch.Start();
 
             this.SetThresholdsFromConfiguration();
 
             if (this.allMemData == null)
             {
-                this.allMemData = new List<FabricResourceUsageData<long>>
+                this.allMemData = new List<FabricResourceUsageData<float>>
                 {
                     // Mem data.
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "Fabric"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricApplicationGateway"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricCAS"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricDCA"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricDnsService"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricGateway"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricHost"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricIS"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricRM"),
-                    new FabricResourceUsageData<long>(ErrorWarningProperty.TotalMemoryConsumptionPct, "FabricUS"),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "Fabric",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricApplicationGateway",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricCAS",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricDCA",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricDnsService",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricGateway",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricHost",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricIS",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricRM",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        "FabricUS",
+                        DataCapacity,
+                        UseCircularBuffer),
                 };
             }
 
@@ -124,16 +162,56 @@ namespace FabricObserver.Observers
                 this.allCpuData = new List<FabricResourceUsageData<int>>
                 {
                     // Cpu data.
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "Fabric"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricApplicationGateway"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricCAS"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricDCA"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricDnsService"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricGateway"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricHost"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricIS"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricRM"),
-                    new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, "FabricUS"),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "Fabric",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricApplicationGateway",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricCAS",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricDCA",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricDnsService",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricGateway",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricHost",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricIS",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricRM",
+                        DataCapacity,
+                        UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricUS",
+                        DataCapacity,
+                        UseCircularBuffer),
                 };
             }
 
@@ -178,7 +256,7 @@ namespace FabricObserver.Observers
                     throw new ArgumentException($"{threshold} is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorMemory}.");
                 }
 
-                this.MemErrorUsageThresholdMB = threshold;
+                this.MemErrorUsageThresholdMb = threshold;
             }
 
             var percentErrorUnhealthyNodes = this.GetSettingParameterValue(
@@ -230,7 +308,7 @@ namespace FabricObserver.Observers
                     throw new ArgumentException($"{threshold} MB is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnMemory}.");
                 }
 
-                this.MemWarnUsageThresholdMB = threshold;
+                this.MemWarnUsageThresholdMb = threshold;
             }
 
             var percentWarnUnhealthyNodes = this.GetSettingParameterValue(
@@ -324,9 +402,10 @@ namespace FabricObserver.Observers
                 }
 
                 // Set TTL.
-                this.stopWatch.Stop();
-                this.runtime = this.stopWatch.Elapsed;
-                this.stopWatch.Reset();
+                this.stopwatch.Stop();
+                this.RunDuration = this.stopwatch.Elapsed;
+                this.stopwatch.Reset();
+
                 await this.ReportAsync(token).ConfigureAwait(true);
 
                 // No need to keep these objects in memory aross healthy iterations.
@@ -355,10 +434,12 @@ namespace FabricObserver.Observers
         {
             var processes = Process.GetProcessesByName(procName);
 
-            if (processes?.Length == 0)
+            if (processes.Length == 0)
             {
                 return;
             }
+
+            Stopwatch timer = new Stopwatch();
 
             foreach (var process in processes)
             {
@@ -370,23 +451,33 @@ namespace FabricObserver.Observers
                     this.TotalActivePortCount += NetworkUsage.GetActivePortCount(process.Id);
                     this.TotalActiveEphemeralPortCount += NetworkUsage.GetActiveEphemeralPortCount(process.Id);
 
-                    int procCount = Environment.ProcessorCount;
+                    TimeSpan duration = TimeSpan.FromSeconds(15);
 
-                    while (!process.HasExited && procCount > 0)
+                    if (this.MonitorDuration > TimeSpan.MinValue)
+                    {
+                        duration = this.MonitorDuration;
+                    }
+
+                    // Warm up the counters.
+                    _ = this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
+                    _ = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
+
+                    timer.Start();
+
+                    while (!process.HasExited && timer.Elapsed <= duration)
                     {
                         this.Token.ThrowIfCancellationRequested();
 
                         try
                         {
+                            // CPU Time for service process.
                             int cpu = (int)this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
+                            this.allCpuData.FirstOrDefault(x => x.Id == procName)?.Data.Add(cpu);
 
-                            this.allCpuData.FirstOrDefault(x => x.Id == procName).Data.Add(cpu);
+                            // Private Working Set for service process.
+                            float mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
+                            this.allMemData.FirstOrDefault(x => x.Id == procName)?.Data.Add(mem);
 
-                            // Memory - Private WS for proc.
-                            var workingset = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
-                            this.allMemData.FirstOrDefault(x => x.Id == procName).Data.Add((long)workingset);
-
-                            --procCount;
                             Thread.Sleep(250);
                         }
                         catch (Exception e)
@@ -395,6 +486,7 @@ namespace FabricObserver.Observers
                                 this.ObserverName,
                                 $"Can't observe {process} details due to {e.Message} - {e.StackTrace}",
                                 LogLevel.Warning);
+
                             throw;
                         }
                     }
@@ -407,12 +499,16 @@ namespace FabricObserver.Observers
                         this.ObserverName,
                         $"Can't observe {process} due to it's privilege level - " + "FabricObserver must be running as System or Admin for this specific task.",
                         LogLevel.Information);
+
                     break;
                 }
                 finally
                 {
                     process?.Dispose();
                 }
+
+                timer.Stop();
+                timer.Reset();
             }
         }
 
@@ -508,7 +604,7 @@ namespace FabricObserver.Observers
         public override Task ReportAsync(CancellationToken token)
         {
             this.Token.ThrowIfCancellationRequested();
-            var timeToLiveWarning = this.SetTimeToLiveWarning(this.runtime.Seconds);
+            var timeToLiveWarning = this.SetHealthReportTimeToLive();
             var portInformationReport = new HealthReport
             {
                 Observer = this.ObserverName,
@@ -535,8 +631,8 @@ namespace FabricObserver.Observers
             // Memory
             this.ProcessResourceDataList(
                 this.allMemData,
-                this.MemErrorUsageThresholdMB,
-                this.MemWarnUsageThresholdMB);
+                this.MemErrorUsageThresholdMb,
+                this.MemWarnUsageThresholdMb);
 
             // Windows Event Log
             if (ObserverManager.ObserverWebAppDeployed
@@ -567,13 +663,13 @@ namespace FabricObserver.Observers
                 {
                     var sb = new StringBuilder();
 
-                    sb.AppendLine("<br/><div><strong>" +
+                    _ = sb.AppendLine("<br/><div><strong>" +
                                   "<a href='javascript:toggle(\"evtContainer\")'>" +
                                   "<div id=\"plus\" style=\"display: inline; font-size: 25px;\">+</div> " + count +
                                   " Error Events in ServiceFabric and System</a> " +
                                   "Event logs</strong>.<br/></div>");
 
-                    sb.AppendLine("<div id='evtContainer' style=\"display: none;\">");
+                    _ = sb.AppendLine("<div id='evtContainer' style=\"display: none;\">");
 
                     foreach (var evt in this.evtRecordList.Distinct())
                     {
@@ -582,18 +678,18 @@ namespace FabricObserver.Observers
                         try
                         {
                             // Access event properties:
-                            sb.AppendLine("<div>" + evt.LogName + "</div>");
-                            sb.AppendLine("<div>" + evt.LevelDisplayName + "</div>");
+                            _ = sb.AppendLine("<div>" + evt.LogName + "</div>");
+                            _ = sb.AppendLine("<div>" + evt.LevelDisplayName + "</div>");
                             if (evt.TimeCreated.HasValue)
                             {
-                                sb.AppendLine("<div>" + evt.TimeCreated.Value.ToShortDateString() + "</div>");
+                                _ = sb.AppendLine("<div>" + evt.TimeCreated.Value.ToShortDateString() + "</div>");
                             }
 
                             foreach (var prop in evt.Properties)
                             {
                                 if (prop.Value != null && Convert.ToString(prop.Value).Length > 0)
                                 {
-                                    sb.AppendLine("<div>" + prop.Value + "</div>");
+                                    _ = sb.AppendLine("<div>" + prop.Value + "</div>");
                                 }
                             }
                         }
@@ -602,10 +698,10 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    sb.AppendLine("</div>");
+                    _ = sb.AppendLine("</div>");
 
-                    this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString());
-                    sb.Clear();
+                    _ = this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString());
+                    _ = sb.Clear();
                 }
 
                 // Clean up.
@@ -650,20 +746,21 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessResourceDataList<T>(
-            List<FabricResourceUsageData<T>> data,
+            IReadOnlyCollection<FabricResourceUsageData<T>> data,
             T thresholdError,
             T thresholdWarning)
+                where T : struct
         {
             foreach (var dataItem in data)
             {
                 this.Token.ThrowIfCancellationRequested();
 
-                if (dataItem.Data.Count == 0 || dataItem.AverageDataValue < 0)
+                if (dataItem.Data.Count == 0 || Convert.ToDouble(dataItem.AverageDataValue) < 0)
                 {
                     continue;
                 }
 
-                if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryEnabled)
+                if (this.CsvFileLogger.EnableCsvLogging)
                 {
                     var fileName = "FabricSystemServices_" + this.NodeName;
                     var propertyName = data.First().Property;
@@ -671,20 +768,18 @@ namespace FabricObserver.Observers
                     // Log average data value to long-running store (CSV).
                     string dataLogMonitorType = propertyName;
 
-                    // Log file output.
-                    string resourceProp = propertyName + " use";
-
-                    if (propertyName == ErrorWarningProperty.TotalMemoryConsumptionPct)
+                    switch (propertyName)
                     {
-                        dataLogMonitorType = "Working Set %";
+                        case ErrorWarningProperty.TotalMemoryConsumptionPct:
+                            dataLogMonitorType = "Working Set %";
+                            break;
+
+                        case ErrorWarningProperty.TotalCpuTime:
+                            dataLogMonitorType = "% CPU Time";
+                            break;
                     }
 
-                    if (propertyName == ErrorWarningProperty.TotalCpuTime)
-                    {
-                        dataLogMonitorType = "% CPU Time";
-                    }
-
-                    this.CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
+                    this.CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(Convert.ToDouble(dataItem.AverageDataValue), 2));
                     this.CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
                 }
 
@@ -692,7 +787,7 @@ namespace FabricObserver.Observers
                     dataItem,
                     thresholdError,
                     thresholdWarning,
-                    this.SetTimeToLiveWarning(this.runtime.Seconds));
+                    this.SetHealthReportTimeToLive());
             }
         }
 
@@ -718,7 +813,8 @@ namespace FabricObserver.Observers
                 {
                     return HealthState.Error;
                 }
-                else if (errorNodesCountPercentage >= warningThreshold)
+
+                if (errorNodesCountPercentage >= warningThreshold)
                 {
                     return HealthState.Warning;
                 }
@@ -733,7 +829,8 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                this.ObserverLogger.LogWarning($"Unhandled Exception querying Cluster health:{Environment.NewLine}{e}");
+                this.ObserverLogger.LogWarning(
+                    $"Unhandled Exception querying Cluster health:{Environment.NewLine}{e}");
 
                 throw;
             }

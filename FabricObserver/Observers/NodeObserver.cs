@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,6 @@ namespace FabricObserver.Observers
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class NodeObserver : ObserverBase
     {
-        private FabricResourceUsageData<float> allCpuDataPrivTime;
         private FabricResourceUsageData<float> allMemDataCommittedBytes;
         private FabricResourceUsageData<int> firewallData;
         private FabricResourceUsageData<int> activePortsData;
@@ -24,6 +24,10 @@ namespace FabricObserver.Observers
         private FabricResourceUsageData<int> allMemDataPercentUsed;
         private WindowsPerfCounters perfCounters;
         private bool disposed;
+        private readonly Stopwatch stopwatch;
+
+        // public because unit test.
+        public FabricResourceUsageData<float> AllCpuTimeData { get; set; }
 
         public int CpuErrorUsageThresholdPct { get; set; }
 
@@ -55,6 +59,7 @@ namespace FabricObserver.Observers
         public NodeObserver()
             : base(ObserverConstants.NodeObserverName)
         {
+            this.stopwatch = new Stopwatch();
         }
 
         /// <inheritdoc/>
@@ -68,10 +73,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (token.IsCancellationRequested)
-            {
-                return;
-            }
+            this.stopwatch.Start();
 
             this.Initialize();
 
@@ -81,6 +83,11 @@ namespace FabricObserver.Observers
             {
                 this.perfCounters = new WindowsPerfCounters();
                 await this.GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
+
+                this.stopwatch.Stop();
+                this.RunDuration = this.stopwatch.Elapsed;
+                this.stopwatch.Reset();
+
                 await this.ReportAsync(token).ConfigureAwait(true);
                 this.LastRunDateTime = DateTime.Now;
             }
@@ -104,34 +111,34 @@ namespace FabricObserver.Observers
 
         private void InitializeDataContainers()
         {
-            if (this.allCpuDataPrivTime == null)
+            if (this.AllCpuTimeData == null)
             {
-                this.allCpuDataPrivTime = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime");
+                this.AllCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
             }
 
             if (this.allMemDataCommittedBytes == null)
             {
-                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb");
+                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", DataCapacity, UseCircularBuffer);
             }
 
             if (this.allMemDataPercentUsed == null)
             {
-                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage");
+                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataCapacity, UseCircularBuffer);
             }
 
             if (this.firewallData == null)
             {
-                this.firewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActiveFirewallRules, "ActiveFirewallRules");
+                this.firewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActiveFirewallRules, "ActiveFirewallRules", 1);
             }
 
             if (this.activePortsData == null)
             {
-                this.activePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, "AllPortsInUse");
+                this.activePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, "AllPortsInUse", 1);
             }
 
             if (this.ephemeralPortsData == null)
             {
-                this.ephemeralPortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUse");
+                this.ephemeralPortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUse", 1);
             }
         }
 
@@ -254,64 +261,79 @@ namespace FabricObserver.Observers
             }
         }
 
-        private async Task GetSystemCpuMemoryValuesAsync(CancellationToken token)
+        private Task GetSystemCpuMemoryValuesAsync(CancellationToken token)
         {
-            await Task.Run(
-            () =>
+            token.ThrowIfCancellationRequested();
+
+            try
             {
-                token.ThrowIfCancellationRequested();
+                // Ports.
+                int activePortCountTotal = NetworkUsage.GetActivePortCount();
+                int ephemeralPortCountTotal = NetworkUsage.GetActiveEphemeralPortCount();
+                this.activePortsData.Data.Add(activePortCountTotal);
+                this.ephemeralPortsData.Data.Add(ephemeralPortCountTotal);
 
-                try
+                // Firewall rules.
+                int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
+                this.firewallData.Data.Add(firewalls);
+
+                // CPU and Memory.
+                // Note: Please make sure you understand the normal state of your nodes
+                // with respect to the machine resource use and/or abuse by your service(s).
+                // For example, if it is normal for your services to consume 90% of available CPU and memory
+                // as part of the work they perform under normal traffic flow, then it doesn't make sense to warn or
+                // error on these conditions.
+                // TODO: Look into making this a long running background task with signaling.
+                TimeSpan duration = TimeSpan.FromSeconds(30);
+
+                if (this.MonitorDuration > TimeSpan.MinValue)
                 {
-                    // Ports.
-                    int activePortCountTotal = NetworkUsage.GetActivePortCount();
-                    int ephemeralPortCountTotal = NetworkUsage.GetActiveEphemeralPortCount();
-                    this.activePortsData.Data.Add(activePortCountTotal);
-                    this.ephemeralPortsData.Data.Add(ephemeralPortCountTotal);
-
-                    // Firewall rules.
-                    int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
-                    this.firewallData.Data.Add(firewalls);
-
-                    // CPU and Memory.
-                    for (int i = 0; i < 30; i++)
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        if (this.CpuWarningUsageThresholdPct > 0
-                            && this.CpuWarningUsageThresholdPct <= 100)
-                        {
-                            this.allCpuDataPrivTime.Data.Add(this.perfCounters.PerfCounterGetProcessorInfo());
-                        }
-
-                        if (this.MemWarningUsageThresholdMb > 0)
-                        {
-                            this.allMemDataCommittedBytes.Data.Add(this.perfCounters.PerfCounterGetMemoryInfoMb());
-                        }
-
-                        if (this.MemoryWarningLimitPercent > 0)
-                        {
-                            this.allMemDataPercentUsed.Data.Add(
-                                ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
-                        }
-
-                        Thread.Sleep(250);
-                    }
+                    duration = this.MonitorDuration;
                 }
-                catch (Exception e)
+
+                // Warn up the counters.
+                _ = this.perfCounters.PerfCounterGetProcessorInfo();
+                _ = this.perfCounters.PerfCounterGetMemoryInfoMb();
+
+                while (this.stopwatch.Elapsed <= duration)
                 {
-                    if (!(e is OperationCanceledException))
+                    token.ThrowIfCancellationRequested();
+
+                    if (this.CpuWarningUsageThresholdPct > 0
+                        && this.CpuWarningUsageThresholdPct <= 100)
                     {
-                        this.HealthReporter.ReportFabricObserverServiceHealth(
-                            this.FabricServiceContext.ServiceName.OriginalString,
-                            this.ObserverName,
-                            HealthState.Warning,
-                            $"Unhandled exception in GetSystemCpuMemoryValuesAsync: {e.Message}: \n {e.StackTrace}");
+                        this.AllCpuTimeData.Data.Add(this.perfCounters.PerfCounterGetProcessorInfo());
                     }
 
-                    throw;
+                    if (this.MemWarningUsageThresholdMb > 0)
+                    {
+                        this.allMemDataCommittedBytes.Data.Add(this.perfCounters.PerfCounterGetMemoryInfoMb());
+                    }
+
+                    if (this.MemoryWarningLimitPercent > 0)
+                    {
+                        this.allMemDataPercentUsed.Data.Add(
+                            ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
+                    }
+
+                    Thread.Sleep(250);
                 }
-            }, token).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                        this.FabricServiceContext.ServiceName.OriginalString,
+                        this.ObserverName,
+                        HealthState.Warning,
+                        $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+
+                throw;
+            }
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
@@ -321,7 +343,7 @@ namespace FabricObserver.Observers
             {
                 token.ThrowIfCancellationRequested();
 
-                if (this.CsvFileLogger.EnableCsvLogging || this.IsTelemetryEnabled)
+                if (this.CsvFileLogger.EnableCsvLogging)
                 {
                     var fileName = "CpuMemFirewallsPorts" + this.NodeName;
 
@@ -331,14 +353,14 @@ namespace FabricObserver.Observers
                         this.NodeName,
                         "CPU Time",
                         "Average",
-                        Math.Round(this.allCpuDataPrivTime.AverageDataValue));
+                        Math.Round(this.AllCpuTimeData.AverageDataValue));
 
                     this.CsvFileLogger.LogData(
                         fileName,
                         this.NodeName,
                         "CPU Time",
                         "Peak",
-                        Math.Round(this.allCpuDataPrivTime.MaxDataValue));
+                        Math.Round(this.AllCpuTimeData.MaxDataValue));
 
                     this.CsvFileLogger.LogData(
                         fileName,
@@ -380,13 +402,13 @@ namespace FabricObserver.Observers
 
                 // Report on the global health state (system-wide (node) metrics).
                 // User-configurable in NodeObserver.config.json
-                var timeToLiveWarning = this.SetTimeToLiveWarning();
+                var timeToLiveWarning = this.SetHealthReportTimeToLive();
 
                 // CPU
-                if (this.allCpuDataPrivTime.AverageDataValue > 0)
+                if (this.AllCpuTimeData.AverageDataValue > 0)
                 {
                     this.ProcessResourceDataReportHealth(
-                        this.allCpuDataPrivTime,
+                        this.AllCpuTimeData,
                         this.CpuErrorUsageThresholdPct,
                         this.CpuWarningUsageThresholdPct,
                         timeToLiveWarning);
@@ -435,14 +457,16 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                if (!(e is OperationCanceledException))
+                if (e is OperationCanceledException)
                 {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        this.ObserverName,
-                        HealthState.Warning,
-                        e.ToString());
+                    return Task.FromResult(1);
                 }
+
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Warning,
+                    e.ToString());
 
                 throw;
             }

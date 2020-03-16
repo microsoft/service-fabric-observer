@@ -17,22 +17,31 @@
     <Parameter Name="ObserverLogPath" Value="C:\observer_logs" />
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data. -->
     <Parameter Name="DataLogPath" Value="C:\observer_logs\fabric_observer_data" />
-    <!-- Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+    <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
+         These files will be written to the DataLogPath supplied above.-->
+    <Parameter Name="EnableLongRunningCSVLogging" Value="False"/>
+    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- Optional: Enabling this will generate CSV files that contain long-running resourcce metric data across observers. --> 
-    <Parameter Name="EnableLongRunningCSVLogging" Value="False"/>
     <!-- Optional: This is for use by the text logger to build node warning/error hyperlinks 
          that FabricObserverWebApi uses in html output. The API does not communicate directly with FabricObserver.
          It relies on the existence of local log files, across ObserverManager and individual observers (they log to their own folders). 
          This only makes sense if you enable secure (SSL) communication in FabricObserverWebApi. By default, it is an internal(node)-only 
          API service.-->
-    <Parameter Name="FQDN" Value=""/>
-    <!-- Optional: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
+    <Parameter Name="FQDN" Value="" />
+    <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="False" />
-    <!-- Optional: Your ApplicationInsights instrumentation key. -->
+    <Parameter Name="EnableTelemetryProvider" Value="True" />
+    <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
+    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
+    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
+    <Parameter Name="LogAnalyticsSharedKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
+    <Parameter Name="LogAnalyticsLogType" Value="Application" />
     <!-- Optional: EventSource Tracing. -->
     <Parameter Name="EnableEventSourceProvider" Value="True" />
     <Parameter Name="EventSourceProviderName" Value="FabricObserverETWProvider" />
@@ -55,18 +64,34 @@
   <Section Name="AppObserverConfiguration">
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="False" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
+    <!-- Optional: The amount of time this observer conducts resource usage probing. 
+         Each observer has a default value set, but you should override by setting this
+         parameter to what makes sense for your service(s). Note that this value represents
+         the time spent monitoring for each service you specify in configuration. -->
+    <Parameter Name="MonitorDuration" Value="00:00:15" />
     <!-- Required: The thresholds are held in a json file. Note that these thresholds apply to any service that is part 
          of the Target Application, which is the logical container for service processes in Service Fabric parlance.-->
     <Parameter Name="AppObserverDataFileName" Value="AppObserver.config.json" />
     <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="False"/>
+    <!-- Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for
+         the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
+         like 0 or a negative number (or omit the parameter altogether). -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" />
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="False" />
     <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
          below, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter.
          Just add a Parameter like below to any of the observers' config sections when you want this level of run control.
@@ -81,42 +106,50 @@
   </Section>
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="True"/>
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- For all Observers where thresholds are housed in this settings file 
-         you can either omit them or set values to "" or "0" if you don't need them.
-         They are all in place here for your reference. -->
-    <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
-    <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
+    <Parameter Name="MonitorDuration" Value="00:00:05"/>
+    <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="80" />
+    <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
-    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="8" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="12" />
   </Section>
   <!-- Only enable FabricSystemObserver after you get a sense of what impact your services have on the SF runtime. 
        This is very important because there is no "one threshold fits all" across warning/error thresholds for any of the SF system services. 
        That is, we do not have a fixed set of guaranteed problematic thresholds for SF infrastructure services. 
        Again, it is best to not Enable this observer until you have done some experimentation with monitoring how your service code impacts 
        Service Fabric system services. Otherwise, you may end up generating noise and creating support tickets when there is in fact nothing wrong with
-       SF, but that your service code is just stressing SF componentry. This is of course useful to know, but FabricSystemObserver can't tell you that
+       SF, but that your service code is just stressing SF runtime services. This is of course useful to know, but FabricSystemObserver can't tell you that
        your code is the problem. -->
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="False" />
+    <Parameter Name="EnableTelemetry" Value="False" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="MonitorDuration" Value="00:00:10"/>
+    <!-- Optional: This represents the number of items to hold in the data collection instance for
+    the observer. You can choose a collection type by supplying a boolean for UseCircularBuffer. 
+    The default collection type is a List<T>, so you do not need to use the UseCircularBuffer parameter 
+    if you want a List<T>. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter. -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" />
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="False"/>
     <!-- Optional: SF Event Log can be noisy and full of non-error errors., 
          so it's recommended that you only enable this for debugging purposes.-->
     <Parameter Name="MonitorWindowsEventLog" Value="False" />
     <Parameter Name="ErrorCpuThresholdPercent" Value="" />
     <Parameter Name="WarnCpuThresholdPercent" Value="80" />
-    <Parameter Name="ErrorMemoryThresholdMB" Value="" />
-    <Parameter Name="WarnMemoryThresholdMB" Value="1024" />
-    <Parameter Name="ErrorDiskIOReadsThreshold" Value="" />
-    <Parameter Name="WarnDiskIOReadsThreshold" Value="" />
-    <Parameter Name="ErrorDiskIOWritesThreshold" Value="" />
-    <Parameter Name="WarnDiskIOWritesThreshold" Value="" />
+    <Parameter Name="ErrorMemoryThresholdMb" Value="" />
+    <Parameter Name="WarnMemoryThresholdMb" Value="1024" />
     <Parameter Name="PercentUnhealthyNodesWarnThreshold" Value="" />
     <Parameter Name="PercentUnhealthyNodesErrorThreshold" Value="" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="NetworkObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="False" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
@@ -125,11 +158,16 @@
   </Section>
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="False" />
+    <Parameter Name="MonitorDuration" Value="00:00:15" />
+    <Parameter Name="UseCircularBuffer" Value="False"/>
+    <!-- Required-If UseCircularBuffer = True -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="CpuErrorLimitPercent" Value="" />
     <Parameter Name="CpuWarningLimitPercent" Value="80" />
-    <Parameter Name="MemoryErrorLimitMB" Value="" />
-    <Parameter Name="MemoryWarningLimitMB" Value ="" />
+    <Parameter Name="MemoryErrorLimitMb" Value="" />
+    <Parameter Name="MemoryWarningLimitMb" Value ="" />
     <Parameter Name="MemoryErrorLimitPercent" Value="" />
     <Parameter Name="MemoryWarningLimitPercent" Value ="80" />
     <Parameter Name="NetworkErrorActivePorts" Value="" />

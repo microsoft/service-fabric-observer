@@ -17,122 +17,142 @@ namespace FabricObserver.Observers.Utilities
 
     public sealed class Statistics
     {
-        internal static (int Count, double Sum, double SumOfSquares)
-        ComputeSumAndSumOfSquares(IEnumerable<double> sequence)
+        /// <summary>
+        /// Computes the standard deviation of type T of a List of numeric values of type T.
+        /// </summary>
+        /// <typeparam name="T">Numeric type T.</typeparam>
+        /// <param name="data">List of numeric values of type T.</param>
+        /// <returns>Standard deviation of input type T as type T.
+        /// Consumption: See impl of StandardDeviation member of FabricResourceUsageData class.</returns>
+        internal static T StandardDeviation<T>(IList<T> data)
         {
-            double sum = 0;
-            double sumOfSquares = 0;
-            int count = 0;
+            var squaredMeanDifferences = new List<T>();
+            T meanOfSquaredDifferences;
+            var standardDeviation = default(T);
+            double average;
 
-            foreach (var item in sequence)
+            switch (data)
             {
-                count++;
-                sum += item;
-                sumOfSquares += item * item;
+                case IList<long> value when value.Count > 0:
+                    average = value.Average();
+                    squaredMeanDifferences.AddRange(
+                        value.Select(
+                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+
+                    meanOfSquaredDifferences =
+                        (T)Convert.ChangeType((squaredMeanDifferences as List<long>)?.Average(), typeof(T));
+
+                    standardDeviation = (T)Convert.ChangeType(
+                        Math.Sqrt(Convert.ToInt64(meanOfSquaredDifferences)),
+                        typeof(T));
+
+                    break;
+
+                case IList<int> value when value.Count > 0:
+                    average = value.Average();
+
+                    squaredMeanDifferences.AddRange(
+                        value.Select(
+                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+
+                    meanOfSquaredDifferences =
+                        (T)Convert.ChangeType((squaredMeanDifferences as List<int>)?.Average(), typeof(T));
+
+                    standardDeviation = (T)Convert.ChangeType(
+                        Math.Sqrt(Convert.ToInt32(meanOfSquaredDifferences)),
+                        typeof(T));
+
+                    break;
+
+                case IList<float> value when value.Count > 0:
+                    average = value.Average();
+
+                    squaredMeanDifferences.AddRange(
+                        value.Select(
+                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+
+                    meanOfSquaredDifferences =
+                        (T)Convert.ChangeType((squaredMeanDifferences as List<float>)?.Average(), typeof(T));
+
+                    standardDeviation =
+                        (T)Convert.ChangeType(Math.Sqrt(Convert.ToSingle(meanOfSquaredDifferences)), typeof(T));
+
+                    break;
+
+                case IList<double> value when value.Count > 0:
+                    average = value.Average();
+
+                    squaredMeanDifferences.AddRange(
+                        value.Select(
+                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+
+                    meanOfSquaredDifferences =
+                        (T)Convert.ChangeType((squaredMeanDifferences as List<double>)?.Average(), typeof(T));
+
+                    standardDeviation =
+                        (T)Convert.ChangeType(Math.Sqrt(Convert.ToDouble(meanOfSquaredDifferences)), typeof(T));
+
+                    break;
             }
 
-            return (count, sum, sumOfSquares);
+            // Standard Deviation is the square root of the mean of squared differences.
+            return (T)Convert.ChangeType(standardDeviation, typeof(T));
         }
 
-        internal static double StandardDeviation<T>(List<T> data)
+        /// <summary>
+        /// Computes Max or Min values within left-to-right sliding window of elements
+        /// of width windowWidth in a numeric list of type T.
+        /// </summary>
+        /// <typeparam name="T">Type of numeric value in List.</typeparam>
+        /// <param name="data">List of some numeric type T.</param>
+        /// <param name="windowWidth">Number of elements inside a window.</param>
+        /// <param name="windowType">Minimum or Maximum sliding window sort.</param>
+        /// <returns>List of sliding window sorted elements of numeric type T.</returns>
+        internal static IList<T> SlidingWindow<T>(
+            IList<T> data,
+            int windowWidth,
+            WindowType windowType)
+            where T : struct
         {
-            var average = 0.0;
-            var squaredMeanDifferences = new List<double>();
-
-            if (data is List<long> v && v.Count > 0)
-            {
-                average = v.Average();
-                squaredMeanDifferences.AddRange(from n in v
-                                                select (n - average) * (n - average));
-            }
-
-            if (data is List<int> x && x.Count > 0)
-            {
-                average = x.Average();
-                squaredMeanDifferences.AddRange(from n in x
-                                                select (n - average) * (n - average));
-            }
-
-            if (data is List<float> y && y.Count > 0)
-            {
-                average = Convert.ToDouble(y.Average());
-                squaredMeanDifferences.AddRange(from n in y
-                                                select (n - average) * (n - average));
-            }
-
-            if (data is List<double> z && z.Count > 0)
-            {
-                average = z.Average();
-                squaredMeanDifferences.AddRange(from n in z
-                                                select (n - average) * (n - average));
-            }
-
-            // Find the mean of those squared differences:
-            var meanOfSquaredDifferences = squaredMeanDifferences.Average();
-
-            // Standard Deviation is the square root of that mean:
-            var standardDeviation = Math.Sqrt(meanOfSquaredDifferences);
-
-            return standardDeviation;
-        }
-
-        internal static double StandardDeviation(List<long> sequence)
-        {
-            var mean = sequence.Average();
-
-            var squaredMeanDifferences = from n in sequence
-                                         select (n - mean) * (n - mean);
-
-            var meanOfSquaredDifferences = squaredMeanDifferences.Average();
-
-            var standardDeviation = Math.Sqrt(meanOfSquaredDifferences);
-
-            return standardDeviation;
-        }
-
-        internal List<int> SlidingWindow(
-                    List<int> data,
-                    int kwidth,
-                    WindowType windowType)
-        {
-            if (kwidth < 1 || data.Count == 0)
+            if (windowWidth < 1 || data.Count == 0)
             {
                 return null;
             }
 
-            var map = new Dictionary<int, int>(data.Count);
-            var window = new List<int> { data.Count - kwidth + 1 };
-            var bst = new SortedSet<int>();
+            var map = new Dictionary<T, T>(data.Count);
+            var capacity = data.Count - (windowWidth + 1);
+            var windowList = new List<T>(capacity);
+            var bst = new SortedSet<T>();
 
-            for (int i = 0; i < data.Count; i++)
+            for (var i = 0; i < capacity; i++)
             {
                 var visit = data[i];
-                bst.Add(visit);
-                map[visit] = i;
+                _ = bst.Add(visit);
+                map[visit] = (T)Convert.ChangeType(i, typeof(T));
 
-                if (i < kwidth - 1)
+                if (i < windowWidth - 1)
                 {
                     continue;
                 }
 
-                if (i >= kwidth && map[data[i - kwidth]] == (i - kwidth))
+                if (i >= windowWidth)
                 {
-                    int k = data[i - kwidth];
-                    bst.Remove(k);
-                    map.Remove(k);
+                    var y = map[data[i - windowWidth]];
+
+                    if (Equals(y, (T)Convert.ChangeType(i - windowWidth, typeof(T))))
+                    {
+                        var k = data[i - windowWidth];
+                        _ = bst.Remove(k);
+                        _ = map.Remove(k);
+                    }
                 }
 
-                if (windowType == WindowType.Max)
-                {
-                    window.Insert(i - kwidth + 1, bst.Max);
-                }
-                else
-                {
-                    window.Insert(i - kwidth + 1, bst.Min);
-                }
+                windowList.Insert(
+                    i - windowWidth + 1,
+                    windowType == WindowType.Max ? bst.Max : bst.Min);
             }
 
-            return window;
+            return windowList;
         }
     }
 }

@@ -13,5 +13,6 @@ namespace FabricClusterObserver.Utilities.Telemetry
         Partition,
         Replica,
         Service,
+        SystemApplication,
     }
 }

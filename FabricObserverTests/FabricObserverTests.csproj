@@ -147,17 +147,10 @@
     <Content Include="clusterManifest.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="PackageRoot\Observers.Data\NodeObserverBadValuesNonInt.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="PackageRoot\Config\AppObserver.config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="PackageRoot\Observers.Data\NodeObserverBadValuesNegativeIntGT100.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="PackageRoot\Observers.Data\AppObserver.config.json" />
-    <None Include="PackageRoot\Observers.Data\NetworkObserver.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="PackageRoot\Observers.Data\NodeObserver.config.json">
+    <None Include="PackageRoot\Config\NetworkObserver.config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />

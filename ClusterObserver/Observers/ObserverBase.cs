@@ -19,7 +19,7 @@ namespace FabricClusterObserver.Observers
     {
         protected bool IsTelemetryEnabled { get; set; } = ObserverManager.TelemetryEnabled;
 
-        protected IObserverTelemetryProvider ObserverTelemetryClient { get; set; }
+        protected ITelemetryProvider ObserverTelemetryClient { get; set; }
 
         protected FabricClient FabricClientInstance { get; set; }
 
@@ -89,7 +89,8 @@ namespace FabricClusterObserver.Observers
             this.FabricServiceContext = ObserverManager.FabricServiceContext;
             this.NodeName = this.FabricServiceContext.NodeContext.NodeName;
             this.NodeType = this.FabricServiceContext.NodeContext.NodeType;
-
+            this.AsyncClusterOperationTimeoutSeconds = TimeSpan.FromSeconds(ObserverManager.AsyncClusterOperationTimeoutSeconds);
+            
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = this.GetSettingParameterValue(
@@ -136,16 +137,6 @@ namespace FabricClusterObserver.Observers
                 out TimeSpan runInterval))
             {
                 this.RunInterval = runInterval;
-            }
-
-            // Async cluster operation timeout setting..
-            if (int.TryParse(
-                this.GetSettingParameterValue(
-                observerName + "Configuration",
-                ObserverConstants.AsyncClusterOperationTimeoutSeconds),
-                out int asyncOpTimeoutSeconds))
-            {
-                this.AsyncClusterOperationTimeoutSeconds = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
             }
         }
 

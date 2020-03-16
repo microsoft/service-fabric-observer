@@ -234,16 +234,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Observers\CertificateObserver.cs" />
+    <Compile Include="Observers\DumpType.cs" />
+    <Compile Include="Observers\Interfaces\ITelemetryProvider.cs" />
+    <Compile Include="Observers\Utilities\CircularBufferCollection.cs" />
+    <Compile Include="Observers\Utilities\ConnectionState.cs" />
     <Compile Include="Observers\DiskObserver.cs" />
     <Compile Include="Observers\Interfaces\IDataTableFileLogger.cs" />
     <Compile Include="Observers\Interfaces\IObserverLogger.cs" />
     <Compile Include="Observers\Interfaces\IObserver.cs" />
     <Compile Include="Observers\Interfaces\IObserverBase.cs" />
-    <Compile Include="Observers\Interfaces\IObserverTelemetryProvider.cs" />
     <Compile Include="Observers\MachineInfoModel\Endpoint.cs" />
     <Compile Include="Observers\MachineInfoModel\NetworkObserverConfig.cs" />
     <Compile Include="Observers\NetworkObserver.cs" />
     <Compile Include="Observers\NodeObserver.cs" />
+    <Compile Include="Observers\Utilities\FabricClientRetryErrors.cs" />
+    <Compile Include="Observers\Utilities\FabricClientRetryHelper.cs" />
     <Compile Include="Observers\Utilities\FOErrorWarningCodes.cs" />
     <Compile Include="Observers\Utilities\ErrorWarningProperty.cs" />
     <Compile Include="Observers\Utilities\Protocol.cs" />
@@ -271,6 +276,9 @@
     <Compile Include="Observers\Utilities\Statistics.cs" />
     <Compile Include="Observers\Utilities\LogLevel.cs" />
     <Compile Include="Observers\Utilities\Telemetry\HealthScope.cs" />
+    <Compile Include="Observers\Utilities\Telemetry\LogAnalyticsTelemetry.cs" />
+    <Compile Include="Observers\Utilities\Telemetry\TelemetryData.cs" />
+    <Compile Include="Observers\Utilities\Telemetry\TelemetryProdiverType.cs" />
     <Compile Include="Observers\Utilities\WindowsPerfCounters.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

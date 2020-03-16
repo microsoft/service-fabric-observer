@@ -1,0 +1,19 @@
+[
+  {
+    "targetApp": "fabric:/TestApp",
+    "endpoints": [
+      {
+        "hostname": "www.facebook.com",
+        "port": 443
+      },
+      {
+        "hostname": "www.google.com",
+        "port": 443
+      },
+      {
+        "hostname": "www.microsoft.com",
+        "port": 443
+      }
+    ]
+  }
+]

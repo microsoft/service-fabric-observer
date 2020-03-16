@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace FabricClusterObserver
 {
-    [EventSource(Name = "Microsoft-ClusterObserverApp-ClusterObserver")]
+    [EventSource(Name = "Service-Fabric-ClusterObserver", Guid = "d0103e75-a77d-5fcf-004b-9ee8b258f51f")]
     internal sealed class ServiceEventSource : EventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
@@ -14,7 +14,7 @@ namespace FabricClusterObserver
         {
             // A workaround for the problem where ETW activities do not get tracked until Tasks infrastructure is initialized.
             // This problem will be fixed in .NET Framework 4.6.2.
-            Task.Run(() => { });
+            _ = Task.Run(() => { });
         }
 
         // Instance constructor is private to enforce singleton semantics
