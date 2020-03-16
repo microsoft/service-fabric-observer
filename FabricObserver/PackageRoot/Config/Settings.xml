@@ -109,8 +109,8 @@
     <Parameter Name="EnableTelemetry" Value="True"/>
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="MonitorDuration" Value="00:00:05"/>
-    <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
-    <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
+    <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="80" />
+    <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" />
     <Parameter Name="AverageQueueLengthWarningThreshold" Value ="12" />
   </Section>

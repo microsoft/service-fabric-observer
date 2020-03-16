@@ -19,7 +19,7 @@ For an app named MyApp, you would simply add this to PackageRoot/Config/AppObser
 [
   {
     "targetApp": "fabric:/MyApp",
-    "cpuWarningLimitPct": 65
+    "cpuWarningLimitPercent": 65
   }
 ]
 ```
@@ -32,12 +32,12 @@ You would add this to PackageRoot/Config/AppObserver.config.json:
  {
     "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "ILikeCpuService, ILikeCpuTooService",
-    "cpuWarningLimitPct": 45
+    "cpuWarningLimitPercent": 45
   },
   {
     "targetApp": "fabric:/MyOtherApp",
     "serviceIncludeList": "ILoveCpuService",
-    "cpuWarningLimitPct": 65
+    "cpuWarningLimitPercent": 65
   }
 ]
 ```
@@ -60,7 +60,7 @@ When you use this property, you can also use either serviceExcludeList or servic
 [
   {
     "targetAppType": "MyAppType",
-    "cpuWarningLimitPct": 40,
+    "cpuWarningLimitPercent": 40,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40,
@@ -83,7 +83,7 @@ Add this to DiskObserver's configuration section and it will warn you when disk 
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
+    <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="80" />
   </Section>
 ```  
 
@@ -131,7 +131,7 @@ regardless of target - there is no requirement for unique target properties in t
   {
     "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2",
-    "cpuWarningLimitPct": 45
+    "cpuWarningLimitPercent": 45
   },
   {
     "targetApp": "fabric:/MyApp",
@@ -148,7 +148,7 @@ just add the threshold properties to one object:
   {
     "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2, MemoryCrunchingService1, MemoryCrunchingService42",
-    "cpuWarningLimitPct": 45,
+    "cpuWarningLimitPercent": 45,
     "memoryWarningLimitPercent": 30
   }
 ```  
@@ -160,8 +160,8 @@ The following configuration tells AppObserver to monitor and report Warnings for
 {
     "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyService42, MyOtherService42",
-    "cpuErrorLimitPct": 90,
-    "cpuWarningLimitPct": 80,
+    "cpuErrorLimitPercent": 90,
+    "cpuWarningLimitPercent": 80,
     "memoryWarningLimitPercent": 70,
     "networkWarningActivePorts": 800,
     "networkWarningEphemeralPorts": 400
@@ -257,9 +257,28 @@ Example Output in SFX:
 ***Solution***: [ClusterObserver](/ClusterObserver) is your friend.  
 
 ClusterObserver is a stateless singleton service that runs on one node in your cluster. It can be
-configured to emit telemetry to your ApplicationInsights workspace out of the box. All you have to do
-is provide your instrumentation key in two files: Settings.xml and ApplicationInsights.config. You can 
+configured to emit telemetry to your Azure ApplicationInsights or Azure LogAnalytics workspace out of the box. 
+All you have to do is provide either your instrumentation key in two files: Settings.xml and ApplicationInsights.config or 
+supply your Azure LogAnalytics WorkspaceId and SharedKey in Settings.xml. You can 
 configure CO to emit Warning state signals in addition to the default Error signalling. It's up to you.  
+
+Telemetry config sample:
+
+```XML
+    <!-- Optional: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
+         but you can implement whatever provider you want. See IObserverTelemetry interface. -->
+    <Parameter Name="EnableTelemetryProvider" Value="True" />
+    <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
+    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
+    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
+    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="[LogAnalytics Workspace Id]" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
+    <Parameter Name="LogAnalyticsSharedKey" Value="[Log Analytics Shared Key]" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
+    <Parameter Name="LogAnalyticsLogType" Value="Application" />
+```
 
 By design, CO will send an Ok health state report when a cluster goes from Warning or Error state to Ok.
 
@@ -280,6 +299,9 @@ Example Configuration:
     <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
     <!-- Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
     <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
+    <!-- Maximum amount of time a node can be in disabling/disabled/down state before
+         emitting a Warning signal.-->
+    <Parameter Name="MaxTimeNodeStatusNotOk" Value="02:00:00"/>
   </Section>
 ``` 
 

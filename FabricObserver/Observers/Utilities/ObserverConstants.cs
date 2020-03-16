@@ -62,12 +62,8 @@ namespace FabricObserver.Observers.Utilities
         public const string DiskObserverName = "DiskObserver";
         public const string DiskObserverConfigurationSectionName = "DiskObserverConfiguration";
         public const string DiskObserverIntervalParameterName = "RunInterval";
-        public const string DiskObserverDiskSpacePercentError = "DiskSpacePercentErrorThreshold";
-        public const string DiskObserverDiskSpacePercentWarning = "DiskSpacePercentWarningThreshold";
-        public const string DiskObserverIoReadsError = "IOReadsErrorThreshold";
-        public const string DiskObserverIoReadsWarning = "IOReadsWarningThreshold";
-        public const string DiskObserverIoWritesError = "IOWritesErrorThreshold";
-        public const string DiskObserverIoWritesWarning = "IOWritesWarningThreshold";
+        public const string DiskObserverDiskSpacePercentError = "DiskSpacePercentUsageErrorThreshold";
+        public const string DiskObserverDiskSpacePercentWarning = "DiskSpacePercentUsageWarningThreshold";
         public const string DiskObserverAverageQueueLengthError = "AverageQueueLengthErrorThreshold";
         public const string DiskObserverAverageQueueLengthWarning = "AverageQueueLengthWarningThreshold";
 

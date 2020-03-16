@@ -353,7 +353,9 @@ until the observer runs again...
 ```xml
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="False" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="60" />
     <Parameter Name="CpuErrorLimitPercent" Value="" />
     <Parameter Name="CpuWarningLimitPercent" Value="90" />
     <Parameter Name="MemoryErrorLimitMb" Value="" />
@@ -366,22 +368,29 @@ until the observer runs again...
     <Parameter Name="NetworkWarningFirewallRules" Value="2500" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
+    <Parameter Name="UseCircularBuffer" Value="False" />
+    <Parameter Name="ResourceUsageDataCapacity" Value="" />
   </Section>
 ```  
 | Setting | Description |
 | :--- | :--- | 
+| **ClusterOperationTimeoutSeconds** | Number of seconds for timeout for making SF async API calls. | 
 | **CpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |  
 | **CpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning | 
+| **EnableTelemetry** | Whether or not to send Observer data to diagnostics/log analytics service. |  
 | **MemoryErrorLimitMb** | Maximum amount of committed memory on virtual machine that will generate an Error. | 
 | **MemoryWarningLimitMb** | Minimum amount of committed memory that will generate a Warning. |  
 | **MemoryErrorLimitPercent** | Maximum percentage of memory in use on virtual machine that will generate an Error. | 
 | **MemoryWarningLimitPercent** | Minimum percentage of memory in use on virtual machine that will generate a Warning. |  
+| **MonitorDuration** | The amount of time this observer conducts resource usage probing. | 
 | **NetworkErrorFirewallRules** | Number of established Firewall Rules that will generate a Health Warning. |  
 | **NetworkWarningFirewallRules** |  Number of established Firewall Rules that will generate a Health Error. |  
 | **NetworkErrorActivePorts** | Maximum number of established ports in use by all processes on node that will generate a Fabric Error. |
 | **NetworkWarningActivePorts** | Minimum number of established TCP ports in use by all processes on node that will generate a Fabric Warning. |
 | **NetworkErrorEphemeralPorts** | Maximum number of established ephemeral TCP ports in use by app process that will generate a Fabric Error. |
 | **NetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on node that will generate a Fabric warning. |
+| **UseCircularBuffer** | You can choose between of `List<T>` or a `CircularBufferCollection<T>` for observer data storage. | 
+| **ResourceUsageDataCapacity** | Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for the observer. | 
 
 **Output**:\
 SFX Warnings when min/max thresholds are reached. CSV file,
