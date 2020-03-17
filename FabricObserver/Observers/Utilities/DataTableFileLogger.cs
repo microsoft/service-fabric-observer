@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using FabricObserver.Interfaces;
+using FabricObserver.Observers.Interfaces;
 using NLog;
 using NLog.Targets;
 using NLog.Time;

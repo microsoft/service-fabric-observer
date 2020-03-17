@@ -37,13 +37,16 @@ namespace FabricClusterObserver
         {
             this.observerManager = new ObserverManager(this.Context, cancellationToken);
 
-            await Task.Factory.StartNew(() => this.observerManager.StartObservers(), cancellationToken).ConfigureAwait(true);
+            await Task.Factory.StartNew(() => this.observerManager.StartObservers()).ConfigureAwait(true);
         }
 
         /// <inheritdoc/>
         protected override Task OnCloseAsync(CancellationToken cancellationToken)
         {
-            observerManager?.Dispose();
+            if (this.observerManager != null)
+            {
+                this.observerManager.Dispose();
+            }
 
             return base.OnCloseAsync(cancellationToken);
         }
