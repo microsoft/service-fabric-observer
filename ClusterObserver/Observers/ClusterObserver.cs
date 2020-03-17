@@ -10,6 +10,7 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.Fabric.Repair;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -261,8 +262,38 @@ namespace FabricClusterObserver.Observers
                                         // If FO did not emit this event, then foStats will be null.
                                         var foStats = TryGetFOHealthStateEventData(appHealthEvent, HealthScope.Application);
 
+                                        Guid partitionId = Guid.Empty;
+                                        long replicaId = 0;
+
                                         if (!string.IsNullOrEmpty(foStats))
                                         {
+                                            // Extract PartitionId and ReplicaId from foStats.
+                                            try
+                                            {
+                                                if (foStats.Contains("Partition: "))
+                                                {
+                                                    int index = foStats.IndexOf("Partition: ") + "Partition: ".Length;
+                                                    string partition = foStats.Substring(index, 36);
+                                                    _ = Guid.TryParse(partition, out partitionId);
+                                                }
+
+                                                if (foStats.Contains("Replica: "))
+                                                {
+                                                    int index = foStats.IndexOf("Replica: ") + "Replica: ".Length;
+                                                    string replica = foStats.Substring(index, 18);
+
+                                                    // If this fails, replicaId is not a long with 18 digits (and thus not a Replica Id), so this check.
+                                                    _ = long.TryParse(
+                                                          replica,
+                                                          NumberStyles.None,
+                                                          CultureInfo.InvariantCulture,
+                                                          out replicaId);
+                                                }
+                                            }
+                                            catch (ArgumentException)
+                                            {
+                                            }
+
                                             telemetryDescription += foStats;
                                         }
                                         else if (!string.IsNullOrEmpty(appHealthEvent.HealthInformation.Description))
@@ -280,6 +311,8 @@ namespace FabricClusterObserver.Observers
                                             HealthEventDescription = telemetryDescription,
                                             Metric = "AggregatedClusterHealth",
                                             Source = this.ObserverName,
+                                            PartitionId = partitionId,
+                                            ReplicaId = replicaId.ToString(),
                                         };
 
                                         // Telemetry.

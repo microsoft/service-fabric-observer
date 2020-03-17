@@ -31,7 +31,7 @@
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
     <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
-    <Parameter Name="LogAnalyticsLogType" Value="Application" />
+    <Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
   </Section>
