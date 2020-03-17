@@ -264,10 +264,12 @@ namespace FabricClusterObserver.Observers
 
                                         Guid partitionId = Guid.Empty;
                                         long replicaId = 0;
+                                        string metric = null;
+                                        string value = null;
 
                                         if (!string.IsNullOrEmpty(foStats))
                                         {
-                                            // Extract PartitionId and ReplicaId from foStats.
+                                            // Extract PartitionId, ReplicaId, Metric, and Value from foStats.
                                             try
                                             {
                                                 if (foStats.Contains("Partition: "))
@@ -289,6 +291,14 @@ namespace FabricClusterObserver.Observers
                                                           CultureInfo.InvariantCulture,
                                                           out replicaId);
                                                 }
+
+                                                if (foStats.Contains(" - "))
+                                                {
+                                                    int metricBeginIndex = foStats.LastIndexOf(" - ") + " - ".Length;
+                                                    int valueBeginIndex = foStats.LastIndexOf(":") + 1;
+                                                    metric = foStats.Substring(metricBeginIndex, foStats.LastIndexOf(":") - metricBeginIndex);
+                                                    value = foStats.Substring(valueBeginIndex, foStats.Length - foStats.LastIndexOf(":") - 1)?.Trim();
+                                                }
                                             }
                                             catch (ArgumentException)
                                             {
@@ -309,10 +319,11 @@ namespace FabricClusterObserver.Observers
                                             HealthScope = "Application",
                                             HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
                                             HealthEventDescription = telemetryDescription,
-                                            Metric = "AggregatedClusterHealth",
+                                            Metric = metric ?? "AggregatedClusterHealth",
                                             Source = this.ObserverName,
                                             PartitionId = partitionId,
                                             ReplicaId = replicaId.ToString(),
+                                            Value = value ?? string.Empty,
                                         };
 
                                         // Telemetry.
