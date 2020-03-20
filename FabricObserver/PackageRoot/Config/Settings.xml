@@ -41,7 +41,7 @@
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
     <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
-    <Parameter Name="LogAnalyticsLogType" Value="Application" />
+    <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
     <!-- Optional: EventSource Tracing. -->
     <Parameter Name="EnableEventSourceProvider" Value="True" />
     <Parameter Name="EventSourceProviderName" Value="FabricObserverETWProvider" />

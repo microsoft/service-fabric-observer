@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
-using System.Fabric.Management.ServiceModel;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver.Interfaces;

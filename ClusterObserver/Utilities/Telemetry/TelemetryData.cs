@@ -11,35 +11,74 @@ namespace FabricClusterObserver.Utilities.Telemetry
 {
     public class TelemetryData
     {
-        public string ApplicationName { get; set; }
+        public string ApplicationName
+        {
+            get; set;
+        }
 
-        public string ClusterId { get; set; }
+        public string ClusterId
+        {
+            get; set;
+        }
 
-        public string Code { get; set; }
+        public string Code
+        {
+            get; set;
+        }
 
-        public string HealthEventDescription { get; set; }
+        public string HealthEventDescription
+        {
+            get; set;
+        }
 
         public string HealthScope { get; set; } = "Cluster";
 
-        public string HealthState { get; set; }
+        public string HealthState
+        {
+            get; set;
+        }
 
-        public string Metric { get; set; }
+        public string Metric
+        {
+            get; set;
+        }
 
-        public string NodeName { get; set; }
+        public string NodeName
+        {
+            get; set;
+        }
 
-        public string NodeStatus { get; set; }
-       
-        public string ObserverName { get; set; }
+        public string NodeStatus
+        {
+            get; set;
+        }
 
-        public Guid Partition { get; set; }
+        public string ObserverName
+        {
+            get; set;
+        }
 
-        public long Replica { get; set; }
+        public Guid PartitionId
+        {
+            get; set;
+        }
 
-        public string ServiceName { get; set; }
+        public string ReplicaId
+        {
+            get; set;
+        }
+
+        public string ServiceName
+        {
+            get; set;
+        }
 
         public string Source { get; set; } = "ClusterObserver";
 
-        public object Value { get; set; }
+        public object Value
+        {
+            get; set;
+        }
 
         public TelemetryData(
             FabricClient fabricClient,

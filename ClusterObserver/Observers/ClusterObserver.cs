@@ -8,8 +8,10 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Fabric.Health;
+using System.Fabric.Management.ServiceModel;
 using System.Fabric.Query;
 using System.Fabric.Repair;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -261,8 +263,48 @@ namespace FabricClusterObserver.Observers
                                         // If FO did not emit this event, then foStats will be null.
                                         var foStats = TryGetFOHealthStateEventData(appHealthEvent, HealthScope.Application);
 
+                                        Guid partitionId = Guid.Empty;
+                                        long replicaId = 0;
+                                        string metric = null;
+                                        string value = null;
+
                                         if (!string.IsNullOrEmpty(foStats))
                                         {
+                                            // Extract PartitionId, ReplicaId, Metric, and Value from foStats.
+                                            try
+                                            {
+                                                if (foStats.Contains("Partition: "))
+                                                {
+                                                    int index = foStats.IndexOf("Partition: ") + "Partition: ".Length;
+                                                    string partition = foStats.Substring(index, 36);
+                                                    _ = Guid.TryParse(partition, out partitionId);
+                                                }
+
+                                                if (foStats.Contains("Replica: "))
+                                                {
+                                                    int index = foStats.IndexOf("Replica: ") + "Replica: ".Length;
+                                                    string replica = foStats.Substring(index, 18);
+
+                                                    // If this fails, replicaId is not a long with 18 digits (and thus not a Replica Id), so this check.
+                                                    _ = long.TryParse(
+                                                          replica,
+                                                          NumberStyles.None,
+                                                          CultureInfo.InvariantCulture,
+                                                          out replicaId);
+                                                }
+
+                                                if (foStats.Contains(" - "))
+                                                {
+                                                    int metricBeginIndex = foStats.LastIndexOf(" - ") + " - ".Length;
+                                                    int valueBeginIndex = foStats.LastIndexOf(":") + 1;
+                                                    metric = foStats.Substring(metricBeginIndex, foStats.LastIndexOf(":") - metricBeginIndex);
+                                                    value = foStats.Substring(valueBeginIndex, foStats.Length - foStats.LastIndexOf(":") - 1)?.Trim();
+                                                }
+                                            }
+                                            catch (ArgumentException)
+                                            {
+                                            }
+
                                             telemetryDescription += foStats;
                                         }
                                         else if (!string.IsNullOrEmpty(appHealthEvent.HealthInformation.Description))
@@ -278,8 +320,11 @@ namespace FabricClusterObserver.Observers
                                             HealthScope = "Application",
                                             HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
                                             HealthEventDescription = telemetryDescription,
-                                            Metric = "AggregatedClusterHealth",
+                                            Metric = metric ?? "AggregatedClusterHealth",
                                             Source = this.ObserverName,
+                                            PartitionId = partitionId,
+                                            ReplicaId = replicaId.ToString(),
+                                            Value = value ?? string.Empty,
                                         };
 
                                         // Telemetry.
@@ -404,17 +449,49 @@ namespace FabricClusterObserver.Observers
 
         private async Task MonitorNodeStatusAsync()
         {
-            /* Node Status Check, Active Repair Tasks Check */
-
             // If a node's NodeStatus is Disabling, Disabled, or Down 
-            // for at or above the specified maximum time, then CO will emit a Warning signal.
+            // for at or above the specified maximum time (in Settings.xml),
+            // then CO will emit a Warning signal.
             var nodeList =
             await this.FabricClientInstance.QueryManager.GetNodeListAsync(
                     null,
                     this.AsyncClusterOperationTimeoutSeconds,
                     Token).ConfigureAwait(true);
 
-            var message = string.Empty;
+            // Are any of the nodes that were previously in non-Up status, now Up?
+            if (this.NodeStatusDictionary.Count > 0)
+            {
+                foreach (var nodeDictItem in this.NodeStatusDictionary)
+                {
+                    if (!nodeList.Any(n => n.NodeName == nodeDictItem.Key
+                                        && n.NodeStatus == NodeStatus.Up))
+                    {
+                        continue;
+                    }
+
+                    // Telemetry.
+                    var telemetry = new TelemetryData(FabricClientInstance, Token)
+                    {
+                        HealthScope = "Node",
+                        HealthState = "Ok",
+                        HealthEventDescription = $"{nodeDictItem.Key} is now Up.",
+                        Metric = "NodeStatus",
+                        NodeName = nodeDictItem.Key,
+                        NodeStatus = "Up",
+                        Source = this.ObserverName,
+                    };
+
+                    await this.ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
+
+                    // ETW.
+                    this.EtwLogger?.Write(
+                        "ClusterObserverDataEvent",
+                        telemetry);
+
+                    // Clear dictionary entry.
+                    this.NodeStatusDictionary.Remove(nodeDictItem.Key);
+                }
+            }
 
             if (!nodeList.All(
                     n =>
@@ -444,14 +521,16 @@ namespace FabricClusterObserver.Observers
 
                     // Nodes stuck in Disabled/Disabling/Down?
                     if (this.NodeStatusDictionary.Any(
-                        dict => dict.Key == node.NodeName && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
+                             dict => dict.Key == node.NodeName 
+                                && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
                                 >= this.maxTimeNodeStatusNotOk))
                     {
                         var kvp = this.NodeStatusDictionary.FirstOrDefault(
-                            dict => dict.Key == node.NodeName && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
-                                    >= this.maxTimeNodeStatusNotOk);
+                                       dict => dict.Key == node.NodeName 
+                                        && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
+                                        >= this.maxTimeNodeStatusNotOk);
 
-                        message +=
+                        var message =
                             $"Node {kvp.Key} has been {kvp.Value.NodeStatus} " +
                             $"for {Math.Round(kvp.Value.LastDetectedTime.Subtract(kvp.Value.FirstDetectedTime).TotalHours, 2)} hours.{Environment.NewLine}";
 
@@ -461,7 +540,7 @@ namespace FabricClusterObserver.Observers
                             HealthScope = "Node",
                             HealthState = "Warning",
                             HealthEventDescription = message,
-                            Metric = "AggregatedClusterHealth",
+                            Metric = "NodeStatus",
                             NodeName = kvp.Key,
                             NodeStatus = $"{kvp.Value.NodeStatus}",
                             Source = this.ObserverName,
@@ -475,27 +554,6 @@ namespace FabricClusterObserver.Observers
                             telemetry);
                     }
                 }
-            }
-            else if (this.NodeStatusDictionary.Count > 0)
-            {
-                // Telemetry.
-                var telemetry = new TelemetryData(FabricClientInstance, Token)
-                {
-                    HealthScope = "Node",
-                    HealthState = "Ok",
-                    HealthEventDescription = "All nodes are now Up.",
-                    Metric = "AggregatedClusterHealth",
-                    Source = this.ObserverName,
-                };
-
-                await this.ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
-
-                // ETW.
-                this.EtwLogger?.Write(
-                    "ClusterObserverDataEvent",
-                    telemetry);
-
-                this.NodeStatusDictionary.Clear();
             }
         }
 
