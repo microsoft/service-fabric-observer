@@ -64,7 +64,7 @@
   <Section Name="AppObserverConfiguration">
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableTelemetry" Value="False" />
+    <Parameter Name="EnableTelemetry" Value="True" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -179,6 +179,7 @@
   </Section>
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="True"/>
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>

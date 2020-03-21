@@ -121,22 +121,31 @@ namespace FabricClusterObserver.Utilities.Telemetry
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var sev = (telemetryData.HealthState == "Error") ? SeverityLevel.Error
-                                    : (telemetryData.HealthState == "Warning") ? SeverityLevel.Warning : SeverityLevel.Information;
+                string value = null;
 
-                string healthInfo = string.Empty;
-
-                if (!string.IsNullOrEmpty(telemetryData.HealthEventDescription))
+                if (telemetryData.Value != null)
                 {
-                    healthInfo += $"{Environment.NewLine}{telemetryData.HealthEventDescription}";
+                    value = telemetryData.Value.ToString();
                 }
 
-                var tt = new TraceTelemetry(
-                    $"Service Fabric Health Report - {telemetryData.HealthScope}: " +
-                    $"{telemetryData.HealthState} -> {telemetryData.Source}:{telemetryData.Metric}{healthInfo}", 
-                    sev);
+                Dictionary<string, string> properties = new Dictionary<string, string>
+                {
+                    { "Application", telemetryData.ApplicationName ?? string.Empty },
+                    { "ClusterId", telemetryData.ClusterId ?? string.Empty },
+                    { "ErrorCode", telemetryData.Code ?? string.Empty },
+                    { "HealthEventDescription", telemetryData.HealthEventDescription ?? string.Empty },
+                    { "HealthState", telemetryData.HealthState ?? string.Empty },
+                    { "Metric", telemetryData.Metric ?? string.Empty },
+                    { "NodeName", telemetryData.NodeName ?? string.Empty },
+                    { "Partition", telemetryData.PartitionId ?? string.Empty },
+                    { "Replica", telemetryData.ReplicaId ?? string.Empty },
+                    { "Source", telemetryData.Source ?? string.Empty },
+                    { "Value", value ?? string.Empty }
+                };
 
-                this.telemetryClient.TrackTrace(tt);
+                this.telemetryClient.TrackEvent(
+                    $"{telemetryData.ObserverName ?? "ClusterObserver"}Event",
+                    properties);
             }
             catch (Exception e)
             {

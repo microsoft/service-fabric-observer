@@ -574,12 +574,14 @@ namespace FabricObserver.Observers
                     telemetryData = new TelemetryData(FabricClientInstance, Token)
                     {
                         ApplicationName = appName?.OriginalString ?? string.Empty,
+                        Code = FoErrorWarningCodes.Ok,
                         NodeName = this.NodeName,
                         ObserverName = this.ObserverName,
                         Metric = data.Property,
                         Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
-                        Partition = replicaOrInstance.PartitionId,
-                        Replica = replicaOrInstance.ReplicaOrInstanceId,
+                        PartitionId = replicaOrInstance.PartitionId.ToString(),
+                        ReplicaId = replicaOrInstance.ReplicaOrInstanceId.ToString(),
+                        Source = ObserverConstants.FabricObserverName,
                     };
                 }
 
@@ -612,9 +614,11 @@ namespace FabricObserver.Observers
                 {
                     telemetryData = new TelemetryData(FabricClientInstance, Token)
                     {
+                        Code = FoErrorWarningCodes.Ok,
                         NodeName = this.NodeName,
                         ObserverName = this.ObserverName,
                         Metric = data.Property,
+                        Source = ObserverConstants.FabricObserverName,
                         Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                     };
 
@@ -817,6 +821,7 @@ namespace FabricObserver.Observers
                     telemetryData.HealthState = Enum.GetName(typeof(HealthState), healthState);
                     telemetryData.HealthEventDescription = healthMessage.ToString();
                     telemetryData.Metric = $"{drive}{data.Property}";
+                    telemetryData.Source = ObserverConstants.FabricObserverName;
                     telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
 
                     _ = this.TelemetryClient?.ReportMetricAsync(
@@ -876,6 +881,7 @@ namespace FabricObserver.Observers
                         telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
                         telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
                         telemetryData.Metric = data.Property;
+                        telemetryData.Source = ObserverConstants.FabricObserverName;
                         telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
 
                         _ = this.TelemetryClient?.ReportMetricAsync(

@@ -171,35 +171,84 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return false;
             }
 
-            var metricTelemetry = new MetricTelemetry
-            {
-                Name = $"{source}: {name}",
-                Sum = Convert.ToDouble(value),
-            };
+            TraceTelemetry tt = new TraceTelemetry(name, SeverityLevel.Information);
 
-            this.telemetryClient.TrackMetric(metricTelemetry);
+            // TODO...
+            this.telemetryClient?.TrackTrace(tt);
 
             return await Task.FromResult(true).ConfigureAwait(false);
         }
 
-        public async Task<bool> ReportMetricAsync(
+        public Task ReportMetricAsync(
           TelemetryData telemetryData,
           CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
-                return await Task.FromResult(false).ConfigureAwait(false);
+                return Task.CompletedTask;
             }
 
-            var metricTelemetry = new MetricTelemetry
+            Dictionary<string, string> properties = new Dictionary<string, string>
             {
-                Name = telemetryData.Metric,
-                Sum = Convert.ToDouble(telemetryData.Value),
+                { "Application", telemetryData.ApplicationName ?? string.Empty },
+                { "ClusterId", telemetryData.ClusterId ?? string.Empty },
+                { "ErrorCode", telemetryData.Code ?? string.Empty },
+                { "HealthEventDescription", telemetryData.HealthEventDescription ?? string.Empty },
+                { "HealthState", telemetryData.HealthState ?? string.Empty },
+                { "Metric", telemetryData.Metric ?? string.Empty },
+                { "NodeName", telemetryData.NodeName ?? string.Empty },
+                { "ObserverName", telemetryData.ObserverName ?? string.Empty },
+                { "Partition", telemetryData.PartitionId ?? string.Empty },
+                { "Replica", telemetryData.ReplicaId ?? string.Empty },
+                { "Source", telemetryData.Source ?? string.Empty },
+                { "Value", telemetryData.Value?.ToString() ?? string.Empty },
             };
 
-            this.telemetryClient.TrackMetric(metricTelemetry);
+            this.telemetryClient.TrackEvent(
+                $"{telemetryData.ObserverName ?? "FabricObserver"}DataEvent",
+                properties);
 
-            return await Task.FromResult(true).ConfigureAwait(false);
+            return Task.CompletedTask;
+        }
+
+        public Task ReportMetricAsync(
+            MachineTelemetryData telemetryData,
+            CancellationToken cancellationToken)
+        {
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
+            {
+                return Task.CompletedTask;
+            }
+
+            Dictionary<string, string> properties = new Dictionary<string, string>
+            {
+                { "ActiveEphemeralPorts", telemetryData.ActiveEphemeralPorts.ToString() },
+                { "ActiveFirewallRules", telemetryData.ActiveFirewallRules.ToString() },
+                { "ActivePorts", telemetryData.ActivePorts.ToString() },
+                { "AvailablePhysicalMemory", telemetryData.AvailablePhysicalMemory.ToString() },
+                { "AvailableVirtualMemory", telemetryData.AvailableVirtualMemory.ToString() },
+                { "DriveInfo", telemetryData.DriveInfo },
+                { "FabricAppPortRange", telemetryData.FabricAppPortRange.ToString() },
+                { "HotFixes", telemetryData.HotFixes.ToString() },
+                { "LastBootUpTime", telemetryData.LastBootUpTime.ToString() },
+                { "Level", telemetryData.HealthState.ToString() },
+                { "LogicalDriveCount", telemetryData.LogicalDriveCount.ToString() },
+                { "LogicalProcessorCount", telemetryData.LogicalProcessorCount.ToString() },
+                { "Node", telemetryData.Node.ToString() },
+                { "NumberOfRunningProcesses", telemetryData.NumberOfRunningProcesses.ToString() },
+                { "Observer", telemetryData.Observer },
+                { "OS", telemetryData.OS },
+                { "OSInstallDate", telemetryData.OSInstallDate },
+                { "OSVersion", telemetryData.OSVersion },
+                { "TotalMemorySizeGB", telemetryData.TotalMemorySizeGB.ToString() },
+                { "WindowsDynamicPortRange", telemetryData.WindowsDynamicPortRange },
+            };
+
+            this.telemetryClient.TrackEvent(
+                $"{telemetryData.Observer ?? "FabricObserver"}DataEvent",
+                properties);
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -210,7 +259,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="properties">IDictionary&lt;string&gt;,&lt;string&gt; containing name/value pairs of additional properties.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public Task ReportMetricAsync(string name, long value, IDictionary<string, string> properties, CancellationToken cancellationToken)
+        public Task ReportMetricAsync(
+            string name,
+            long value,
+            IDictionary<string, string> properties,
+            CancellationToken cancellationToken)
         {
             if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -231,7 +284,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="value">Value if the metric.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public Task ReportMetricAsync(string role, Guid partition, string name, long value, CancellationToken cancellationToken)
+        public Task ReportMetricAsync(
+            string role,
+            Guid partition,
+            string name,
+            long value,
+            CancellationToken cancellationToken)
         {
             return this.ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
@@ -245,7 +303,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="value">Value if the metric.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task ReportMetricAsync(string role, long id, string name, long value, CancellationToken cancellationToken)
+        public async Task ReportMetricAsync(
+            string role,
+            long id,
+            string name,
+            long value,
+            CancellationToken cancellationToken)
         {
             await this.ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
         }

@@ -373,6 +373,7 @@ namespace FabricObserver.Observers
                 // Disk
                 var drivesInformationTuple = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
                 var logicalDriveCount = drivesInformationTuple.Count;
+                string driveInfo = string.Empty;
 
                 _ = sb.AppendLine($"LogicalDriveCount: {logicalDriveCount}");
 
@@ -385,8 +386,13 @@ namespace FabricObserver.Observers
                         systemDrv = "System";
                     }
 
-                    _ = sb.AppendLine($"Drive {driveName} ({systemDrv}) Size: {diskSize} GB");
-                    _ = sb.AppendLine($"Drive {driveName} ({systemDrv}) Consumed*: {percentConsumed}%");
+                    string drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB";
+                    string drvConsumed = $"Drive {driveName} ({systemDrv}) Consumed*: {percentConsumed}%";
+
+                    _ = sb.AppendLine(drvSize);
+                    _ = sb.AppendLine(drvConsumed);
+
+                    driveInfo += $"{drvSize}{Environment.NewLine}{drvConsumed}{Environment.NewLine}";
                 }
 
                 string osHotFixes = GetWindowsHotFixes(token);
@@ -406,9 +412,9 @@ namespace FabricObserver.Observers
                 {
                     Logger.EtwLogger?.Write(
                         $"FabricObserverDataEvent",
-                        new
+                        new MachineTelemetryData
                         {
-                            Level = 0, // Info
+                            HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                             Node = this.NodeName,
                             Observer = this.ObserverName,
                             OS = osName,
@@ -426,6 +432,34 @@ namespace FabricObserver.Observers
                             FabricAppPortRange = fabricAppPortRange,
                             HotFixes = GetWindowsHotFixes(token, false).Replace("\r\n", ", ").TrimEnd(','),
                         });
+                }
+
+                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                {
+                    this.TelemetryClient?.ReportMetricAsync(
+                        new MachineTelemetryData
+                        {
+                            HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
+                            Node = this.NodeName,
+                            Observer = this.ObserverName,
+                            OS = osName,
+                            OSVersion = osVersion,
+                            OSInstallDate = installDate,
+                            LastBootUpTime = lastBootTime,
+                            TotalMemorySizeGB = this.totalVisibleMemoryGb,
+                            AvailablePhysicalMemory = freePhysicalMem,
+                            AvailableVirtualMemory = freeVirtualMem,
+                            LogicalProcessorCount = logicalProcessorCount,
+                            LogicalDriveCount = logicalDriveCount,
+                            DriveInfo = driveInfo,
+                            NumberOfRunningProcesses = numProcs,
+                            ActiveFirewallRules = firewalls,
+                            ActivePorts = activePorts,
+                            ActiveEphemeralPorts = activeEphemeralPorts,
+                            WindowsDynamicPortRange = osEphemeralPortRange,
+                            FabricAppPortRange = fabricAppPortRange,
+                            HotFixes = GetWindowsHotFixes(token, false).Replace("\r\n", ", ").TrimEnd(','),
+                        }, this.Token);
                 }
             }
             catch (ManagementException)

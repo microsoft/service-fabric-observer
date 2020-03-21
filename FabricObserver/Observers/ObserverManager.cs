@@ -509,19 +509,19 @@ namespace FabricObserver.Observers
                         if (string.IsNullOrEmpty(aiKey))
                         {
                             TelemetryEnabled = false;
-                            
+
                             return;
                         }
 
                         TelemetryClient = new AppInsightsTelemetry(aiKey);
-                        
+
                         break;
                     }
 
                     default:
-                        
+
                         TelemetryEnabled = false;
-                        
+
                         break;
                 }
             }
