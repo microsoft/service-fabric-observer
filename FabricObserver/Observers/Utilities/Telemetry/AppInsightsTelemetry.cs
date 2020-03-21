@@ -188,13 +188,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.CompletedTask;
             }
 
-            bool hasNumericValue = false;
-
-            if (!double.TryParse(telemetryData.Value.ToString(), out double value))
-            {
-                hasNumericValue = true;
-            }
-
             Dictionary<string, string> properties = new Dictionary<string, string>
             {
                 { "Application", telemetryData.ApplicationName ?? string.Empty },
@@ -208,22 +201,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 { "Partition", telemetryData.PartitionId ?? string.Empty },
                 { "Replica", telemetryData.ReplicaId ?? string.Empty },
                 { "Source", telemetryData.Source ?? string.Empty },
+                { "Value", telemetryData.Value?.ToString() ?? string.Empty },
             };
-
-            Dictionary<string, double> values = null;
-
-            if (hasNumericValue)
-            {
-                values = new Dictionary<string, double>
-                {
-                    { telemetryData.Metric, value },
-                };
-            }
 
             this.telemetryClient.TrackEvent(
                 $"{telemetryData.ObserverName ?? "FabricObserver"}DataEvent",
-                properties,
-                values);
+                properties);
 
             return Task.CompletedTask;
         }
