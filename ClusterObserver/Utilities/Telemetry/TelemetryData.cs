@@ -58,7 +58,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             get; set;
         }
 
-        public Guid PartitionId
+        public string PartitionId
         {
             get; set;
         }

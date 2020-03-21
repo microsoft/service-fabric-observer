@@ -322,7 +322,7 @@ namespace FabricClusterObserver.Observers
                                             HealthEventDescription = telemetryDescription,
                                             Metric = metric ?? "AggregatedClusterHealth",
                                             Source = this.ObserverName,
-                                            PartitionId = partitionId,
+                                            PartitionId = partitionId.ToString(),
                                             ReplicaId = replicaId.ToString(),
                                             Value = value ?? string.Empty,
                                         };
@@ -603,16 +603,25 @@ namespace FabricClusterObserver.Observers
         internal async Task<RepairTaskList> GetRepairTasksCurrentlyProcessingAsync(
             CancellationToken cancellationToken)
         {
-            var repairTasks = await FabricClientInstance.RepairManager.GetRepairTaskListAsync(
-                null,
-                RepairTaskStateFilter.Active |
-                RepairTaskStateFilter.Approved |
-                RepairTaskStateFilter.Executing,
-                null,
-                this.AsyncClusterOperationTimeoutSeconds,
-                cancellationToken);
+            try
+            {
 
-            return repairTasks;
+                var repairTasks = await FabricClientInstance.RepairManager.GetRepairTaskListAsync(
+                    null,
+                    RepairTaskStateFilter.Active |
+                    RepairTaskStateFilter.Approved |
+                    RepairTaskStateFilter.Executing,
+                    null,
+                    this.AsyncClusterOperationTimeoutSeconds,
+                    cancellationToken);
+
+                return repairTasks;
+            }
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+            }
+
+            return null;
         }
     }
 }

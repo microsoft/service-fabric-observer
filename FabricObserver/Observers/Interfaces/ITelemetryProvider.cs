@@ -87,9 +87,17 @@ namespace FabricObserver.Observers.Interfaces
         /// </summary>
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>A completed task of bool indicating success or failure.</returns>
-        Task<bool> ReportMetricAsync(
+        Task ReportMetricAsync(
           TelemetryData telemetryData,
+          CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Calls telemetry provider to report a metric.
+        /// </summary>
+        /// <param name="telemetryData">MachineTelemetryData instance.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        Task ReportMetricAsync(
+          MachineTelemetryData telemetryData,
           CancellationToken cancellationToken);
 
         /// <summary>

@@ -88,7 +88,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!await this.Initialize().ConfigureAwait(true) 
+            if (!await this.Initialize().ConfigureAwait(true)
                 || token.IsCancellationRequested)
             {
                 this.stopwatch.Stop();
@@ -199,16 +199,16 @@ namespace FabricObserver.Observers
                 return true;
             }
 
-            var settings = 
+            var settings =
                 this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                     ObserverConstants.ObserverConfigurationPackageName)?.Settings;
 
             ConfigSettings.Initialize(
-                settings, 
-                ObserverConstants.NetworkObserverConfigurationSectionName, 
+                settings,
+                ObserverConstants.NetworkObserverConfigurationSectionName,
                 "NetworkObserverDataFileName");
 
-            var networkObserverConfigFileName = 
+            var networkObserverConfigFileName =
                 Path.Combine(this.dataPackagePath, ConfigSettings.NetworkObserverDataFileName);
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
@@ -232,9 +232,9 @@ namespace FabricObserver.Observers
             if (this.userEndpoints.Count == 0)
             {
                 using (Stream stream = new FileStream(
-                        networkObserverConfigFileName, 
-                        FileMode.Open, 
-                        FileAccess.Read, 
+                        networkObserverConfigFileName,
+                        FileMode.Open,
+                        FileAccess.Read,
                         FileShare.Read))
                 {
                     this.userEndpoints.AddRange(JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream));
@@ -247,7 +247,7 @@ namespace FabricObserver.Observers
                         this.ObserverName,
                         HealthState.Warning,
                         "Missing required configuration data: endpoints.");
-                    
+
                     return false;
                 }
             }
@@ -389,11 +389,11 @@ namespace FabricObserver.Observers
                                 || we.Status == WebExceptionStatus.TrustFailure
                                 || we.Response?.Headers?.Count > 0)
                             {
-                                // Could not establish trust or server doesn't want to hear from you, or... 
+                                // Could not establish trust or server doesn't want to hear from you, or...
                                 // Either way, the Server *responded*. It's reachable.
                                 // You could always add code to grab your app or cluster certs from local store
                                 // and apply it to the request. See CertificateObserver for how to get
-                                // both your App cert(s) and Cluster cert. The goal of NetworkObserver is 
+                                // both your App cert(s) and Cluster cert. The goal of NetworkObserver is
                                 // to test availability. Nothing more.
                                 passed = true;
                             }
@@ -424,21 +424,23 @@ namespace FabricObserver.Observers
                                                       conn.Health == HealthState.Warning))
                 {
                     _ = this.connectionStatus.RemoveAll(conn => conn.HostName == endpoint.HostName);
-                    
+
                     this.connectionStatus.Add(
-                        new ConnectionState 
-                        { HostName = endpoint.HostName, 
-                            Connected = true, 
-                            Health = HealthState.Warning 
+                        new ConnectionState
+                        {
+                            HostName = endpoint.HostName,
+                            Connected = true,
+                            Health = HealthState.Warning,
                         });
                 }
                 else
                 {
                     this.connectionStatus.Add(
-                        new ConnectionState 
-                        { HostName = endpoint.HostName, 
-                            Connected = true, 
-                            Health = HealthState.Ok 
+                        new ConnectionState
+                        {
+                            HostName = endpoint.HostName,
+                            Connected = true,
+                            Health = HealthState.Ok,
                         });
                 }
             }
@@ -448,10 +450,11 @@ namespace FabricObserver.Observers
                                                conn.Health == HealthState.Warning))
                 {
                     this.connectionStatus.Add(
-                        new ConnectionState 
-                        { HostName = endpoint.HostName, 
-                            Connected = false, 
-                            Health = HealthState.Warning 
+                        new ConnectionState
+                        {
+                            HostName = endpoint.HostName,
+                            Connected = false,
+                            Health = HealthState.Warning,
                         });
                 }
             }
@@ -561,7 +564,7 @@ namespace FabricObserver.Observers
 
             // Clear
             _ = this.connectionStatus.RemoveAll(conn => conn.Connected);
-            
+
             this.connectionStatus.TrimExcess();
         }
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FabricClusterObserver.Observers;
+using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Query;
@@ -128,7 +129,7 @@ namespace FabricClusterObserver.Utilities
             {
                 var fabricUpgradeProgress =
                     await fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                        TimeSpan.FromMinutes(1), 
+                        TimeSpan.FromSeconds(ObserverManager.AsyncClusterOperationTimeoutSeconds), 
                         token).ConfigureAwait(true);
 
                 int currentUpgradeDomainInProgress = -1;

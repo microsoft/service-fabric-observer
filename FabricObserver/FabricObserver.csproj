@@ -236,6 +236,7 @@
     <Compile Include="Observers\CertificateObserver.cs" />
     <Compile Include="Observers\DumpType.cs" />
     <Compile Include="Observers\Interfaces\ITelemetryProvider.cs" />
+    <Compile Include="Observers\Utilities\Telemetry\MachineTelemetryData.cs" />
     <Compile Include="Observers\Utilities\CircularBufferCollection.cs" />
     <Compile Include="Observers\Utilities\ConnectionState.cs" />
     <Compile Include="Observers\DiskObserver.cs" />
