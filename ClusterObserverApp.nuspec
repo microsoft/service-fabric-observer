@@ -9,6 +9,6 @@
     <summary>This package contains the Service Fabric ClusterObserver Application, a configurable SF service for cluster health monitoring and telemetry.</summary>
   </metadata>
   <files>
-    <file src="C:\Users\C\source\repos\microsoft\service-fabric-observer\ClusterObserverApp\pkg\Release\**.*" />
+    <file src="$pkgpath$" />
   </files>
 </package>

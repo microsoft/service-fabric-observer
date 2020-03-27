@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-    <metadata>
-        <id>FabricObserver</id>
-        <version>2.0.1</version>
-        <authors>ctorre</authors>
-        <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>This package contains the Service Fabric FabricObserver Application.</description>
-        <summary>This package contains the Service Fabric FabricObserver Application, a highly flexible and configurable node-local (-1), stateless SF app service for SF user service and node (VM) health monitoring with telemetry.</summary>
-    </metadata>
-    <files>
-        <file src="C:\Users\C\source\repos\microsoft\service-fabric-observer\FabricObserverApp\pkg\Release\**.*" />
-    </files>
+  <metadata>
+    <id>FabricObserver</id>
+    <version>2.0.1</version>
+    <authors>ctorre</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This package contains the Service Fabric FabricObserver Application.</description>
+    <summary>This package contains the Service Fabric FabricObserver Application, a highly flexible and configurable node-local (-1), stateless SF app service for SF user service and node (VM) health monitoring with telemetry.</summary>
+  </metadata>
+  <files>
+    <file src="$pkgpath$" />
+  </files>
 </package>
