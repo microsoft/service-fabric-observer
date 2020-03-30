@@ -1,4 +1,9 @@
 <?xml version="1.0"?>
+<!-- This file is used by the Azure Pipelines build. If you want to produce a nupkg from
+     this nuspec, you must modify the files element to make sense for you file directory
+     structure OR simply pass a -basepath paramater to nuget pack FabricObserverApp.nuspec call:
+     e.g., 
+     nuget pack FabricObserverApp.nuspec -basepath "C:\Users\Foo\source\repos\microsoft\service-fabric-observer\FabricObserverApp\pkg\Release" -->
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>FabricObserver</id>
