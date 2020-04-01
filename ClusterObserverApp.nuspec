@@ -1,0 +1,19 @@
+﻿<?xml version="1.0"?>
+<!-- This file is used by the Azure Pipelines build. If you want to produce a nupkg from
+     this nuspec, you must modify the files element to make sense for your file directory
+     structure OR simply pass a -basepath paramater to nuget pack ClusterObserverApp.nuspec call:
+     e.g., 
+     nuget pack ClusterObserverApp.nuspec -basepath "C:\Users\Foo\source\repos\microsoft\service-fabric-observer\ClusterObserverApp\pkg\Release" -->
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>ClusterObserver</id>
+    <version>1.0.7</version>
+    <authors>ctorre</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This package contains the Service Fabric ClusterObserver Application.</description>
+    <summary>This package contains the Service Fabric ClusterObserver Application, a configurable SF service for cluster health monitoring and telemetry.</summary>
+  </metadata>
+  <files>
+    <file src="**.*" target="content" />
+  </files>
+</package>

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Fabric.Management.ServiceModel;
 using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Globalization;
@@ -25,6 +24,9 @@ namespace FabricClusterObserver.Observers
         private TimeSpan maxTimeNodeStatusNotOk;
 
         private EventSource EtwLogger { get; set; }
+
+        private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
+        private readonly Uri fabricSystemAppUri = new Uri("fabric:/System");
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
@@ -592,6 +594,30 @@ namespace FabricClusterObserver.Observers
         }
 
         /// <summary>
+        /// Checks if the RepairManager System app service is deployed in the cluster.
+        /// </summary>
+        /// <param name="cancellationToken">cancellation token to stop the async operation</param>
+        /// <returns>true if RepairManager service is present in cluster, otherwise false</returns>
+        internal async Task<bool> IsRepairManagerDeployedAsync(
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(
+                                      this.fabricSystemAppUri,
+                                      this.repairManagerServiceUri,
+                                      AsyncClusterOperationTimeoutSeconds,
+                                      cancellationToken).ConfigureAwait(true);
+
+                return serviceList?.Count > 0;
+            }
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// This function returns a list of active Fabric repair tasks (RM) in the cluster.
         /// If a VM is being updated by VMSS, for example, then there will be a Fabric Repair task in play and
         /// this will cause changes in Fabric node status like Disabling, Disabled, Down, Enabling, etc.
@@ -603,9 +629,13 @@ namespace FabricClusterObserver.Observers
         internal async Task<RepairTaskList> GetRepairTasksCurrentlyProcessingAsync(
             CancellationToken cancellationToken)
         {
+            if (!await IsRepairManagerDeployedAsync(cancellationToken))
+            {
+                return null;
+            }
+
             try
             {
-
                 var repairTasks = await FabricClientInstance.RepairManager.GetRepairTaskListAsync(
                     null,
                     RepairTaskStateFilter.Active |
