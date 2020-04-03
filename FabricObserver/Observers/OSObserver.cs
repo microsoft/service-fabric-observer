@@ -412,7 +412,7 @@ namespace FabricObserver.Observers
                 {
                     Logger.EtwLogger?.Write(
                         $"FabricObserverDataEvent",
-                        new MachineTelemetryData
+                        new
                         {
                             HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                             Node = this.NodeName,

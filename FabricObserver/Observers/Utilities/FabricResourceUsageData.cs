@@ -21,8 +21,8 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="property">Metric string.</param>
         /// <param name="id">Instance id.</param>
-        /// <param name="dataCapacity">Max element capacity of instance's data container
-        /// (CircularBufferCollection.<T>, which implements IList<T>).</param>
+        /// <param name="dataCapacity">Max element capacity of instance's data container.</param>
+        /// <param name="useCircularBuffer">Whether to hold data in a Circular Buffer or not.</param>
         public FabricResourceUsageData(
             string property,
             string id,
@@ -100,7 +100,7 @@ namespace FabricObserver.Observers.Utilities
         public string Units { get; }
 
         /// <summary>
-        /// Gets the Circular Buffer of type IList that holds the resource monitoring
+        /// Gets IList type that holds the resource monitoring
         /// numeric data.
         /// </summary>
         public IList<T> Data { get; }
