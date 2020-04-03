@@ -144,7 +144,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            // To SFX and Telemetry provider.
+            // To SFX.
             if (healthReport.ReportType == HealthReportType.Application && healthReport.AppName != null)
             {
                 var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);

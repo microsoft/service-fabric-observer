@@ -10,7 +10,7 @@
     <version>1.0.8</version>
     <authors>ctorre</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>This package contains the Service Fabric ClusterObserver Application.</description>
+    <description>This package contains the Service Fabric ClusterObserver Application (Config files and Microsoft-signed binaries).</description>
     <summary>This package contains the Service Fabric ClusterObserver Application, a configurable SF service for cluster health monitoring and telemetry.</summary>
   </metadata>
   <files>
