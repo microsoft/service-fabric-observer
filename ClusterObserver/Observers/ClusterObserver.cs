@@ -166,7 +166,7 @@ namespace FabricClusterObserver.Observers
                     if (this.etwEnabled)
                     {
                         this.EtwLogger?.Write(
-                            "ClusterObserverDataEvent",
+                            ObserverConstants.ClusterObserverETWEventName,
                             new
                             {
                                 HealthScope = "Cluster",
@@ -223,7 +223,7 @@ namespace FabricClusterObserver.Observers
                             if (this.etwEnabled)
                             {
                                 this.EtwLogger?.Write(
-                                    "ClusterObserverDataEvent",
+                                    ObserverConstants.ClusterObserverETWEventName,
                                     new
                                     {
                                         HealthScope = "SystemApplication",
@@ -376,7 +376,7 @@ namespace FabricClusterObserver.Observers
                                         if (this.etwEnabled)
                                         {
                                             this.EtwLogger?.Write(
-                                                "ClusterObserverDataEvent",
+                                                ObserverConstants.ClusterObserverETWEventName,
                                                 new
                                                 {
                                                     ApplicationName = appHealth.ApplicationName.OriginalString,
@@ -466,7 +466,7 @@ namespace FabricClusterObserver.Observers
                                         if (this.etwEnabled)
                                         {
                                             this.EtwLogger?.Write(
-                                                "ClusterObserverDataEvent",
+                                                ObserverConstants.ClusterObserverETWEventName,
                                                 new
                                                 {
                                                     NodeName = node.NodeName,
@@ -563,7 +563,7 @@ namespace FabricClusterObserver.Observers
                     if (this.etwEnabled)
                     {
                         this.EtwLogger?.Write(
-                            "ClusterObserverDataEvent",
+                            ObserverConstants.ClusterObserverETWEventName,
                             new
                             {
                                 HealthScope = "Node",
@@ -643,7 +643,7 @@ namespace FabricClusterObserver.Observers
                         if (this.etwEnabled)
                         {
                             this.EtwLogger?.Write(
-                                "ClusterObserverDataEvent",
+                                ObserverConstants.ClusterObserverETWEventName,
                                 new
                                 {
                                     HealthScope = "Node",

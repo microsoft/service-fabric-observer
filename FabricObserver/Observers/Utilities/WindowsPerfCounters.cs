@@ -51,6 +51,12 @@ namespace FabricObserver.Observers.Utilities
             return true;
         }
 
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            this.Dispose(true);
+        }
+
         internal float PerfCounterGetAverageDiskQueueLength(string instance)
         {
             string cat = "LogicalDisk";
@@ -236,12 +242,6 @@ namespace FabricObserver.Observers.Utilities
             }
 
             this.disposedValue = true;
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            this.Dispose(true);
         }
     }
 }

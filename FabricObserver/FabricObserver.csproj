@@ -58,6 +58,7 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <CodeAnalysisIgnoreGeneratedCode>false</CodeAnalysisIgnoreGeneratedCode>
+    <NoWarn>CA1822</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <AdditionalFileItemNames>$(AdditionalFileItemNames);None</AdditionalFileItemNames>

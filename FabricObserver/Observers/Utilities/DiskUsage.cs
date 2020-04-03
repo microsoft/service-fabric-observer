@@ -43,6 +43,12 @@ namespace FabricObserver.Observers.Utilities
 
         internal string Drive { get; }
 
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            this.Dispose(true);
+        }
+
         internal static double GetTotalDiskSpace(string driveLetter, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             var driveInfo = new DriveInfo(driveLetter);
@@ -142,12 +148,6 @@ namespace FabricObserver.Observers.Utilities
                 default:
                     return amount;
             }
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            this.Dispose(true);
         }
     }
 

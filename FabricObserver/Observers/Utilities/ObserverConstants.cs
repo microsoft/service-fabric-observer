@@ -17,6 +17,7 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
         public const string FabricObserverName = "FabricObserver";
+        public const string FabricObserverETWEventName = "FabricObserverDataEvent";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";

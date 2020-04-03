@@ -17,6 +17,7 @@ namespace FabricObserver.Observers
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
     public class NodeObserver : ObserverBase
     {
+        private readonly Stopwatch stopwatch;
         private FabricResourceUsageData<float> allMemDataCommittedBytes;
         private FabricResourceUsageData<int> firewallData;
         private FabricResourceUsageData<int> activePortsData;
@@ -24,7 +25,6 @@ namespace FabricObserver.Observers
         private FabricResourceUsageData<int> allMemDataPercentUsed;
         private WindowsPerfCounters perfCounters;
         private bool disposed;
-        private readonly Stopwatch stopwatch;
 
         // public because unit test.
         public FabricResourceUsageData<float> AllCpuTimeData { get; set; }
@@ -99,6 +99,158 @@ namespace FabricObserver.Observers
             }
         }
 
+        /// <inheritdoc/>
+        public override Task ReportAsync(CancellationToken token)
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+
+                if (this.CsvFileLogger.EnableCsvLogging)
+                {
+                    var fileName = "CpuMemFirewallsPorts" + this.NodeName;
+
+                    // Log (csv) system-wide CPU/Mem data.
+                    this.CsvFileLogger.LogData(
+                        fileName,
+                        this.NodeName,
+                        "CPU Time",
+                        "Average",
+                        Math.Round(this.AllCpuTimeData.AverageDataValue));
+
+                    this.CsvFileLogger.LogData(
+                        fileName,
+                        this.NodeName,
+                        "CPU Time",
+                        "Peak",
+                        Math.Round(this.AllCpuTimeData.MaxDataValue));
+
+                    this.CsvFileLogger.LogData(
+                        fileName,
+                        this.NodeName,
+                        "Committed Memory (MB)",
+                        "Average",
+                        Math.Round(this.allMemDataCommittedBytes.AverageDataValue));
+
+                    this.CsvFileLogger.LogData(
+                        fileName,
+                        this.NodeName,
+                        "Committed Memory (MB)",
+                        "Peak",
+                        Math.Round(this.allMemDataCommittedBytes.MaxDataValue));
+
+                    this.CsvFileLogger.LogData(
+                        fileName,
+                        this.NodeName,
+                        "All Active Ports",
+                        "Total",
+                        this.activePortsData.Data[0]);
+
+                    this.CsvFileLogger.LogData(
+                        fileName,
+                        this.NodeName,
+                        "Ephemeral Active Ports",
+                        "Total",
+                        this.ephemeralPortsData.Data[0]);
+
+                    this.CsvFileLogger.LogData(
+                        fileName,
+                        this.NodeName,
+                        "Firewall Rules",
+                        "Total",
+                        this.firewallData.Data[0]);
+
+                    DataTableFileLogger.Flush();
+                }
+
+                // Report on the global health state (system-wide (node) metrics).
+                // User-configurable in NodeObserver.config.json
+                var timeToLiveWarning = this.SetHealthReportTimeToLive();
+
+                // CPU
+                if (this.AllCpuTimeData.AverageDataValue > 0)
+                {
+                    this.ProcessResourceDataReportHealth(
+                        this.AllCpuTimeData,
+                        this.CpuErrorUsageThresholdPct,
+                        this.CpuWarningUsageThresholdPct,
+                        timeToLiveWarning);
+                }
+
+                // Memory
+                if (this.allMemDataCommittedBytes.AverageDataValue > 0)
+                {
+                    this.ProcessResourceDataReportHealth(
+                        this.allMemDataCommittedBytes,
+                        this.MemErrorUsageThresholdMb,
+                        this.MemWarningUsageThresholdMb,
+                        timeToLiveWarning);
+                }
+
+                if (this.allMemDataPercentUsed.AverageDataValue > 0)
+                {
+                    this.ProcessResourceDataReportHealth(
+                        this.allMemDataPercentUsed,
+                        this.MemoryErrorLimitPercent,
+                        this.MemoryWarningLimitPercent,
+                        timeToLiveWarning);
+                }
+
+                // Firewall rules
+                this.ProcessResourceDataReportHealth(
+                    this.firewallData,
+                    this.FirewallRulesErrorThreshold,
+                    this.FirewallRulesWarningThreshold,
+                    timeToLiveWarning);
+
+                // Ports
+                this.ProcessResourceDataReportHealth(
+                    this.activePortsData,
+                    this.ActivePortsErrorThreshold,
+                    this.ActivePortsWarningThreshold,
+                    timeToLiveWarning);
+
+                this.ProcessResourceDataReportHealth(
+                    this.ephemeralPortsData,
+                    this.EphemeralPortsErrorThreshold,
+                    this.EphemeralPortsWarningThreshold,
+                    timeToLiveWarning);
+
+                return Task.FromResult(1);
+            }
+            catch (Exception e)
+            {
+                if (e is OperationCanceledException)
+                {
+                    return Task.FromResult(1);
+                }
+
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Warning,
+                    e.ToString());
+
+                throw;
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            if (disposing && this.perfCounters != null)
+            {
+                this.perfCounters.Dispose();
+                this.perfCounters = null;
+            }
+
+            this.disposed = true;
+        }
+
         private void Initialize()
         {
             if (!this.IsTestRun)
@@ -113,17 +265,17 @@ namespace FabricObserver.Observers
         {
             if (this.AllCpuTimeData == null)
             {
-                this.AllCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
+                this.AllCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", this.DataCapacity, this.UseCircularBuffer);
             }
 
             if (this.allMemDataCommittedBytes == null)
             {
-                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", DataCapacity, UseCircularBuffer);
+                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", this.DataCapacity, this.UseCircularBuffer);
             }
 
             if (this.allMemDataPercentUsed == null)
             {
-                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataCapacity, UseCircularBuffer);
+                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", this.DataCapacity, this.UseCircularBuffer);
             }
 
             if (this.firewallData == null)
@@ -334,158 +486,6 @@ namespace FabricObserver.Observers
             }
 
             return Task.CompletedTask;
-        }
-
-        /// <inheritdoc/>
-        public override Task ReportAsync(CancellationToken token)
-        {
-            try
-            {
-                token.ThrowIfCancellationRequested();
-
-                if (this.CsvFileLogger.EnableCsvLogging)
-                {
-                    var fileName = "CpuMemFirewallsPorts" + this.NodeName;
-
-                    // Log (csv) system-wide CPU/Mem data.
-                    this.CsvFileLogger.LogData(
-                        fileName,
-                        this.NodeName,
-                        "CPU Time",
-                        "Average",
-                        Math.Round(this.AllCpuTimeData.AverageDataValue));
-
-                    this.CsvFileLogger.LogData(
-                        fileName,
-                        this.NodeName,
-                        "CPU Time",
-                        "Peak",
-                        Math.Round(this.AllCpuTimeData.MaxDataValue));
-
-                    this.CsvFileLogger.LogData(
-                        fileName,
-                        this.NodeName,
-                        "Committed Memory (MB)",
-                        "Average",
-                        Math.Round(this.allMemDataCommittedBytes.AverageDataValue));
-
-                    this.CsvFileLogger.LogData(
-                        fileName,
-                        this.NodeName,
-                        "Committed Memory (MB)",
-                        "Peak",
-                        Math.Round(this.allMemDataCommittedBytes.MaxDataValue));
-
-                    this.CsvFileLogger.LogData(
-                        fileName,
-                        this.NodeName,
-                        "All Active Ports",
-                        "Total",
-                        this.activePortsData.Data[0]);
-
-                    this.CsvFileLogger.LogData(
-                        fileName,
-                        this.NodeName,
-                        "Ephemeral Active Ports",
-                        "Total",
-                        this.ephemeralPortsData.Data[0]);
-
-                    this.CsvFileLogger.LogData(
-                        fileName,
-                        this.NodeName,
-                        "Firewall Rules",
-                        "Total",
-                        this.firewallData.Data[0]);
-
-                    DataTableFileLogger.Flush();
-                }
-
-                // Report on the global health state (system-wide (node) metrics).
-                // User-configurable in NodeObserver.config.json
-                var timeToLiveWarning = this.SetHealthReportTimeToLive();
-
-                // CPU
-                if (this.AllCpuTimeData.AverageDataValue > 0)
-                {
-                    this.ProcessResourceDataReportHealth(
-                        this.AllCpuTimeData,
-                        this.CpuErrorUsageThresholdPct,
-                        this.CpuWarningUsageThresholdPct,
-                        timeToLiveWarning);
-                }
-
-                // Memory
-                if (this.allMemDataCommittedBytes.AverageDataValue > 0)
-                {
-                    this.ProcessResourceDataReportHealth(
-                        this.allMemDataCommittedBytes,
-                        this.MemErrorUsageThresholdMb,
-                        this.MemWarningUsageThresholdMb,
-                        timeToLiveWarning);
-                }
-
-                if (this.allMemDataPercentUsed.AverageDataValue > 0)
-                {
-                    this.ProcessResourceDataReportHealth(
-                        this.allMemDataPercentUsed,
-                        this.MemoryErrorLimitPercent,
-                        this.MemoryWarningLimitPercent,
-                        timeToLiveWarning);
-                }
-
-                // Firewall rules
-                this.ProcessResourceDataReportHealth(
-                    this.firewallData,
-                    this.FirewallRulesErrorThreshold,
-                    this.FirewallRulesWarningThreshold,
-                    timeToLiveWarning);
-
-                // Ports
-                this.ProcessResourceDataReportHealth(
-                    this.activePortsData,
-                    this.ActivePortsErrorThreshold,
-                    this.ActivePortsWarningThreshold,
-                    timeToLiveWarning);
-
-                this.ProcessResourceDataReportHealth(
-                    this.ephemeralPortsData,
-                    this.EphemeralPortsErrorThreshold,
-                    this.EphemeralPortsWarningThreshold,
-                    timeToLiveWarning);
-
-                return Task.FromResult(1);
-            }
-            catch (Exception e)
-            {
-                if (e is OperationCanceledException)
-                {
-                    return Task.FromResult(1);
-                }
-
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
-                    HealthState.Warning,
-                    e.ToString());
-
-                throw;
-            }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            if (disposing && this.perfCounters != null)
-            {
-                this.perfCounters.Dispose();
-                this.perfCounters = null;
-            }
-
-            this.disposed = true;
         }
     }
 }

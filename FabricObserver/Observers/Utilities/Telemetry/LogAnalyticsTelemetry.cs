@@ -48,72 +48,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             this.fabricClient = fabricClient;
             this.token = token;
             this.ApiVersion = apiVersion;
-            logger = new Logger("TelemetryLogger");
-        }
-
-        /// <summary>
-        /// Sends telemetry data to Azure LogAnalytics via REST.
-        /// </summary>
-        /// <param name="payload">Json string containing telemetry data.</param>
-        /// <returns>A completed task or task containing exception info.</returns>
-        private Task SendTelemetryAsync(string payload)
-        {
-            var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
-            string date = DateTime.UtcNow.ToString("r");
-            string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
-
-            var request = (HttpWebRequest)WebRequest.Create(requestUri);
-            request.ContentType = "application/json";
-            request.Method = "POST";
-            request.Headers["Log-Type"] = LogType;
-            request.Headers["x-ms-date"] = date;
-            request.Headers["Authorization"] = signature;
-            byte[] content = Encoding.UTF8.GetBytes(payload);
-
-            using (var requestStreamAsync = request.GetRequestStream())
-            {
-                requestStreamAsync.Write(content, 0, content.Length);
-            }
-
-            using (var responseAsync = (HttpWebResponse)request.GetResponse())
-            {
-                if (responseAsync.StatusCode == HttpStatusCode.OK ||
-                    responseAsync.StatusCode == HttpStatusCode.Accepted)
-                {
-                    return Task.CompletedTask;
-                }
-
-                var responseStream = responseAsync.GetResponseStream();
-
-                if (responseStream == null)
-                {
-                    return Task.CompletedTask;
-                }
-
-                using (var streamReader = new StreamReader(responseStream))
-                {
-                    string err = $"Exception sending LogAnalytics Telemetry:{Environment.NewLine}{streamReader.ReadToEnd()}";
-                    logger.LogWarning(err);
-
-                    return Task.FromException(new Exception(err));
-                }
-            }
-        }
-
-        private string GetSignature(
-            string method,
-            int contentLength,
-            string contentType,
-            string date,
-            string resource)
-        {
-            string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
-            byte[] bytes = Encoding.UTF8.GetBytes(message);
-
-            using (var encryptor = new HMACSHA256(Convert.FromBase64String(Key)))
-            {
-                return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
-            }
+            this.logger = new Logger("TelemetryLogger");
         }
 
         public async Task ReportHealthAsync(
@@ -127,7 +62,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string instanceName = null)
         {
             var (clusterId, tenantId, clusterType) =
-                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
+                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(this.fabricClient, this.token).ConfigureAwait(true);
 
             string jsonPayload = JsonConvert.SerializeObject(
                 new
@@ -159,7 +94,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
-            await SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
         }
 
         public async Task ReportMetricAsync(
@@ -173,7 +108,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
-            await SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -183,7 +118,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             CancellationToken cancellationToken)
         {
             var (clusterId, tenantId, clusterType) =
-               await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
+               await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(this.fabricClient, this.token).ConfigureAwait(true);
 
             string jsonPayload = JsonConvert.SerializeObject(
                 new
@@ -259,6 +194,71 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Sends telemetry data to Azure LogAnalytics via REST.
+        /// </summary>
+        /// <param name="payload">Json string containing telemetry data.</param>
+        /// <returns>A completed task or task containing exception info.</returns>
+        private Task SendTelemetryAsync(string payload)
+        {
+            var requestUri = new Uri($"https://{this.WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={this.ApiVersion}");
+            string date = DateTime.UtcNow.ToString("r");
+            string signature = this.GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
+
+            var request = (HttpWebRequest)WebRequest.Create(requestUri);
+            request.ContentType = "application/json";
+            request.Method = "POST";
+            request.Headers["Log-Type"] = this.LogType;
+            request.Headers["x-ms-date"] = date;
+            request.Headers["Authorization"] = signature;
+            byte[] content = Encoding.UTF8.GetBytes(payload);
+
+            using (var requestStreamAsync = request.GetRequestStream())
+            {
+                requestStreamAsync.Write(content, 0, content.Length);
+            }
+
+            using (var responseAsync = (HttpWebResponse)request.GetResponse())
+            {
+                if (responseAsync.StatusCode == HttpStatusCode.OK ||
+                    responseAsync.StatusCode == HttpStatusCode.Accepted)
+                {
+                    return Task.CompletedTask;
+                }
+
+                var responseStream = responseAsync.GetResponseStream();
+
+                if (responseStream == null)
+                {
+                    return Task.CompletedTask;
+                }
+
+                using (var streamReader = new StreamReader(responseStream))
+                {
+                    string err = $"Exception sending LogAnalytics Telemetry:{Environment.NewLine}{streamReader.ReadToEnd()}";
+                    this.logger.LogWarning(err);
+
+                    return Task.FromException(new Exception(err));
+                }
+            }
+        }
+
+        private string GetSignature(
+            string method,
+            int contentLength,
+            string contentType,
+            string date,
+            string resource)
+        {
+            string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
+            byte[] bytes = Encoding.UTF8.GetBytes(message);
+
+            using (var encryptor = new HMACSHA256(Convert.FromBase64String(this.Key)))
+            {
+                return $"SharedKey {this.WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
+            }
         }
     }
 }

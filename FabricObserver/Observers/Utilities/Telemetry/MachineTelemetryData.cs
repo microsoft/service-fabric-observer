@@ -109,7 +109,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             set;
         }
 
-        public double AvailablePhysicalMemory
+        public double AvailablePhysicalMemoryGB
         {
             get;
             internal set;
@@ -121,7 +121,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             internal set;
         }
 
-        public double AvailableVirtualMemory
+        public double AvailableVirtualMemoryGB
         {
             get;
             internal set;

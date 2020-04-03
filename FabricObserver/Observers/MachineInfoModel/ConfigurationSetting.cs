@@ -14,11 +14,11 @@ namespace FabricObserver.Observers.MachineInfoModel
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationSetting{T}"/> class.
+        /// </summary>
         /// <param name="configurationSettings">The settings instance.</param>
         /// <param name="configurationSectionName">The section name.</param>
         /// <param name="settingName">The setting name.</param>
         /// <param name="defaultValue">The default value.</param>
-        /// </summary>
         public ConfigurationSetting(
             ConfigurationSettings configurationSettings,
             string configurationSectionName,
@@ -59,7 +59,10 @@ namespace FabricObserver.Observers.MachineInfoModel
         /// <remarks>
         ///   This property allows the tracing subsystem itself to use configuration settings, where infinite recursion might otherwise occur.
         /// </remarks>
-        public bool DisableTracing { get; set; }
+        public bool DisableTracing
+        {
+            get; set;
+        }
 
         public virtual T Value
         {
@@ -98,7 +101,7 @@ namespace FabricObserver.Observers.MachineInfoModel
         protected bool ValueSpecified { get; set; }
 
         /// <summary>
-        ///   Try to parse the string and return an object of the given type.
+        /// Try to parse the string and return an object of the given type.
         /// </summary>
         /// <param name="value"> String to be parsed. </param>
         /// <param name="type"> Type of result. </param>
@@ -197,43 +200,6 @@ namespace FabricObserver.Observers.MachineInfoModel
             return true;
         }
 
-        /// <summary>
-        /// Get Windows Fabric Settings from config.
-        /// </summary>
-        /// <param name="parameterName">Return settings for the parameter name.</param>
-        /// <returns>string.</returns>
-        protected string GetConfigurationSetting(string parameterName)
-        {
-            if (string.IsNullOrEmpty(parameterName) || this.ConfigurationSettings == null)
-            {
-                return null;
-            }
-
-            if (!this.ConfigurationSettings.Sections.Contains(this.ConfigurationSectionName)
-                || this.ConfigurationSettings.Sections[this.ConfigurationSectionName] == null)
-            {
-                return null;
-            }
-
-            if (!this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters.Contains(parameterName))
-            {
-                return null;
-            }
-
-            string parameterValue = this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].Value;
-
-            if (!this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName]
-                .IsEncrypted || string.IsNullOrEmpty(parameterValue))
-            {
-                return parameterValue;
-            }
-
-            var paramValueAsCharArray = SecureStringToCharArray(
-                this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].DecryptValue());
-
-            return new string(paramValueAsCharArray);
-        }
-
         internal static char[] SecureStringToCharArray(SecureString secureString)
         {
             if (secureString == null)
@@ -270,6 +236,43 @@ namespace FabricObserver.Observers.MachineInfoModel
             }
 
             return secureString;
+        }
+
+        /// <summary>
+        /// Get Windows Fabric Settings from config.
+        /// </summary>
+        /// <param name="parameterName">Return settings for the parameter name.</param>
+        /// <returns>string.</returns>
+        protected string GetConfigurationSetting(string parameterName)
+        {
+            if (string.IsNullOrEmpty(parameterName) || this.ConfigurationSettings == null)
+            {
+                return null;
+            }
+
+            if (!this.ConfigurationSettings.Sections.Contains(this.ConfigurationSectionName)
+                || this.ConfigurationSettings.Sections[this.ConfigurationSectionName] == null)
+            {
+                return null;
+            }
+
+            if (!this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters.Contains(parameterName))
+            {
+                return null;
+            }
+
+            string parameterValue = this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].Value;
+
+            if (!this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName]
+                .IsEncrypted || string.IsNullOrEmpty(parameterValue))
+            {
+                return parameterValue;
+            }
+
+            var paramValueAsCharArray = SecureStringToCharArray(
+                this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].DecryptValue());
+
+            return new string(paramValueAsCharArray);
         }
     }
 }

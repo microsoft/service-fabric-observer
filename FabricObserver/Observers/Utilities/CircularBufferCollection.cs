@@ -189,7 +189,7 @@ namespace FabricObserver.Observers.Utilities
             this.head = this.Capacity - 1;
             this.tail = 0;
             this.Count = 0;
-            buffer = new List<T>(new T[Capacity]);
+            this.buffer = new List<T>(new T[this.Capacity]);
         }
 
         /// <summary>

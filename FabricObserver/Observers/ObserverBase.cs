@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
+using System.Fabric.Query;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -27,27 +28,19 @@ namespace FabricObserver.Observers
 {
     public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
     {
-        // SF Infra.
         private const string SfWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
         private const string SfInfrastructureLogRootRegistryName = "FabricLogRoot";
         private const int TtlAddMinutes = 5;
-        private string sFLogRoot;
-
-        // Dump.
-        private string dumpsPath;
         private readonly int maxDumps = 5;
         private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
-
-        protected bool IsTelemetryProviderEnabled { get; set; } = ObserverManager.TelemetryEnabled;
-
-        protected ITelemetryProvider TelemetryClient { get; set; }
-
-        protected bool IsEtwEnabled { get; set; } = ObserverManager.EtwEnabled;
-
-        protected FabricClient FabricClientInstance { get; set; }
+        private string sFLogRoot;
+        private string dumpsPath;
 
         /// <inheritdoc/>
-        public string ObserverName { get; set; }
+        public string ObserverName
+        {
+            get; set;
+        }
 
         /// <inheritdoc/>
         public string NodeName { get; set; }
@@ -86,7 +79,6 @@ namespace FabricObserver.Observers
 
         // Each derived Observer can set this to maintain health status across iterations.
         // This information is used by ObserverManager.
-        /// <inheritdoc/>
         public bool HasActiveFabricErrorOrWarning { get; set; }
 
         /// <inheritdoc/>
@@ -100,6 +92,20 @@ namespace FabricObserver.Observers
 
         public TimeSpan MonitorDuration { get; set; } = TimeSpan.MinValue;
 
+        protected bool IsTelemetryProviderEnabled { get; set; } = ObserverManager.TelemetryEnabled;
+
+        protected ITelemetryProvider TelemetryClient
+        {
+            get; set;
+        }
+
+        protected bool IsEtwEnabled { get; set; } = ObserverManager.EtwEnabled;
+
+        protected FabricClient FabricClientInstance
+        {
+            get; set;
+        }
+
         /// <inheritdoc/>
         public abstract Task ObserveAsync(CancellationToken token);
 
@@ -109,6 +115,7 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverBase"/> class.
         /// </summary>
+        /// <param name="observerName">Name of observer.</param>
         protected ObserverBase(string observerName)
         {
             this.FabricClientInstance = ObserverManager.FabricClientInstance;
@@ -292,6 +299,11 @@ namespace FabricObserver.Observers
             {
                 var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
+                if (serviceConfiguration == null)
+                {
+                    return null;
+                }
+
                 if (serviceConfiguration.Settings.Sections.All(sec => sec.Name != sectionName))
                 {
                     return null;
@@ -408,38 +420,10 @@ namespace FabricObserver.Observers
             return interval;
         }
 
-        private void SetDefaultSfDumpPath()
+        /// <inheritdoc/>
+        public void Dispose()
         {
-            // This only needs to be set once.
-            if (string.IsNullOrEmpty(this.dumpsPath))
-            {
-                this.sFLogRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureLogRootRegistryName, null);
-
-                if (!string.IsNullOrEmpty(this.sFLogRoot))
-                {
-                    this.dumpsPath = Path.Combine(this.sFLogRoot, "CrashDumps");
-                }
-            }
-
-            if (Directory.Exists(this.dumpsPath))
-            {
-                return;
-            }
-
-            try
-            {
-                _ = Directory.CreateDirectory(this.dumpsPath);
-            }
-            catch (IOException e)
-            {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.ToString(),
-                    this.ObserverName,
-                    HealthState.Warning,
-                    $"Unable to create dumps directory:{Environment.NewLine}{e}");
-
-                this.dumpsPath = null;
-            }
+            this.Dispose(true);
         }
 
         // Windows process dmp creator.
@@ -566,7 +550,7 @@ namespace FabricObserver.Observers
                 name = appName.OriginalString.Replace("fabric:/", string.Empty);
                 id = name + "_" + data.Property.Replace(" ", string.Empty);
 
-                telemetryData = new TelemetryData(FabricClientInstance, Token)
+                telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
                 {
                     ApplicationName = appName?.OriginalString ?? string.Empty,
                     Code = FoErrorWarningCodes.Ok,
@@ -589,13 +573,13 @@ namespace FabricObserver.Observers
                     {
                         _ = this.TelemetryClient?.ReportMetricAsync(
                             telemetryData,
-                            Token).ConfigureAwait(false);
+                            this.Token).ConfigureAwait(false);
                     }
 
                     if (this.IsEtwEnabled)
                     {
                         Logger.EtwLogger?.Write(
-                            "FabricObserverDataEvent",
+                            ObserverConstants.FabricObserverETWEventName,
                             new
                             {
                                 ApplicationName = appName?.OriginalString ?? string.Empty,
@@ -624,7 +608,7 @@ namespace FabricObserver.Observers
             {
                 if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
-                    telemetryData = new TelemetryData(FabricClientInstance, Token)
+                    telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
                     {
                         Code = FoErrorWarningCodes.Ok,
                         HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
@@ -643,7 +627,7 @@ namespace FabricObserver.Observers
                 if (this.IsEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
-                        "FabricObserverDataEvent",
+                        ObserverConstants.FabricObserverETWEventName,
                         new
                         {
                             Code = FoErrorWarningCodes.Ok,
@@ -844,7 +828,7 @@ namespace FabricObserver.Observers
                 if (this.IsEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
-                        $"FabricObserverDataEvent",
+                        ObserverConstants.FabricObserverETWEventName,
                         new
                         {
                             ApplicationName = appName?.OriginalString ?? string.Empty,
@@ -901,7 +885,7 @@ namespace FabricObserver.Observers
                     if (this.IsEtwEnabled)
                     {
                         Logger.EtwLogger?.Write(
-                            $"FabricObserverDataEvent",
+                            ObserverConstants.FabricObserverETWEventName,
                             new
                             {
                                 ApplicationName = appName?.OriginalString ?? string.Empty,
@@ -922,7 +906,17 @@ namespace FabricObserver.Observers
             }
 
             // No need to keep data in memory.
-            data.Data.Clear();
+            if (data.Data is List<T>)
+            {
+                // List<T> impl.
+                ((List<T>)data.Data).Clear();
+                ((List<T>)data.Data).TrimExcess();
+            }
+            else
+            {
+                // CircularBufferCollection<T> impl.
+                data.Data.Clear();
+            }
         }
 
         internal TimeSpan SetHealthReportTimeToLive()
@@ -965,10 +959,38 @@ namespace FabricObserver.Observers
             this.disposedValue = true;
         }
 
-        /// <inheritdoc/>
-        public void Dispose()
+        private void SetDefaultSfDumpPath()
         {
-            this.Dispose(true);
+            // This only needs to be set once.
+            if (string.IsNullOrEmpty(this.dumpsPath))
+            {
+                this.sFLogRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureLogRootRegistryName, null);
+
+                if (!string.IsNullOrEmpty(this.sFLogRoot))
+                {
+                    this.dumpsPath = Path.Combine(this.sFLogRoot, "CrashDumps");
+                }
+            }
+
+            if (Directory.Exists(this.dumpsPath))
+            {
+                return;
+            }
+
+            try
+            {
+                _ = Directory.CreateDirectory(this.dumpsPath);
+            }
+            catch (IOException e)
+            {
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.ToString(),
+                    this.ObserverName,
+                    HealthState.Warning,
+                    $"Unable to create dumps directory:{Environment.NewLine}{e}");
+
+                this.dumpsPath = null;
+            }
         }
     }
 }
