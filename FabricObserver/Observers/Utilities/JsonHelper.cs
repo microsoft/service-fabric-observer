@@ -75,6 +75,14 @@ namespace FabricObserver.Observers.Utilities
             return data;
         }
 
+        public static T ConvertFromString<T>(string jsonInput)
+        {
+            using (var stream = CreateStreamFromString(jsonInput))
+            {
+                return ReadFromJsonStream<T>(stream);
+            }
+        }
+
         public static void WriteToStream<T>(T data, Stream stream)
         {
             JsonMediaTypeFormatter.WriteToStreamAsync(
@@ -85,24 +93,6 @@ namespace FabricObserver.Observers.Utilities
                 null).Wait();
         }
 
-        private static Stream CreateStreamFromString(string s)
-        {
-            var stream = new MemoryStream();
-            var writer = new StreamWriter(stream, Encoding.UTF8);
-            writer.Write(s);
-            writer.Flush();
-            stream.Position = 0;
-            return stream;
-        }
-
-        public static T ConvertFromString<T>(string jsonInput)
-        {
-            using (var stream = CreateStreamFromString(jsonInput))
-            {
-                return ReadFromJsonStream<T>(stream);
-            }
-        }
-
         public static string ConvertToString<T>(T data)
         {
             using (var stream = new MemoryStream())
@@ -111,6 +101,16 @@ namespace FabricObserver.Observers.Utilities
                 stream.Position = 0;
                 return Encoding.UTF8.GetString(stream.GetBuffer());
             }
+        }
+
+        private static Stream CreateStreamFromString(string s)
+        {
+            var stream = new MemoryStream();
+            var writer = new StreamWriter(stream, Encoding.UTF8);
+            writer.Write(s);
+            writer.Flush();
+            stream.Position = 0;
+            return stream;
         }
     }
 }

@@ -99,6 +99,7 @@ namespace FabricObserver.Observers
                 {
                     // Clear Error or Warning with an OK Health Report.
                     string healthMessage = $"OS reporting healthy: {this.osStatus}";
+
                     var healthReport = new HealthReport
                     {
                         Observer = this.ObserverName,
@@ -411,10 +412,10 @@ namespace FabricObserver.Observers
                 if (this.IsEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
-                        $"FabricObserverDataEvent",
+                        ObserverConstants.FabricObserverETWEventName,
                         new
                         {
-                            HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
+                            HealthState = "Ok",
                             Node = this.NodeName,
                             Observer = this.ObserverName,
                             OS = osName,
@@ -422,8 +423,11 @@ namespace FabricObserver.Observers
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
+                            AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
+                            AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
                             LogicalProcessorCount = logicalProcessorCount,
                             LogicalDriveCount = logicalDriveCount,
+                            DriveInfo = driveInfo,
                             NumberOfRunningProcesses = numProcs,
                             ActiveFirewallRules = firewalls,
                             ActivePorts = activePorts,
@@ -434,12 +438,13 @@ namespace FabricObserver.Observers
                         });
                 }
 
+                // Telemetry
                 if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
                     this.TelemetryClient?.ReportMetricAsync(
                         new MachineTelemetryData
                         {
-                            HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
+                            HealthState = "Ok",
                             Node = this.NodeName,
                             Observer = this.ObserverName,
                             OS = osName,
@@ -447,8 +452,8 @@ namespace FabricObserver.Observers
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
-                            AvailablePhysicalMemory = freePhysicalMem,
-                            AvailableVirtualMemory = freeVirtualMem,
+                            AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
+                            AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
                             LogicalProcessorCount = logicalProcessorCount,
                             LogicalDriveCount = logicalDriveCount,
                             DriveInfo = driveInfo,

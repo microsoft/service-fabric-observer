@@ -16,7 +16,7 @@ using Microsoft.Win32;
 
 namespace FabricObserver.Observers
 {
-    // This observer doesn't monitor or report health status.
+    // This observer doesn't monitor or report health status. It is only useful if you employ the FabricObserverWebApi App.
     // It provides information about the currently installed Service Fabric runtime environment, apps, and services.
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
     public class SfConfigurationObserver : ObserverBase
@@ -133,6 +133,80 @@ namespace FabricObserver.Observers
             await this.ReportAsync(token).ConfigureAwait(true);
 
             this.LastRunDateTime = DateTime.Now;
+        }
+
+        /// <inheritdoc/>
+        public override async Task ReportAsync(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var sb = new StringBuilder();
+
+            _ = sb.AppendLine("\nService Fabric information:\n");
+
+            if (!string.IsNullOrEmpty(this.sFVersion))
+            {
+                _ = sb.AppendLine("Runtime Version: " + this.sFVersion);
+            }
+
+            if (this.sFBinRoot != null)
+            {
+                _ = sb.AppendLine("Fabric Bin root directory: " + this.sFBinRoot);
+            }
+
+            if (this.sFCodePath != null)
+            {
+                _ = sb.AppendLine("Fabric Code Path: " + this.sFCodePath);
+            }
+
+            if (!string.IsNullOrEmpty(this.sFDataRoot))
+            {
+                _ = sb.AppendLine("Data root directory: " + this.sFDataRoot);
+            }
+
+            if (!string.IsNullOrEmpty(this.sFLogRoot))
+            {
+                _ = sb.AppendLine("Log root directory: " + this.sFLogRoot);
+            }
+
+            if (this.sFVolumeDiskServiceEnabled != null)
+            {
+                _ = sb.AppendLine("Volume Disk Service Enabled: " + this.sFVolumeDiskServiceEnabled);
+            }
+
+            if (this.unsupportedPreviewFeaturesEnabled != null)
+            {
+                _ = sb.AppendLine("Unsupported Preview Features Enabled: " + this.unsupportedPreviewFeaturesEnabled);
+            }
+
+            if (this.sFCompatibilityJsonPath != null)
+            {
+                _ = sb.AppendLine("Compatibility Json path: " + this.sFCompatibilityJsonPath);
+            }
+
+            if (this.sFEnableCircularTraceSession != null)
+            {
+                _ = sb.AppendLine("Enable Circular trace session: " + this.sFEnableCircularTraceSession);
+            }
+
+            _ = sb.Append(await this.GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
+            _ = sb.AppendLine();
+
+            token.ThrowIfCancellationRequested();
+
+            var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SFInfraInfo.txt");
+
+            // This file is used by the web application (ObserverWebApi).
+            if (!this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
+            {
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Warning,
+                    "Unable to create SFInfraInfo.txt file.");
+            }
+
+            _ = sb.Clear();
         }
 
         private async Task<string> GetDeployedAppsInfoAsync(CancellationToken token)
@@ -313,7 +387,7 @@ namespace FabricObserver.Observers
                                 if (this.IsEtwEnabled)
                                 {
                                     Logger.EtwLogger?.Write(
-                                        "FabricObserverDataEvent",
+                                        ObserverConstants.FabricObserverETWEventName,
                                         new
                                         {
                                             Level = 0, // Info
@@ -350,80 +424,6 @@ namespace FabricObserver.Observers
             }
 
             return ret;
-        }
-
-        /// <inheritdoc/>
-        public override async Task ReportAsync(CancellationToken token)
-        {
-            token.ThrowIfCancellationRequested();
-
-            var sb = new StringBuilder();
-
-            _ = sb.AppendLine("\nService Fabric information:\n");
-
-            if (!string.IsNullOrEmpty(this.sFVersion))
-            {
-                _ = sb.AppendLine("Runtime Version: " + this.sFVersion);
-            }
-
-            if (this.sFBinRoot != null)
-            {
-                _ = sb.AppendLine("Fabric Bin root directory: " + this.sFBinRoot);
-            }
-
-            if (this.sFCodePath != null)
-            {
-                _ = sb.AppendLine("Fabric Code Path: " + this.sFCodePath);
-            }
-
-            if (!string.IsNullOrEmpty(this.sFDataRoot))
-            {
-                _ = sb.AppendLine("Data root directory: " + this.sFDataRoot);
-            }
-
-            if (!string.IsNullOrEmpty(this.sFLogRoot))
-            {
-                _ = sb.AppendLine("Log root directory: " + this.sFLogRoot);
-            }
-
-            if (this.sFVolumeDiskServiceEnabled != null)
-            {
-                _ = sb.AppendLine("Volume Disk Service Enabled: " + this.sFVolumeDiskServiceEnabled);
-            }
-
-            if (this.unsupportedPreviewFeaturesEnabled != null)
-            {
-                _ = sb.AppendLine("Unsupported Preview Features Enabled: " + this.unsupportedPreviewFeaturesEnabled);
-            }
-
-            if (this.sFCompatibilityJsonPath != null)
-            {
-                _ = sb.AppendLine("Compatibility Json path: " + this.sFCompatibilityJsonPath);
-            }
-
-            if (this.sFEnableCircularTraceSession != null)
-            {
-                _ = sb.AppendLine("Enable Circular trace session: " + this.sFEnableCircularTraceSession);
-            }
-
-            _ = sb.Append(await this.GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
-            _ = sb.AppendLine();
-
-            token.ThrowIfCancellationRequested();
-
-            var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SFInfraInfo.txt");
-
-            // This file is used by the web application (ObserverWebApi).
-            if (!this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
-            {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
-                    HealthState.Warning,
-                    "Unable to create SFInfraInfo.txt file.");
-            }
-
-            _ = sb.Clear();
         }
     }
 }

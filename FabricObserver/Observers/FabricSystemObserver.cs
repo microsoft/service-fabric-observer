@@ -86,6 +86,330 @@ namespace FabricObserver.Observers
 
         public string ErrorOrWarningKind { get; set; } = null;
 
+        /// <inheritdoc/>
+        public override async Task ObserveAsync(CancellationToken token)
+        {
+            // If set, this observer will only run during the supplied interval.
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
+            if (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            {
+                return;
+            }
+
+            this.Token = token;
+
+            if (this.Token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            // Don't run this observer if the aggregated health state of the cluster is Warning or Error.
+            if (this.FabricClientInstance.QueryManager.GetNodeListAsync().GetAwaiter().GetResult()?.Count > 3
+                && await this.GetClusterHealthStateWithPercentErrorNodesAsync(
+                    this.unhealthyNodesWarnThreshold,
+                    this.unhealthyNodesErrorThreshold).ConfigureAwait(true) == HealthState.Error)
+            {
+                return;
+            }
+
+            this.Initialize();
+
+            this.perfCounters = new WindowsPerfCounters();
+            this.diskUsage = new DiskUsage();
+
+            try
+            {
+                foreach (var proc in this.processWatchList)
+                {
+                    this.Token.ThrowIfCancellationRequested();
+
+                    this.GetProcessInfo(proc);
+                }
+            }
+            catch (Exception e)
+            {
+                if (!(e is OperationCanceledException))
+                {
+                    this.WriteToLogWithLevel(
+                        this.ObserverName,
+                        "Unhandled exception in ObserveAsync. Failed to observe CPU and Memory usage of " + string.Join(",", this.processWatchList) + ": " + e,
+                        LogLevel.Error);
+                }
+
+                throw;
+            }
+
+            try
+            {
+                if (ObserverManager.ObserverWebAppDeployed
+                    && this.monitorWinEventLog)
+                {
+                    this.ReadServiceFabricWindowsEventLog();
+                }
+
+                // Set TTL.
+                this.stopwatch.Stop();
+                this.RunDuration = this.stopwatch.Elapsed;
+                this.stopwatch.Reset();
+
+                await this.ReportAsync(token).ConfigureAwait(true);
+
+                // No need to keep these objects in memory aross healthy iterations.
+                if (!this.HasActiveFabricErrorOrWarning)
+                {
+                    // Clear out/null list objects.
+                    this.allCpuData.Clear();
+                    this.allCpuData = null;
+
+                    this.allMemData.Clear();
+                    this.allMemData = null;
+                }
+
+                this.LastRunDateTime = DateTime.Now;
+            }
+            finally
+            {
+                this.diskUsage?.Dispose();
+                this.diskUsage = null;
+                this.perfCounters?.Dispose();
+                this.perfCounters = null;
+            }
+        }
+
+        /// <inheritdoc/>
+        public override Task ReportAsync(CancellationToken token)
+        {
+            this.Token.ThrowIfCancellationRequested();
+            var timeToLiveWarning = this.SetHealthReportTimeToLive();
+            var portInformationReport = new HealthReport
+            {
+                Observer = this.ObserverName,
+                NodeName = this.NodeName,
+                HealthMessage = $"Number of ports in use by Fabric services: {this.TotalActivePortCount}\n" +
+                                $"Number of ephemeral ports in use by Fabric services: {this.TotalActiveEphemeralPortCount}",
+                State = HealthState.Ok,
+                HealthReportTimeToLive = timeToLiveWarning,
+            };
+
+            // TODO: Report on port count based on thresholds PortCountWarning/Error.
+            this.HealthReporter.ReportHealthToServiceFabric(portInformationReport);
+
+            // Reset ports counters.
+            this.TotalActivePortCount = 0;
+            this.TotalActiveEphemeralPortCount = 0;
+
+            // CPU
+            this.ProcessResourceDataList(
+                this.allCpuData,
+                this.CpuErrorUsageThresholdPct,
+                this.CpuWarnUsageThresholdPct);
+
+            // Memory
+            this.ProcessResourceDataList(
+                this.allMemData,
+                this.MemErrorUsageThresholdMb,
+                this.MemWarnUsageThresholdMb);
+
+            // Windows Event Log
+            if (ObserverManager.ObserverWebAppDeployed
+                && this.monitorWinEventLog)
+            {
+                // SF Eventlog Errors?
+                // Write this out to a new file, for use by the web front end log viewer.
+                // Format = HTML.
+                int count = this.evtRecordList.Count();
+                var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
+
+                // Remove existing file.
+                if (File.Exists(logPath))
+                {
+                    try
+                    {
+                        File.Delete(logPath);
+                    }
+                    catch (IOException)
+                    {
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                    }
+                }
+
+                if (count >= 10)
+                {
+                    var sb = new StringBuilder();
+
+                    _ = sb.AppendLine("<br/><div><strong>" +
+                                  "<a href='javascript:toggle(\"evtContainer\")'>" +
+                                  "<div id=\"plus\" style=\"display: inline; font-size: 25px;\">+</div> " + count +
+                                  " Error Events in ServiceFabric and System</a> " +
+                                  "Event logs</strong>.<br/></div>");
+
+                    _ = sb.AppendLine("<div id='evtContainer' style=\"display: none;\">");
+
+                    foreach (var evt in this.evtRecordList.Distinct())
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        try
+                        {
+                            // Access event properties:
+                            _ = sb.AppendLine("<div>" + evt.LogName + "</div>");
+                            _ = sb.AppendLine("<div>" + evt.LevelDisplayName + "</div>");
+                            if (evt.TimeCreated.HasValue)
+                            {
+                                _ = sb.AppendLine("<div>" + evt.TimeCreated.Value.ToShortDateString() + "</div>");
+                            }
+
+                            foreach (var prop in evt.Properties)
+                            {
+                                if (prop.Value != null && Convert.ToString(prop.Value).Length > 0)
+                                {
+                                    _ = sb.AppendLine("<div>" + prop.Value + "</div>");
+                                }
+                            }
+                        }
+                        catch (EventLogException)
+                        {
+                        }
+                    }
+
+                    _ = sb.AppendLine("</div>");
+
+                    _ = this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString());
+                    _ = sb.Clear();
+                }
+
+                // Clean up.
+                if (count > 0)
+                {
+                    this.evtRecordList.Clear();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// ReadServiceFabricWindowsEventLog().
+        /// </summary>
+        public void ReadServiceFabricWindowsEventLog()
+        {
+            string sfOperationalLogSource = "Microsoft-ServiceFabric/Operational";
+            string sfAdminLogSource = "Microsoft-ServiceFabric/Admin";
+            string systemLogSource = "System";
+            string sfLeaseAdminLogSource = "Microsoft-ServiceFabric-Lease/Admin";
+            string sfLeaseOperationalLogSource = "Microsoft-ServiceFabric-Lease/Operational";
+
+            var range2Days = DateTime.UtcNow.AddDays(-1);
+            var format = range2Days.ToString(
+                         "yyyy-MM-ddTHH:mm:ss.fffffff00K",
+                         CultureInfo.InvariantCulture);
+            var datexQuery = string.Format(
+                             "*[System/TimeCreated/@SystemTime >='{0}']",
+                             format);
+
+            // Critical and Errors only.
+            string xQuery = "*[System/Level <= 2] and " + datexQuery;
+
+            // SF Admin Event Store.
+            var evtLogQuery = new EventLogQuery(sfAdminLogSource, PathType.LogName, xQuery);
+            using (var evtLogReader = new EventLogReader(evtLogQuery))
+            {
+                for (var eventInstance = evtLogReader.ReadEvent();
+                     eventInstance != null;
+                     eventInstance = evtLogReader.ReadEvent())
+                {
+                    this.Token.ThrowIfCancellationRequested();
+                    this.evtRecordList.Add(eventInstance);
+                }
+            }
+
+            // SF Operational Event Store.
+            evtLogQuery = new EventLogQuery(sfOperationalLogSource, PathType.LogName, xQuery);
+            using (var evtLogReader = new EventLogReader(evtLogQuery))
+            {
+                for (var eventInstance = evtLogReader.ReadEvent();
+                     eventInstance != null;
+                     eventInstance = evtLogReader.ReadEvent())
+                {
+                    this.Token.ThrowIfCancellationRequested();
+                    this.evtRecordList.Add(eventInstance);
+                }
+            }
+
+            // SF Lease Admin Event Store.
+            evtLogQuery = new EventLogQuery(sfLeaseAdminLogSource, PathType.LogName, xQuery);
+            using (var evtLogReader = new EventLogReader(evtLogQuery))
+            {
+                for (var eventInstance = evtLogReader.ReadEvent();
+                     eventInstance != null;
+                     eventInstance = evtLogReader.ReadEvent())
+                {
+                    this.Token.ThrowIfCancellationRequested();
+                    this.evtRecordList.Add(eventInstance);
+                }
+            }
+
+            // SF Lease Operational Event Store.
+            evtLogQuery = new EventLogQuery(sfLeaseOperationalLogSource, PathType.LogName, xQuery);
+            using (var evtLogReader = new EventLogReader(evtLogQuery))
+            {
+                for (var eventInstance = evtLogReader.ReadEvent();
+                     eventInstance != null;
+                     eventInstance = evtLogReader.ReadEvent())
+                {
+                    this.Token.ThrowIfCancellationRequested();
+                    this.evtRecordList.Add(eventInstance);
+                }
+            }
+
+            // System Event Store.
+            evtLogQuery = new EventLogQuery(systemLogSource, PathType.LogName, xQuery);
+            using (var evtLogReader = new EventLogReader(evtLogQuery))
+            {
+                for (var eventInstance = evtLogReader.ReadEvent();
+                     eventInstance != null;
+                     eventInstance = evtLogReader.ReadEvent())
+                {
+                    this.Token.ThrowIfCancellationRequested();
+                    this.evtRecordList.Add(eventInstance);
+                }
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (this.perfCounters != null)
+                {
+                    this.perfCounters.Dispose();
+                    this.perfCounters = null;
+                }
+
+                if (this.diskUsage != null)
+                {
+                    this.diskUsage.Dispose();
+                    this.diskUsage = null;
+                }
+
+                // Data lists.
+                this.processWatchList?.Clear();
+                this.allCpuData?.Clear();
+                this.allMemData?.Clear();
+                this.evtRecordList?.Clear();
+
+                this.disposed = true;
+            }
+        }
+
         private void Initialize()
         {
             if (this.stopwatch == null)
@@ -107,53 +431,53 @@ namespace FabricObserver.Observers
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "Fabric",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricApplicationGateway",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricCAS",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricDCA",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricDnsService",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricGateway",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricHost",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricIS",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricRM",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionPct,
                         "FabricUS",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                 };
             }
 
@@ -165,53 +489,53 @@ namespace FabricObserver.Observers
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "Fabric",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricApplicationGateway",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricCAS",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricDCA",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricDnsService",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricGateway",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricHost",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricIS",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricRM",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricUS",
-                        DataCapacity,
-                        UseCircularBuffer),
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
                 };
             }
 
@@ -339,97 +663,6 @@ namespace FabricObserver.Observers
             }
         }
 
-        /// <inheritdoc/>
-        public override async Task ObserveAsync(CancellationToken token)
-        {
-            // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (this.RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
-            {
-                return;
-            }
-
-            this.Token = token;
-
-            if (this.Token.IsCancellationRequested)
-            {
-                return;
-            }
-
-            // Don't run this observer if the aggregated health state of the cluster is Warning or Error.
-            if (this.FabricClientInstance.QueryManager.GetNodeListAsync().GetAwaiter().GetResult()?.Count > 3
-                && await this.GetClusterHealthStateWithPercentErrorNodesAsync(
-                    this.unhealthyNodesWarnThreshold,
-                    this.unhealthyNodesErrorThreshold).ConfigureAwait(true) == HealthState.Error)
-            {
-                return;
-            }
-
-            this.Initialize();
-
-            this.perfCounters = new WindowsPerfCounters();
-            this.diskUsage = new DiskUsage();
-
-            try
-            {
-                foreach (var proc in this.processWatchList)
-                {
-                    this.Token.ThrowIfCancellationRequested();
-
-                    this.GetProcessInfo(proc);
-                }
-            }
-            catch (Exception e)
-            {
-                if (!(e is OperationCanceledException))
-                {
-                    this.WriteToLogWithLevel(
-                        this.ObserverName,
-                        "Unhandled exception in ObserveAsync. Failed to observe CPU and Memory usage of " + string.Join(",", this.processWatchList) + ": " + e,
-                        LogLevel.Error);
-                }
-
-                throw;
-            }
-
-            try
-            {
-                if (ObserverManager.ObserverWebAppDeployed
-                    && this.monitorWinEventLog)
-                {
-                    this.ReadServiceFabricWindowsEventLog();
-                }
-
-                // Set TTL.
-                this.stopwatch.Stop();
-                this.RunDuration = this.stopwatch.Elapsed;
-                this.stopwatch.Reset();
-
-                await this.ReportAsync(token).ConfigureAwait(true);
-
-                // No need to keep these objects in memory aross healthy iterations.
-                if (!this.HasActiveFabricErrorOrWarning)
-                {
-                    // Clear out/null list objects.
-                    this.allCpuData.Clear();
-                    this.allCpuData = null;
-
-                    this.allMemData.Clear();
-                    this.allMemData = null;
-                }
-
-                this.LastRunDateTime = DateTime.Now;
-            }
-            finally
-            {
-                this.diskUsage?.Dispose();
-                this.diskUsage = null;
-                this.perfCounters?.Dispose();
-                this.perfCounters = null;
-            }
-        }
-
         private void GetProcessInfo(string procName)
         {
             var processes = Process.GetProcessesByName(procName);
@@ -509,239 +742,6 @@ namespace FabricObserver.Observers
 
                 timer.Stop();
                 timer.Reset();
-            }
-        }
-
-        /// <summary>
-        /// ReadServiceFabricWindowsEventLog().
-        /// </summary>
-        public void ReadServiceFabricWindowsEventLog()
-        {
-            string sfOperationalLogSource = "Microsoft-ServiceFabric/Operational";
-            string sfAdminLogSource = "Microsoft-ServiceFabric/Admin";
-            string systemLogSource = "System";
-            string sfLeaseAdminLogSource = "Microsoft-ServiceFabric-Lease/Admin";
-            string sfLeaseOperationalLogSource = "Microsoft-ServiceFabric-Lease/Operational";
-
-            var range2Days = DateTime.UtcNow.AddDays(-1);
-            var format = range2Days.ToString(
-                         "yyyy-MM-ddTHH:mm:ss.fffffff00K",
-                         CultureInfo.InvariantCulture);
-            var datexQuery = string.Format(
-                             "*[System/TimeCreated/@SystemTime >='{0}']",
-                             format);
-
-            // Critical and Errors only.
-            string xQuery = "*[System/Level <= 2] and " + datexQuery;
-
-            // SF Admin Event Store.
-            var evtLogQuery = new EventLogQuery(sfAdminLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
-                {
-                    this.Token.ThrowIfCancellationRequested();
-                    this.evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Operational Event Store.
-            evtLogQuery = new EventLogQuery(sfOperationalLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
-                {
-                    this.Token.ThrowIfCancellationRequested();
-                    this.evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Lease Admin Event Store.
-            evtLogQuery = new EventLogQuery(sfLeaseAdminLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
-                {
-                    this.Token.ThrowIfCancellationRequested();
-                    this.evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Lease Operational Event Store.
-            evtLogQuery = new EventLogQuery(sfLeaseOperationalLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
-                {
-                    this.Token.ThrowIfCancellationRequested();
-                    this.evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // System Event Store.
-            evtLogQuery = new EventLogQuery(systemLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
-                {
-                    this.Token.ThrowIfCancellationRequested();
-                    this.evtRecordList.Add(eventInstance);
-                }
-            }
-        }
-
-        /// <inheritdoc/>
-        public override Task ReportAsync(CancellationToken token)
-        {
-            this.Token.ThrowIfCancellationRequested();
-            var timeToLiveWarning = this.SetHealthReportTimeToLive();
-            var portInformationReport = new HealthReport
-            {
-                Observer = this.ObserverName,
-                NodeName = this.NodeName,
-                HealthMessage = $"Number of ports in use by Fabric services: {this.TotalActivePortCount}\n" +
-                                $"Number of ephemeral ports in use by Fabric services: {this.TotalActiveEphemeralPortCount}",
-                State = HealthState.Ok,
-                HealthReportTimeToLive = timeToLiveWarning,
-            };
-
-            // TODO: Report on port count based on thresholds PortCountWarning/Error.
-            this.HealthReporter.ReportHealthToServiceFabric(portInformationReport);
-
-            // Reset ports counters.
-            this.TotalActivePortCount = 0;
-            this.TotalActiveEphemeralPortCount = 0;
-
-            // CPU
-            this.ProcessResourceDataList(
-                this.allCpuData,
-                this.CpuErrorUsageThresholdPct,
-                this.CpuWarnUsageThresholdPct);
-
-            // Memory
-            this.ProcessResourceDataList(
-                this.allMemData,
-                this.MemErrorUsageThresholdMb,
-                this.MemWarnUsageThresholdMb);
-
-            // Windows Event Log
-            if (ObserverManager.ObserverWebAppDeployed
-                && this.monitorWinEventLog)
-            {
-                // SF Eventlog Errors?
-                // Write this out to a new file, for use by the web front end log viewer.
-                // Format = HTML.
-                int count = this.evtRecordList.Count();
-                var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
-
-                // Remove existing file.
-                if (File.Exists(logPath))
-                {
-                    try
-                    {
-                        File.Delete(logPath);
-                    }
-                    catch (IOException)
-                    {
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                    }
-                }
-
-                if (count >= 10)
-                {
-                    var sb = new StringBuilder();
-
-                    _ = sb.AppendLine("<br/><div><strong>" +
-                                  "<a href='javascript:toggle(\"evtContainer\")'>" +
-                                  "<div id=\"plus\" style=\"display: inline; font-size: 25px;\">+</div> " + count +
-                                  " Error Events in ServiceFabric and System</a> " +
-                                  "Event logs</strong>.<br/></div>");
-
-                    _ = sb.AppendLine("<div id='evtContainer' style=\"display: none;\">");
-
-                    foreach (var evt in this.evtRecordList.Distinct())
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        try
-                        {
-                            // Access event properties:
-                            _ = sb.AppendLine("<div>" + evt.LogName + "</div>");
-                            _ = sb.AppendLine("<div>" + evt.LevelDisplayName + "</div>");
-                            if (evt.TimeCreated.HasValue)
-                            {
-                                _ = sb.AppendLine("<div>" + evt.TimeCreated.Value.ToShortDateString() + "</div>");
-                            }
-
-                            foreach (var prop in evt.Properties)
-                            {
-                                if (prop.Value != null && Convert.ToString(prop.Value).Length > 0)
-                                {
-                                    _ = sb.AppendLine("<div>" + prop.Value + "</div>");
-                                }
-                            }
-                        }
-                        catch (EventLogException)
-                        {
-                        }
-                    }
-
-                    _ = sb.AppendLine("</div>");
-
-                    _ = this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString());
-                    _ = sb.Clear();
-                }
-
-                // Clean up.
-                if (count > 0)
-                {
-                    this.evtRecordList.Clear();
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-                if (this.perfCounters != null)
-                {
-                    this.perfCounters.Dispose();
-                    this.perfCounters = null;
-                }
-
-                if (this.diskUsage != null)
-                {
-                    this.diskUsage.Dispose();
-                    this.diskUsage = null;
-                }
-
-                // Data lists.
-                this.processWatchList?.Clear();
-                this.allCpuData?.Clear();
-                this.allMemData?.Clear();
-                this.evtRecordList?.Clear();
-
-                this.disposed = true;
             }
         }
 
