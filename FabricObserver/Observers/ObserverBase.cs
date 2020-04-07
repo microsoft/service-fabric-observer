@@ -782,7 +782,7 @@ namespace FabricObserver.Observers
                 }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.AppendLine($" - Average {data.Property}: {Math.Round(Convert.ToDouble(data.AverageDataValue))}{data.Units}");
+                _ = healthMessage.AppendLine($" - {data.Property}: {Math.Round(Convert.ToDouble(data.AverageDataValue))}{data.Units}");
 
                 var healthReport = new HealthReport
                 {

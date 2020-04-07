@@ -50,8 +50,8 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            this.GetComputerInfo(token);
-            await this.ReportAsync(token).ConfigureAwait(true);
+            await this.GetComputerInfoAsync(token).ConfigureAwait(false);
+            await this.ReportAsync(token).ConfigureAwait(false);
             this.LastRunDateTime = DateTime.Now;
         }
 
@@ -216,7 +216,7 @@ namespace FabricObserver.Observers
             return ret;
         }
 
-        private void GetComputerInfo(CancellationToken token)
+        private async Task GetComputerInfoAsync(CancellationToken token)
         {
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
@@ -261,19 +261,23 @@ namespace FabricObserver.Observers
                             case "caption":
                                 osName = value;
                                 break;
+
                             case "numberofprocesses":
-                                // Number of running processes
                                 _ = int.TryParse(value, out numProcs);
                                 break;
+
                             case "status":
                                 this.osStatus = value;
                                 break;
+
                             case "oslanguage":
                                 osLang = value;
                                 break;
+
                             case "version":
                                 osVersion = value;
                                 break;
+
                             default:
                             {
                                 if (name.ToLower().Contains("bootuptime"))
@@ -325,7 +329,9 @@ namespace FabricObserver.Observers
                 string osEphemeralPortRange = string.Empty;
                 var fabricAppPortRange = string.Empty;
 
-                var clusterManifestXml = this.IsTestRun ? File.ReadAllText(this.TestManifestPath) : this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).GetAwaiter().GetResult();
+                var clusterManifestXml = this.IsTestRun ? File.ReadAllText(
+                    this.TestManifestPath) : await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(
+                        this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(false);
 
                 var (lowPortApp, highPortApp) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
