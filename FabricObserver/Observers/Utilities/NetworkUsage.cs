@@ -349,28 +349,18 @@ namespace FabricObserver.Observers.Utilities
                 var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
                 nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
 
-                // Application Port Range.
-                var endpointsNodeList = xdoc.SelectNodes($"//sf:NodeTypes//sf:NodeType[@Name='{nodeType}']//sf:Endpoints", nsmgr);
+                // SF Application Port Range.
+                var applicationEndpointsNode = xdoc.SelectSingleNode($"//sf:NodeTypes//sf:NodeType[@Name='{nodeType}']//sf:ApplicationEndpoints", nsmgr);
 
-                if (endpointsNodeList == null)
+                if (applicationEndpointsNode == null)
                 {
                     return (-1, -1);
                 }
 
-                var ret = (-1, -1);
+                var ret = (int.Parse(applicationEndpointsNode.Attributes?.Item(0)?.Value ?? "-1"),
+                           int.Parse(applicationEndpointsNode.Attributes?.Item(1)?.Value ?? "-1"));
 
-                foreach (XmlNode node in endpointsNodeList)
-                {
-                    if (node == null || node.ChildNodes.Count < 7)
-                    {
-                        continue;
-                    }
-
-                    ret = (int.Parse(node.ChildNodes[6].Attributes?.Item(0).Value ?? "-1"),
-                           int.Parse(node.ChildNodes[6].Attributes?.Item(1).Value ?? "-1"));
-                }
-
-                reader.Dispose();
+                reader?.Dispose();
 
                 return ret;
             }
