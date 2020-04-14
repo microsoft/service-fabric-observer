@@ -932,12 +932,12 @@ namespace FabricObserverTests
                 IsTestRun = true,
             };
 
-            var commonNamesToObserve = new System.Collections.Generic.List<string>
+            var commonNamesToObserve = new List<string>
             {
                 "MyValidCert", // Common name of valid cert
             };
 
-            var thumbprintsToObserve = new System.Collections.Generic.List<string>
+            var thumbprintsToObserve = new List<string>
             {
                 "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
             };
@@ -987,12 +987,12 @@ namespace FabricObserverTests
                 IsTestRun = true,
             };
 
-            var commonNamesToObserve = new System.Collections.Generic.List<string>
+            var commonNamesToObserve = new List<string>
             {
                 "MyExpiredCert", // common name of expired cert
             };
 
-            var thumbprintsToObserve = new System.Collections.Generic.List<string>
+            var thumbprintsToObserve = new List<string>
             {
                 "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert, but warning threshold causes expiring
             };

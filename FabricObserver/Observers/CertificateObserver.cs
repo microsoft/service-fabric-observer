@@ -7,8 +7,10 @@ using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.ModelBinding;
 using System.Xml;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -165,6 +167,46 @@ namespace FabricObserver.Observers
                 };
 
                 this.HasActiveFabricErrorOrWarning = true;
+
+                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                {
+                    TelemetryData telemetryData = new TelemetryData(this.FabricClientInstance, token)
+                    {
+                        Code = FoErrorWarningCodes.WarningCertificateExpiration,
+                        HealthState = "Warning",
+                        NodeName = this.NodeName,
+                        Metric = ErrorWarningProperty.CertificateExpiration,
+                        HealthEventDescription = healthMessage,
+                        ObserverName = this.ObserverName,
+                        Source = ObserverConstants.FabricObserverName,
+                        Value = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
+                            FoErrorWarningCodes.WarningCertificateExpiration,
+                            HealthScope.Node),
+                    };
+
+                    _ = this.TelemetryClient?.ReportMetricAsync(
+                        telemetryData,
+                        this.Token);
+                }
+
+                if (this.IsEtwEnabled)
+                {
+                    Logger.EtwLogger?.Write(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Code = FoErrorWarningCodes.WarningCertificateExpiration,
+                            HealthState = "Warning",
+                            NodeName = this.NodeName,
+                            Metric = ErrorWarningProperty.CertificateExpiration,
+                            HealthEventDescription = healthMessage,
+                            ObserverName = this.ObserverName,
+                            Source = ObserverConstants.FabricObserverName,
+                            Value = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
+                                FoErrorWarningCodes.WarningCertificateExpiration,
+                                HealthScope.Node),
+                        });
+                }
             }
 
             this.HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -172,7 +214,6 @@ namespace FabricObserver.Observers
             this.ExpiredWarnings = null;
             this.ExpiringWarnings = null;
             this.NotFoundWarnings = null;
-
             this.LastRunDateTime = DateTime.Now;
 
             return Task.CompletedTask;

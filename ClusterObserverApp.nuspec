@@ -7,7 +7,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>ClusterObserver</id>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <authors>ctorre</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>This package contains the Service Fabric ClusterObserver Application (Config files and Microsoft-signed binaries).</description>

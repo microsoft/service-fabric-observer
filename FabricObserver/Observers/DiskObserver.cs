@@ -208,7 +208,7 @@ namespace FabricObserver.Observers
             {
                 var timeToLiveWarning = this.SetHealthReportTimeToLive();
 
-                // Disk Space Usage % from Settings.xml.
+                // User-supplied Disk Space Usage % thresholds from Settings.xml.
                 foreach (var data in this.diskSpacePercentageUsageData)
                 {
                     token.ThrowIfCancellationRequested();
@@ -219,40 +219,7 @@ namespace FabricObserver.Observers
                         timeToLiveWarning);
                 }
 
-                // Disk Space Usage
-                foreach (var data in this.diskSpaceUsageData)
-                {
-                    token.ThrowIfCancellationRequested();
-                    this.ProcessResourceDataReportHealth(
-                        data,
-                        0,
-                        0,
-                        timeToLiveWarning);
-                }
-
-                // Disk Space Available
-                foreach (var data in this.diskSpaceAvailableData)
-                {
-                    token.ThrowIfCancellationRequested();
-                    this.ProcessResourceDataReportHealth(
-                        data,
-                        0,
-                        0,
-                        timeToLiveWarning);
-                }
-
-                // Disk Space Total
-                foreach (var data in this.diskSpaceTotalData)
-                {
-                    token.ThrowIfCancellationRequested();
-                    this.ProcessResourceDataReportHealth(
-                        data,
-                        0,
-                        0,
-                        timeToLiveWarning);
-                }
-
-                // Average disk queue length.
+                // User-supplied Average disk queue length thresholds from Settings.xml.
                 foreach (var data in this.diskAverageQueueLengthData)
                 {
                     token.ThrowIfCancellationRequested();
@@ -261,6 +228,43 @@ namespace FabricObserver.Observers
                         this.AverageQueueLengthErrorThreshold,
                         this.AverageQueueLengthWarningThreshold,
                         timeToLiveWarning);
+                }
+
+                /* For ETW Only */
+                if (this.IsEtwEnabled)
+                {
+                    // Disk Space Usage
+                    foreach (var data in this.diskSpaceUsageData)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        this.ProcessResourceDataReportHealth(
+                            data,
+                            0,
+                            0,
+                            timeToLiveWarning);
+                    }
+
+                    // Disk Space Available
+                    foreach (var data in this.diskSpaceAvailableData)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        this.ProcessResourceDataReportHealth(
+                            data,
+                            0,
+                            0,
+                            timeToLiveWarning);
+                    }
+
+                    // Disk Space Total
+                    foreach (var data in this.diskSpaceTotalData)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        this.ProcessResourceDataReportHealth(
+                            data,
+                            0,
+                            0,
+                            timeToLiveWarning);
+                    }
                 }
 
                 token.ThrowIfCancellationRequested();
@@ -284,10 +288,10 @@ namespace FabricObserver.Observers
                 if (!(e is OperationCanceledException))
                 {
                     this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        this.ObserverName,
-                        HealthState.Error,
-                        $"Unhandled exception processing Disk information: {e.Message}: \n {e.StackTrace}");
+                            this.FabricServiceContext.ServiceName.OriginalString,
+                            this.ObserverName,
+                            HealthState.Error,
+                            $"Unhandled exception processing Disk information:{Environment.NewLine}{e}");
                 }
 
                 throw;

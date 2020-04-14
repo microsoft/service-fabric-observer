@@ -140,7 +140,7 @@
     <Compile Include="Utilities\LogLevel.cs" />
     <Compile Include="Utilities\ObserverConstants.cs" />
     <Compile Include="Utilities\Telemetry\AppInsightsTelemetry.cs" />
-    <Compile Include="Utilities\Telemetry\HealthScope.cs" />
+    <Compile Include="Utilities\HealthScope.cs" />
     <Compile Include="Utilities\Telemetry\LogAnalyticsTelemetry.cs" />
     <Compile Include="Utilities\Telemetry\TelemetryData.cs" />
     <Compile Include="Utilities\Telemetry\TelemetryProdiverType.cs" />

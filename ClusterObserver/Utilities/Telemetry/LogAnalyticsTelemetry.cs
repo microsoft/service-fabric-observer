@@ -129,13 +129,13 @@ namespace FabricClusterObserver.Utilities.Telemetry
             string serviceName = null,
             string instanceName = null)
         {
-            var (clusterId, tenantId, clusterType) =
+            var (clusterId, _, _) =
                 await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
 
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
-                    id = $"CO_{Guid.NewGuid().ToString()}",
+                    id = $"CO_{Guid.NewGuid()}",
                     datetime = DateTime.UtcNow,
                     clusterId = clusterId ?? string.Empty,
                     source = ObserverConstants.ClusterObserverName,

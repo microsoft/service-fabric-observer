@@ -306,9 +306,23 @@ namespace FabricClusterObserver.Observers
                                         long replicaId = 0;
                                         string metric = null;
                                         string value = null;
+                                        string sourceObserver = null;
 
                                         if (!string.IsNullOrEmpty(foStats))
                                         {
+                                            if (foStats.Contains("AppObserver"))
+                                            {
+                                                sourceObserver = "AppObserver";
+                                            }
+                                            else if (foStats.Contains("FabricSystemObserver"))
+                                            {
+                                                sourceObserver = "FabricSystemObserver";
+                                            }
+                                            else if (foStats.Contains("NetworkObserver"))
+                                            {
+                                                sourceObserver = "NetworkObserver";
+                                            }
+
                                             // Extract PartitionId, ReplicaId, Metric, and Value from foStats.
                                             try
                                             {
@@ -336,8 +350,10 @@ namespace FabricClusterObserver.Observers
                                                 {
                                                     int metricBeginIndex = foStats.LastIndexOf(" - ") + " - ".Length;
                                                     int valueBeginIndex = foStats.LastIndexOf(":") + 1;
-                                                    metric = foStats.Substring(metricBeginIndex, foStats.LastIndexOf(":") - metricBeginIndex);
-                                                    value = foStats.Substring(valueBeginIndex, foStats.Length - foStats.LastIndexOf(":") - 1)?.Trim();
+                                                    metric = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
+                                                        appHealthEvent.HealthInformation.SourceId,
+                                                        HealthScope.Application);
+                                                    value = foStats.Substring(valueBeginIndex, foStats.Length - foStats.LastIndexOf(":") - 1)?.Replace("%", "").Trim();
                                                 }
                                             }
                                             catch (ArgumentException)
@@ -363,10 +379,11 @@ namespace FabricClusterObserver.Observers
                                                 HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
                                                 HealthEventDescription = telemetryDescription,
                                                 Metric = metric ?? "AggregatedClusterHealth",
+                                                ObserverName = sourceObserver ?? string.Empty,
                                                 Source = this.ObserverName,
                                                 PartitionId = partitionId.ToString(),
                                                 ReplicaId = replicaId.ToString(),
-                                                Value = value ?? string.Empty,
+                                                Value = double.TryParse(value, out double val) != false ? val : 0,
                                             };
 
                                             await this.ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
@@ -384,10 +401,11 @@ namespace FabricClusterObserver.Observers
                                                     HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
                                                     HealthEventDescription = telemetryDescription,
                                                     Metric = metric ?? "AggregatedClusterHealth",
+                                                    ObserverName = sourceObserver ?? string.Empty,
                                                     Source = this.ObserverName,
                                                     PartitionId = partitionId.ToString(),
                                                     ReplicaId = replicaId.ToString(),
-                                                    Value = value ?? string.Empty,
+                                                    Value = double.TryParse(value, out double val) != false ? val : 0,
                                                 });
                                         }
 
@@ -434,10 +452,40 @@ namespace FabricClusterObserver.Observers
                                         // FabricObservers health event details need to be formatted correctly.
                                         // If FO did not emit this event, then foStats will be null.
                                         var foStats = TryGetFOHealthStateEventData(nodeHealthEvent, HealthScope.Node);
+                                        string sourceObserver = null;
+                                        string metric = null;
+                                        string value = null;
 
                                         if (!string.IsNullOrEmpty(foStats))
                                         {
                                             telemetryDescription += foStats;
+
+                                            if (foStats.Contains("CertificateObserver"))
+                                            {
+                                                sourceObserver = "CertificateObserver";
+                                            }
+                                            else if (foStats.Contains("DiskObserver"))
+                                            {
+                                                sourceObserver = "DiskObserver";
+                                            }
+                                            else if (foStats.Contains("NodeObserver"))
+                                            {
+                                                sourceObserver = "NodeObserver";
+                                            }
+                                            else if (foStats.Contains("OSObserver"))
+                                            {
+                                                sourceObserver = "OSObserver";
+                                            }
+
+                                            if (foStats.Contains(" - "))
+                                            {
+                                                int metricBeginIndex = foStats.LastIndexOf(" - ") + " - ".Length;
+                                                int valueBeginIndex = foStats.LastIndexOf(":") + 1;
+                                                metric = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
+                                                    nodeHealthEvent.HealthInformation.SourceId,
+                                                    HealthScope.Node);
+                                                value = foStats.Substring(valueBeginIndex, foStats.Length - foStats.LastIndexOf(":") - 1)?.Replace("%", "").Trim();
+                                            }
                                         }
                                         else if (!string.IsNullOrEmpty(nodeHealthEvent.HealthInformation.Description))
                                         {
@@ -446,16 +494,32 @@ namespace FabricClusterObserver.Observers
                                             telemetryDescription += $"{nodeHealthEvent.HealthInformation.Description}{Environment.NewLine}";
                                         }
 
+                                        var targetNodeList = 
+                                            await FabricClientInstance.QueryManager.GetNodeListAsync(
+                                                node.NodeName,
+                                                AsyncClusterOperationTimeoutSeconds,
+                                                token).ConfigureAwait(false);
+
+                                        Node targetNode = null;
+
+                                        if (targetNodeList?.Count > 0)
+                                        {
+                                            targetNode = targetNodeList[0];
+                                        }
+
                                         if (this.IsTelemetryEnabled)
                                         {
                                             var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                             {
                                                 NodeName = node.NodeName,
+                                                NodeStatus = targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty,
                                                 HealthScope = "Node",
                                                 HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
                                                 HealthEventDescription = telemetryDescription,
-                                                Metric = "AggregatedClusterHealth",
+                                                Metric = metric ?? "AggregatedClusterHealth",
+                                                ObserverName = sourceObserver ?? string.Empty,
                                                 Source = this.ObserverName,
+                                                Value = double.TryParse(value, out double val) != false ? val : 0,
                                             };
 
                                             // Telemetry.
@@ -470,12 +534,16 @@ namespace FabricClusterObserver.Observers
                                                 new
                                                 {
                                                     NodeName = node.NodeName,
+                                                    NodeStatus = targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty,
                                                     HealthScope = "Node",
                                                     HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
                                                     HealthEventDescription = telemetryDescription,
-                                                    Metric = "AggregatedClusterHealth",
+                                                    Metric = metric ?? "AggregatedClusterHealth",
+                                                    ObserverName = sourceObserver ?? string.Empty,
                                                     Source = this.ObserverName,
+                                                    Value = double.TryParse(value, out double val) != false ? val : 0,
                                                 });
+                                            ;
                                         }
 
                                         // Reset 
@@ -669,20 +737,17 @@ namespace FabricClusterObserver.Observers
         /// and description of the detected issue.</returns>
         private string TryGetFOHealthStateEventData(HealthEvent healthEvent, HealthScope scope)
         {
-            if (scope == HealthScope.Node
-                && !FoErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId) 
-                || scope == HealthScope.Application
-                && !FoErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId))
+            if (string.IsNullOrEmpty(
+                FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
+                    healthEvent.HealthInformation.SourceId, scope)))
             {
                 return null;
             }
 
             string errorWarning = "Warning";
 
-            if (scope == HealthScope.Node
-                && FoErrorWarningCodes.NodeErrorCodesDictionary[healthEvent.HealthInformation.SourceId].Contains("Error") 
-                || scope == HealthScope.Application
-                && FoErrorWarningCodes.AppErrorCodesDictionary[healthEvent.HealthInformation.SourceId].Contains("Error"))
+            if (FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
+                healthEvent.HealthInformation.SourceId, scope).Contains("Error"))
             {
                 errorWarning = "Error";
             }

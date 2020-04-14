@@ -84,7 +84,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             FabricClient fabricClient,
             CancellationToken cancellationToken)
         {
-            var (clusterId, tenantId, clusterType) =
+            var (clusterId, _, _) =
               ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
 
             this.ClusterId = clusterId;

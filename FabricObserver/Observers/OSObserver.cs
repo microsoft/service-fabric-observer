@@ -333,7 +333,11 @@ namespace FabricObserver.Observers
                     this.TestManifestPath) : await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(
                         this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(false);
 
-                var (lowPortApp, highPortApp) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                var (lowPortApp, highPortApp) =
+                    NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(
+                    this.FabricServiceContext.NodeContext.NodeType,
+                    clusterManifestXml);
+
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
                 // OS info.
