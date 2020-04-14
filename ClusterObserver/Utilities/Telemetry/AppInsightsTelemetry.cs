@@ -144,12 +144,14 @@ namespace FabricClusterObserver.Utilities.Telemetry
                 };
 
                 this.telemetryClient.TrackEvent(
-                    $"{telemetryData.ObserverName ?? "ClusterObserver"}Event",
+                    $"{telemetryData.ObserverName ?? "ClusterObserver"}DataEvent",
                     properties);
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                this.logger.LogWarning(
+                    $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
+                    $"{Environment.NewLine}{e}");
                 
                 throw;
             }

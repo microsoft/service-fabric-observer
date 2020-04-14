@@ -337,13 +337,16 @@ namespace FabricObserver.Observers.Utilities
                 return (-1, -1);
             }
 
+            StringReader sreader = null;
+            XmlReader xreader = null;
+
             try
             {
                 // Safe XML pattern - *Do not use LoadXml*.
                 var xdoc = new XmlDocument { XmlResolver = null };
-                var sreader = new StringReader(clusterManifestXml);
-                var reader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
-                xdoc.Load(reader);
+                sreader = new StringReader(clusterManifestXml);
+                xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                xdoc.Load(xreader);
 
                 // Cluster Information.
                 var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
@@ -360,8 +363,6 @@ namespace FabricObserver.Observers.Utilities
                 var ret = (int.Parse(applicationEndpointsNode.Attributes?.Item(0)?.Value ?? "-1"),
                            int.Parse(applicationEndpointsNode.Attributes?.Item(1)?.Value ?? "-1"));
 
-                reader?.Dispose();
-
                 return ret;
             }
             catch (XmlException)
@@ -372,6 +373,11 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (NullReferenceException)
             {
+            }
+            finally
+            {
+                sreader?.Dispose();
+                xreader?.Dispose();
             }
 
             return (-1, -1);

@@ -119,9 +119,20 @@ namespace FabricObserver.Observers.Utilities
                 sourceId = $"{healthReport.Code}";
             }
 
+            string errWarnPreamble = string.Empty;
+
+            if (healthReport.State == HealthState.Error
+                || healthReport.State == HealthState.Warning)
+            {
+                errWarnPreamble =
+                    $"{healthReport.Observer} detected " +
+                    $"{Enum.GetName(typeof(HealthState), healthReport.State)} " +
+                    $"threshold breach.";
+            }
+
             var healthInformation = new HealthInformation(sourceId, property, healthReport.State)
             {
-                Description = healthReport.HealthMessage,
+                Description = $"{errWarnPreamble} {healthReport.HealthMessage}",
                 TimeToLive = timeToLive,
                 RemoveWhenExpired = true,
             };
