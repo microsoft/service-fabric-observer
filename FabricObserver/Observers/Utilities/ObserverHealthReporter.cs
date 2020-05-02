@@ -126,8 +126,13 @@ namespace FabricObserver.Observers.Utilities
             {
                 errWarnPreamble =
                     $"{healthReport.Observer} detected " +
-                    $"{Enum.GetName(typeof(HealthState), healthReport.State)} " +
-                    $"threshold breach.";
+                    $"{Enum.GetName(typeof(HealthState), healthReport.State)} threshold breach. ";
+            }
+
+            // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
+            if (healthReport.Observer == ObserverConstants.OsObserverName)
+            {
+                errWarnPreamble = $"{ObserverConstants.OsObserverName} detected potential problem with OS configuration: ";
             }
 
             var healthInformation = new HealthInformation(sourceId, property, healthReport.State)

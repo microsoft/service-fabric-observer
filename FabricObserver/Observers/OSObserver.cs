@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
+using WUApiLib;
 
 namespace FabricObserver.Observers
 {
@@ -25,9 +26,13 @@ namespace FabricObserver.Observers
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OsObserver : ObserverBase
     {
+        private const string auUnknownMessage = "Unable to determine AU service state.";
         private string osReport;
         private string osStatus;
+        private string auServiceEnabledMessage;
         private int totalVisibleMemoryGb = -1;
+        private bool auStateUnknown;
+        private bool isWindowsAutoUpdateEnabled;
 
         public string TestManifestPath { get; set; }
 
@@ -50,9 +55,45 @@ namespace FabricObserver.Observers
                 return;
             }
 
+            await this.CheckWuAutoUpdateEnabledAsync(token).ConfigureAwait(false);
             await this.GetComputerInfoAsync(token).ConfigureAwait(false);
             await this.ReportAsync(token).ConfigureAwait(false);
             this.LastRunDateTime = DateTime.Now;
+        }
+
+        private async Task CheckWuAutoUpdateEnabledAsync(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            // Local Windows AutoUpdate service enabled? If so, it's best to disable and leverage
+            // either POA or the best option for SFRP clusters: VMSS automatic OS image upgrades.
+            try
+            {
+                var wuApiFilePath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.System),
+                    "wuapi.dll");
+
+                if (!File.Exists(wuApiFilePath))
+                {
+                    this.auStateUnknown = true;
+                    return;
+                }
+
+                var wuUpdateClass = new AutomaticUpdatesClass();
+
+                if (wuUpdateClass == null)
+                {
+                    this.auStateUnknown = true;
+                    return;
+                }
+
+                this.isWindowsAutoUpdateEnabled = wuUpdateClass.ServiceEnabled;
+            }
+            catch (Exception e)
+            {
+                this.ObserverLogger.LogWarning($"Unable to determine if WU's AutoUpdate service is enabled.{Environment.NewLine}{e}");
+                auStateUnknown = true;
+            }
         }
 
         /// <inheritdoc/>
@@ -141,6 +182,53 @@ namespace FabricObserver.Observers
 
                 this.HealthReporter.ReportHealthToServiceFabric(report);
 
+                // AutoUpdate service enabled?
+                if (this.isWindowsAutoUpdateEnabled)
+                {
+                    string linkText = 
+                        $"{Environment.NewLine}NOTE: For clusters of Silver durability or above, " +
+                        $"please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\">" +
+                        $"enabling VMSS automatic OS image upgrades</a> to prevent unexpected VM reboots. " +
+                        $"For Bronze durability clusters, please consider deploying the " +
+                        $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\">Patch Orchestration Service</a>.";
+                    
+                    auServiceEnabledMessage = $"WU AutoUpdate Enabled: {this.isWindowsAutoUpdateEnabled}{linkText}";
+
+                    report = new HealthReport
+                    {
+                        Observer = this.ObserverName,
+                        HealthMessage = auServiceEnabledMessage,
+                        State = HealthState.Warning,
+                        NodeName = this.NodeName,
+                        HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
+                    };
+
+                    this.HealthReporter.ReportHealthToServiceFabric(report);
+
+                    // reset au globals to false for new detection during next observer run.
+                    this.isWindowsAutoUpdateEnabled = false;
+                    this.auStateUnknown = false;
+                }
+#if DEBUG
+                else if (this.auStateUnknown)
+                {
+                    report = new HealthReport
+                    {
+                        Observer = this.ObserverName,
+                        HealthMessage = "Unable to determine whether Windows AutoUpdate service is enabled.",
+                        State = HealthState.Warning,
+                        NodeName = this.NodeName,
+                        HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
+                    };
+
+                    this.HealthReporter.ReportHealthToServiceFabric(report);
+
+                    // reset au globals to false for new detection during next observer run.
+                    this.isWindowsAutoUpdateEnabled = false;
+                    this.auStateUnknown = false;
+#endif
+                }
+
                 return Task.CompletedTask;
             }
             catch (Exception e)
@@ -150,6 +238,7 @@ namespace FabricObserver.Observers
                     this.ObserverName,
                     HealthState.Error,
                     $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
+                
                 throw;
             }
         }
@@ -340,12 +429,25 @@ namespace FabricObserver.Observers
 
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
+                // WU AutoUpdate
+                string auMessage = "WU AutoUpdate Enabled: ";
+
+                if (this.auStateUnknown)
+                {
+                    auMessage += "Unknown";
+                }
+                else
+                {
+                    auMessage += this.isWindowsAutoUpdateEnabled;
+                }
+
                 // OS info.
                 _ = sb.AppendLine("OS Information:\r\n");
                 _ = sb.AppendLine($"Name: {osName}");
                 _ = sb.AppendLine($"Version: {osVersion}");
                 _ = sb.AppendLine($"InstallDate: {installDate}");
                 _ = sb.AppendLine($"LastBootUpTime*: {lastBootTime}");
+                _ = sb.AppendLine(auMessage);
                 _ = sb.AppendLine($"OSLanguage: {osLang}");
                 _ = sb.AppendLine($"OSHealthStatus*: {this.osStatus}");
                 _ = sb.AppendLine($"NumberOfProcesses*: {numProcs}");
@@ -431,6 +533,7 @@ namespace FabricObserver.Observers
                             OS = osName,
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
+                            AutoUpdateEnabled = this.auStateUnknown ? "Unknown" : this.isWindowsAutoUpdateEnabled.ToString(),
                             LastBootUpTime = lastBootTime,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
