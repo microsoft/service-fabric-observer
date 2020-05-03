@@ -281,8 +281,8 @@ namespace FabricObserver.Observers
             // For POA service, it will try and disable AU for you.
             try
             {
-                var wuUpdateClass = new AutomaticUpdatesClass();
-                this.isWindowsAutoUpdateEnabled = wuUpdateClass.ServiceEnabled;
+                var wuAutoUpdatesClass = new AutomaticUpdatesClass();
+                this.isWindowsAutoUpdateEnabled = wuAutoUpdatesClass.ServiceEnabled;
             }
             catch (Exception e) when (e is COMException || e is InvalidOperationException || e is Win32Exception)
             {
