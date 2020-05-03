@@ -178,7 +178,7 @@ namespace FabricObserver.Observers
                 if (this.isWindowsAutoUpdateEnabled)
                 {
                     string linkText = 
-                        $"{Environment.NewLine}NOTE: For clusters of Silver durability or above, " +
+                        $"{Environment.NewLine}For clusters of Silver durability or above, " +
                         $"please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\" target=\"blank\">" +
                         $"enabling VMSS automatic OS image upgrades</a> to prevent unexpected VM reboots. " +
                         $"For Bronze durability clusters, please consider deploying the " +
