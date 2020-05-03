@@ -69,18 +69,10 @@ namespace FabricObserver.Observers
             // either POA or the best option for SFRP clusters: VMSS automatic OS image upgrades.
             try
             {
-                var wuApiFilePath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.System),
-                    "wuapi.dll");
-
-                if (!File.Exists(wuApiFilePath))
-                {
-                    this.auStateUnknown = true;
-                    return;
-                }
-
                 var wuUpdateClass = new AutomaticUpdatesClass();
 
+                // This code will never run if the library is not present on the machine. The CLR loader will fail
+                // well before this ever runs. We like checking for null, we do.
                 if (wuUpdateClass == null)
                 {
                     this.auStateUnknown = true;
@@ -187,10 +179,10 @@ namespace FabricObserver.Observers
                 {
                     string linkText = 
                         $"{Environment.NewLine}NOTE: For clusters of Silver durability or above, " +
-                        $"please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\">" +
+                        $"please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\" target=\"blank\">" +
                         $"enabling VMSS automatic OS image upgrades</a> to prevent unexpected VM reboots. " +
                         $"For Bronze durability clusters, please consider deploying the " +
-                        $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\">Patch Orchestration Service</a>.";
+                        $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\" target=\"blank\">Patch Orchestration Service</a>.";
                     
                     auServiceEnabledMessage = $"WU AutoUpdate Enabled: {this.isWindowsAutoUpdateEnabled}{linkText}";
 
@@ -205,7 +197,7 @@ namespace FabricObserver.Observers
 
                     this.HealthReporter.ReportHealthToServiceFabric(report);
 
-                    // reset au globals to false for new detection during next observer run.
+                    // reset au globals to false for fresh detection during next observer run.
                     this.isWindowsAutoUpdateEnabled = false;
                     this.auStateUnknown = false;
                 }
