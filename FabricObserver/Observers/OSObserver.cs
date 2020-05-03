@@ -4,18 +4,20 @@
 // ------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using WUApiLib;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
@@ -26,7 +28,7 @@ namespace FabricObserver.Observers
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OsObserver : ObserverBase
     {
-        private const string auUnknownMessage = "Unable to determine AU service state.";
+        private const string AuUnknownMessage = "Unable to determine AU service state.";
         private string osReport;
         private string osStatus;
         private string auServiceEnabledMessage;
@@ -59,33 +61,6 @@ namespace FabricObserver.Observers
             await this.GetComputerInfoAsync(token).ConfigureAwait(false);
             await this.ReportAsync(token).ConfigureAwait(false);
             this.LastRunDateTime = DateTime.Now;
-        }
-
-        private async Task CheckWuAutoUpdateEnabledAsync(CancellationToken token)
-        {
-            token.ThrowIfCancellationRequested();
-
-            // Local Windows AutoUpdate service enabled? If so, it's best to disable and leverage
-            // either POA or the best option for SFRP clusters: VMSS automatic OS image upgrades.
-            try
-            {
-                var wuUpdateClass = new AutomaticUpdatesClass();
-
-                // This code will never run if the library is not present on the machine. The CLR loader will fail
-                // well before this ever runs. We like checking for null, we do.
-                if (wuUpdateClass == null)
-                {
-                    this.auStateUnknown = true;
-                    return;
-                }
-
-                this.isWindowsAutoUpdateEnabled = wuUpdateClass.ServiceEnabled;
-            }
-            catch (Exception e)
-            {
-                this.ObserverLogger.LogWarning($"Unable to determine if WU's AutoUpdate service is enabled.{Environment.NewLine}{e}");
-                auStateUnknown = true;
-            }
         }
 
         /// <inheritdoc/>
@@ -177,19 +152,19 @@ namespace FabricObserver.Observers
                 // AutoUpdate service enabled?
                 if (this.isWindowsAutoUpdateEnabled)
                 {
-                    string linkText = 
+                    string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
                         $"please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\" target=\"blank\">" +
                         $"enabling VMSS automatic OS image upgrades</a> to prevent unexpected VM reboots. " +
                         $"For Bronze durability clusters, please consider deploying the " +
                         $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\" target=\"blank\">Patch Orchestration Service</a>.";
-                    
-                    auServiceEnabledMessage = $"Windows Automatic Update service is enabled.{linkText}";
+
+                    this.auServiceEnabledMessage = $"Windows Automatic Update service is enabled.{linkText}";
 
                     report = new HealthReport
                     {
                         Observer = this.ObserverName,
-                        HealthMessage = auServiceEnabledMessage,
+                        HealthMessage = this.auServiceEnabledMessage,
                         State = HealthState.Warning,
                         NodeName = this.NodeName,
                         HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
@@ -218,9 +193,8 @@ namespace FabricObserver.Observers
                     // reset au globals to false for new detection during next observer run.
                     this.isWindowsAutoUpdateEnabled = false;
                     this.auStateUnknown = false;
-#endif
                 }
-
+#endif
                 return Task.CompletedTask;
             }
             catch (Exception e)
@@ -230,7 +204,7 @@ namespace FabricObserver.Observers
                     this.ObserverName,
                     HealthState.Error,
                     $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
-                
+
                 throw;
             }
         }
@@ -295,6 +269,30 @@ namespace FabricObserver.Observers
             }
 
             return ret;
+        }
+
+        private Task CheckWuAutoUpdateEnabledAsync(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            // Local Windows AutoUpdate service enabled? If so, it's best to disable and leverage
+            // either POA (Bronze durability) or the best option for Silver+ durability clusters:
+            // VMSS automatic OS image upgrades. This is to prevent unexpected VM reboots.
+            // For POA service, it will try and disable AU for you.
+            try
+            {
+                var wuUpdateClass = new AutomaticUpdatesClass();
+                this.isWindowsAutoUpdateEnabled = wuUpdateClass.ServiceEnabled;
+            }
+            catch (Exception e) when (e is COMException || e is InvalidOperationException || e is Win32Exception)
+            {
+                this.ObserverLogger.LogWarning(
+                    $"{AuUnknownMessage}{Environment.NewLine}{e}");
+
+                this.auStateUnknown = true;
+            }
+
+            return Task.CompletedTask;
         }
 
         private async Task GetComputerInfoAsync(CancellationToken token)
@@ -468,7 +466,7 @@ namespace FabricObserver.Observers
 
                 // Hardware info.
                 // Proc/Mem
-                _ = sb.AppendLine("\r\nHardware Information:\r\n");
+                _ = sb.AppendLine($"{Environment.NewLine}Hardware Information:{Environment.NewLine}");
                 _ = sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
                 _ = sb.AppendLine($"TotalVirtualMemorySize: {totalVirtualMem} GB");
                 _ = sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGb} GB");
@@ -581,7 +579,7 @@ namespace FabricObserver.Observers
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
                     HealthState.Error,
-                    $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
+                    $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
                 throw;
             }
