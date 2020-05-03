@@ -184,7 +184,7 @@ namespace FabricObserver.Observers
                         $"For Bronze durability clusters, please consider deploying the " +
                         $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\" target=\"blank\">Patch Orchestration Service</a>.";
                     
-                    auServiceEnabledMessage = $"WU AutoUpdate Enabled: {this.isWindowsAutoUpdateEnabled}{linkText}";
+                    auServiceEnabledMessage = $"Windows Automatic Update service is enabled.{linkText}";
 
                     report = new HealthReport
                     {
