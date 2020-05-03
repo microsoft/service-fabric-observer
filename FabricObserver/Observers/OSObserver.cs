@@ -28,7 +28,7 @@ namespace FabricObserver.Observers
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OsObserver : ObserverBase
     {
-        private const string AuUnknownMessage = "Unable to determine AU service state.";
+        private const string AuStateUnknownMessage = "Unable to determine AU service state.";
         private string osReport;
         private string osStatus;
         private string auServiceEnabledMessage;
@@ -287,7 +287,7 @@ namespace FabricObserver.Observers
             catch (Exception e) when (e is COMException || e is InvalidOperationException || e is Win32Exception)
             {
                 this.ObserverLogger.LogWarning(
-                    $"{AuUnknownMessage}{Environment.NewLine}{e}");
+                    $"{AuStateUnknownMessage}{Environment.NewLine}{e}");
 
                 this.auStateUnknown = true;
             }
