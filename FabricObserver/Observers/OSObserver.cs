@@ -16,7 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using WUApiLib;
+using Microsoft.Win32;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -36,7 +36,10 @@ namespace FabricObserver.Observers
         private bool auStateUnknown;
         private bool isWindowsAutoUpdateEnabled;
 
-        public string TestManifestPath { get; set; }
+        public string TestManifestPath
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="OsObserver"/> class.
@@ -164,6 +167,7 @@ namespace FabricObserver.Observers
                     report = new HealthReport
                     {
                         Observer = this.ObserverName,
+                        Property = "OSConfiguration",
                         HealthMessage = this.auServiceEnabledMessage,
                         State = HealthState.Warning,
                         NodeName = this.NodeName,
@@ -275,14 +279,24 @@ namespace FabricObserver.Observers
         {
             token.ThrowIfCancellationRequested();
 
-            // Local Windows AutoUpdate service enabled? If so, it's best to disable and leverage
-            // either POA (Bronze durability) or the best option for Silver+ durability clusters:
+            // Local Windows AutoUpdate enabled (as in automatically downloading the update without notification)?
+            // If so, it's best to disable and leverage either POA (Bronze durability) 
+            // or the best option for Silver+ durability clusters:
             // VMSS automatic OS image upgrades. This is to prevent unexpected VM reboots.
             // For POA service, it will try and disable AU for you.
             try
             {
-                var wuAutoUpdatesClass = new AutomaticUpdatesClass();
-                this.isWindowsAutoUpdateEnabled = wuAutoUpdatesClass.ServiceEnabled;
+#if DEBUG
+                string AuRegPath = WindowsAutoUpdateUtility.AURegPath;
+                RegistryKey auKey = Registry.LocalMachine.OpenSubKey(AuRegPath, true);
+                
+                if (auKey != null)
+                {
+                    this.LogCurrentAUValues(auKey);
+                }
+#endif
+                WindowsAutoUpdateUtility wuAuUtility = new WindowsAutoUpdateUtility();
+                this.isWindowsAutoUpdateEnabled = wuAuUtility.IsAutoUpdateEnabled;
             }
             catch (Exception e) when (e is COMException || e is InvalidOperationException || e is Win32Exception)
             {
@@ -302,7 +316,6 @@ namespace FabricObserver.Observers
 
             var sb = new StringBuilder();
             var diskUsage = new DiskUsage();
-
             string osName = string.Empty;
             string osVersion = string.Empty;
             int numProcs = 0;
@@ -525,6 +538,7 @@ namespace FabricObserver.Observers
                             OSInstallDate = installDate,
                             AutoUpdateEnabled = this.auStateUnknown ? "Unknown" : this.isWindowsAutoUpdateEnabled.ToString(),
                             LastBootUpTime = lastBootTime,
+                            WindowsAutoUpdateEnabled = this.isWindowsAutoUpdateEnabled,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
                             AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
@@ -554,6 +568,7 @@ namespace FabricObserver.Observers
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
+                            WindowsAutoUpdateEnabled = this.isWindowsAutoUpdateEnabled,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
                             AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
@@ -590,6 +605,35 @@ namespace FabricObserver.Observers
                 diskUsage?.Dispose();
                 _ = sb.Clear();
             }
+        }
+
+        private void LogCurrentAUValues(RegistryKey regKey)
+        {
+            StringBuilder result = new StringBuilder();
+            var values = regKey.GetValueNames();
+            foreach (string value in values)
+            {
+                result.AppendFormat(
+                    "{0} = {1}{2}",
+                    value,
+                    regKey.GetValue(value),
+                    Environment.NewLine);
+            }
+
+            string s = result.ToString();
+
+            int majorVersion = Environment.OSVersion.Version.Major;
+            int minorVersion = Environment.OSVersion.Version.Minor;
+
+            this.HealthReporter.ReportHealthToServiceFabric(new HealthReport
+            {
+                HealthMessage = s + Environment.NewLine + majorVersion + "." + minorVersion,
+                Observer = this.ObserverName,
+                Property = "DebugOutputAU",
+                State = HealthState.Ok,
+                NodeName = this.NodeName,
+                ReportType = HealthReportType.Node,
+            });
         }
     }
 }
