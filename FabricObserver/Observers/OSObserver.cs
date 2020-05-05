@@ -61,7 +61,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            await this.CheckWuAutoUpdateEnabledAsync(token).ConfigureAwait(false);
+            await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
             await this.GetComputerInfoAsync(token).ConfigureAwait(false);
             await this.ReportAsync(token).ConfigureAwait(false);
             this.LastRunDateTime = DateTime.Now;
@@ -153,7 +153,7 @@ namespace FabricObserver.Observers
 
                 this.HealthReporter.ReportHealthToServiceFabric(report);
 
-                // AutoUpdate service enabled?
+                // Windows Update automatic download enabled?
                 if (this.isWindowsUpdateAutoDownloadEnabled)
                 {
                     string linkText =
@@ -183,7 +183,7 @@ namespace FabricObserver.Observers
                     {
                         Observer = this.ObserverName,
                         HealthMessage =
-                            "Unable to determine whether Windows Update AutoDownload is enabled. " +
+                            "Unable to determine whether Windows Update Automatic Download is enabled. " +
                             "Make sure FO is running as LocalSystem.",
                         State = HealthState.Warning,
                         NodeName = this.NodeName,
@@ -249,19 +249,12 @@ namespace FabricObserver.Observers
                 ret = sb.ToString().Trim();
                 _ = sb.Clear();
             }
-            catch (ArgumentException)
-            {
-            }
-            catch (FormatException)
-            {
-            }
-            catch (InvalidCastException)
-            {
-            }
-            catch (ManagementException)
-            {
-            }
-            catch (NullReferenceException)
+            catch (Exception e) when (
+                e is ArgumentException ||
+                e is FormatException ||
+                e is InvalidCastException ||
+                e is ManagementException ||
+                e is NullReferenceException)
             {
             }
             finally
@@ -273,7 +266,7 @@ namespace FabricObserver.Observers
             return ret;
         }
 
-        private Task CheckWuAutoUpdateEnabledAsync(CancellationToken token)
+        private Task CheckWuAutoDownloadEnabledAsync(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
