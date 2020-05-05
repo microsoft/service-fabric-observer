@@ -283,7 +283,6 @@
     <Compile Include="Observers\Utilities\Telemetry\TelemetryProdiverType.cs" />
     <Compile Include="Observers\Utilities\WindowsPerfCounters.cs" />
     <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="Observers\Utilities\WindowsAutoUpdateUtility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FabricObserver.cs" />
     <Compile Include="Program.cs" />

@@ -127,7 +127,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             internal set;
         }
 
-        public bool WindowsAutoUpdateEnabled
+        public bool WindowsUpdateAutoDownloadEnabled
         {
             get;
             internal set;

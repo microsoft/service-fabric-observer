@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
@@ -102,21 +103,13 @@ namespace FabricObserver.Observers
                 this.unsupportedPreviewFeaturesEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableUnsupportedPreviewFeaturesName, null));
                 this.sFNodeLastBootTime = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureNodeLastBootUpTime, null);
             }
-            catch (ArgumentException ae)
+            catch (Exception e) when (e is ArgumentException || e is IOException)
             {
                 this.HealthReporter.ReportFabricObserverServiceHealth(
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
                     HealthState.Warning,
-                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n{ae}");
-            }
-            catch (IOException ie)
-            {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
-                    HealthState.Warning,
-                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n {ie}");
+                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n{e}");
             }
             catch (Exception e)
             {
@@ -125,6 +118,7 @@ namespace FabricObserver.Observers
                     this.ObserverName,
                     HealthState.Warning,
                     $"this.NodeName | Unhandled Exception trying to read registry value:\n{e}");
+
                 throw;
             }
 
@@ -228,10 +222,7 @@ namespace FabricObserver.Observers
                     appList = await this.FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
                     clusterManifestXml = await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(true);
                 }
-                catch (System.Fabric.FabricException)
-                {
-                }
-                catch (TimeoutException)
+                catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
                 }
             }

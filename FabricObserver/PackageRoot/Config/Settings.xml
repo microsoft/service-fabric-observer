@@ -98,7 +98,7 @@
     <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
          below, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter.
          Just add a Parameter like below to any of the observers' config sections when you want this level of run control.
-         Format: Day(s).Hours:Minutes:Seconds e.g., 1.00:00:00 = 1 day.-->
+         Format: Day(s).Hours:Minutes:Seconds e.g., 1.00:00:00 = 1 day. -->
     <Parameter Name="RunInterval" Value="1.00:00:00" />
     <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="42" />

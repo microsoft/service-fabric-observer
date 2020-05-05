@@ -10,7 +10,7 @@
     <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="2.0.6" />
     <ConfigOverrides />
     <Policies>
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="NetworkUser" />
     </Policies>
   </ServiceManifestImport>
   <DefaultServices>

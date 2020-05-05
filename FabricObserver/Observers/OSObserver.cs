@@ -19,12 +19,12 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Win32;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
+using WUApiLib;
 
 namespace FabricObserver.Observers
 {
     // This observer monitors OS health state and provides static and dynamic OS level information.
-    // This observer is not configurable. It will signal infinite TTL Ok Health Reports that will show up
-    // under node details in SFX as well as emit ETW events.
+    // It will signal Ok Health Reports that will show up under node details in SFX as well as emit ETW events.
     // If FabricObserverWebApi is installed, the output includes a local file that is used
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OsObserver : ObserverBase
@@ -270,25 +270,16 @@ namespace FabricObserver.Observers
         {
             token.ThrowIfCancellationRequested();
 
-            // Local Windows AutoUpdate Download enabled (as in automatically downloading the update without notification)?
-            // If so, it's best to disable and leverage either POA (Bronze durability)
-            // or the best option for Silver+ durability clusters:
-            // VMSS automatic OS image upgrades. This is to prevent unexpected VM reboots.
-            // For POA service, it will try and disable AU for you.
+            // Windows Update Automatic Download enabled (automatically downloading an update without notification beforehand)?
+            // If so, it's best to disable this and leverage either POA (Bronze durability)
+            // or enable VMSS automatic OS image upgrades for Silver+ durability clusters. This is to prevent unexpected VM reboots.
+            // For POA service, it will try and disable this for you when it first runs.
             try
             {
-#if DEBUG
-                string AuRegPath = WindowsAutoUpdateUtility.AURegPath;
-                RegistryKey auKey = Registry.LocalMachine.OpenSubKey(AuRegPath, true);
-                
-                if (auKey != null)
-                {
-                    this.LogCurrentAUValues(auKey);
-                }
-#endif
-                // Note: FO must run as LocalSystem for this check to work.
-                var wuAuUtility = new WindowsAutoUpdateUtility();
-                this.isWindowsUpdateAutoDownloadEnabled = wuAuUtility.IsAutoUpdateDownloadEnabled;
+                var wuLibAutoUpdate = new WUApiLib.AutomaticUpdatesClass();
+                this.isWindowsUpdateAutoDownloadEnabled =
+                    wuLibAutoUpdate.ServiceEnabled &&
+                    wuLibAutoUpdate.Settings.NotificationLevel != AutomaticUpdatesNotificationLevel.aunlNotifyBeforeDownload;
             }
             catch (Exception e) when (
                 e is COMException ||
@@ -564,7 +555,7 @@ namespace FabricObserver.Observers
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
-                            WindowsAutoUpdateEnabled = this.isWindowsUpdateAutoDownloadEnabled,
+                            WindowsUpdateAutoDownloadEnabled = this.isWindowsUpdateAutoDownloadEnabled,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
                             AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
