@@ -18,8 +18,8 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Win32;
-using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using WUApiLib;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
@@ -94,7 +94,7 @@ namespace FabricObserver.Observers
                     this.HasActiveFabricErrorOrWarning = true;
 
                     // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                    if (this.IsTelemetryProviderEnabled)
+                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                     {
                         _ = this.TelemetryClient?.ReportHealthAsync(
                             HealthScope.Application,
@@ -176,21 +176,41 @@ namespace FabricObserver.Observers
                     };
 
                     this.HealthReporter.ReportHealthToServiceFabric(report);
-                }
-                else if (this.auStateUnknown)
-                {
-                    report = new HealthReport
-                    {
-                        Observer = this.ObserverName,
-                        HealthMessage =
-                            "Unable to determine whether Windows Update Automatic Download is enabled. " +
-                            "Make sure FO is running as LocalSystem.",
-                        State = HealthState.Warning,
-                        NodeName = this.NodeName,
-                        HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
-                    };
 
-                    this.HealthReporter.ReportHealthToServiceFabric(report);
+                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    {
+                        // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
+                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        {
+                            HealthEventDescription = this.auServiceEnabledMessage,
+                            HealthState = "Warning",
+                            Metric = "WUAutoDownloadEnabled",
+                            Value = this.isWindowsUpdateAutoDownloadEnabled,
+                            NodeName = this.NodeName,
+                            ObserverName = this.ObserverName,
+                            Source = ObserverConstants.FabricObserverName,
+                        };
+
+                        _ = this.TelemetryClient?.ReportMetricAsync(
+                            telemetryData,
+                            this.Token);
+                    }
+
+                    // ETW.
+                    if (this.IsEtwEnabled)
+                    {
+                        Logger.EtwLogger?.Write(
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                HealthState = "Warning",
+                                HealthEventDescription = this.auServiceEnabledMessage,
+                                ObserverName = this.ObserverName,
+                                Metric = "WUAutoDownloadEnabled",
+                                Value = this.isWindowsUpdateAutoDownloadEnabled,
+                                NodeName = this.NodeName,
+                            });
+                    }
                 }
 
                 // reset au globals for fresh detection during next observer run.

@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Principal;
 using System.Text;
 using System.Threading;
@@ -59,7 +60,6 @@ namespace FabricObserver.Observers
         };
 
         private readonly string dataPackagePath;
-        private readonly InternetProtocol protocol = InternetProtocol.Tcp;
         private readonly List<NetworkObserverConfig> userEndpoints = new List<NetworkObserverConfig>();
         private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
         private HealthState healthState = HealthState.Ok;
@@ -157,6 +157,7 @@ namespace FabricObserver.Observers
                             State = this.healthState,
                             NodeName = this.NodeName,
                             Observer = this.ObserverName,
+                            Property = $"EndpointUnreachable({this.NodeName})",
                             ReportType = HealthReportType.Application,
                             ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {connStatus.HostName}",
                         };
@@ -211,7 +212,7 @@ namespace FabricObserver.Observers
                         }
 
                         this.healthState = HealthState.Ok;
-                        var healthMessage = $"Outbound Internet connection successful for {connStatus?.HostName}.";
+                        var healthMessage = $"Outbound Internet connection successful for {connStatus?.HostName} from node {this.NodeName}.";
 
                         // Clear existing Health Warning.
                         var report = new HealthReport
@@ -469,55 +470,71 @@ namespace FabricObserver.Observers
                 configList = this.userEndpoints;
             }
 
-            if (this.protocol == InternetProtocol.Icmp)
+            foreach (var config in configList)
             {
-                using (var pingSender = new Ping())
+                this.cancellationToken.ThrowIfCancellationRequested();
+
+                foreach (var endpoint in config.Endpoints)
                 {
-                    foreach (var config in configList)
+                    bool passed = false;
+                        
+                    if (string.IsNullOrEmpty(endpoint.HostName))
                     {
-                        foreach (var endpoint in config.Endpoints)
-                        {
-                            bool passed = false;
-
-                            try
-                            {
-                                var reply = pingSender.Send(endpoint.HostName);
-
-                                if (reply != null && reply.Status == IPStatus.Success)
-                                {
-                                    passed = true;
-                                }
-                            }
-                            catch (PingException)
-                            {
-                            }
-
-                            this.SetHealthState(endpoint, passed);
-                        }
+                        continue;
                     }
-                }
-            }
-            else
-            {
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
 
-                foreach (var config in configList)
-                {
-                    this.cancellationToken.ThrowIfCancellationRequested();
-
-                    foreach (var endpoint in config.Endpoints)
+                    // SQL Azure, etc.
+                    if (endpoint.Port == 1433 || endpoint.HostName.ToLower().Contains("database.windows.net"))
                     {
-                        bool passed = false;
+                        this.cancellationToken.ThrowIfCancellationRequested();
 
                         try
                         {
-                            if (string.IsNullOrEmpty(endpoint.HostName))
+                            // NetworkObserver only cares about endpoint/port *reachability*, nothing more.
+                            // It doesn't matter if the server forcibly closes an unauthenticated connection attempt.
+                            using (var socket = new Socket(
+                                AddressFamily.InterNetwork,
+                                SocketType.Stream,
+                                ProtocolType.Tcp))
                             {
-                                continue;
+                                IAsyncResult asyncResult = socket.BeginConnect(
+                                    endpoint.HostName,
+                                    endpoint.Port,
+                                    null,
+                                    null);
+                                passed = asyncResult.AsyncWaitHandle.WaitOne(15000, true);
+                                socket.Close();
                             }
+                        }
+                        catch (SocketException se)
+                        {
+                            if (se.SocketErrorCode == SocketError.NetworkUnreachable
+                                || se.SocketErrorCode == SocketError.AddressNotAvailable
+                                || se.SocketErrorCode == SocketError.HostDown
+                                || se.SocketErrorCode == SocketError.HostUnreachable
+                                || se.SocketErrorCode == SocketError.NetworkDown
+                                || se.SocketErrorCode == SocketError.NoData
+                                || se.SocketErrorCode == SocketError.TimedOut)
+                            {
+                                passed = false;
+                            }
+                            else if (se.SocketErrorCode == SocketError.AccessDenied
+                                     || se.SocketErrorCode == SocketError.ConnectionRefused)
+                            {
+                                passed = true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Service endpoints, CosmosDB REST endpoint, etc.
+                        try
+                        {
+                            this.cancellationToken.ThrowIfCancellationRequested();
 
+                            ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
                             string prefix =
-                                (endpoint.Port == 443 || endpoint.Port == 1433) ? "https://" : "http://";
+                                endpoint.Port == 443 ? "https://" : "http://";
 
                             if (endpoint.HostName.Contains("://"))
                             {
@@ -538,7 +555,7 @@ namespace FabricObserver.Observers
 
                                 // The target server responded with something.
                                 // It doesn't really matter what it "said".
-                                if (response?.Headers.Count > 0)
+                                if (status == HttpStatusCode.OK || response?.Headers?.Count > 0)
                                 {
                                     passed = true;
                                 }
@@ -569,9 +586,9 @@ namespace FabricObserver.Observers
 
                             throw;
                         }
-
-                        this.SetHealthState(endpoint, passed);
                     }
+
+                    this.SetHealthState(endpoint, passed);
                 }
             }
         }
@@ -622,6 +639,7 @@ namespace FabricObserver.Observers
         }
     }
 
+    // TODO. Currently only TCP is supported.
     internal enum InternetProtocol
     {
         Icmp,

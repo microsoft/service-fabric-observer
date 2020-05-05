@@ -32,10 +32,10 @@
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="True" />
-    <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. 
+    <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
+    <Parameter Name="TelemetryProvider" Value="" />
+    <!-- Required-If TelemetryProvider is AzureApplicationInsights. 
          You have to also add this key to [repo root]\FabricObserver\ApplicationInsights.config -->
-    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
     <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
@@ -152,7 +152,7 @@
   </Section>
   <Section Name="NetworkObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableTelemetry" Value="False" />
+    <Parameter Name="EnableTelemetry" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
