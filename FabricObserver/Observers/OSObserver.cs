@@ -28,7 +28,7 @@ namespace FabricObserver.Observers
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OsObserver : ObserverBase
     {
-        private const string AuStateUnknownMessage = "Unable to determine AU service state.";
+        private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
         private string osReport;
         private string osStatus;
         private string auServiceEnabledMessage;
@@ -162,7 +162,7 @@ namespace FabricObserver.Observers
                         $"For Bronze durability clusters, please consider deploying the " +
                         $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\" target=\"blank\">Patch Orchestration Service</a>.";
 
-                    this.auServiceEnabledMessage = $"Windows Automatic Update service is enabled.{linkText}";
+                    this.auServiceEnabledMessage = $"Windows Update Automatic Download is enabled.{linkText}";
 
                     report = new HealthReport
                     {
@@ -280,7 +280,7 @@ namespace FabricObserver.Observers
             token.ThrowIfCancellationRequested();
 
             // Local Windows AutoUpdate enabled (as in automatically downloading the update without notification)?
-            // If so, it's best to disable and leverage either POA (Bronze durability) 
+            // If so, it's best to disable and leverage either POA (Bronze durability)
             // or the best option for Silver+ durability clusters:
             // VMSS automatic OS image upgrades. This is to prevent unexpected VM reboots.
             // For POA service, it will try and disable AU for you.
@@ -433,7 +433,7 @@ namespace FabricObserver.Observers
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
                 // WU AutoUpdate
-                string auMessage = "WU AutoUpdate Enabled: ";
+                string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
 
                 if (this.auStateUnknown)
                 {

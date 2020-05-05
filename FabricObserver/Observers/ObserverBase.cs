@@ -605,6 +605,13 @@ namespace FabricObserver.Observers
             }
             else
             {
+                string drive = string.Empty;
+
+                if (this.ObserverName == ObserverConstants.DiskObserverName)
+                {
+                    drive = $"{data.Id}: ";
+                }
+
                 if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
                     telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
@@ -613,7 +620,7 @@ namespace FabricObserver.Observers
                         HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                         NodeName = this.NodeName,
                         ObserverName = this.ObserverName,
-                        Metric = data.Property,
+                        Metric = $"{drive}{data.Property}",
                         Source = ObserverConstants.FabricObserverName,
                         Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                     };
@@ -633,7 +640,7 @@ namespace FabricObserver.Observers
                             HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                             NodeName = this.NodeName,
                             ObserverName = this.ObserverName,
-                            Metric = data.Property,
+                            Metric = $"{drive}{data.Property}",
                             Source = ObserverConstants.FabricObserverName,
                             Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                         });
@@ -775,7 +782,7 @@ namespace FabricObserver.Observers
 
                 string drive = string.Empty;
 
-                if (data.Property.Contains("Disk"))
+                if (this.ObserverName == ObserverConstants.DiskObserverName)
                 {
                     drive = $"{data.Id}: ";
                 }

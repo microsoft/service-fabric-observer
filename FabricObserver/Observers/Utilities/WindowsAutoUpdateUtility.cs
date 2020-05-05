@@ -8,7 +8,6 @@ using Microsoft.Win32;
 
 namespace FabricObserver.Observers.Utilities
 {
-
     /// <summary>
     /// Utility which helps in getting and settings the Windows Update settings of a Windows based system
     /// </summary>
