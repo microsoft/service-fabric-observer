@@ -17,7 +17,6 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -477,7 +476,7 @@ namespace FabricObserver.Observers
                 foreach (var endpoint in config.Endpoints)
                 {
                     bool passed = false;
-                        
+
                     if (string.IsNullOrEmpty(endpoint.HostName))
                     {
                         continue;
