@@ -271,15 +271,15 @@ namespace FabricObserver.Observers
             token.ThrowIfCancellationRequested();
 
             // Windows Update Automatic Download enabled (automatically downloading an update without notification beforehand)?
-            // If so, it's best to disable this and leverage either POA (Bronze durability)
-            // or enable VMSS automatic OS image upgrades for Silver+ durability clusters. This is to prevent unexpected VM reboots.
-            // For POA service, it will try and disable this for you when it first runs.
+            // If so, it's best to disable this and deploy either POA (for Bronze durability clusters)
+            // or enable VMSS automatic OS image upgrades for Silver+ durability clusters. 
+            // This is important to prevent unexpected, concurrent VM reboots due to Windows Updates.
             try
             {
-                var wuLibAutoUpdate = new WUApiLib.AutomaticUpdatesClass();
+                var wuLibAutoUpdates = new WUApiLib.AutomaticUpdatesClass();
                 this.isWindowsUpdateAutoDownloadEnabled =
-                    wuLibAutoUpdate.ServiceEnabled &&
-                    wuLibAutoUpdate.Settings.NotificationLevel != AutomaticUpdatesNotificationLevel.aunlNotifyBeforeDownload;
+                    wuLibAutoUpdates.ServiceEnabled &&
+                    wuLibAutoUpdates.Settings.NotificationLevel != AutomaticUpdatesNotificationLevel.aunlNotifyBeforeDownload;
             }
             catch (Exception e) when (
                 e is COMException ||
