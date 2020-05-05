@@ -28,7 +28,7 @@ namespace FabricObserver.Observers.Utilities
 
             if (auKey != null)
             {
-                this.IsAutoUpdateEnabled =
+                this.IsAutoUpdateDownloadEnabled =
                     !(Convert.ToInt32(auKey.GetValue("NoAutoUpdate")) == 0
                     && Convert.ToInt32(auKey.GetValue("AUOptions")) == 2);
             }
@@ -37,7 +37,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets a value indicating whether automatic update is enabled.
         /// </summary>
-        public bool IsAutoUpdateEnabled
+        public bool IsAutoUpdateDownloadEnabled
         {
             get;
         }

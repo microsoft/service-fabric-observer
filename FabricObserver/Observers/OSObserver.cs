@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +35,7 @@ namespace FabricObserver.Observers
         private string auServiceEnabledMessage;
         private int totalVisibleMemoryGb = -1;
         private bool auStateUnknown;
-        private bool isWindowsAutoUpdateEnabled;
+        private bool isWindowsUpdateAutoDownloadEnabled;
 
         public string TestManifestPath
         {
@@ -153,7 +154,7 @@ namespace FabricObserver.Observers
                 this.HealthReporter.ReportHealthToServiceFabric(report);
 
                 // AutoUpdate service enabled?
-                if (this.isWindowsAutoUpdateEnabled)
+                if (this.isWindowsUpdateAutoDownloadEnabled)
                 {
                     string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
@@ -175,30 +176,27 @@ namespace FabricObserver.Observers
                     };
 
                     this.HealthReporter.ReportHealthToServiceFabric(report);
-
-                    // reset au globals to false for fresh detection during next observer run.
-                    this.isWindowsAutoUpdateEnabled = false;
-                    this.auStateUnknown = false;
                 }
-#if DEBUG
                 else if (this.auStateUnknown)
                 {
                     report = new HealthReport
                     {
                         Observer = this.ObserverName,
-                        HealthMessage = "Unable to determine whether Windows AutoUpdate service is enabled.",
+                        HealthMessage =
+                            "Unable to determine whether Windows Update AutoDownload is enabled. " +
+                            "Make sure FO is running as LocalSystem.",
                         State = HealthState.Warning,
                         NodeName = this.NodeName,
                         HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
                     };
 
                     this.HealthReporter.ReportHealthToServiceFabric(report);
-
-                    // reset au globals to false for new detection during next observer run.
-                    this.isWindowsAutoUpdateEnabled = false;
-                    this.auStateUnknown = false;
                 }
-#endif
+
+                // reset au globals for fresh detection during next observer run.
+                this.isWindowsUpdateAutoDownloadEnabled = false;
+                this.auStateUnknown = false;
+
                 return Task.CompletedTask;
             }
             catch (Exception e)
@@ -279,7 +277,7 @@ namespace FabricObserver.Observers
         {
             token.ThrowIfCancellationRequested();
 
-            // Local Windows AutoUpdate enabled (as in automatically downloading the update without notification)?
+            // Local Windows AutoUpdate Download enabled (as in automatically downloading the update without notification)?
             // If so, it's best to disable and leverage either POA (Bronze durability)
             // or the best option for Silver+ durability clusters:
             // VMSS automatic OS image upgrades. This is to prevent unexpected VM reboots.
@@ -295,10 +293,15 @@ namespace FabricObserver.Observers
                     this.LogCurrentAUValues(auKey);
                 }
 #endif
-                WindowsAutoUpdateUtility wuAuUtility = new WindowsAutoUpdateUtility();
-                this.isWindowsAutoUpdateEnabled = wuAuUtility.IsAutoUpdateEnabled;
+                // Note: FO must run as LocalSystem for this check to work.
+                var wuAuUtility = new WindowsAutoUpdateUtility();
+                this.isWindowsUpdateAutoDownloadEnabled = wuAuUtility.IsAutoUpdateDownloadEnabled;
             }
-            catch (Exception e) when (e is COMException || e is InvalidOperationException || e is Win32Exception)
+            catch (Exception e) when (
+                e is COMException ||
+                e is InvalidOperationException ||
+                e is SecurityException ||
+                e is Win32Exception)
             {
                 this.ObserverLogger.LogWarning(
                     $"{AuStateUnknownMessage}{Environment.NewLine}{e}");
@@ -441,7 +444,7 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    auMessage += this.isWindowsAutoUpdateEnabled;
+                    auMessage += this.isWindowsUpdateAutoDownloadEnabled;
                 }
 
                 // OS info.
@@ -536,9 +539,9 @@ namespace FabricObserver.Observers
                             OS = osName,
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
-                            AutoUpdateEnabled = this.auStateUnknown ? "Unknown" : this.isWindowsAutoUpdateEnabled.ToString(),
+                            AutoUpdateEnabled = this.auStateUnknown ? "Unknown" : this.isWindowsUpdateAutoDownloadEnabled.ToString(),
                             LastBootUpTime = lastBootTime,
-                            WindowsAutoUpdateEnabled = this.isWindowsAutoUpdateEnabled,
+                            WindowsAutoUpdateEnabled = this.isWindowsUpdateAutoDownloadEnabled,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
                             AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
@@ -568,7 +571,7 @@ namespace FabricObserver.Observers
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
-                            WindowsAutoUpdateEnabled = this.isWindowsAutoUpdateEnabled,
+                            WindowsAutoUpdateEnabled = this.isWindowsUpdateAutoDownloadEnabled,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
                             AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
