@@ -446,6 +446,7 @@ namespace FabricObserver.Observers
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
                     break;
+
                 case DumpType.MiniPlus:
                     miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
@@ -454,10 +455,12 @@ namespace FabricObserver.Observers
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
                     break;
+
                 case DumpType.Mini:
                     miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithIndirectlyReferencedMemory |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpScanMemory;
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(dumpType), dumpType, null);
             }
