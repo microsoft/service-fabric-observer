@@ -14,6 +14,7 @@ using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Principal;
+using System.ServiceModel.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -120,14 +121,14 @@ namespace FabricObserver.Observers
             var timeToLiveWarning = this.SetHealthReportTimeToLive();
 
             // Report on connection state.
-            foreach (var t in this.userEndpoints)
+            foreach (var endPoint in this.userEndpoints)
             {
                 token.ThrowIfCancellationRequested();
 
                 var deployedApps = await this.FabricClientInstance.QueryManager
                     .GetDeployedApplicationListAsync(
                         this.NodeName,
-                        new Uri(t.TargetApp)).ConfigureAwait(true);
+                        new Uri(endPoint.TargetApp)).ConfigureAwait(true);
 
                 // We only care about deployed apps.
                 if (deployedApps == null || deployedApps.Count < 1)
@@ -135,11 +136,11 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                foreach (var t1 in this.connectionStatus)
+                foreach (var conn in this.connectionStatus.Where(ep => ep.TargetApp == endPoint.TargetApp))
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var connStatus = t1;
+                    var connStatus = conn;
 
                     if (!connStatus.Connected)
                     {
@@ -148,7 +149,7 @@ namespace FabricObserver.Observers
 
                         var report = new HealthReport
                         {
-                            AppName = new Uri(t.TargetApp),
+                            AppName = new Uri(conn.TargetApp),
                             Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EmitLogEvent = true,
                             HealthMessage = healthMessage,
@@ -172,7 +173,7 @@ namespace FabricObserver.Observers
                         {
                             var telemetryData = new TelemetryData(this.FabricClientInstance, token)
                             {
-                                ApplicationName = t.TargetApp,
+                                ApplicationName = endPoint.TargetApp,
                                 Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                                 HealthState = "Warning",
                                 HealthEventDescription = healthMessage,
@@ -193,7 +194,7 @@ namespace FabricObserver.Observers
                                 ObserverConstants.FabricObserverETWEventName,
                                 new
                                 {
-                                    ApplicationName = t.TargetApp,
+                                    ApplicationName = endPoint.TargetApp,
                                     Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                                     HealthState = "Warning",
                                     HealthEventDescription = healthMessage,
@@ -216,7 +217,7 @@ namespace FabricObserver.Observers
                         // Clear existing Health Warning.
                         var report = new HealthReport
                         {
-                            AppName = new Uri(t.TargetApp),
+                            AppName = new Uri(endPoint.TargetApp),
                             EmitLogEvent = true,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = default(TimeSpan),
@@ -233,7 +234,7 @@ namespace FabricObserver.Observers
                         {
                             var telemetryData = new TelemetryData(this.FabricClientInstance, token)
                             {
-                                ApplicationName = t.TargetApp,
+                                ApplicationName = endPoint.TargetApp,
                                 Code = FoErrorWarningCodes.Ok,
                                 HealthState = "Ok",
                                 HealthEventDescription = healthMessage,
@@ -254,7 +255,7 @@ namespace FabricObserver.Observers
                                 ObserverConstants.FabricObserverETWEventName,
                                 new
                                 {
-                                    ApplicationName = t.TargetApp,
+                                    ApplicationName = endPoint.TargetApp,
                                     Code = FoErrorWarningCodes.Ok,
                                     HealthState = "Ok",
                                     HealthEventDescription = healthMessage,
@@ -491,18 +492,14 @@ namespace FabricObserver.Observers
                         {
                             // NetworkObserver only cares about endpoint/port *reachability*, nothing more.
                             // It doesn't matter if the server forcibly closes an unauthenticated connection attempt.
-                            using (var socket = new Socket(
-                                AddressFamily.InterNetwork,
-                                SocketType.Stream,
-                                ProtocolType.Tcp))
+                            using (var tcpClient = new TcpClient(endpoint.HostName, endpoint.Port))
                             {
-                                IAsyncResult asyncResult = socket.BeginConnect(
-                                    endpoint.HostName,
-                                    endpoint.Port,
-                                    null,
-                                    null);
-                                passed = asyncResult.AsyncWaitHandle.WaitOne(15000, true);
-                                socket.Close();
+                                if (tcpClient.Connected)
+                                {
+                                    passed = true;
+                                }
+
+                                tcpClient.Close();
                             }
                         }
                         catch (SocketException se)
@@ -510,6 +507,7 @@ namespace FabricObserver.Observers
                             if (se.SocketErrorCode == SocketError.NetworkUnreachable
                                 || se.SocketErrorCode == SocketError.AddressNotAvailable
                                 || se.SocketErrorCode == SocketError.HostDown
+                                || se.SocketErrorCode == SocketError.HostNotFound
                                 || se.SocketErrorCode == SocketError.HostUnreachable
                                 || se.SocketErrorCode == SocketError.NetworkDown
                                 || se.SocketErrorCode == SocketError.NoData
@@ -587,12 +585,12 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    this.SetHealthState(endpoint, passed);
+                    this.SetHealthState(endpoint, config.TargetApp, passed);
                 }
             }
         }
 
-        private void SetHealthState(Endpoint endpoint, bool passed)
+        private void SetHealthState(Endpoint endpoint, string targetApp, bool passed)
         {
             if (passed)
             {
@@ -608,6 +606,7 @@ namespace FabricObserver.Observers
                             HostName = endpoint.HostName,
                             Connected = true,
                             Health = HealthState.Warning,
+                            TargetApp = targetApp,
                         });
                 }
                 else
@@ -618,6 +617,7 @@ namespace FabricObserver.Observers
                             HostName = endpoint.HostName,
                             Connected = true,
                             Health = HealthState.Ok,
+                            TargetApp = targetApp,
                         });
                 }
             }
@@ -632,6 +632,7 @@ namespace FabricObserver.Observers
                             HostName = endpoint.HostName,
                             Connected = false,
                             Health = HealthState.Warning,
+                            TargetApp = targetApp,
                         });
                 }
             }
