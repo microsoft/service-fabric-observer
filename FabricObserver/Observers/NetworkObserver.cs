@@ -14,7 +14,6 @@ using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Principal;
-using System.ServiceModel.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -173,7 +172,7 @@ namespace FabricObserver.Observers
                         {
                             var telemetryData = new TelemetryData(this.FabricClientInstance, token)
                             {
-                                ApplicationName = endPoint.TargetApp,
+                                ApplicationName = conn.TargetApp,
                                 Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                                 HealthState = "Warning",
                                 HealthEventDescription = healthMessage,
@@ -194,7 +193,7 @@ namespace FabricObserver.Observers
                                 ObserverConstants.FabricObserverETWEventName,
                                 new
                                 {
-                                    ApplicationName = endPoint.TargetApp,
+                                    ApplicationName = conn.TargetApp,
                                     Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                                     HealthState = "Warning",
                                     HealthEventDescription = healthMessage,
@@ -217,13 +216,15 @@ namespace FabricObserver.Observers
                         // Clear existing Health Warning.
                         var report = new HealthReport
                         {
-                            AppName = new Uri(endPoint.TargetApp),
+                            AppName = new Uri(conn.TargetApp),
+                            Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EmitLogEvent = true,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = default(TimeSpan),
-                            State = this.healthState,
+                            State = HealthState.Ok,
                             NodeName = this.NodeName,
                             Observer = this.ObserverName,
+                            Property = $"EndpointUnreachable({this.NodeName})",
                             ReportType = HealthReportType.Application,
                         };
 
@@ -234,7 +235,7 @@ namespace FabricObserver.Observers
                         {
                             var telemetryData = new TelemetryData(this.FabricClientInstance, token)
                             {
-                                ApplicationName = endPoint.TargetApp,
+                                ApplicationName = conn.TargetApp,
                                 Code = FoErrorWarningCodes.Ok,
                                 HealthState = "Ok",
                                 HealthEventDescription = healthMessage,
@@ -255,7 +256,7 @@ namespace FabricObserver.Observers
                                 ObserverConstants.FabricObserverETWEventName,
                                 new
                                 {
-                                    ApplicationName = endPoint.TargetApp,
+                                    ApplicationName = conn.TargetApp,
                                     Code = FoErrorWarningCodes.Ok,
                                     HealthState = "Ok",
                                     HealthEventDescription = healthMessage,

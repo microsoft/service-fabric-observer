@@ -33,7 +33,7 @@
     "networkWarningEphemeralPorts": 40
   },
   {
-    "targetType": "PatchOrchestrationApplicationType",
+    "targetAppType": "PatchOrchestrationApplicationType",
     "cpuWarningLimitPercent": 45,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
