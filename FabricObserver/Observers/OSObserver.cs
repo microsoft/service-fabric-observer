@@ -180,7 +180,7 @@ namespace FabricObserver.Observers
                     if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData(this.FabricClientInstance, token)
                         {
                             HealthEventDescription = this.auServiceEnabledMessage,
                             HealthState = "Warning",
@@ -292,11 +292,11 @@ namespace FabricObserver.Observers
 
             // Windows Update Automatic Download enabled (automatically downloading an update without notification beforehand)?
             // If so, it's best to disable this and deploy either POA (for Bronze durability clusters)
-            // or enable VMSS automatic OS image upgrades for Silver+ durability clusters. 
+            // or enable VMSS automatic OS image upgrades for Silver+ durability clusters.
             // This is important to prevent unexpected, concurrent VM reboots due to Windows Updates.
             try
             {
-                var wuLibAutoUpdates = new WUApiLib.AutomaticUpdatesClass();
+                var wuLibAutoUpdates = new AutomaticUpdatesClass();
                 this.isWindowsUpdateAutoDownloadEnabled =
                     wuLibAutoUpdates.ServiceEnabled &&
                     wuLibAutoUpdates.Settings.NotificationLevel != AutomaticUpdatesNotificationLevel.aunlNotifyBeforeDownload;

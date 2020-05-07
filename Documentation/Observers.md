@@ -283,7 +283,7 @@ Users should supply hostname/port pairs (if they only allow
 communication with an allowed list of endpoints, for example, or just
 want us to test the endpoints they care about). The point of this observer is simply
 test reachability of an external endpoint. There is no support for authenticated connections.
-The implementation allows for TCP-based tests, which is the most common protocol for use
+The implementation allows for TCP-based tests (HTTP or direct TCP), which is the most common protocol for use
 in service to service communication (which will undoubtedly involve passing data back and forth).
 
 Each endpoint test result is stored in a simple data type
@@ -292,7 +292,18 @@ the next run assuming failure, in which case if the endpoint is
 reachable, SFX will be cleared with an OK health state report and the
 ConnectionState object will be removed from the containing
 List\<ConnectionState\>. Only Warning data is persisted across
-iterations.
+iterations. If targetApp entries share hostname/port pairs, only one test will
+be conducted to limit network traffic. However, each app will is configured with the same
+hostname/port pairs will go into warning if the reachability test fails.
+
+| Setting | Description |
+| :--- | :--- | 
+| **targetApp**|SF application name (Uri format) to target. | 
+| **endpoints** | Array of hostname/port pairs and protocol to be used for the reachability tests. | 
+| **hostname**| The remote hostname to connect to. You don't have to supply prefix like http or https. However, if the endpoint requires a secure SSL channel using a custom port (not 443, for example), then you must provide the https prefix. | 
+| **port**| The remote port to connect to. |
+| **protocol** | These are "direct" protocols. So, http means the connection should be over HTTP (like REST calls), and a WebRequest will be made. tcp is for database endpoints like SQL Azure, which require a direct TCP connection (TcpClient socket will be used). Note: the default is http, so you can omit this setting for your REST endpoints, etc. You must use tcp when you want to monitor databases like SQL Azure.|  
+
 
 Example NetworkObserver.config.json configuration:  
 
@@ -303,15 +314,18 @@ Example NetworkObserver.config.json configuration:
       "endpoints": [
         {
           "hostname": "google.com",
-          "port": 443
+          "port": 443,
+          "protocol": "http"
         },
         {
           "hostname": "facebook.com",
-          "port": 443
+          "port": 443,
+          "protocol": "http"
         },
         {
           "hostname": "westusserver001.database.windows.net",
-          "port": 1433
+          "port": 1433,
+          "protocol": "tcp"
         }
      ]
   },
@@ -320,15 +334,18 @@ Example NetworkObserver.config.json configuration:
       "endpoints": [
         {
           "hostname": "google.com",
-          "port": 443
+          "port": 443,
+          "protocol": "http"
         },
         {
           "hostname": "microsoft.com",
-          "port": 443
+          "port": 443,
+          "protocol": "http"
         },
         {
           "hostname": "eastusserver007.database.windows.net",
-          "port": 1433
+          "port": 1433,
+          "protocol": "tcp"
         }
      ]
   }
@@ -336,12 +353,12 @@ Example NetworkObserver.config.json configuration:
 ```
 
 **Output**: Log text(Info/Error/Warning), Service Fabric Health Report
-(Error/Warning)  
+(Error/Warning), structured telemetry.
 
 This observer runs 4 checks per supplied hostname with a 3 second delay
 between tests. This is done to help ensure we don't report transient
 network failures which will result in Fabric Health warnings that live
-until the observer runs again...  
+until the observer runs again.  
 
 
 ## NodeObserver

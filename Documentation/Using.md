@@ -215,15 +215,18 @@ In NetworkObserver's configuration file (PackageRoot/Config/NetworkObserver.conf
     "endpoints": [
       {
         "hostname": "critical.endpoint.com",
-        "port": 443
+        "port": 443,
+        "protocol": "http"
       },
       {
         "hostname": "another.critical.endpoint.net",
-        "port": 443
+        "port": 443,
+        "protocol": "http"
       },
       {
         "hostname": "eastusserver0042.database.windows.net",
-        "port": 1433
+        "port": 1433,
+        "protocol": "tcp"
       }
     ]
   },
@@ -232,15 +235,18 @@ In NetworkObserver's configuration file (PackageRoot/Config/NetworkObserver.conf
     "endpoints": [
       {
         "hostname": "critical.endpoint42.com",
-        "port": 443
+        "port": 443,
+        "protocol": "http"
       },
       {
         "hostname": "another.critical.endpoint.net",
-        "port": 443
+        "port": 443,
+        "protocol": "http"
       },
       {
         "hostname": "westusserver0007.database.windows.net",
-        "port": 1433
+        "port": 1433,
+        "protocol": "tcp"
       }
     ]
   }

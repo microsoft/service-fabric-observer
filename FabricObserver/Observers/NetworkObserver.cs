@@ -10,6 +10,7 @@ using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -32,7 +33,7 @@ namespace FabricObserver.Observers
     /// </summary>
     public class NetworkObserver : ObserverBase
     {
-        private readonly List<NetworkObserverConfig> defaultEndpoints = new List<NetworkObserverConfig>
+        private readonly List<NetworkObserverConfig> defaultConfig = new List<NetworkObserverConfig>
         {
             new NetworkObserverConfig
             {
@@ -59,8 +60,10 @@ namespace FabricObserver.Observers
         };
 
         private readonly string dataPackagePath;
-        private readonly List<NetworkObserverConfig> userEndpoints = new List<NetworkObserverConfig>();
+        private readonly List<Endpoint> userEndpoints = new List<Endpoint>();
+        private readonly List<NetworkObserverConfig> userConfig = new List<NetworkObserverConfig>();
         private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
+        private Dictionary<string, bool> connEndpointTestResults = new Dictionary<string, bool>();
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;
         private Stopwatch stopwatch;
@@ -120,14 +123,14 @@ namespace FabricObserver.Observers
             var timeToLiveWarning = this.SetHealthReportTimeToLive();
 
             // Report on connection state.
-            foreach (var endPoint in this.userEndpoints)
+            foreach (var config in this.userConfig)
             {
                 token.ThrowIfCancellationRequested();
 
                 var deployedApps = await this.FabricClientInstance.QueryManager
                     .GetDeployedApplicationListAsync(
                         this.NodeName,
-                        new Uri(endPoint.TargetApp)).ConfigureAwait(true);
+                        new Uri(config.TargetApp)).ConfigureAwait(true);
 
                 // We only care about deployed apps.
                 if (deployedApps == null || deployedApps.Count < 1)
@@ -135,30 +138,29 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                foreach (var conn in this.connectionStatus.Where(ep => ep.TargetApp == endPoint.TargetApp))
+                foreach (var conn in this.connectionStatus.Where(cs => cs.TargetApp == config.TargetApp))
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var connStatus = conn;
+                    var connState = conn;
 
-                    if (!connStatus.Connected)
+                    if (!connState.Connected)
                     {
                         this.healthState = HealthState.Warning;
-                        var healthMessage = $"Outbound Internet connection failure detected for endpoint {connStatus.HostName}{Environment.NewLine}";
+                        var healthMessage = $"Outbound Internet connection failure detected for endpoint {connState.HostName}{Environment.NewLine}";
 
                         var report = new HealthReport
                         {
                             AppName = new Uri(conn.TargetApp),
-                            Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EmitLogEvent = true,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = timeToLiveWarning,
                             State = this.healthState,
                             NodeName = this.NodeName,
                             Observer = this.ObserverName,
-                            Property = $"EndpointUnreachable({this.NodeName})",
+                            Property = $"EndpointUnreachable({conn.HostName})",
                             ReportType = HealthReportType.Application,
-                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {connStatus.HostName}",
+                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {connState.HostName}",
                         };
 
                         // Send health report Warning and log event locally.
@@ -205,13 +207,13 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        if (connStatus.Health != HealthState.Warning)
+                        if (connState.Health != HealthState.Warning)
                         {
                             continue;
                         }
 
                         this.healthState = HealthState.Ok;
-                        var healthMessage = $"Outbound Internet connection successful for {connStatus?.HostName} from node {this.NodeName}.";
+                        var healthMessage = $"Outbound Internet connection successful for {connState?.HostName} from node {this.NodeName}.";
 
                         // Clear existing Health Warning.
                         var report = new HealthReport
@@ -224,7 +226,7 @@ namespace FabricObserver.Observers
                             State = HealthState.Ok,
                             NodeName = this.NodeName,
                             Observer = this.ObserverName,
-                            Property = $"EndpointUnreachable({this.NodeName})",
+                            Property = $"EndpointUnreachable({conn.HostName})",
                             ReportType = HealthReportType.Application,
                         };
 
@@ -274,8 +276,8 @@ namespace FabricObserver.Observers
 
             // Clear
             _ = this.connectionStatus.RemoveAll(conn => conn.Connected);
-
             this.connectionStatus.TrimExcess();
+            this.connEndpointTestResults.Clear();
         }
 
         private static string GetNetworkInterfaceInfo(CancellationToken token)
@@ -392,7 +394,7 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            if (this.userEndpoints.Count == 0)
+            if (this.userConfig.Count == 0)
             {
                 using (Stream stream = new FileStream(
                         networkObserverConfigFileName,
@@ -400,10 +402,10 @@ namespace FabricObserver.Observers
                         FileAccess.Read,
                         FileShare.Read))
                 {
-                    this.userEndpoints.AddRange(JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream));
+                    this.userConfig.AddRange(JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream));
                 }
 
-                if (this.userEndpoints.Count == 0)
+                if (this.userConfig.Count == 0)
                 {
                     this.HealthReporter.ReportFabricObserverServiceHealth(
                         this.FabricServiceContext.ServiceName.ToString(),
@@ -417,11 +419,11 @@ namespace FabricObserver.Observers
 
             int configCount = 0;
 
-            for (int i = 0; i < this.userEndpoints.Count; i++)
+            for (int i = 0; i < this.userConfig.Count; i++)
             {
                 this.cancellationToken.ThrowIfCancellationRequested();
 
-                var config = this.userEndpoints[i];
+                var config = this.userConfig[i];
 
                 var deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
                     this.NodeName,
@@ -429,7 +431,7 @@ namespace FabricObserver.Observers
 
                 if (deployedApps == null || deployedApps.Count < 1)
                 {
-                    this.userEndpoints.RemoveAt(i);
+                    this.userConfig.RemoveAt(i);
 
                     continue;
                 }
@@ -464,11 +466,11 @@ namespace FabricObserver.Observers
 
         private void InternetConnectionStateIsConnected()
         {
-            var configList = this.defaultEndpoints;
+            var configList = this.defaultConfig;
 
-            if (this.userEndpoints.Count > 0)
+            if (this.userConfig.Count > 0)
             {
-                configList = this.userEndpoints;
+                configList = this.userConfig;
             }
 
             foreach (var config in configList)
@@ -477,55 +479,91 @@ namespace FabricObserver.Observers
 
                 foreach (var endpoint in config.Endpoints)
                 {
-                    bool passed = false;
-
                     if (string.IsNullOrEmpty(endpoint.HostName))
                     {
                         continue;
                     }
 
-                    // SQL Azure, etc.
-                    if (endpoint.Port == 1433 || endpoint.HostName.ToLower().Contains("database.windows.net"))
+                    // Don't re-test endpoint if it has already been tested for a different targetApp.
+                    if (this.connEndpointTestResults.ContainsKey(endpoint.HostName))
+                    {
+                        this.SetHealthState(endpoint, config.TargetApp, this.connEndpointTestResults[endpoint.HostName]);
+                        continue;
+                    }
+
+                    bool passed = false;
+
+                    // SQL Azure, other database services that are addressable over direct TCP.
+                    if (endpoint.Protocol == DirectInternetProtocol.Tcp)
                     {
                         this.cancellationToken.ThrowIfCancellationRequested();
+                        TcpClient tcpClient = null;
+                        NetworkStream stream = null;
 
                         try
                         {
-                            // NetworkObserver only cares about endpoint/port *reachability*, nothing more.
+                            // NetworkObserver only cares about remote endpoint/port *reachability*, nothing more.
                             // It doesn't matter if the server forcibly closes an unauthenticated connection attempt.
-                            using (var tcpClient = new TcpClient(endpoint.HostName, endpoint.Port))
+                            // The TcpClient ctor used here will throw a socket exception if the hostname can't be resolved,
+                            // so it would therefore be unreachable.
+                            tcpClient = new TcpClient(endpoint.HostName, endpoint.Port);
+
+                            // If we get here, it means DNS resolution successful (hostname -> ip) and
+                            // connection to remote port on remote host has been made.
+                            // If the ctor above didn't throw this is a redundant check, but inexpensive.
+                            if (tcpClient.Connected)
                             {
-                                if (tcpClient.Connected)
+                                // Data to send to the remote host.
+                                byte[] sendData = new byte[1];
+                                byte[] receiveBuffer = new byte[256];
+                                stream = tcpClient.GetStream();
+
+                                // These (Write/Read) *may* throw a SocketException for some handle-able reason
+                                // like if the remote host forcibly closes the connection.
+                                // It still means the endpoint is *reachable*, which is the only thing we care about.
+                                stream.Write(sendData, 0, sendData.Length);
+                                _ = stream.Read(receiveBuffer, 0, receiveBuffer.Length);
+                                tcpClient.Client.Disconnect(false);
+
+                                passed = true;
+                            }
+                        }
+                        catch (IOException ie)
+                        {
+                            if (ie.InnerException != null && ie.InnerException is SocketException)
+                            {
+                                var se = ie.InnerException as SocketException;
+
+                                if (se.SocketErrorCode == SocketError.ConnectionRefused
+                                    || se.SocketErrorCode == SocketError.ConnectionReset)
                                 {
                                     passed = true;
                                 }
-
-                                tcpClient.Close();
                             }
                         }
                         catch (SocketException se)
                         {
-                            if (se.SocketErrorCode == SocketError.NetworkUnreachable
-                                || se.SocketErrorCode == SocketError.AddressNotAvailable
-                                || se.SocketErrorCode == SocketError.HostDown
-                                || se.SocketErrorCode == SocketError.HostNotFound
-                                || se.SocketErrorCode == SocketError.HostUnreachable
-                                || se.SocketErrorCode == SocketError.NetworkDown
-                                || se.SocketErrorCode == SocketError.NoData
-                                || se.SocketErrorCode == SocketError.TimedOut)
-                            {
-                                passed = false;
-                            }
-                            else if (se.SocketErrorCode == SocketError.AccessDenied
-                                     || se.SocketErrorCode == SocketError.ConnectionRefused)
+                            if (se.SocketErrorCode == SocketError.ConnectionRefused
+                                || se.SocketErrorCode == SocketError.ConnectionReset)
                             {
                                 passed = true;
                             }
                         }
+                        finally
+                        {
+                            tcpClient?.Dispose();
+                            tcpClient = null;
+                            stream?.Dispose();
+                            stream = null;
+                        }
                     }
+
+                    // Default is http.
                     else
                     {
-                        // Service endpoints, CosmosDB REST endpoint, etc.
+                        // Service REST endpoints, CosmosDB REST endpoint, etc.
+                        // Http protocol means any enpoint/port pair that is addressable over HTTP/s.
+                        // E.g., REST enpoints, etc.
                         try
                         {
                             this.cancellationToken.ThrowIfCancellationRequested();
@@ -587,6 +625,11 @@ namespace FabricObserver.Observers
                     }
 
                     this.SetHealthState(endpoint, config.TargetApp, passed);
+
+                    if (!this.connEndpointTestResults.ContainsKey(endpoint.HostName))
+                    {
+                        this.connEndpointTestResults.Add(endpoint.HostName, passed);
+                    }
                 }
             }
         }
@@ -625,6 +668,7 @@ namespace FabricObserver.Observers
             else
             {
                 if (!this.connectionStatus.Any(conn => conn.HostName == endpoint.HostName &&
+                                               conn.TargetApp == targetApp &&
                                                conn.Health == HealthState.Warning))
                 {
                     this.connectionStatus.Add(
@@ -638,13 +682,5 @@ namespace FabricObserver.Observers
                 }
             }
         }
-    }
-
-    // TODO. Currently only TCP is supported.
-    internal enum InternetProtocol
-    {
-        Icmp,
-        Tcp,
-        Udp,
     }
 }
