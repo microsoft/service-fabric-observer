@@ -10,7 +10,6 @@ using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -60,7 +59,6 @@ namespace FabricObserver.Observers
         };
 
         private readonly string dataPackagePath;
-        private readonly List<Endpoint> userEndpoints = new List<Endpoint>();
         private readonly List<NetworkObserverConfig> userConfig = new List<NetworkObserverConfig>();
         private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
         private Dictionary<string, bool> connEndpointTestResults = new Dictionary<string, bool>();
