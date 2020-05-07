@@ -9,10 +9,24 @@ namespace FabricObserver.Observers.Utilities
 {
     internal class ConnectionState
     {
-        public string HostName { get; set; }
+        public bool Connected
+        {
+            get; set;
+        }
 
-        public bool Connected { get; set; }
+        public HealthState Health
+        {
+            get; set;
+        }
 
-        public HealthState Health { get; set; }
+        public string HostName
+        {
+            get; set;
+        }
+
+        public string TargetApp
+        {
+            get; set;
+        }
     }
 }

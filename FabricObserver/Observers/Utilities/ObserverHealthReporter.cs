@@ -77,38 +77,38 @@ namespace FabricObserver.Observers.Utilities
                 timeToLive = healthReport.HealthReportTimeToLive;
             }
 
-            // In order for multiple Error/Warning/Ok events to show up in SFX Details view from observer instances,
-            // Event Source Ids must be unique, thus the seemingly strange conditionals inside the cases below:
-            // The apparent duplicity in OR checks is for the case when the incoming report is an OK report, where there is
-            // no error code, but the specific ErrorWarningProperty is known.
-            string property;
+            // Set property for health event.
+            string property = healthReport.Property;
 
-            switch (healthReport.Observer)
+            if (string.IsNullOrEmpty(property))
             {
-                case ObserverConstants.AppObserverName:
-                    property = "ApplicationHealth";
-                    break;
-                case ObserverConstants.CertificateObserverName:
-                    property = "SecurityHealth";
-                    break;
-                case ObserverConstants.DiskObserverName:
-                    property = "DiskHealth";
-                    break;
-                case ObserverConstants.FabricSystemObserverName:
-                    property = "FabricSystemServiceHealth";
-                    break;
-                case ObserverConstants.NetworkObserverName:
-                    property = "NetworkHealth";
-                    break;
-                case ObserverConstants.OsObserverName:
-                    property = "MachineInformation";
-                    break;
-                case ObserverConstants.NodeObserverName:
-                    property = "MachineResourceHealth";
-                    break;
-                default:
-                    property = "FOGenericHealth";
-                    break;
+                switch (healthReport.Observer)
+                {
+                    case ObserverConstants.AppObserverName:
+                        property = "ApplicationHealth";
+                        break;
+                    case ObserverConstants.CertificateObserverName:
+                        property = "SecurityHealth";
+                        break;
+                    case ObserverConstants.DiskObserverName:
+                        property = "DiskHealth";
+                        break;
+                    case ObserverConstants.FabricSystemObserverName:
+                        property = "FabricSystemServiceHealth";
+                        break;
+                    case ObserverConstants.NetworkObserverName:
+                        property = "NetworkHealth";
+                        break;
+                    case ObserverConstants.OsObserverName:
+                        property = "MachineInformation";
+                        break;
+                    case ObserverConstants.NodeObserverName:
+                        property = "MachineResourceHealth";
+                        break;
+                    default:
+                        property = "FOGenericHealth";
+                        break;
+                }
             }
 
             string sourceId = healthReport.Observer;
@@ -126,8 +126,15 @@ namespace FabricObserver.Observers.Utilities
             {
                 errWarnPreamble =
                     $"{healthReport.Observer} detected " +
-                    $"{Enum.GetName(typeof(HealthState), healthReport.State)} " +
-                    $"threshold breach.";
+                    $"{Enum.GetName(typeof(HealthState), healthReport.State)} threshold breach. ";
+
+                // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
+                if (healthReport.Observer == ObserverConstants.OsObserverName
+                    && property == "OSConfiguration")
+                {
+                    errWarnPreamble = $"{ObserverConstants.OsObserverName} detected potential problem with OS configuration: ";
+                    property = "OSConfiguration";
+                }
             }
 
             var healthInformation = new HealthInformation(sourceId, property, healthReport.State)

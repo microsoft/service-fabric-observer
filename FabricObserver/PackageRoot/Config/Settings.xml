@@ -33,8 +33,9 @@
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="True" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
-    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
+    <Parameter Name="TelemetryProvider" Value="" />
+    <!-- Required-If TelemetryProvider is AzureApplicationInsights. 
+         You have to also add this key to [repo root]\FabricObserver\ApplicationInsights.config -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
     <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
@@ -97,7 +98,7 @@
     <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
          below, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter.
          Just add a Parameter like below to any of the observers' config sections when you want this level of run control.
-         Format: Day(s).Hours:Minutes:Seconds e.g., 1.00:00:00 = 1 day.-->
+         Format: Day(s).Hours:Minutes:Seconds e.g., 1.00:00:00 = 1 day. -->
     <Parameter Name="RunInterval" Value="1.00:00:00" />
     <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="42" />
@@ -151,11 +152,11 @@
   </Section>
   <Section Name="NetworkObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableTelemetry" Value="False" />
+    <Parameter Name="EnableTelemetry" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
-         These values are held in a json file, NetworkObserver.config.json".-->
+         These values are held in a json file, NetworkObserver.config.json". -->
     <Parameter Name="NetworkObserverDataFileName" Value="NetworkObserver.config.json" />
   </Section>
   <Section Name="NodeObserverConfiguration">

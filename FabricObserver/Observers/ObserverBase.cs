@@ -446,6 +446,7 @@ namespace FabricObserver.Observers
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
                     break;
+
                 case DumpType.MiniPlus:
                     miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
@@ -454,10 +455,12 @@ namespace FabricObserver.Observers
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
                     break;
+
                 case DumpType.Mini:
                     miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithIndirectlyReferencedMemory |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpScanMemory;
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(dumpType), dumpType, null);
             }
@@ -605,6 +608,13 @@ namespace FabricObserver.Observers
             }
             else
             {
+                string drive = string.Empty;
+
+                if (this.ObserverName == ObserverConstants.DiskObserverName)
+                {
+                    drive = $"{data.Id}: ";
+                }
+
                 if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
                     telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
@@ -613,7 +623,7 @@ namespace FabricObserver.Observers
                         HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                         NodeName = this.NodeName,
                         ObserverName = this.ObserverName,
-                        Metric = data.Property,
+                        Metric = $"{drive}{data.Property}",
                         Source = ObserverConstants.FabricObserverName,
                         Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                     };
@@ -633,7 +643,7 @@ namespace FabricObserver.Observers
                             HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                             NodeName = this.NodeName,
                             ObserverName = this.ObserverName,
-                            Metric = data.Property,
+                            Metric = $"{drive}{data.Property}",
                             Source = ObserverConstants.FabricObserverName,
                             Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                         });
@@ -775,7 +785,7 @@ namespace FabricObserver.Observers
 
                 string drive = string.Empty;
 
-                if (data.Property.Contains("Disk"))
+                if (this.ObserverName == ObserverConstants.DiskObserverName)
                 {
                     drive = $"{data.Id}: ";
                 }

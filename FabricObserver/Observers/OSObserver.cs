@@ -4,32 +4,43 @@
 // ------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using Microsoft.Win32;
+using WUApiLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
     // This observer monitors OS health state and provides static and dynamic OS level information.
-    // This observer is not configurable. It will signal infinite TTL Ok Health Reports that will show up
-    // under node details in SFX as well as emit ETW events.
+    // It will signal Ok Health Reports that will show up under node details in SFX as well as emit ETW events.
     // If FabricObserverWebApi is installed, the output includes a local file that is used
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OsObserver : ObserverBase
     {
+        private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
         private string osReport;
         private string osStatus;
+        private string auServiceEnabledMessage;
         private int totalVisibleMemoryGb = -1;
+        private bool auStateUnknown;
+        private bool isWindowsUpdateAutoDownloadEnabled;
 
-        public string TestManifestPath { get; set; }
+        public string TestManifestPath
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="OsObserver"/> class.
@@ -50,6 +61,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
+            await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
             await this.GetComputerInfoAsync(token).ConfigureAwait(false);
             await this.ReportAsync(token).ConfigureAwait(false);
             this.LastRunDateTime = DateTime.Now;
@@ -82,7 +94,7 @@ namespace FabricObserver.Observers
                     this.HasActiveFabricErrorOrWarning = true;
 
                     // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                    if (this.IsTelemetryProviderEnabled)
+                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                     {
                         _ = this.TelemetryClient?.ReportHealthAsync(
                             HealthScope.Application,
@@ -141,6 +153,70 @@ namespace FabricObserver.Observers
 
                 this.HealthReporter.ReportHealthToServiceFabric(report);
 
+                // Windows Update automatic download enabled?
+                if (this.isWindowsUpdateAutoDownloadEnabled)
+                {
+                    string linkText =
+                        $"{Environment.NewLine}For clusters of Silver durability or above, " +
+                        $"please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\" target=\"blank\">" +
+                        $"enabling VMSS automatic OS image upgrades</a> to prevent unexpected VM reboots. " +
+                        $"For Bronze durability clusters, please consider deploying the " +
+                        $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\" target=\"blank\">Patch Orchestration Service</a>.";
+
+                    this.auServiceEnabledMessage = $"Windows Update Automatic Download is enabled.{linkText}";
+
+                    report = new HealthReport
+                    {
+                        Observer = this.ObserverName,
+                        Property = "OSConfiguration",
+                        HealthMessage = this.auServiceEnabledMessage,
+                        State = HealthState.Warning,
+                        NodeName = this.NodeName,
+                        HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
+                    };
+
+                    this.HealthReporter.ReportHealthToServiceFabric(report);
+
+                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    {
+                        // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
+                        var telemetryData = new TelemetryData(this.FabricClientInstance, token)
+                        {
+                            HealthEventDescription = this.auServiceEnabledMessage,
+                            HealthState = "Warning",
+                            Metric = "WUAutoDownloadEnabled",
+                            Value = this.isWindowsUpdateAutoDownloadEnabled,
+                            NodeName = this.NodeName,
+                            ObserverName = this.ObserverName,
+                            Source = ObserverConstants.FabricObserverName,
+                        };
+
+                        _ = this.TelemetryClient?.ReportMetricAsync(
+                            telemetryData,
+                            this.Token);
+                    }
+
+                    // ETW.
+                    if (this.IsEtwEnabled)
+                    {
+                        Logger.EtwLogger?.Write(
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                HealthState = "Warning",
+                                HealthEventDescription = this.auServiceEnabledMessage,
+                                ObserverName = this.ObserverName,
+                                Metric = "WUAutoDownloadEnabled",
+                                Value = this.isWindowsUpdateAutoDownloadEnabled,
+                                NodeName = this.NodeName,
+                            });
+                    }
+                }
+
+                // reset au globals for fresh detection during next observer run.
+                this.isWindowsUpdateAutoDownloadEnabled = false;
+                this.auStateUnknown = false;
+
                 return Task.CompletedTask;
             }
             catch (Exception e)
@@ -150,6 +226,7 @@ namespace FabricObserver.Observers
                     this.ObserverName,
                     HealthState.Error,
                     $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
+
                 throw;
             }
         }
@@ -192,19 +269,12 @@ namespace FabricObserver.Observers
                 ret = sb.ToString().Trim();
                 _ = sb.Clear();
             }
-            catch (ArgumentException)
-            {
-            }
-            catch (FormatException)
-            {
-            }
-            catch (InvalidCastException)
-            {
-            }
-            catch (ManagementException)
-            {
-            }
-            catch (NullReferenceException)
+            catch (Exception e) when (
+                e is ArgumentException ||
+                e is FormatException ||
+                e is InvalidCastException ||
+                e is ManagementException ||
+                e is NullReferenceException)
             {
             }
             finally
@@ -216,6 +286,36 @@ namespace FabricObserver.Observers
             return ret;
         }
 
+        private Task CheckWuAutoDownloadEnabledAsync(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            // Windows Update Automatic Download enabled (automatically downloading an update without notification beforehand)?
+            // If so, it's best to disable this and deploy either POA (for Bronze durability clusters)
+            // or enable VMSS automatic OS image upgrades for Silver+ durability clusters.
+            // This is important to prevent unexpected, concurrent VM reboots due to Windows Updates.
+            try
+            {
+                var wuLibAutoUpdates = new AutomaticUpdatesClass();
+                this.isWindowsUpdateAutoDownloadEnabled =
+                    wuLibAutoUpdates.ServiceEnabled &&
+                    wuLibAutoUpdates.Settings.NotificationLevel != AutomaticUpdatesNotificationLevel.aunlNotifyBeforeDownload;
+            }
+            catch (Exception e) when (
+                e is COMException ||
+                e is InvalidOperationException ||
+                e is SecurityException ||
+                e is Win32Exception)
+            {
+                this.ObserverLogger.LogWarning(
+                    $"{AuStateUnknownMessage}{Environment.NewLine}{e}");
+
+                this.auStateUnknown = true;
+            }
+
+            return Task.CompletedTask;
+        }
+
         private async Task GetComputerInfoAsync(CancellationToken token)
         {
             ManagementObjectSearcher win32OsInfo = null;
@@ -223,7 +323,6 @@ namespace FabricObserver.Observers
 
             var sb = new StringBuilder();
             var diskUsage = new DiskUsage();
-
             string osName = string.Empty;
             string osVersion = string.Empty;
             int numProcs = 0;
@@ -340,12 +439,25 @@ namespace FabricObserver.Observers
 
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
+                // WU AutoUpdate
+                string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
+
+                if (this.auStateUnknown)
+                {
+                    auMessage += "Unknown";
+                }
+                else
+                {
+                    auMessage += this.isWindowsUpdateAutoDownloadEnabled;
+                }
+
                 // OS info.
                 _ = sb.AppendLine("OS Information:\r\n");
                 _ = sb.AppendLine($"Name: {osName}");
                 _ = sb.AppendLine($"Version: {osVersion}");
                 _ = sb.AppendLine($"InstallDate: {installDate}");
                 _ = sb.AppendLine($"LastBootUpTime*: {lastBootTime}");
+                _ = sb.AppendLine(auMessage);
                 _ = sb.AppendLine($"OSLanguage: {osLang}");
                 _ = sb.AppendLine($"OSHealthStatus*: {this.osStatus}");
                 _ = sb.AppendLine($"NumberOfProcesses*: {numProcs}");
@@ -374,7 +486,7 @@ namespace FabricObserver.Observers
 
                 // Hardware info.
                 // Proc/Mem
-                _ = sb.AppendLine("\r\nHardware Information:\r\n");
+                _ = sb.AppendLine($"{Environment.NewLine}Hardware Information:{Environment.NewLine}");
                 _ = sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
                 _ = sb.AppendLine($"TotalVirtualMemorySize: {totalVirtualMem} GB");
                 _ = sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGb} GB");
@@ -431,7 +543,9 @@ namespace FabricObserver.Observers
                             OS = osName,
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
+                            AutoUpdateEnabled = this.auStateUnknown ? "Unknown" : this.isWindowsUpdateAutoDownloadEnabled.ToString(),
                             LastBootUpTime = lastBootTime,
+                            WindowsAutoUpdateEnabled = this.isWindowsUpdateAutoDownloadEnabled,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
                             AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
@@ -461,6 +575,7 @@ namespace FabricObserver.Observers
                             OSVersion = osVersion,
                             OSInstallDate = installDate,
                             LastBootUpTime = lastBootTime,
+                            WindowsUpdateAutoDownloadEnabled = this.isWindowsUpdateAutoDownloadEnabled,
                             TotalMemorySizeGB = this.totalVisibleMemoryGb,
                             AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
                             AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
@@ -486,7 +601,7 @@ namespace FabricObserver.Observers
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
                     HealthState.Error,
-                    $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
+                    $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
                 throw;
             }
@@ -497,6 +612,35 @@ namespace FabricObserver.Observers
                 diskUsage?.Dispose();
                 _ = sb.Clear();
             }
+        }
+
+        private void LogCurrentAUValues(RegistryKey regKey)
+        {
+            StringBuilder result = new StringBuilder();
+            var values = regKey.GetValueNames();
+            foreach (string value in values)
+            {
+                result.AppendFormat(
+                    "{0} = {1}{2}",
+                    value,
+                    regKey.GetValue(value),
+                    Environment.NewLine);
+            }
+
+            string s = result.ToString();
+
+            int majorVersion = Environment.OSVersion.Version.Major;
+            int minorVersion = Environment.OSVersion.Version.Minor;
+
+            this.HealthReporter.ReportHealthToServiceFabric(new HealthReport
+            {
+                HealthMessage = s + Environment.NewLine + majorVersion + "." + minorVersion,
+                Observer = this.ObserverName,
+                Property = "DebugOutputAU",
+                State = HealthState.Ok,
+                NodeName = this.NodeName,
+                ReportType = HealthReportType.Node,
+            });
         }
     }
 }

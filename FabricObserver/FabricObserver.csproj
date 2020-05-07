@@ -235,7 +235,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Observers\CertificateObserver.cs" />
-    <Compile Include="Observers\DumpType.cs" />
+    <Compile Include="Observers\Utilities\DirectInternetProtocol.cs" />
+    <Compile Include="Observers\Utilities\DumpType.cs" />
     <Compile Include="Observers\Interfaces\ITelemetryProvider.cs" />
     <Compile Include="Observers\Utilities\Telemetry\MachineTelemetryData.cs" />
     <Compile Include="Observers\Utilities\CircularBufferCollection.cs" />
@@ -341,7 +342,17 @@
       <Name>TelemetryLib</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <COMReference Include="WUApiLib">
+      <Guid>{B596CC9F-56E5-419E-A622-E01BB457431E}</Guid>
+      <VersionMajor>2</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
