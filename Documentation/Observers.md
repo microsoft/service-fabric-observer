@@ -300,9 +300,9 @@ hostname/port pairs will go into warning if the reachability test fails.
 | :--- | :--- | 
 | **targetApp**|SF application name (Uri format) to target. | 
 | **endpoints** | Array of hostname/port pairs and protocol to be used for the reachability tests. | 
-| **hostname**| The remote hostname to connect to. You don't have to supply prefix like http or https (if you are using port 443). However, if the endpoint requires a secure SSL channel using a custom port (so, not 443, for example), then you must provide the https prefix (like for a CosmosDB REST endpoint). | 
+| **hostname**| The remote hostname to connect to. You don't have to supply a prefix like http or https if you are using port 443. However, if the endpoint requires a secure SSL/TLS channel using a custom port (so, *not* 443, for example), then you must provide the https prefix (like for a CosmosDB REST endpoint) in the hostname setting string. If you want to test local endpoints (same local network/cluster, some port number), then use the local IP and *not* the domain name for hostname. | 
 | **port**| The remote port to connect to. |
-| **protocol** | These are "direct" protocols. So, http means the connection should be over HTTP (like REST calls), and a WebRequest will be made. tcp is for database endpoints like SQL Azure, which require a direct TCP connection (TcpClient socket will be used). Note: the default is http, so you can omit this setting for your REST endpoints, etc. You must use tcp when you want to monitor databases like SQL Azure.|  
+| **protocol** | These are "direct" protocols. So, http means the connection should be over HTTP (like REST calls), and a WebRequest will be made. tcp is for database endpoints like SQL Azure, which require a direct TCP connection (TcpClient socket will be used). Note: the default is http, so you can omit this setting for your REST endpoints, etc. You must use tcp when you want to monitor database server endpoints like SQL Azure.|  
 
 
 Example NetworkObserver.config.json configuration:  

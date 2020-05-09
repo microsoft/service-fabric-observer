@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security;
 using System.Security.Principal;
 using System.Text;
 using System.Threading;
@@ -540,10 +541,19 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
+                        catch (IOException ie)
+                        {
+                            if (ie.InnerException != null
+                                && ie.InnerException is ProtocolViolationException)
+                            {
+                                passed = true;
+                            }
+                        }
                         catch (WebException we)
                         {
                             if (we.Status == WebExceptionStatus.ProtocolError
                                 || we.Status == WebExceptionStatus.TrustFailure
+                                || we.Status == WebExceptionStatus.SecureChannelFailure
                                 || we.Response?.Headers?.Count > 0)
                             {
                                 // Could not establish trust or server doesn't want to hear from you, or...
@@ -552,6 +562,13 @@ namespace FabricObserver.Observers
                                 // and apply it to the request. See CertificateObserver for how to get
                                 // both your App cert(s) and Cluster cert. The goal of NetworkObserver is
                                 // to test availability. Nothing more.
+                                passed = true;
+                            }
+                            else if (we.Status == WebExceptionStatus.SendFailure
+                                     && we.InnerException != null
+                                     && (we.InnerException.Message.ToLower().Contains("authentication") 
+                                     || we.InnerException.HResult == -2146232800))
+                            {
                                 passed = true;
                             }
                         }
