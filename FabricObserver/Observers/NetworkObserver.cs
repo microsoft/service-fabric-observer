@@ -13,10 +13,12 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security;
 using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.Configuration;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -32,6 +34,7 @@ namespace FabricObserver.Observers
     /// </summary>
     public class NetworkObserver : ObserverBase
     {
+        private const int MaxTcpConnTestRetries = 5;
         private readonly List<NetworkObserverConfig> defaultConfig = new List<NetworkObserverConfig>
         {
             new NetworkObserverConfig
@@ -66,6 +69,7 @@ namespace FabricObserver.Observers
         private bool hasRun;
         private Stopwatch stopwatch;
         private CancellationToken cancellationToken;
+        private int tcpConnTestRetried;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetworkObserver"/> class.
@@ -490,70 +494,12 @@ namespace FabricObserver.Observers
                     }
 
                     bool passed = false;
+                    this.cancellationToken.ThrowIfCancellationRequested();
 
                     // SQL Azure, other database services that are addressable over direct TCP.
                     if (endpoint.Protocol == DirectInternetProtocol.Tcp)
                     {
-                        this.cancellationToken.ThrowIfCancellationRequested();
-                        TcpClient tcpClient = null;
-                        NetworkStream stream = null;
-
-                        try
-                        {
-                            // NetworkObserver only cares about remote endpoint/port *reachability*, nothing more.
-                            // It doesn't matter if the server forcibly closes an unauthenticated connection attempt.
-                            // The TcpClient ctor used here will throw a socket exception if the hostname can't be resolved,
-                            // so it would therefore be unreachable.
-                            tcpClient = new TcpClient(endpoint.HostName, endpoint.Port);
-
-                            // If we get here, it means DNS resolution successful (hostname -> ip) and
-                            // connection to remote port on remote host has been made.
-                            // If the ctor above didn't throw this is a redundant check, but inexpensive.
-                            if (tcpClient.Connected)
-                            {
-                                // Data to send to the remote host.
-                                byte[] sendData = new byte[1];
-                                byte[] receiveBuffer = new byte[256];
-                                stream = tcpClient.GetStream();
-
-                                // These (Write/Read) *may* throw a SocketException for some handle-able reason
-                                // like if the remote host forcibly closes the connection.
-                                // It still means the endpoint is *reachable*, which is the only thing we care about.
-                                stream.Write(sendData, 0, sendData.Length);
-                                _ = stream.Read(receiveBuffer, 0, receiveBuffer.Length);
-                                tcpClient.Client.Disconnect(false);
-
-                                passed = true;
-                            }
-                        }
-                        catch (IOException ie)
-                        {
-                            if (ie.InnerException != null && ie.InnerException is SocketException)
-                            {
-                                var se = ie.InnerException as SocketException;
-
-                                if (se.SocketErrorCode == SocketError.ConnectionRefused
-                                    || se.SocketErrorCode == SocketError.ConnectionReset)
-                                {
-                                    passed = true;
-                                }
-                            }
-                        }
-                        catch (SocketException se)
-                        {
-                            if (se.SocketErrorCode == SocketError.ConnectionRefused
-                                || se.SocketErrorCode == SocketError.ConnectionReset)
-                            {
-                                passed = true;
-                            }
-                        }
-                        finally
-                        {
-                            tcpClient?.Dispose();
-                            tcpClient = null;
-                            stream?.Dispose();
-                            stream = null;
-                        }
+                        passed = this.TcpEndpointDoConnectionTest(endpoint.HostName, endpoint.Port);
                     }
 
                     // Default is http.
@@ -595,10 +541,19 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
+                        catch (IOException ie)
+                        {
+                            if (ie.InnerException != null
+                                && ie.InnerException is ProtocolViolationException)
+                            {
+                                passed = true;
+                            }
+                        }
                         catch (WebException we)
                         {
                             if (we.Status == WebExceptionStatus.ProtocolError
                                 || we.Status == WebExceptionStatus.TrustFailure
+                                || we.Status == WebExceptionStatus.SecureChannelFailure
                                 || we.Response?.Headers?.Count > 0)
                             {
                                 // Could not establish trust or server doesn't want to hear from you, or...
@@ -607,6 +562,13 @@ namespace FabricObserver.Observers
                                 // and apply it to the request. See CertificateObserver for how to get
                                 // both your App cert(s) and Cluster cert. The goal of NetworkObserver is
                                 // to test availability. Nothing more.
+                                passed = true;
+                            }
+                            else if (we.Status == WebExceptionStatus.SendFailure
+                                     && we.InnerException != null
+                                     && (we.InnerException.Message.ToLower().Contains("authentication") 
+                                     || we.InnerException.HResult == -2146232800))
+                            {
                                 passed = true;
                             }
                         }
@@ -630,6 +592,84 @@ namespace FabricObserver.Observers
                     }
                 }
             }
+        }
+
+        private bool TcpEndpointDoConnectionTest(string hostName, int port)
+        {
+            TcpClient tcpClient = null;
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+
+            // NetworkObserver only cares about remote endpoint/port *reachability*, nothing more.
+            // This test simply tries to connect to a remote endpoint using TCP sockets. It will attempt to
+            // send a byte of data to the remote connection. If it fails, it will retry 5 times.
+            try
+            {
+                // The ctor used here will throw a SocketException (e.g., HostNotFound) if the hostname can't be resolved,
+                // so it would therefore be unreachable as far as this test is concerned.
+                tcpClient = new TcpClient(hostName, port);
+
+                if (tcpClient.Client.Connected)
+                {
+                    // Data to send to the remote host.
+                    byte[] sendBuffer = new byte[1];
+                    tcpClient.SendTimeout = 10000;
+
+                    if (tcpClient.Client.Poll(1000, SelectMode.SelectWrite))
+                    {
+                        tcpClient.Client.Send(sendBuffer);
+                        this.tcpConnTestRetried = 0;
+
+                        return true;
+                    }
+                }
+            }
+            catch (IOException ie)
+            {
+                if (ie.InnerException != null && ie.InnerException is SocketException)
+                {
+                    var se = ie.InnerException as SocketException;
+
+                    if (se.SocketErrorCode == SocketError.ConnectionRefused
+                        || se.SocketErrorCode == SocketError.ConnectionReset)
+                    {
+                        if (this.tcpConnTestRetried <= MaxTcpConnTestRetries)
+                        {
+                            this.tcpConnTestRetried++;
+                            Thread.Sleep(1000);
+                            _ = this.TcpEndpointDoConnectionTest(hostName, port);
+                        }
+                        else
+                        {
+                            this.tcpConnTestRetried = 0;
+                        }
+                    }
+                }
+            }
+            catch (SocketException se)
+            {
+                if (se.SocketErrorCode == SocketError.ConnectionRefused
+                    || se.SocketErrorCode == SocketError.ConnectionReset)
+                {
+                    if (this.tcpConnTestRetried < MaxTcpConnTestRetries)
+                    {
+                        this.tcpConnTestRetried++;
+                        Thread.Sleep(1000);
+                        _ = this.TcpEndpointDoConnectionTest(hostName, port);
+                    }
+                    else
+                    {
+                        this.tcpConnTestRetried = 0;
+                    }
+                }
+
+                return false;
+            }
+            finally
+            {
+                tcpClient?.Dispose();
+            }
+
+            return false;
         }
 
         private void SetHealthState(Endpoint endpoint, string targetApp, bool passed)

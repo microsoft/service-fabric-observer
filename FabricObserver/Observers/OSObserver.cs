@@ -299,7 +299,7 @@ namespace FabricObserver.Observers
                 var wuLibAutoUpdates = new AutomaticUpdatesClass();
                 this.isWindowsUpdateAutoDownloadEnabled =
                     wuLibAutoUpdates.ServiceEnabled &&
-                    wuLibAutoUpdates.Settings.NotificationLevel != AutomaticUpdatesNotificationLevel.aunlNotifyBeforeDownload;
+                    wuLibAutoUpdates.Settings.NotificationLevel == AutomaticUpdatesNotificationLevel.aunlScheduledInstallation;
             }
             catch (Exception e) when (
                 e is COMException ||
