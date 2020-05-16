@@ -240,12 +240,9 @@ FabricResourceUsageData object.
 This observer checks outbound connection state for user-supplied endpoints (hostname/port pairs).
 
 **Input**: NetworkObserver.config.json in PackageRoot\\Config.
-Users should supply hostname/port pairs (if they only allow
-communication with an allowed list of endpoints, for example, or just
-want us to test the endpoints they care about). The point of this observer is to simply
-test reachability of an external endpoint. There is no support for verifying successful authentication with remote endpoints. That is, the tests will not authenticate with credentials, but will pass if the server responds,since the response means the server/service is up and running (reachable).
-The implementation allows for TCP-based tests (HTTP or direct TCP), which is the most common protocol for use
-in service to service communication (which will undoubtedly involve passing data back and forth).
+Users must supply target application Uri (targetApp), endpoint hostname/port pairs, and protocol. 
+
+The point of this observer is to simply test reachability of an external endpoint. There is no support for verifying successful authentication with remote endpoints. That is, the tests will not authenticate with credentials, but will pass if the server responds since the response means the server/service is up and running (reachable). The implementation allows for TCP/IP-based tests (HTTP or direct TCP), which is the most common protocol for use in service to service communication (which will undoubtedly involve passing data back and forth).
 
 Each endpoint test result is stored in a simple data type
 (ConnectionState) that lives for either the lifetime of the run or until
