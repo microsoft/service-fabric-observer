@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
+using System.Fabric.Query;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -527,7 +528,7 @@ namespace FabricObserver.Observers
             HealthReportType healthReportType = HealthReportType.Node,
             ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
             bool dumpOnError = false)
-                where T : struct
+            where T : struct
         {
             if (data == null)
             {
@@ -542,14 +543,23 @@ namespace FabricObserver.Observers
             Uri appName = null;
             TelemetryData telemetryData = null;
 
-            if (replicaOrInstance != null)
+            if (healthReportType == HealthReportType.Application)
             {
-                repPartitionId = $"Partition: {replicaOrInstance.PartitionId}";
-                repOrInstanceId = $"Replica: {replicaOrInstance.ReplicaOrInstanceId}";
+                if (replicaOrInstance != null)
+                {
+                    repPartitionId = $"Partition: {replicaOrInstance.PartitionId}";
+                    repOrInstanceId = $"Replica: {replicaOrInstance.ReplicaOrInstanceId}";
 
-                // Create a unique id which may be used in the case of warnings or OK clears.
-                appName = replicaOrInstance.ApplicationName;
-                name = appName.OriginalString.Replace("fabric:/", string.Empty);
+                    // Create a unique id which will be used for health Warnings and OKs (clears).
+                    appName = replicaOrInstance.ApplicationName;
+                    name = appName.OriginalString.Replace("fabric:/", string.Empty);
+                }
+                else
+                {
+                    appName = new Uri("fabric:/System");
+                    name = data.Id;
+                }
+
                 id = name + "_" + data.Property.Replace(" ", string.Empty);
 
                 telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
@@ -561,14 +571,23 @@ namespace FabricObserver.Observers
                     ObserverName = this.ObserverName,
                     Metric = data.Property,
                     Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
-                    PartitionId = replicaOrInstance.PartitionId.ToString(),
-                    ReplicaId = replicaOrInstance.ReplicaOrInstanceId.ToString(),
+                    PartitionId = replicaOrInstance?.PartitionId.ToString(),
+                    ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
                     Source = ObserverConstants.FabricObserverName,
                 };
 
                 try
                 {
-                    procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId).ProcessName;
+                    if (replicaOrInstance != null)
+                    {
+                        procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId).ProcessName;
+                    }
+                    else
+                    {
+                        // The name of the target service process is always the id for data containers coming from FSO.
+                        procName = data.Id;
+                    }
+
                     telemetryData.ServiceName = procName;
 
                     if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
@@ -591,8 +610,9 @@ namespace FabricObserver.Observers
                                 ObserverName = this.ObserverName,
                                 Metric = data.Property,
                                 Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
-                                PartitionId = replicaOrInstance.PartitionId.ToString(),
-                                ReplicaId = replicaOrInstance.ReplicaOrInstanceId.ToString(),
+                                PartitionId = replicaOrInstance?.PartitionId.ToString(),
+                                ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
+                                ServiceName = procName,
                                 Source = ObserverConstants.FabricObserverName,
                             });
                     }
@@ -706,7 +726,7 @@ namespace FabricObserver.Observers
 
                 switch (data.Property)
                 {
-                    case ErrorWarningProperty.TotalCpuTime when replicaOrInstance != null:
+                    case ErrorWarningProperty.TotalCpuTime when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorCpuTime : FoErrorWarningCodes.AppWarningCpuTime;
                         break;
@@ -726,7 +746,7 @@ namespace FabricObserver.Observers
                             FoErrorWarningCodes.NodeErrorDiskSpaceMb : FoErrorWarningCodes.NodeWarningDiskSpaceMb;
                         break;
 
-                    case ErrorWarningProperty.TotalMemoryConsumptionMb when replicaOrInstance != null:
+                    case ErrorWarningProperty.TotalMemoryConsumptionMb when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorMemoryCommittedMb : FoErrorWarningCodes.AppWarningMemoryCommittedMb;
                         break;
@@ -755,7 +775,7 @@ namespace FabricObserver.Observers
                             FoErrorWarningCodes.ErrorTooManyFirewallRules : FoErrorWarningCodes.WarningTooManyFirewallRules;
                         break;
 
-                    case ErrorWarningProperty.TotalActivePorts when replicaOrInstance != null:
+                    case ErrorWarningProperty.TotalActivePorts when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FoErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
                         break;
@@ -765,7 +785,7 @@ namespace FabricObserver.Observers
                             FoErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FoErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
                         break;
 
-                    case ErrorWarningProperty.TotalEphemeralPorts when replicaOrInstance != null:
+                    case ErrorWarningProperty.TotalEphemeralPorts when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FoErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FoErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
                         break;
@@ -780,7 +800,14 @@ namespace FabricObserver.Observers
 
                 if (name != null)
                 {
-                    _ = healthMessage.Append($"{name} (Node: {this.NodeName}, Service Process: {procName}, {repPartitionId}, {repOrInstanceId}): ");
+                    string partitionAndReplicaInfo = string.Empty;
+
+                    if (replicaOrInstance != null)
+                    {
+                        partitionAndReplicaInfo = $", {repPartitionId}, {repOrInstanceId}";
+                    }
+
+                    _ = healthMessage.Append($"{name} (Node: {this.NodeName}, Service Process: {procName}.exe{partitionAndReplicaInfo}): ");
                 }
 
                 string drive = string.Empty;
@@ -806,6 +833,12 @@ namespace FabricObserver.Observers
                     Observer = this.ObserverName,
                     ResourceUsageDataProperty = data.Property,
                 };
+
+                // From FSO.
+                if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
+                {
+                    healthReport.Property = id;
+                }
 
                 // Emit a Fabric Health Report and optionally a local log write.
                 this.HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -845,6 +878,8 @@ namespace FabricObserver.Observers
                             HealthState = Enum.GetName(typeof(HealthState), healthState),
                             HealthEventDescription = healthMessage.ToString(),
                             Metric = $"{drive}{data.Property}",
+                            Node = this.NodeName,
+                            ServiceName = name ?? string.Empty,
                             Source = ObserverConstants.FabricObserverName,
                             Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                         });
@@ -857,7 +892,7 @@ namespace FabricObserver.Observers
             {
                 if (data.ActiveErrorOrWarning)
                 {
-                    var report = new HealthReport
+                    var healthReport = new HealthReport
                     {
                         AppName = appName,
                         Code = data.ActiveErrorOrWarningCode,
@@ -871,8 +906,14 @@ namespace FabricObserver.Observers
                         ResourceUsageDataProperty = data.Property,
                     };
 
+                    // From FSO.
+                    if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
+                    {
+                        healthReport.Property = id;
+                    }
+
                     // Emit an Ok Health Report to clear Fabric Health warning.
-                    this.HealthReporter.ReportHealthToServiceFabric(report);
+                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                     // Telemetry
                     if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
@@ -902,6 +943,8 @@ namespace FabricObserver.Observers
                                 HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                                 HealthEventDescription = $"{data.Property} is now within normal/expected range.",
                                 Metric = data.Property,
+                                Node = this.NodeName,
+                                ServiceName = name ?? string.Empty,
                                 Source = ObserverConstants.FabricObserverName,
                                 Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                             });

@@ -38,6 +38,7 @@ namespace FabricObserver.Observers
             "FabricCAS",
             "FabricDCA",
             "FabricDnsService",
+            "FabricFAS",
             "FabricGateway",
             "FabricHost",
             "FabricIS",
@@ -68,21 +69,21 @@ namespace FabricObserver.Observers
         {
         }
 
-        public int CpuErrorUsageThresholdPct { get; set; } = 90;
+        public int CpuErrorUsageThresholdPct { get; set; }
 
-        public int MemErrorUsageThresholdMb { get; set; } = 15000;
+        public int MemErrorUsageThresholdMb { get; set; }
 
         public int TotalActivePortCount { get; set; }
 
         public int TotalActiveEphemeralPortCount { get; set; }
 
-        public int PortCountWarning { get; set; } = 1000;
+        public int PortCountWarning { get; set; }
 
-        public int PortCountError { get; set; } = 5000;
+        public int PortCountError { get; set; }
 
-        public int CpuWarnUsageThresholdPct { get; set; } = 70;
+        public int CpuWarnUsageThresholdPct { get; set; }
 
-        public int MemWarnUsageThresholdMb { get; set; } = 14000;
+        public int MemWarnUsageThresholdMb { get; set; }
 
         public string ErrorOrWarningKind { get; set; } = null;
 
@@ -156,16 +157,11 @@ namespace FabricObserver.Observers
                 await this.ReportAsync(token).ConfigureAwait(true);
 
                 // No need to keep these objects in memory aross healthy iterations.
-                if (!this.HasActiveFabricErrorOrWarning)
-                {
-                    // Clear out/null list objects.
-                    this.allCpuData.Clear();
-                    this.allCpuData = null;
-
-                    this.allMemData.Clear();
-                    this.allMemData = null;
-                }
-
+                // Clear out/null list objects.
+                this.allCpuData.Clear();
+                this.allCpuData = null;
+                this.allMemData.Clear();
+                this.allMemData = null;
                 this.LastRunDateTime = DateTime.Now;
             }
             finally
@@ -429,52 +425,57 @@ namespace FabricObserver.Observers
                 {
                     // Mem data.
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "Fabric",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricApplicationGateway",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricCAS",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricDCA",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricDnsService",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
+                        "FabricFAS",
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
+                    new FabricResourceUsageData<float>(
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricGateway",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricHost",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricIS",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricRM",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionPct,
+                        ErrorWarningProperty.TotalMemoryConsumptionMb,
                         "FabricUS",
                         this.DataCapacity,
                         this.UseCircularBuffer),
@@ -509,6 +510,11 @@ namespace FabricObserver.Observers
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
                         "FabricDnsService",
+                        this.DataCapacity,
+                        this.UseCircularBuffer),
+                    new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.TotalCpuTime,
+                        "FabricFAS",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
@@ -717,7 +723,7 @@ namespace FabricObserver.Observers
                         {
                             this.WriteToLogWithLevel(
                                 this.ObserverName,
-                                $"Can't observe {process} details due to {e.Message} - {e.StackTrace}",
+                                $"Can't observe {process} details:{Environment.NewLine}{e}",
                                 LogLevel.Warning);
 
                             throw;
@@ -730,7 +736,7 @@ namespace FabricObserver.Observers
                     // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed.
                     this.WriteToLogWithLevel(
                         this.ObserverName,
-                        $"Can't observe {process} due to it's privilege level - " + "FabricObserver must be running as System or Admin for this specific task.",
+                        $"Can't observe {process.ProcessName} due to it's privilege level. FabricObserver must be running as System or Admin for this specific task.",
                         LogLevel.Information);
 
                     break;
@@ -770,7 +776,7 @@ namespace FabricObserver.Observers
 
                     switch (propertyName)
                     {
-                        case ErrorWarningProperty.TotalMemoryConsumptionPct:
+                        case ErrorWarningProperty.TotalMemoryConsumptionMb:
                             dataLogMonitorType = "Working Set %";
                             break;
 
@@ -787,7 +793,8 @@ namespace FabricObserver.Observers
                     dataItem,
                     thresholdError,
                     thresholdWarning,
-                    this.SetHealthReportTimeToLive());
+                    this.SetHealthReportTimeToLive(),
+                    HealthReportType.Application);
             }
         }
 

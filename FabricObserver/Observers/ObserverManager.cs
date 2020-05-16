@@ -264,6 +264,12 @@ namespace FabricObserver.Observers
         {
             try
             {
+                // Nothing to do here.
+                if (this.observers.Count == 0)
+                {
+                    return;
+                }
+
                 // Create Global Shutdown event handler
                 this.globalShutdownEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 
