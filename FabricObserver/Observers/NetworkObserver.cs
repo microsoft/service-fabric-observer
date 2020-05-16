@@ -566,7 +566,7 @@ namespace FabricObserver.Observers
                             }
                             else if (we.Status == WebExceptionStatus.SendFailure
                                      && we.InnerException != null
-                                     && (we.InnerException.Message.ToLower().Contains("authentication") 
+                                     && (we.InnerException.Message.ToLower().Contains("authentication")
                                      || we.InnerException.HResult == -2146232800))
                             {
                                 passed = true;

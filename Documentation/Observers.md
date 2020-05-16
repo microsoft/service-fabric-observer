@@ -212,17 +212,15 @@ Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean set
 
 
 ## FabricSystemObserver 
-This observer monitors Fabric system services for 1 minute per global
-observer iteration e.g., Fabric, FabricApplicationGateway, FabricCAS,
-FabricDCA, FabricDnsService, FabricGateway, FabricHost,
-FileStoreService.  
+This observer monitors Fabric system service processes e.g., Fabric, FabricApplicationGateway, FabricCAS,
+FabricDCA, FabricDnsService, FabricFAS, FabricGateway, FabricHost, FabricUS, etc.  
 
 **NOTE:**
-Only enable FabricSystemObserver ***after*** you get a sense of what impact your services have on the SF runtime... 
+Only enable FabricSystemObserver ***after*** you get a sense of what impact your services have on the SF runtime. 
 This is very important because there is no "one threshold fits all" across warning/error thresholds for any of the SF system services. 
 That is, we (the SF team) do not have a fixed set of guaranteed problematic warning thresholds for SF infrastructure services. Your code can cause Fabric.exe to eat a lot of CPU, for example, but this is not a Fabric.exe bug. 
  
-Again, it is best to ***not*** Enable this observer until you have done some experimentation with monitoring how your service code impacts Service Fabric system services. Otherwise, you may end up generating noise and creating support tickets when there is in fact nothing wrong with SF, but that your service code is just stressing SF services (e.g., Fabric.exe). This is of course useful to know, but FabricSystemObserver can't tell you that your code is the problem and we do not want you to create a support ticket because FSO warned you about something SF engineers can't fix for you...  
+Again, it is best to Enable this observer only after you have done some experimentation with monitoring how your service code impacts Service Fabric system services. Otherwise, you may end up generating noise and creating support tickets when there is in fact nothing wrong with SF, but that your service code is just stressing SF services (e.g., Fabric.exe). This is of course useful to know, but FabricSystemObserver can't tell you that your code is the problem and we do not want you to create a support ticket because FSO warned you about something SF engineers can't fix for you...  
 
 **Input**: Settings.xml in PackageRoot\\Observers.Config\
 **Output**: Log text(Error/Warning), Service Fabric Health Report
@@ -235,44 +233,7 @@ Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean set
 This observer runs for either a specified configuration setting of time
 or default of 30 seconds. Each fabric system process is monitored for
 CPU and memory usage, with related values stored in instances of
-FabricResourceUsageData object: 
-```C#
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace FabricObserver.Utilities
-{
-    internal class FabricResourceUsageData<T>
-    {
-        public List<T> Data { get; }
-        public string Name { get; set; }
-        public T MaxDataValue { get; }
-        public double AverageDataValue { get; }
-        public bool ActiveErrorOrWarning { get; set; }
-        public int LifetimeWarningCount { get; set; } = 0;
-        public bool IsUnhealthy<U>(U threshold){ ... }
-        public double StandardDeviation { get; }
-        public FabricResourceUsageData(string property, string id){ ... }
-    }
-}
-```
-
-These instances live across iterations and the usage data they hold
-(Data field) is cleared upon successful health checks by sending a
-HealthState.Ok health report to fabric. Consumer can choose to keep
-MaxDataValue and AverageDataValue values intact across runs and use them
-for specific purposes. This is the case for Fabric.exe currently, for
-example. Note the design of GetHealthState. We report on Average of
-accumulated resource usage values to determine health state. If this
-value exceeds specified related threshold, a Warning is issued to Fabric
-via ObserverBase instance's ObserverHealthReporter, which takes a
-FabricClient instance that ObserverManager creates (and disposes). We
-only want to use a single FabricClient for all observers given our own
-resource constraints (we want to limit our impact on the system as core
-design goal). The number of active ports in use by each fabric service
-is logged per iteration.
-
+FabricResourceUsageData object.
 
 ## NetworkObserver
 
