@@ -125,7 +125,7 @@
        SF, but that your service code is just stressing SF runtime services. This is of course useful to know, but FabricSystemObserver can't tell you that
        your code is the problem. -->
   <Section Name="FabricSystemObserverConfiguration">
-    <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="Enabled" Value="False" />
     <Parameter Name="EnableTelemetry" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="MonitorDuration" Value="00:00:10"/>
