@@ -207,12 +207,10 @@ namespace FabricObserver.Observers
             StatelessServiceContext context,
             CancellationToken token)
         {
-            if (singleton != null)
+            if (singleton == null)
             {
-                return singleton;
+                singleton = new ObserverManager(context, token);
             }
-
-            singleton = new ObserverManager(context, token);
 
             return singleton;
         }
