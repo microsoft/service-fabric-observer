@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricObserver.Observers.Utilities.Telemetry;
 using System;
 using System.Fabric.Health;
 
@@ -31,5 +32,11 @@ namespace FabricObserver.Observers.Utilities
         public string Property { get; set; }
 
         public string ResourceUsageDataProperty { get; set; }
+
+        public TelemetryData HealthData
+        {
+            get;
+            set;
+        }
     }
 }
