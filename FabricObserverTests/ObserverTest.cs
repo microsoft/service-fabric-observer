@@ -1043,6 +1043,7 @@ namespace FabricObserverTests
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
                 MonitorDuration = TimeSpan.FromSeconds(5),
+                IsTestRun = true,
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);

@@ -137,8 +137,8 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     { "HealthState", telemetryData.HealthState ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "Partition", telemetryData.PartitionId ?? string.Empty },
-                    { "Replica", telemetryData.ReplicaId ?? string.Empty },
+                    { "Partition", $"{telemetryData.PartitionId}" },
+                    { "Replica", $"{telemetryData.ReplicaId}" },
                     { "Source", telemetryData.Source ?? string.Empty },
                     { "Value", value ?? string.Empty }
                 };

@@ -823,14 +823,17 @@ namespace FabricObserver.Observers
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
                 _ = healthMessage.AppendLine($" - {data.Property}: {Math.Round(Convert.ToDouble(data.AverageDataValue))}{data.Units}");
 
-                telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
-                telemetryData.Code = errorWarningCode;
-                telemetryData.HealthState = Enum.GetName(typeof(HealthState), healthState);
-                telemetryData.HealthEventDescription = healthMessage.ToString();
-                telemetryData.Metric = $"{drive}{data.Property}";
-                telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
-                telemetryData.Source = ObserverConstants.FabricObserverName;
-                telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
+                if (!IsTestRun)
+                {
+                    telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
+                    telemetryData.Code = errorWarningCode;
+                    telemetryData.HealthState = Enum.GetName(typeof(HealthState), healthState);
+                    telemetryData.HealthEventDescription = healthMessage.ToString();
+                    telemetryData.Metric = $"{drive}{data.Property}";
+                    telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
+                    telemetryData.Source = ObserverConstants.FabricObserverName;
+                    telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
+                }
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
@@ -923,7 +926,7 @@ namespace FabricObserver.Observers
                     // Telemetry
                     if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                     {
-                        telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
+                        telemetryData.ApplicationName = appName != null ? appName.OriginalString : string.Empty;
                         telemetryData.Code = data.ActiveErrorOrWarningCode;
                         telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
                         telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
@@ -943,7 +946,7 @@ namespace FabricObserver.Observers
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
-                                ApplicationName = appName?.OriginalString ?? string.Empty,
+                                ApplicationName = appName != null ? appName.OriginalString : string.Empty,
                                 Code = data.ActiveErrorOrWarningCode,
                                 HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                                 HealthEventDescription = $"{data.Property} is now within normal/expected range.",
