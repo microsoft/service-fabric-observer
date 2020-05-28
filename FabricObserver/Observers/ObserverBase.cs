@@ -807,7 +807,7 @@ namespace FabricObserver.Observers
 
                 var healthMessage = new StringBuilder();
 
-                if (name != null)
+                /*if (name != null)
                 {
                     string partitionAndReplicaInfo = string.Empty;
 
@@ -817,7 +817,7 @@ namespace FabricObserver.Observers
                     }
 
                     _ = healthMessage.Append($"{name} (Node: {this.NodeName}, Service Process: {procName}.exe{partitionAndReplicaInfo}): ");
-                }
+                }*/
 
                 string drive = string.Empty;
 
