@@ -3,9 +3,9 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricObserver.Observers.Utilities.Telemetry;
 using System;
 using System.Fabric.Health;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers.Utilities
 {

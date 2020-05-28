@@ -644,7 +644,7 @@ namespace FabricObserver.Observers
                         HostProcessId = statefulReplica.HostProcessId,
                         ReplicaOrInstanceId = statefulReplica.ReplicaId,
                         PartitionId = statefulReplica.Partitionid,
-                        ServiceName = statefulReplica.ServiceName
+                        ServiceName = statefulReplica.ServiceName,
                     };
 
                     if (serviceFilterList != null
