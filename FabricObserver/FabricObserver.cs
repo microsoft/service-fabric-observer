@@ -19,7 +19,7 @@ namespace FabricObserver
     /// </summary>
     internal sealed class FabricObserver : StatelessService
     {
-        private ObserverManager observerManager;
+        private ObserverManager observerManager = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserver"/> class.
@@ -46,20 +46,8 @@ namespace FabricObserver
         /// <returns>a Task.</returns>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            this.observerManager = new ObserverManager(this.Context, cancellationToken);
-
-            await Task.Factory.StartNew(() => this.observerManager.StartObservers()).ConfigureAwait(true);
-        }
-
-        /// <inheritdoc/>
-        protected override Task OnCloseAsync(CancellationToken cancellationToken)
-        {
-            if (this.observerManager != null)
-            {
-                this.observerManager.Dispose();
-            }
-
-            return base.OnCloseAsync(cancellationToken);
+            this.observerManager = ObserverManager.Singleton(this.Context, cancellationToken);
+            await this.observerManager.StartObserversAsync().ConfigureAwait(false);
         }
     }
 }

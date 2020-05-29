@@ -252,18 +252,14 @@ namespace FabricObserver.Observers
                                             .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"]?.ToString()));
 
                 var sb = new StringBuilder();
+                var baseUrl = "https://support.microsoft.com/help/";
 
                 foreach (var obj in resultsOrdered)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    _ = generateUrl ? sb.AppendFormat(
-                        "<a href=\"{0}\" target=\"_blank\">{1}</a>   {2}",
-                        obj["Caption"],
-                        obj["HotFixID"],
-                        obj["InstalledOn"]) : sb.AppendFormat("{0}", obj["HotFixID"]);
-
-                    _ = sb.AppendLine();
+                    _ = generateUrl ? sb.AppendLine(
+                        $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower()?.Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   {obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
                 }
 
                 ret = sb.ToString().Trim();

@@ -179,6 +179,11 @@ namespace FabricClusterObserver.Observers
             try
             {
                 var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
+                
+                if (serviceConfiguration == null)
+                {
+                    return null;
+                }
 
                 if (!serviceConfiguration.Settings.Sections.Any(sec => sec.Name == sectionName))
                 {

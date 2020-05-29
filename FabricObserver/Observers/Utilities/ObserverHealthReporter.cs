@@ -6,6 +6,10 @@
 using System;
 using System.Fabric;
 using System.Fabric.Health;
+using FabricObserver.Observers.Utilities.Telemetry;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -112,11 +116,12 @@ namespace FabricObserver.Observers.Utilities
             }
 
             string sourceId = healthReport.Observer;
+            TelemetryData healthData = healthReport.HealthData;
 
             if (!string.IsNullOrEmpty(healthReport.Code))
             {
                 // Only use FOErrorWarningCode for source
-                sourceId = $"{healthReport.Code}";
+                sourceId += $"({healthReport.Code})";
             }
 
             string errWarnPreamble = string.Empty;
@@ -137,9 +142,16 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
+            string message = $"{errWarnPreamble}{healthReport.HealthMessage}";
+
+            if (healthData != null)
+            {
+                message = JsonConvert.SerializeObject(healthData);
+            }
+
             var healthInformation = new HealthInformation(sourceId, property, healthReport.State)
             {
-                Description = $"{errWarnPreamble} {healthReport.HealthMessage}",
+                Description = $"{message}",
                 TimeToLive = timeToLive,
                 RemoveWhenExpired = true,
             };

@@ -428,12 +428,30 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var stopWatch = new Stopwatch();
-
             var obs = new CertificateObserver
             {
-                IsEnabled = true,
-                NodeName = "_Test_0",
+                IsTestRun = true,
+            };
+
+            var commonNamesToObserve = new List<string>
+            {
+                "MyValidCert", // Common name of valid cert
+            };
+
+            var thumbprintsToObserve = new List<string>
+            {
+                "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
+            };
+
+            obs.DaysUntilAppExpireWarningThreshold = 14;
+            obs.DaysUntilClusterExpireWarningThreshold = 14;
+            obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
+            obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
+            obs.SecurityConfiguration = new SecurityConfiguration
+            {
+                SecurityType = SecurityType.None,
+                ClusterCertThumbprintOrCommonName = string.Empty,
+                ClusterCertSecondaryThumbprint = string.Empty,
             };
 
             var obsMgr = new ObserverManager(obs)
@@ -441,33 +459,17 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-
-            var t = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(() =>
             {
-                objReady.Set();
-                obsMgr.StartObservers();
+                obsMgr.StartObserversAsync();
             });
 
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
-            // Observer is running. Stop it.
+            Thread.Sleep(1);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
-            Thread.Sleep(5);
-
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
-            objReady?.Dispose();
         }
 
         [TestMethod]
@@ -478,46 +480,38 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var stopWatch = new Stopwatch();
-
             var obs = new AppObserver
             {
-                IsEnabled = true,
-                NodeName = "_Test_0",
                 IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(15),
+                ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
+
+            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
+            {
+                ApplicationName = new Uri("fabric:/TestApp"),
+                PartitionId = Guid.NewGuid(),
+                HostProcessId = 0,
+                ReplicaOrInstanceId = default(long),
+            });
 
             var obsMgr = new ObserverManager(obs)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-            var t = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(() =>
             {
-                objReady.Set();
-                obsMgr.StartObservers();
+                obsMgr.StartObserversAsync();
             });
 
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
-            // Observer is running. Stop it.
+            Thread.Sleep(10);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
-            Thread.Sleep(5);
-
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
-            objReady?.Dispose();
         }
 
         [TestMethod]
@@ -527,8 +521,6 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-
-            var stopWatch = new Stopwatch();
 
             var obs = new DiskObserver
             {
@@ -542,31 +534,17 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-            var t = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(() =>
             {
-                objReady.Set();
-                obsMgr.StartObservers();
+                obsMgr.StartObserversAsync();
             });
 
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
+            Thread.Sleep(1000);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
-
-            Thread.Sleep(5);
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
-            objReady?.Dispose();
         }
 
         [TestMethod]
@@ -576,8 +554,6 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-
-            var stopWatch = new Stopwatch();
 
             var obs = new FabricSystemObserver
             {
@@ -591,31 +567,17 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-            var t = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(() =>
             {
-                objReady.Set();
-                obsMgr.StartObservers();
+                obsMgr.StartObserversAsync();
             });
 
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
+            Thread.Sleep(3000);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
-
-            Thread.Sleep(5);
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
-            objReady?.Dispose();
         }
 
         [TestMethod]
@@ -625,8 +587,6 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-
-            var stopWatch = new Stopwatch();
 
             var obs = new NetworkObserver
             {
@@ -640,31 +600,16 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-            var t = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(() =>
             {
-                objReady.Set();
-                obsMgr.StartObservers();
+                obsMgr.StartObserversAsync();
             });
 
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
+            Thread.Sleep(200);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
-
-            Thread.Sleep(5);
             Assert.IsFalse(obsMgr.IsObserverRunning);
-
             obs.Dispose();
-            objReady?.Dispose();
         }
 
         [TestMethod]
@@ -674,8 +619,6 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-
-            var stopWatch = new Stopwatch();
 
             var obs = new NodeObserver
             {
@@ -689,31 +632,17 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-            var t = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(() =>
             {
-                objReady.Set();
-                obsMgr.StartObservers();
+                obsMgr.StartObserversAsync();
             });
 
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
+            Thread.Sleep(3000);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
-
-            Thread.Sleep(5);
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
-            objReady?.Dispose();
         }
 
         [TestMethod]
@@ -723,8 +652,6 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-
-            var stopWatch = new Stopwatch();
 
             var obs = new OsObserver
             {
@@ -738,130 +665,17 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-            var t = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(() =>
             {
-                objReady.Set();
-                obsMgr.StartObservers();
+                obsMgr.StartObserversAsync();
             });
 
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
+            Thread.Sleep(1000);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
-
-            Thread.Sleep(5);
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
-            objReady?.Dispose();
-        }
-
-        [TestMethod]
-        public void Successful_SFConfigurationObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-
-            var stopWatch = new Stopwatch();
-
-            var obs = new SfConfigurationObserver
-            {
-                IsEnabled = true,
-                NodeName = "_Test_0",
-                IsTestRun = true,
-            };
-
-            var obsMgr = new ObserverManager(obs)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-            var t = Task.Factory.StartNew(() =>
-            {
-                objReady.Set();
-                obsMgr.StartObservers();
-            });
-
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
-            obsMgr.StopObservers();
-
-            Thread.Sleep(5);
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-
-            obs.Dispose();
-            objReady?.Dispose();
-        }
-
-        [TestMethod]
-        [SuppressMessage("Code Quality", "IDE0067:Dispose objects before losing scope", Justification = "Noise.")]
-        public void Successful_ClusterObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            ClusterObserverManager.FabricServiceContext = this.context;
-            ClusterObserverManager.TelemetryEnabled = false;
-            ClusterObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-
-            var stopWatch = new Stopwatch();
-
-            var obs = new ClusterObserver
-            {
-                IsEnabled = true,
-                NodeName = "_Test_0",
-            };
-
-            var obsMgr = new ClusterObserverManager(obs)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            var objReady = new ManualResetEventSlim(false);
-
-            stopWatch.Start();
-
-            var t = Task.Factory.StartNew(() =>
-            {
-                objReady.Set();
-                obsMgr.StartObservers();
-            });
-
-            objReady?.Wait();
-
-            while (!obsMgr.IsObserverRunning && stopWatch.Elapsed.TotalSeconds < 10)
-            {
-                // wait.
-            }
-
-            stopWatch.Stop();
-
-            // Observer is running. Stop it.
-            obsMgr.StopObservers();
-            Thread.Sleep(5);
-
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-
-            obs.Dispose();
-            objReady?.Dispose();
         }
 
         /****** These tests do NOT work without a running local SF cluster
@@ -1124,6 +938,7 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new OsObserver()
             {
@@ -1229,6 +1044,7 @@ namespace FabricObserverTests
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
                 MonitorDuration = TimeSpan.FromSeconds(5),
+                IsTestRun = true,
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);

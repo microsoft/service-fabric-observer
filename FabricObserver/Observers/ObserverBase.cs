@@ -541,6 +541,7 @@ namespace FabricObserver.Observers
             T threshold = thresholdWarning;
             var healthState = HealthState.Ok;
             Uri appName = null;
+            Uri serviceName = null;
             TelemetryData telemetryData = null;
 
             if (healthReportType == HealthReportType.Application)
@@ -552,6 +553,7 @@ namespace FabricObserver.Observers
 
                     // Create a unique id which will be used for health Warnings and OKs (clears).
                     appName = replicaOrInstance.ApplicationName;
+                    serviceName = replicaOrInstance.ServiceName;
                     name = appName.OriginalString.Replace("fabric:/", string.Empty);
                 }
                 else
@@ -562,6 +564,9 @@ namespace FabricObserver.Observers
 
                 id = name + "_" + data.Property.Replace(" ", string.Empty);
 
+                // The health event description will be a serialized instance of telemetryData,
+                // so it should be completely constructed (filled with data) regardless
+                // of user telemetry settings.
                 telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
                 {
                     ApplicationName = appName?.OriginalString ?? string.Empty,
@@ -573,6 +578,7 @@ namespace FabricObserver.Observers
                     Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
+                    ServiceName = serviceName?.OriginalString ?? string.Empty,
                     Source = ObserverConstants.FabricObserverName,
                 };
 
@@ -635,19 +641,22 @@ namespace FabricObserver.Observers
                     drive = $"{data.Id}: ";
                 }
 
+                // The health event description will be a serialized instance of telemetryData,
+                // so it should be completely constructed (filled with data) regardless
+                // of user telemetry settings.
+                telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
+                {
+                    Code = FoErrorWarningCodes.Ok,
+                    HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
+                    NodeName = this.NodeName,
+                    ObserverName = this.ObserverName,
+                    Metric = $"{drive}{data.Property}",
+                    Source = ObserverConstants.FabricObserverName,
+                    Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                };
+
                 if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
-                    telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
-                    {
-                        Code = FoErrorWarningCodes.Ok,
-                        HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                        NodeName = this.NodeName,
-                        ObserverName = this.ObserverName,
-                        Metric = $"{drive}{data.Property}",
-                        Source = ObserverConstants.FabricObserverName,
-                        Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
-                    };
-
                     _ = this.TelemetryClient?.ReportMetricAsync(
                         telemetryData,
                         this.Token);
@@ -798,7 +807,7 @@ namespace FabricObserver.Observers
 
                 var healthMessage = new StringBuilder();
 
-                if (name != null)
+                /*if (name != null)
                 {
                     string partitionAndReplicaInfo = string.Empty;
 
@@ -808,7 +817,7 @@ namespace FabricObserver.Observers
                     }
 
                     _ = healthMessage.Append($"{name} (Node: {this.NodeName}, Service Process: {procName}.exe{partitionAndReplicaInfo}): ");
-                }
+                }*/
 
                 string drive = string.Empty;
 
@@ -820,11 +829,51 @@ namespace FabricObserver.Observers
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
                 _ = healthMessage.AppendLine($" - {data.Property}: {Math.Round(Convert.ToDouble(data.AverageDataValue))}{data.Units}");
 
+                // The health event description will be a serialized instance of telemetryData,
+                // so it should be completely constructed (filled with data) regardless
+                // of user telemetry settings.
+                telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
+                telemetryData.Code = errorWarningCode;
+                telemetryData.HealthState = Enum.GetName(typeof(HealthState), healthState);
+                telemetryData.HealthEventDescription = healthMessage.ToString();
+                telemetryData.Metric = $"{drive}{data.Property}";
+                telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
+                telemetryData.Source = ObserverConstants.FabricObserverName;
+                telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                {
+                    _ = this.TelemetryClient?.ReportMetricAsync(
+                            telemetryData,
+                            this.Token);
+                }
+
+                // ETW.
+                if (this.IsEtwEnabled)
+                {
+                    Logger.EtwLogger?.Write(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            ApplicationName = appName?.OriginalString ?? string.Empty,
+                            Code = errorWarningCode,
+                            HealthState = Enum.GetName(typeof(HealthState), healthState),
+                            HealthEventDescription = healthMessage.ToString(),
+                            Metric = $"{drive}{data.Property}",
+                            Node = this.NodeName,
+                            ServiceName = serviceName?.OriginalString ?? string.Empty,
+                            Source = ObserverConstants.FabricObserverName,
+                            Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                        });
+                }
+
                 var healthReport = new HealthReport
                 {
                     AppName = appName,
                     Code = errorWarningCode,
                     EmitLogEvent = true,
+                    HealthData = telemetryData,
                     HealthMessage = healthMessage.ToString(),
                     HealthReportTimeToLive = healthReportTtl,
                     ReportType = healthReportType,
@@ -850,41 +899,6 @@ namespace FabricObserver.Observers
                 // This means this observer created a Warning or Error SF Health Report
                 this.HasActiveFabricErrorOrWarning = true;
 
-                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
-                {
-                    telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
-                    telemetryData.Code = errorWarningCode;
-                    telemetryData.HealthState = Enum.GetName(typeof(HealthState), healthState);
-                    telemetryData.HealthEventDescription = healthMessage.ToString();
-                    telemetryData.Metric = $"{drive}{data.Property}";
-                    telemetryData.Source = ObserverConstants.FabricObserverName;
-                    telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
-
-                    _ = this.TelemetryClient?.ReportMetricAsync(
-                            telemetryData,
-                            this.Token);
-                }
-
-                // ETW.
-                if (this.IsEtwEnabled)
-                {
-                    Logger.EtwLogger?.Write(
-                        ObserverConstants.FabricObserverETWEventName,
-                        new
-                        {
-                            ApplicationName = appName?.OriginalString ?? string.Empty,
-                            Code = errorWarningCode,
-                            HealthState = Enum.GetName(typeof(HealthState), healthState),
-                            HealthEventDescription = healthMessage.ToString(),
-                            Metric = $"{drive}{data.Property}",
-                            Node = this.NodeName,
-                            ServiceName = name ?? string.Empty,
-                            Source = ObserverConstants.FabricObserverName,
-                            Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
-                        });
-                }
-
                 // Clean up sb.
                 _ = healthMessage.Clear();
             }
@@ -892,11 +906,50 @@ namespace FabricObserver.Observers
             {
                 if (data.ActiveErrorOrWarning)
                 {
+                    // The health event description will be a serialized instance of telemetryData,
+                    // so it should be completely constructed (filled with data) regardless
+                    // of user telemetry settings.
+                    telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
+                    telemetryData.Code = data.ActiveErrorOrWarningCode;
+                    telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
+                    telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
+                    telemetryData.Metric = data.Property;
+                    telemetryData.Source = ObserverConstants.FabricObserverName;
+                    telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
+
+                    // Telemetry
+                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    {
+                        _ = this.TelemetryClient?.ReportMetricAsync(
+                                telemetryData,
+                                this.Token);
+                    }
+
+                    // ETW.
+                    if (this.IsEtwEnabled)
+                    {
+                        Logger.EtwLogger?.Write(
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                ApplicationName = appName != null ? appName.OriginalString : string.Empty,
+                                Code = data.ActiveErrorOrWarningCode,
+                                HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
+                                HealthEventDescription = $"{data.Property} is now within normal/expected range.",
+                                Metric = data.Property,
+                                Node = this.NodeName,
+                                ServiceName = name ?? string.Empty,
+                                Source = ObserverConstants.FabricObserverName,
+                                Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                            });
+                    }
+
                     var healthReport = new HealthReport
                     {
                         AppName = appName,
                         Code = data.ActiveErrorOrWarningCode,
                         EmitLogEvent = true,
+                        HealthData = telemetryData,
                         HealthMessage = $"{data.Property} is now within normal/expected range.",
                         HealthReportTimeToLive = default(TimeSpan),
                         ReportType = healthReportType,
@@ -915,41 +968,6 @@ namespace FabricObserver.Observers
                     // Emit an Ok Health Report to clear Fabric Health warning.
                     this.HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                    // Telemetry
-                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
-                    {
-                        telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
-                        telemetryData.Code = data.ActiveErrorOrWarningCode;
-                        telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
-                        telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
-                        telemetryData.Metric = data.Property;
-                        telemetryData.Source = ObserverConstants.FabricObserverName;
-                        telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
-
-                        _ = this.TelemetryClient?.ReportMetricAsync(
-                                telemetryData,
-                                this.Token);
-                    }
-
-                    // ETW.
-                    if (this.IsEtwEnabled)
-                    {
-                        Logger.EtwLogger?.Write(
-                            ObserverConstants.FabricObserverETWEventName,
-                            new
-                            {
-                                ApplicationName = appName?.OriginalString ?? string.Empty,
-                                Code = data.ActiveErrorOrWarningCode,
-                                HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                                HealthEventDescription = $"{data.Property} is now within normal/expected range.",
-                                Metric = data.Property,
-                                Node = this.NodeName,
-                                ServiceName = name ?? string.Empty,
-                                Source = ObserverConstants.FabricObserverName,
-                                Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
-                            });
-                    }
-
                     // Reset health states.
                     data.ActiveErrorOrWarning = false;
                     data.ActiveErrorOrWarningCode = FoErrorWarningCodes.Ok;
@@ -958,11 +976,11 @@ namespace FabricObserver.Observers
             }
 
             // No need to keep data in memory.
-            if (data.Data is List<T>)
+            if (data.Data is List<T> list)
             {
                 // List<T> impl.
-                ((List<T>)data.Data).Clear();
-                ((List<T>)data.Data).TrimExcess();
+                list.Clear();
+                list.TrimExcess();
             }
             else
             {
