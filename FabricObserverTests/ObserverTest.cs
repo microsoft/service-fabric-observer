@@ -483,7 +483,7 @@ namespace FabricObserverTests
             var obs = new AppObserver
             {
                 IsTestRun = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(15),
                 ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
@@ -506,7 +506,7 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Thread.Sleep(30);
+            Thread.Sleep(10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -938,6 +938,7 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new OsObserver()
             {
