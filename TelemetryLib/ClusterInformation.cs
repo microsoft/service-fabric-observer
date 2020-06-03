@@ -7,6 +7,8 @@ using System;
 using System.Fabric;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -107,7 +109,45 @@ namespace Microsoft.ServiceFabric.TelemetryLib
 
         private static string GetTenantId()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return GetTenantIdWindows();
+            }
+            else
+            {
+                return GetTenantIdLinux();
+            }
+        }
+
+        private static string GetTenantIdLinux()
+        {
+            // Implementation copied from https://github.com/microsoft/service-fabric/blob/master/src/prod/src/managed/DCA/product/host/TelemetryConsumerLinux.cs
+            const string TenantIdFile = "/var/lib/waagent/HostingEnvironmentConfig.xml";
+
+            if (!File.Exists(TenantIdFile))
+            {
+                return null;
+            }
+
+            string tenantId;
+
+            var xmlDoc = new XmlDocument { XmlResolver = null };
+
+            using (var xmlReader = XmlReader.Create(TenantIdFile, new XmlReaderSettings() { XmlResolver = null }))
+            {
+                xmlDoc.Load(xmlReader);
+            }
+
+            tenantId = xmlDoc.GetElementsByTagName("Deployment").Item(0).Attributes.GetNamedItem("name").Value;
+
+            return tenantId;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string GetTenantIdWindows()
+        {
             const string TenantIdValueName = "WATenantID";
+
             string tenantIdKeyName = string.Format(CultureInfo.InvariantCulture, "{0}\\{1}", Registry.LocalMachine.Name, FabricRegistryKeyPath);
 
             return (string)Registry.GetValue(tenantIdKeyName, TenantIdValueName, null);
