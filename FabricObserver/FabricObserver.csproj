@@ -71,6 +71,7 @@
     <PackageReference Include="System.Security.Cryptography.Primitives" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" />
     <Reference Include="System.ServiceModel" />
+    <Reference Include="..\interop\Interop.WUApiLib.dll" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ApplicationInsights.config">
@@ -101,17 +102,6 @@
       <Project>{7bc6991f-c840-413e-b1cd-4025947cf5fa}</Project>
       <Name>TelemetryLib</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <COMReference Include="WUApiLib">
-      <Guid>{B596CC9F-56E5-419E-A622-E01BB457431E}</Guid>
-      <VersionMajor>2</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </COMReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="NLog.config">
