@@ -85,6 +85,12 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
+                    // CDRom and Network drives do not have Avg queue length perf counter
+                    if (d.DriveType == DriveType.CDRom || d.DriveType == DriveType.Network)
+                    {
+                        continue;
+                    }
+
                     // This section only needs to run if you have the FabricObserverWebApi app installed.
                     if (ObserverManager.ObserverWebAppDeployed)
                     {
