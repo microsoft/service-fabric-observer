@@ -79,8 +79,8 @@ namespace FabricObserverTests
         /// <inheritdoc/>
         public string WorkDirectory { get; private set; }
 
-        // Interface required events. These are never used. Ignore the Warnings(CS0414).
-
+        // Interface required events. These are never used. Ignore the Warnings(CS0067) The event 'MockCodePackageActivationContext.CodePackageRemovedEvent' is never used
+#pragma warning disable CS0067
         /// <inheritdoc/>
         public event EventHandler<PackageAddedEventArgs<CodePackage>> CodePackageAddedEvent;
 
@@ -107,6 +107,7 @@ namespace FabricObserverTests
 
         /// <inheritdoc/>
         public event EventHandler<PackageRemovedEventArgs<DataPackage>> DataPackageRemovedEvent;
+#pragma warning restore
 
         /// <inheritdoc/>
         public ApplicationPrincipalsDescription GetApplicationPrincipals()
