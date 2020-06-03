@@ -23,6 +23,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="NLog.config" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--
     <PackageReference Include="Microsoft.ApplicationInsights.Agent.Intercept"/>
     -->
@@ -81,7 +85,6 @@
     <None Include="PackageRoot\Config\AppObserver.config.json" />
     <None Include="PackageRoot\Config\NetworkObserver.config.json" />
     <None Include="PackageRoot\ServiceManifest.xml" />
-    <None Include="packages.config" />
     <None Include="stylecop.json" />
   </ItemGroup>
   <ItemGroup>
@@ -109,6 +112,11 @@
       <Isolated>False</Isolated>
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="NLog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
 
