@@ -18,7 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "ClusterObserverApp", "ClusterObserverApp\ClusterObserverApp.sfproj", "{BD5D216F-5F89-4CC4-92FD-D6FDEC5A19AD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusterObserver", "ClusterObserver\ClusterObserver.csproj", "{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClusterObserver", "ClusterObserver\ClusterObserver.csproj", "{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricObserver", "FabricObserver\FabricObserver.csproj", "{51AC2A69-B952-4766-8A1E-2C7752BC011A}"
 EndProject
@@ -26,7 +26,7 @@ Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "FabricObserverApp", "Fabric
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelemetryLib", "TelemetryLib\TelemetryLib.csproj", "{7BC6991F-C840-413E-B1CD-4025947CF5FA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabricObserverTests", "FabricObserverTests\FabricObserverTests.csproj", "{48C88BEB-9960-4183-861B-DF25C193E4C9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricObserverTests", "FabricObserverTests\FabricObserverTests.csproj", "{48C88BEB-9960-4183-861B-DF25C193E4C9}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricObserverWeb", "FabricObserverWeb\FabricObserverWeb.csproj", "{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}"
 EndProject
@@ -48,12 +48,14 @@ Global
 		{BD5D216F-5F89-4CC4-92FD-D6FDEC5A19AD}.Release|x64.ActiveCfg = Release|x64
 		{BD5D216F-5F89-4CC4-92FD-D6FDEC5A19AD}.Release|x64.Build.0 = Release|x64
 		{BD5D216F-5F89-4CC4-92FD-D6FDEC5A19AD}.Release|x64.Deploy.0 = Release|x64
-		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Debug|x64.ActiveCfg = Debug|x64
-		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Debug|x64.Build.0 = Debug|x64
-		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Release|Any CPU.ActiveCfg = Release|x64
-		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Release|x64.ActiveCfg = Release|x64
-		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Release|x64.Build.0 = Release|x64
+		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Debug|x64.Build.0 = Debug|Any CPU
+		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Release|x64.ActiveCfg = Release|Any CPU
+		{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}.Release|x64.Build.0 = Release|Any CPU
 		{51AC2A69-B952-4766-8A1E-2C7752BC011A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{51AC2A69-B952-4766-8A1E-2C7752BC011A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51AC2A69-B952-4766-8A1E-2C7752BC011A}.Debug|x64.ActiveCfg = Debug|Any CPU
