@@ -1,12 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!--
-  <ItemGroup>
-    <GlobalPackageReference Include="AzDev.AsyncAnalyzers" Version="[0.1.79]" />
-    <GlobalPackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="[2.9.8]" />
-    <GlobalPackageReference Include="StyleCop.Analyzers" Version="[1.1.118]" />
-  </ItemGroup>
-  -->
   <ItemGroup>
     <PackageReference Update="Microsoft.ServiceFabric" Version="7.0.457"/>
     <PackageReference Update="Microsoft.ServiceFabric.Data" Version="4.0.457" />
@@ -46,6 +39,7 @@
     <!--
     <PackageReference Update="Microsoft.ApplicationInsights.Agent.Intercept" Version="2.4.0" />
     -->
+    <PackageReference Update="Microsoft.ApplicationInsights" version="2.12.0" />
     <PackageReference Update="Microsoft.ApplicationInsights.DependencyCollector" Version="2.12.0"/>
     <PackageReference Update="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.12.0"/>
     <PackageReference Update="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" Version="2.12.0"/>
@@ -53,6 +47,7 @@
     <PackageReference Update="Microsoft.ApplicationInsights" Version="2.12.0"/>
     <PackageReference Update="Microsoft.ApplicationInsights.NLogTarget" Version="2.12.0"/>
 
+    <PackageReference Update="Microsoft.Win32.Registry" Version="4.7.0"/>
   </ItemGroup>
 
   <ItemGroup>
