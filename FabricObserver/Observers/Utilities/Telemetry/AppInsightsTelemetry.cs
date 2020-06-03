@@ -36,10 +36,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             this.logger = new Logger("TelemetryLog");
 
-            this.telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
+            TelemetryConfiguration configuration = new TelemetryConfiguration() { InstrumentationKey = key };
+            this.telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
-            TelemetryConfiguration.Active.TelemetryChannel.DeveloperMode = true;
+            configuration.TelemetryChannel.DeveloperMode = true;
 #endif
         }
 
