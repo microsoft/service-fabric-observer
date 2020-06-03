@@ -13,8 +13,8 @@
     <Copyright>Copyright ©  2020</Copyright>
     <Product>TelemetryLib</Product>
   </PropertyGroup>
-  <Import Project="properties\common.props" />
-  <Import Project="properties\EnableStylecop.props" />
+  <Import Project="Properties\common.props" />
+  <Import Project="Properties\EnableStylecop.props" />
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" />
     <PackageReference Include="Microsoft.ServiceFabric" />
