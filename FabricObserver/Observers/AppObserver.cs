@@ -35,7 +35,6 @@ namespace FabricObserver.Observers
         private readonly Stopwatch stopwatch;
         private readonly List<ApplicationInfo> targetList;
         private WindowsPerfCounters perfCounters;
-        private DiskUsage diskUsage;
         private bool disposed;
 
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
@@ -90,7 +89,6 @@ namespace FabricObserver.Observers
             try
             {
                 this.perfCounters = new WindowsPerfCounters();
-                this.diskUsage = new DiskUsage();
 
                 foreach (var app in this.targetList)
                 {
@@ -117,8 +115,6 @@ namespace FabricObserver.Observers
             finally
             {
                 // Clean up.
-                this.diskUsage?.Dispose();
-                this.diskUsage = null;
                 this.perfCounters?.Dispose();
                 this.perfCounters = null;
             }
@@ -268,12 +264,6 @@ namespace FabricObserver.Observers
             {
                 this.perfCounters.Dispose();
                 this.perfCounters = null;
-            }
-
-            if (this.diskUsage != null)
-            {
-                this.diskUsage.Dispose();
-                this.diskUsage = null;
             }
 
             this.disposed = true;

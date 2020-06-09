@@ -318,7 +318,6 @@ namespace FabricObserver.Observers
             ManagementObjectCollection results = null;
 
             var sb = new StringBuilder();
-            var diskUsage = new DiskUsage();
             string osName = string.Empty;
             string osVersion = string.Empty;
             int numProcs = 0;
@@ -490,7 +489,7 @@ namespace FabricObserver.Observers
                 _ = sb.AppendLine($"FreeVirtualMemory*: {Math.Round(freeVirtualMem / 1024 / 1024, 2)} GB");
 
                 // Disk
-                var drivesInformationTuple = diskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
+                var drivesInformationTuple = DiskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
                 var logicalDriveCount = drivesInformationTuple.Count;
                 string driveInfo = string.Empty;
 
@@ -500,7 +499,7 @@ namespace FabricObserver.Observers
                 {
                     string systemDrv = "Data";
 
-                    if (Environment.SystemDirectory.Substring(0, 1) == driveName)
+                    if (string.Equals(Environment.SystemDirectory.Substring(0, 1), driveName.Substring(0, 1), StringComparison.OrdinalIgnoreCase))
                     {
                         systemDrv = "System";
                     }
@@ -605,7 +604,6 @@ namespace FabricObserver.Observers
             {
                 results?.Dispose();
                 win32OsInfo?.Dispose();
-                diskUsage?.Dispose();
                 _ = sb.Clear();
             }
         }

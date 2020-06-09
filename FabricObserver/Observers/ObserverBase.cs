@@ -481,17 +481,17 @@ namespace FabricObserver.Observers
                 processName += "_" + DateTime.Now.ToString("ddMMyyyyHHmmss") + ".dmp";
 
                 // Check disk space availability before writing dump file.
-                using (var diskUsage = new DiskUsage(this.dumpsPath.Substring(0, 1)))
+
+                // This will not work on Linux
+                string driveName = this.dumpsPath.Substring(0, 2);
+                if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
                 {
-                    if (diskUsage.PercentUsedSpace >= 90)
-                    {
-                        this.HealthReporter.ReportFabricObserverServiceHealth(
-                            this.FabricServiceContext.ServiceName.OriginalString,
-                            this.ObserverName,
-                            HealthState.Warning,
-                            "Not enough disk space available for dump file creation.");
-                        return false;
-                    }
+                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                        this.FabricServiceContext.ServiceName.OriginalString,
+                        this.ObserverName,
+                        HealthState.Warning,
+                        "Not enough disk space available for dump file creation.");
+                    return false;
                 }
 
                 using (var file = File.Create(Path.Combine(this.dumpsPath, processName)))

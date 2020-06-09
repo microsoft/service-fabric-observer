@@ -22,7 +22,7 @@
     <Parameter Name="EnableLongRunningCSVLogging" Value="False"/>
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
-    <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="EnableVerboseLogging" Value="true" />
     <!-- Optional: This is for use by the text logger to build node warning/error hyperlinks 
          that FabricObserverWebApi uses in html output. The API does not communicate directly with FabricObserver.
          It relies on the existence of local log files, across ObserverManager and individual observers (they log to their own folders). 

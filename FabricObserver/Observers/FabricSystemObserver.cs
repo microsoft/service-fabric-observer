@@ -56,7 +56,6 @@ namespace FabricObserver.Observers
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList;
         private WindowsPerfCounters perfCounters;
-        private DiskUsage diskUsage;
         private bool monitorWinEventLog;
         private int unhealthyNodesErrorThreshold;
         private int unhealthyNodesWarnThreshold;
@@ -117,7 +116,6 @@ namespace FabricObserver.Observers
             this.Initialize();
 
             this.perfCounters = new WindowsPerfCounters();
-            this.diskUsage = new DiskUsage();
 
             try
             {
@@ -166,8 +164,6 @@ namespace FabricObserver.Observers
             }
             finally
             {
-                this.diskUsage?.Dispose();
-                this.diskUsage = null;
                 this.perfCounters?.Dispose();
                 this.perfCounters = null;
             }
@@ -388,12 +384,6 @@ namespace FabricObserver.Observers
                 {
                     this.perfCounters.Dispose();
                     this.perfCounters = null;
-                }
-
-                if (this.diskUsage != null)
-                {
-                    this.diskUsage.Dispose();
-                    this.diskUsage = null;
                 }
 
                 // Data lists.
