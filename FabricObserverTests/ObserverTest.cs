@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Fabric;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,9 +33,6 @@ using ObserverManager = FabricObserver.Observers.ObserverManager;
 namespace FabricObserverTests
 {
     [TestClass]
-
-    // [DeploymentItem(@"MyValidCert.p12")]
-    // [DeploymentItem(@"MyExpiredCert.p12")]
     public class ObserverTest
     {
         private static readonly Uri ServiceName = new Uri("fabric:/app/service");
@@ -71,47 +70,53 @@ namespace FabricObserverTests
             this.isSFRuntimePresentOnTestMachine = this.IsLocalSFRuntimePresent();
         }
 
-        [ClassInitialize]
-        public static void InstallCerts(TestContext tc)
+        private static bool InstallCerts()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                // We cannot install certs into local machine store on Linux
+                return false;
+            }
+
             var validCert = new X509Certificate2("MyValidCert.p12");
             var expiredCert = new X509Certificate2("MyExpiredCert.p12");
-            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
 
-            try
+            using (var store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
             {
-                store.Open(OpenFlags.ReadWrite);
-                store.Add(validCert);
-                store.Add(expiredCert);
-            }
-            finally
-            {
-                store?.Dispose();
+                try
+                {
+                    store.Open(OpenFlags.ReadWrite);
+                    store.Add(validCert);
+                    store.Add(expiredCert);
+                    return true;
+                }
+                catch (CryptographicException ex) when (ex.HResult == 5) // access denied
+                {
+                    return false;
+                }
             }
         }
 
-        [ClassCleanup]
-        public static void UninstallCerts()
+        private static void UnInstallCerts()
         {
             var validCert = new X509Certificate2("MyValidCert.p12");
             var expiredCert = new X509Certificate2("MyExpiredCert.p12");
-            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
 
-            try
+            using (var store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
             {
                 store.Open(OpenFlags.ReadWrite);
                 store.Remove(validCert);
                 store.Remove(expiredCert);
             }
-            finally
-            {
-                store?.Dispose();
-            }
+        }
 
+        [ClassCleanup]
+        public static void TestClassCleanup()
+        {
             // Remove any files generated.
             try
             {
-                var outputFolder = $@"{Environment.CurrentDirectory}\observer_logs\";
+                string outputFolder = Path.Combine(Environment.CurrentDirectory, "observer_logs");
 
                 if (Directory.Exists(outputFolder))
                 {
@@ -735,51 +740,62 @@ namespace FabricObserverTests
                 return;
             }
 
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
+            if (!InstallCerts())
+            {
+                Assert.Inconclusive("This test can only be run on Windows as an admin.");
+            }
 
             var obs = new CertificateObserver
             {
                 IsTestRun = true,
             };
 
-            var commonNamesToObserve = new List<string>
+            try
             {
-                "MyValidCert", // Common name of valid cert
-            };
+                var startDateTime = DateTime.Now;
+                ObserverManager.FabricServiceContext = this.context;
+                ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+                ObserverManager.TelemetryEnabled = false;
+                ObserverManager.EtwEnabled = false;
 
-            var thumbprintsToObserve = new List<string>
+                var commonNamesToObserve = new List<string>
+                {
+                    "MyValidCert", // Common name of valid cert
+                };
+
+                    var thumbprintsToObserve = new List<string>
+                {
+                    "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
+                };
+
+                obs.DaysUntilAppExpireWarningThreshold = 14;
+                obs.DaysUntilClusterExpireWarningThreshold = 14;
+                obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
+                obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
+                obs.SecurityConfiguration = new SecurityConfiguration
+                {
+                    SecurityType = SecurityType.None,
+                    ClusterCertThumbprintOrCommonName = string.Empty,
+                    ClusterCertSecondaryThumbprint = string.Empty,
+                };
+
+                await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+                // observer ran to completion with no errors.
+                Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+                // observer detected no error conditions.
+                Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+                // observer did not have any internal errors during run.
+                Assert.IsFalse(obs.IsUnhealthy);
+            }
+            finally
             {
-                "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
-            };
-
-            obs.DaysUntilAppExpireWarningThreshold = 14;
-            obs.DaysUntilClusterExpireWarningThreshold = 14;
-            obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
-            obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
-            obs.SecurityConfiguration = new SecurityConfiguration
-            {
-                SecurityType = SecurityType.None,
-                ClusterCertThumbprintOrCommonName = string.Empty,
-                ClusterCertSecondaryThumbprint = string.Empty,
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+                UnInstallCerts();
+                obs.Dispose();
+                ObserverManager.FabricClientInstance?.Dispose();
+            }
         }
 
         [TestMethod]
@@ -1006,7 +1022,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\disks.txt";
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "disks.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
