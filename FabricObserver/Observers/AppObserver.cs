@@ -446,7 +446,7 @@ namespace FabricObserver.Observers
 
                     // Warm up the counters.
                     _ = cpuUsage.GetCpuUsageProcess(currentProcess);
-                    _ = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(currentProcess.ProcessName);
+                    _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(currentProcess.Id);
 
                     timer.Start();
 
@@ -463,7 +463,7 @@ namespace FabricObserver.Observers
                         }
 
                         // Memory (private working set (process)).
-                        var processMem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(currentProcess.ProcessName);
+                        var processMem = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(currentProcess.Id);
                         this.allAppMemDataMb.FirstOrDefault(x => x.Id == id).Data.Add(processMem);
 
                         // Memory (percent in use (total)).

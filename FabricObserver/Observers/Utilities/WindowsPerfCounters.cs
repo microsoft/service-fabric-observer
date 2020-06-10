@@ -177,36 +177,6 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        internal float PerfCounterGetProcessPrivateWorkingSetMb(string procName)
-        {
-            string cat = "Process";
-            string counter = "Working Set - Private";
-
-            try
-            {
-                this.memProcessPrivateWorkingSetCounter.CategoryName = cat;
-                this.memProcessPrivateWorkingSetCounter.CounterName = counter;
-                this.memProcessPrivateWorkingSetCounter.InstanceName = procName;
-
-                return this.memProcessPrivateWorkingSetCounter.NextValue() / 1024 / 1024;
-            }
-            catch (Exception e)
-            {
-                if (e is ArgumentNullException || e is PlatformNotSupportedException
-                    || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
-                {
-                    this.Logger.LogError($"{cat} {counter} PerfCounter handled error: " + e);
-
-                    // Don't throw.
-                    return 0F;
-                }
-
-                this.Logger.LogError($"{cat} {counter} PerfCounter unhandled error: " + e);
-
-                throw;
-            }
-        }
-
         protected virtual void Dispose(bool disposing)
         {
             if (this.disposedValue)

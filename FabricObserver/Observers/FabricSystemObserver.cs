@@ -688,8 +688,9 @@ namespace FabricObserver.Observers
                     }
 
                     // Warm up the counters.
+                    // TODO(Vladimir) use CpuUsage
                     _ = this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
-                    _ = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
+                    _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
 
                     timer.Start();
 
@@ -700,11 +701,12 @@ namespace FabricObserver.Observers
                         try
                         {
                             // CPU Time for service process.
+                            // TODO(Vladimir) use CpuUsage
                             int cpu = (int)this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
                             this.allCpuData.FirstOrDefault(x => x.Id == procName)?.Data.Add(cpu);
 
                             // Private Working Set for service process.
-                            float mem = this.perfCounters.PerfCounterGetProcessPrivateWorkingSetMb(process.ProcessName);
+                            float mem = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
                             this.allMemData.FirstOrDefault(x => x.Id == procName)?.Data.Add(mem);
 
                             Thread.Sleep(250);
