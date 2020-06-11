@@ -5,8 +5,8 @@
 
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using FabricObserver.Interfaces;
-using FabricObserver.Observers.Interfaces;
 using NLog;
 using NLog.Targets;
 using NLog.Time;
@@ -28,8 +28,16 @@ namespace FabricObserver.Observers.Utilities
         public void ConfigureLogger(string filename)
         {
             // default log directory.
-            string windrive = Environment.SystemDirectory.Substring(0, 2);
-            string logPath = windrive + "\\observer_logs\\fabric_observer_data";
+            string logPath;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                string windrive = Environment.SystemDirectory.Substring(0, 2);
+                logPath = windrive + "\\observer_logs\\fabric_observer_data";
+            }
+            else
+            {
+                logPath = "/tmp/observer_logs/fabric_observer_data";
+            }
 
             // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrEmpty(this.DataLogFolderPath))

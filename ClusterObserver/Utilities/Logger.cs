@@ -5,6 +5,7 @@
 
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
@@ -51,8 +52,18 @@ namespace FabricClusterObserver.Utilities
         internal void InitializeLoggers()
         {
             // default log directory.
-            string windrive = Environment.SystemDirectory.Substring(0, 2);
-            string logFolderBase = windrive + "\\observer_logs";
+            string logFolderBase;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                string windrive = Environment.SystemDirectory.Substring(0, 2);
+                logFolderBase = windrive + "\\observer_logs";
+            }
+            else
+            {
+                // Linux
+                logFolderBase = "/tmp/observer_logs";
+            }
 
             // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrEmpty(this.LogFolderBasePath))

@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
 using NLog;
@@ -186,8 +187,16 @@ namespace FabricObserver.Observers.Utilities
         internal void InitializeLoggers()
         {
             // default log directory.
-            string windrive = Environment.SystemDirectory.Substring(0, 2);
-            string logFolderBase = windrive + "\\observer_logs";
+            string logFolderBase;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                string windrive = Environment.SystemDirectory.Substring(0, 2);
+                logFolderBase = windrive + "\\observer_logs";
+            }
+            else
+            {
+                logFolderBase = "/tmp/observer_logs";
+            }
 
             // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrEmpty(this.LogFolderBasePath))

@@ -319,7 +319,7 @@ namespace FabricObserverTests
             {
                 IsTestRun = true,
                 MonitorDuration = TimeSpan.FromSeconds(5),
-                ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
 
@@ -363,7 +363,7 @@ namespace FabricObserverTests
             {
                 IsTestRun = true,
                 MonitorDuration = TimeSpan.FromSeconds(5),
-                ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
 
@@ -489,7 +489,7 @@ namespace FabricObserverTests
             {
                 IsTestRun = true,
                 MonitorDuration = TimeSpan.FromSeconds(15),
-                ConfigPackagePath = $@"{Environment.CurrentDirectory}\PackageRoot\Config\AppObserver.config.json",
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
 
@@ -959,7 +959,7 @@ namespace FabricObserverTests
             var obs = new OsObserver()
             {
                 IsTestRun = true,
-                TestManifestPath = $@"{Environment.CurrentDirectory}\clusterManifest.xml",
+                TestManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -973,7 +973,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\SysInfo.txt";
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "SysInfo.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
@@ -1074,7 +1074,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\disks.txt";
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "disks.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
@@ -1165,7 +1165,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\NetInfo.txt";
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "NetInfo.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
@@ -1258,7 +1258,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = $@"{Environment.CurrentDirectory}\observer_logs\SFInfraInfo.txt";
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "SFInfraInfo.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
