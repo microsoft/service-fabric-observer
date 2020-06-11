@@ -28,8 +28,6 @@ namespace FabricObserver.Observers
 {
     public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
     {
-        private const string SfWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
-        private const string SfInfrastructureLogRootRegistryName = "FabricLogRoot";
         private const int TtlAddMinutes = 5;
         private readonly int maxDumps = 5;
         private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
@@ -1034,7 +1032,7 @@ namespace FabricObserver.Observers
             // This only needs to be set once.
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
-                this.sFLogRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureLogRootRegistryName, null);
+                this.sFLogRoot = ServiceFabricConfiguration.Instance.FabricLogRoot;
 
                 if (!string.IsNullOrEmpty(this.sFLogRoot))
                 {

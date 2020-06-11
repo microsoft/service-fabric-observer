@@ -22,22 +22,6 @@ namespace FabricObserver.Observers
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
     public class SfConfigurationObserver : ObserverBase
     {
-        // SF Reg Key Path.
-        private const string SfWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
-
-        // Keys.
-        private const string SfInfrastructureCompatibilityJsonPathRegistryName = "CompatibilityJsonPath";
-        private const string SfInfrastructureEnableCircularTraceSessionRegistryName = "EnableCircularTraceSession";
-        private const string SfInfrastructureBinRootRegistryName = "FabricBinRoot";
-        private const string SfInfrastructureCodePathRegistryName = "FabricCodePath";
-        private const string SfInfrastructureDataRootRegistryName = "FabricDataRoot";
-        private const string SfInfrastructureLogRootRegistryName = "FabricLogRoot";
-        private const string SfInfrastructureRootDirectoryRegistryName = "FabricRoot";
-        private const string SfInfrastructureVersionRegistryName = "FabricVersion";
-        private const string SfInfrastructureIsSfVolumeDiskServiceEnabledName = "IsSFVolumeDiskServiceEnabled";
-        private const string SfInfrastructureEnableUnsupportedPreviewFeaturesName = "EnableUnsupportedPreviewFeatures";
-        private const string SfInfrastructureNodeLastBootUpTime = "NodeLastBootUpTime";
-
         // Values.
         private string sFVersion;
 
@@ -91,17 +75,18 @@ namespace FabricObserver.Observers
 
             try
             {
-                this.sFVersion = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureVersionRegistryName, null);
-                this.sFBinRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureBinRootRegistryName, null);
-                this.sFCompatibilityJsonPath = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureCompatibilityJsonPathRegistryName, null);
-                this.sFCodePath = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureCodePathRegistryName, null);
-                this.sFDataRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureDataRootRegistryName, null);
-                this.sFLogRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureLogRootRegistryName, null);
-                this.SFRootDir = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureRootDirectoryRegistryName, null);
-                this.sFEnableCircularTraceSession = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableCircularTraceSessionRegistryName, null));
-                this.sFVolumeDiskServiceEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureIsSfVolumeDiskServiceEnabledName, null));
-                this.unsupportedPreviewFeaturesEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableUnsupportedPreviewFeaturesName, null));
-                this.sFNodeLastBootTime = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureNodeLastBootUpTime, null);
+                ServiceFabricConfiguration config = ServiceFabricConfiguration.Instance;
+                this.sFVersion = config.FabricVersion;
+                this.sFBinRoot = config.FabricBinRoot;
+                this.sFCompatibilityJsonPath = config.CompatibilityJsonPath;
+                this.sFCodePath = config.FabricCodePath;
+                this.sFDataRoot = config.FabricDataRoot;
+                this.sFLogRoot = config.FabricLogRoot;
+                this.SFRootDir = config.FabricRoot;
+                this.sFEnableCircularTraceSession = config.EnableCircularTraceSession;
+                this.sFVolumeDiskServiceEnabled = config.IsSFVolumeDiskServiceEnabled;
+                this.unsupportedPreviewFeaturesEnabled = config.EnableUnsupportedPreviewFeatures;
+                this.sFNodeLastBootTime = config.NodeLastBootUpTime;
             }
             catch (Exception e) when (e is ArgumentException || e is IOException)
             {
