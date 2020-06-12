@@ -34,7 +34,6 @@ namespace FabricObserver.Observers
         private readonly List<FabricResourceUsageData<int>> allAppEphemeralPortsData;
         private readonly Stopwatch stopwatch;
         private readonly List<ApplicationInfo> targetList;
-        private WindowsPerfCounters perfCounters;
         private bool disposed;
 
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
@@ -86,38 +85,27 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            try
+            foreach (var app in this.targetList)
             {
-                this.perfCounters = new WindowsPerfCounters();
+                this.Token.ThrowIfCancellationRequested();
 
-                foreach (var app in this.targetList)
+                if (string.IsNullOrWhiteSpace(app.TargetApp)
+                    && string.IsNullOrWhiteSpace(app.TargetAppType))
                 {
-                    this.Token.ThrowIfCancellationRequested();
-
-                    if (string.IsNullOrWhiteSpace(app.TargetApp)
-                        && string.IsNullOrWhiteSpace(app.TargetAppType))
-                    {
-                        continue;
-                    }
-
-                    await this.MonitorAppAsync(app).ConfigureAwait(true);
+                    continue;
                 }
 
-                // The time it took to get to ReportAsync.
-                // For use in computing actual HealthReport TTL.
-                this.stopwatch.Stop();
-                this.RunDuration = this.stopwatch.Elapsed;
-                this.stopwatch.Reset();
+                await this.MonitorAppAsync(app).ConfigureAwait(true);
+            }
 
-                await this.ReportAsync(token).ConfigureAwait(true);
-                this.LastRunDateTime = DateTime.Now;
-            }
-            finally
-            {
-                // Clean up.
-                this.perfCounters?.Dispose();
-                this.perfCounters = null;
-            }
+            // The time it took to get to ReportAsync.
+            // For use in computing actual HealthReport TTL.
+            this.stopwatch.Stop();
+            this.RunDuration = this.stopwatch.Elapsed;
+            this.stopwatch.Reset();
+
+            await this.ReportAsync(token).ConfigureAwait(true);
+            this.LastRunDateTime = DateTime.Now;
         }
 
         /// <inheritdoc/>
@@ -258,12 +246,6 @@ namespace FabricObserver.Observers
             if (this.disposed || !disposing)
             {
                 return;
-            }
-
-            if (this.perfCounters != null)
-            {
-                this.perfCounters.Dispose();
-                this.perfCounters = null;
             }
 
             this.disposed = true;
@@ -476,7 +458,7 @@ namespace FabricObserver.Observers
                             this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
                         }
 
-                        Thread.Sleep(250);
+                        await Task.Delay(250);
                     }
 
                     timer.Stop();
