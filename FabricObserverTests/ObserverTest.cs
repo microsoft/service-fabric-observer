@@ -469,7 +469,19 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Thread.Sleep(1);
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
+            {
+                if (!obsMgr.IsObserverRunning)
+                {
+                    Thread.Sleep(5); // sleep 5 ms
+                }
+                else
+                {
+                    break;
+                }
+            }
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);

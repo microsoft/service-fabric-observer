@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -70,7 +71,8 @@ namespace FabricObserver.Observers
             this.ExpiringWarnings = new List<string>();
             this.NotFoundWarnings = new List<string>();
 
-            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            // Unix LocalMachine X509Store is limited to the Root and CertificateAuthority stores.
+            var store = new X509Store(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? StoreName.Root : StoreName.My, StoreLocation.LocalMachine);
 
             try
             {
