@@ -418,8 +418,8 @@ namespace FabricObserver.Observers
                 var activePorts = OperatingSystemInfoProvider.Instance.GetActivePortCount();
 
                 // Active, ephemeral ports.
-                var activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
-                var (lowPortOs, highPortOs) = NetworkUsage.TupleGetDynamicPortRange();
+                var activeEphemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
+                var (lowPortOs, highPortOs) = OperatingSystemInfoProvider.Instance.TupleGetDynamicPortRange();
                 string osEphemeralPortRange = string.Empty;
                 var fabricAppPortRange = string.Empty;
 

@@ -469,7 +469,7 @@ namespace FabricObserver.Observers
                         .Data.Add(OperatingSystemInfoProvider.Instance.GetActivePortCount(currentProcess.Id));
 
                     this.allAppEphemeralPortsData.FirstOrDefault(x => x.Id == id)
-                        .Data.Add(NetworkUsage.GetActiveEphemeralPortCount(currentProcess.Id));
+                        .Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(currentProcess.Id));
                 }
                 catch (Exception e)
                 {

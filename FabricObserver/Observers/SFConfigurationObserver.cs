@@ -338,7 +338,7 @@ namespace FabricObserver.Observers
                                 if (procId > -1)
                                 {
                                     ports = OperatingSystemInfoProvider.Instance.GetActivePortCount(procId);
-                                    ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
+                                    ephemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId);
                                 }
 
                                 _ = sb.AppendLine("\tService Name: " + serviceName.OriginalString);

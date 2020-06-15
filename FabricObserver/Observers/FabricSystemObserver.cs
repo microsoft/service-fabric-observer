@@ -678,7 +678,7 @@ namespace FabricObserver.Observers
 
                     // ports in use by Fabric services.
                     this.TotalActivePortCount += OperatingSystemInfoProvider.Instance.GetActivePortCount(process.Id);
-                    this.TotalActiveEphemeralPortCount += NetworkUsage.GetActiveEphemeralPortCount(process.Id);
+                    this.TotalActiveEphemeralPortCount += OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id);
 
                     TimeSpan duration = TimeSpan.FromSeconds(15);
 
