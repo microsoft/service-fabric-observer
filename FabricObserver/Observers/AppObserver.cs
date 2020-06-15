@@ -449,7 +449,7 @@ namespace FabricObserver.Observers
                         this.allAppMemDataMb.FirstOrDefault(x => x.Id == id).Data.Add(processMem);
 
                         // Memory (percent in use (total)).
-                        var memInfo = ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
+                        var memInfo = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
                         long totalMem = memInfo.TotalMemory;
 
                         if (totalMem > -1)

@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -33,7 +34,7 @@ namespace FabricObserver.Observers.Utilities
 
             if (File.Exists(filePath))
             {
-                value = File.ReadAllText(filePath);
+                value = File.ReadAllLines(filePath).FirstOrDefault();
             }
 
             return value;

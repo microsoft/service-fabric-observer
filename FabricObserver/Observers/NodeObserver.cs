@@ -465,7 +465,7 @@ namespace FabricObserver.Observers
                     if (this.MemoryWarningLimitPercent > 0)
                     {
                         this.allMemDataPercentUsed.Data.Add(
-                            ObserverManager.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
+                            OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                     }
 
                     Thread.Sleep(250);
