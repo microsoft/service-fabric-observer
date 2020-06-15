@@ -327,7 +327,7 @@ namespace FabricObserverTests
             {
                 ApplicationName = new Uri("fabric:/TestApp"),
                 PartitionId = Guid.NewGuid(),
-                HostProcessId = 0,
+                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
                 ReplicaOrInstanceId = default(long),
             });
 
@@ -372,7 +372,7 @@ namespace FabricObserverTests
                 ApplicationName = new Uri("fabric:/TestApp"),
                 ApplicationTypeName = "TestAppType",
                 PartitionId = Guid.NewGuid(),
-                HostProcessId = 0,
+                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
                 ReplicaOrInstanceId = default(long),
             });
 
@@ -509,7 +509,7 @@ namespace FabricObserverTests
             {
                 ApplicationName = new Uri("fabric:/TestApp"),
                 PartitionId = Guid.NewGuid(),
-                HostProcessId = 0,
+                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
                 ReplicaOrInstanceId = default(long),
             });
 
