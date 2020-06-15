@@ -420,7 +420,7 @@ namespace FabricObserver.Observers
             try
             {
                 // Ports.
-                int activePortCountTotal = NetworkUsage.GetActivePortCount();
+                int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActivePortCount();
                 int ephemeralPortCountTotal = NetworkUsage.GetActiveEphemeralPortCount();
                 this.activePortsData.Data.Add(activePortCountTotal);
                 this.ephemeralPortsData.Data.Add(ephemeralPortCountTotal);

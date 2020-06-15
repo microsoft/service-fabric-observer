@@ -1,10 +1,70 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Management;
 
 namespace FabricObserver.Observers.Utilities
 {
     internal class WindowsInfoProvider : OperatingSystemInfoProvider
     {
+        internal override int GetActivePortCount(int processId = -1)
+        {
+            const string Protocol = "tcp";
+
+            try
+            {
+                string protoParam = string.Empty;
+
+                protoParam = "-p " + Protocol;
+
+                var findStrProc = $"| find /i \"{Protocol}\"";
+
+                if (processId > 0)
+                {
+                    findStrProc = $"| find \"{processId}\"";
+                }
+
+                using (var p = new Process())
+                {
+                    var ps = new ProcessStartInfo
+                    {
+                        Arguments = $"/c netstat -ano {protoParam} {findStrProc} /c",
+                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                        UseShellExecute = false,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                    };
+
+                    p.StartInfo = ps;
+                    _ = p.Start();
+
+                    var stdOutput = p.StandardOutput;
+                    string output = stdOutput.ReadToEnd().Trim('\n', '\r');
+                    string exitStatus = p.ExitCode.ToString();
+                    stdOutput.Close();
+
+                    if (exitStatus != "0")
+                    {
+                        return -1;
+                    }
+
+                    return int.TryParse(output, out int ret) ? ret : 0;
+                }
+            }
+            catch (ArgumentException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            catch (Win32Exception)
+            {
+            }
+
+            return -1;
+        }
+
         internal override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             ManagementObjectSearcher win32OsInfo = null;

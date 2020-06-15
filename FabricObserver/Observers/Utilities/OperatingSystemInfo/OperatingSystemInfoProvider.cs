@@ -38,5 +38,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         internal abstract (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse();
+
+        internal abstract int GetActivePortCount(int processId = -1);
     }
 }

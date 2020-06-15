@@ -415,7 +415,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Active, bound ports.
-                var activePorts = NetworkUsage.GetActivePortCount();
+                var activePorts = OperatingSystemInfoProvider.Instance.GetActivePortCount();
 
                 // Active, ephemeral ports.
                 var activeEphemeralPorts = NetworkUsage.GetActiveEphemeralPortCount();
@@ -606,35 +606,6 @@ namespace FabricObserver.Observers
                 win32OsInfo?.Dispose();
                 _ = sb.Clear();
             }
-        }
-
-        private void LogCurrentAUValues(RegistryKey regKey)
-        {
-            StringBuilder result = new StringBuilder();
-            var values = regKey.GetValueNames();
-            foreach (string value in values)
-            {
-                result.AppendFormat(
-                    "{0} = {1}{2}",
-                    value,
-                    regKey.GetValue(value),
-                    Environment.NewLine);
-            }
-
-            string s = result.ToString();
-
-            int majorVersion = Environment.OSVersion.Version.Major;
-            int minorVersion = Environment.OSVersion.Version.Minor;
-
-            this.HealthReporter.ReportHealthToServiceFabric(new HealthReport
-            {
-                HealthMessage = s + Environment.NewLine + majorVersion + "." + minorVersion,
-                Observer = this.ObserverName,
-                Property = "DebugOutputAU",
-                State = HealthState.Ok,
-                NodeName = this.NodeName,
-                ReportType = HealthReportType.Node,
-            });
         }
     }
 }

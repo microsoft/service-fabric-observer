@@ -677,7 +677,7 @@ namespace FabricObserver.Observers
                     this.Token.ThrowIfCancellationRequested();
 
                     // ports in use by Fabric services.
-                    this.TotalActivePortCount += NetworkUsage.GetActivePortCount(process.Id);
+                    this.TotalActivePortCount += OperatingSystemInfoProvider.Instance.GetActivePortCount(process.Id);
                     this.TotalActiveEphemeralPortCount += NetworkUsage.GetActiveEphemeralPortCount(process.Id);
 
                     TimeSpan duration = TimeSpan.FromSeconds(15);

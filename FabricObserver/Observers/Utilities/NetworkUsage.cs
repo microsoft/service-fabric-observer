@@ -17,67 +17,6 @@ namespace FabricObserver.Observers.Utilities
 {
     internal static class NetworkUsage
     {
-        internal static int GetActivePortCount(
-            int procId = -1,
-            Protocol protocol = Protocol.Tcp)
-        {
-            try
-            {
-                string protoParam = string.Empty;
-
-                if (protocol != Protocol.None)
-                {
-                    protoParam = "-p " + Enum.GetName(protocol.GetType(), protocol)?.ToLower();
-                }
-
-                var findStrProc = $"| find /i \"{Enum.GetName(protocol.GetType(), protocol)?.ToLower()}\"";
-
-                if (procId > 0)
-                {
-                    findStrProc = $"| find \"{procId}\"";
-                }
-
-                using (var p = new Process())
-                {
-                    var ps = new ProcessStartInfo
-                    {
-                        Arguments = $"/c netstat -ano {protoParam} {findStrProc} /c",
-                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                    };
-
-                    p.StartInfo = ps;
-                    _ = p.Start();
-
-                    var stdOutput = p.StandardOutput;
-                    string output = stdOutput.ReadToEnd().Trim('\n', '\r');
-                    string exitStatus = p.ExitCode.ToString();
-                    stdOutput.Close();
-
-                    if (exitStatus != "0")
-                    {
-                        return -1;
-                    }
-
-                    return int.TryParse(output, out int ret) ? ret : 0;
-                }
-            }
-            catch (ArgumentException)
-            {
-            }
-            catch (InvalidOperationException)
-            {
-            }
-            catch (Win32Exception)
-            {
-            }
-
-            return -1;
-        }
-
         /// <returns>List of string,int Tuples.</returns>
         /// <summary>
         ///  Returns number of ephemeral ports (ports within a dynamic numerical range) in use by a process

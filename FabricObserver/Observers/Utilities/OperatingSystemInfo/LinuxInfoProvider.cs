@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿using System;
 using System.IO;
 using System.Text;
 
@@ -6,6 +6,27 @@ namespace FabricObserver.Observers.Utilities
 {
     internal class LinuxInfoProvider : OperatingSystemInfoProvider
     {
+        internal override int GetActivePortCount(int processId = -1)
+        {
+            string filePath = processId == -1 ? "/proc/net/protocols" : $"/proc/{processId}/net/protocols";
+
+            string[] lines = File.ReadAllLines(filePath);
+
+            for (int i = 0; i < lines.Length; ++i)
+            {
+                string line = lines[i];
+
+                if (line.StartsWith("TCP ", StringComparison.Ordinal))
+                {
+                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                    return int.Parse(parts[2]);
+                }
+            }
+
+            return -1;
+        }
+
         internal override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             long totalMemory = -1;

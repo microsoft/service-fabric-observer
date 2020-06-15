@@ -466,7 +466,7 @@ namespace FabricObserver.Observers
 
                     // Total and Ephemeral ports..
                     this.allAppTotalActivePortsData.FirstOrDefault(x => x.Id == id)
-                        .Data.Add(NetworkUsage.GetActivePortCount(currentProcess.Id));
+                        .Data.Add(OperatingSystemInfoProvider.Instance.GetActivePortCount(currentProcess.Id));
 
                     this.allAppEphemeralPortsData.FirstOrDefault(x => x.Id == id)
                         .Data.Add(NetworkUsage.GetActiveEphemeralPortCount(currentProcess.Id));
