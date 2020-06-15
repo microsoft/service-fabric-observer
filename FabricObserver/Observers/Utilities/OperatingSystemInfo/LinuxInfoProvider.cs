@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace FabricObserver.Observers.Utilities
@@ -17,13 +18,17 @@ namespace FabricObserver.Observers.Utilities
                 {
                     if (line.StartsWith("MemTotal:"))
                     {
+                        // totalMemory is in KB. This is always first line.
                         totalMemory = ReadInt64(line, "MemTotal:".Length + 1);
                     }
                     else if (line.StartsWith("MemFree:"))
                     {
+                        // freeMem is in KB. Usually second line.
                         long freeMem = ReadInt64(line, "MemFree:".Length + 1);
 
-                        return (totalMemory / 1024, (int)(((double)(totalMemory - freeMem)) / totalMemory * 100));
+                        // Divide by 1048576 to convert total memory
+                        // from KB to GB.
+                        return (totalMemory / 1048576, (int)(((double)(totalMemory - freeMem)) / totalMemory * 100));
                     }
                 }
             }
