@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -13,8 +14,8 @@ namespace FabricObserver.Observers.Utilities
 {
     internal static class DiskUsage
     {
-        private static WindowsPerfCounters winPerfCounters;
-        private static object winPerfCountersLock = new object();
+        private static PerformanceCounter diskAverageQueueLengthCounter =
+            new PerformanceCounter(categoryName: "LogicalDisk", counterName: "Avg. Disk Queue Length", readOnly: true);
 
         internal static bool ShouldCheckDrive(DriveInfo driveInfo)
         {
@@ -99,22 +100,32 @@ namespace FabricObserver.Observers.Utilities
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                if (winPerfCounters == null)
+                try
                 {
-                    lock (winPerfCountersLock)
-                    {
-                        if (winPerfCounters == null)
-                        {
-                            winPerfCounters = new WindowsPerfCounters();
-                        }
-                    }
+                    DiskUsage.diskAverageQueueLengthCounter.InstanceName = instance;
+                    return DiskUsage.diskAverageQueueLengthCounter.NextValue();
                 }
+                catch (Exception e)
+                {
+                    Logger logger = new Logger("Utilities");
 
-                return winPerfCounters.PerfCounterGetAverageDiskQueueLength(instance);
+                    if (e is ArgumentNullException || e is PlatformNotSupportedException
+                        || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
+                    {
+
+                        logger.LogError($"{DiskUsage.diskAverageQueueLengthCounter.CategoryName} {DiskUsage.diskAverageQueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
+
+                        // Don't throw.
+                        return 0F;
+                    }
+
+                    logger.LogError($"{DiskUsage.diskAverageQueueLengthCounter.CategoryName} {DiskUsage.diskAverageQueueLengthCounter.CounterName} PerfCounter unhandled exception: " + e);
+                    throw;
+                }
             }
 
             // We do not support this on Linux for now
-            return 0f;
+            return 0F;
         }
 
         private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)

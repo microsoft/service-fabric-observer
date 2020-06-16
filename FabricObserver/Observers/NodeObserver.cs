@@ -23,8 +23,6 @@ namespace FabricObserver.Observers
         private FabricResourceUsageData<int> activePortsData;
         private FabricResourceUsageData<int> ephemeralPortsData;
         private FabricResourceUsageData<int> allMemDataPercentUsed;
-        private WindowsPerfCounters perfCounters;
-        private bool disposed;
 
         // public because unit test.
         public FabricResourceUsageData<float> AllCpuTimeData { get; set; }
@@ -79,24 +77,14 @@ namespace FabricObserver.Observers
 
             this.Token = token;
 
-            try
-            {
-                this.perfCounters = new WindowsPerfCounters();
-                await this.GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
+            await this.GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
 
-                this.stopwatch.Stop();
-                this.RunDuration = this.stopwatch.Elapsed;
-                this.stopwatch.Reset();
+            this.stopwatch.Stop();
+            this.RunDuration = this.stopwatch.Elapsed;
+            this.stopwatch.Reset();
 
-                await this.ReportAsync(token).ConfigureAwait(true);
-                this.LastRunDateTime = DateTime.Now;
-            }
-            finally
-            {
-                // Clean up.
-                this.perfCounters?.Dispose();
-                this.perfCounters = null;
-            }
+            await this.ReportAsync(token).ConfigureAwait(true);
+            this.LastRunDateTime = DateTime.Now;
         }
 
         /// <inheritdoc/>
@@ -233,22 +221,6 @@ namespace FabricObserver.Observers
 
                 throw;
             }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            if (disposing && this.perfCounters != null)
-            {
-                this.perfCounters.Dispose();
-                this.perfCounters = null;
-            }
-
-            this.disposed = true;
         }
 
         private void Initialize()
@@ -413,9 +385,11 @@ namespace FabricObserver.Observers
             }
         }
 
-        private Task GetSystemCpuMemoryValuesAsync(CancellationToken token)
+        private async Task GetSystemCpuMemoryValuesAsync(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
+
+            CpuUtilizationProvider cpuUtilizationProvider = null;
 
             try
             {
@@ -443,23 +417,25 @@ namespace FabricObserver.Observers
                     duration = this.MonitorDuration;
                 }
 
+                cpuUtilizationProvider = CpuUtilizationProvider.Create();
                 // Warn up the counters.
-                _ = this.perfCounters.PerfCounterGetProcessorInfo();
-                _ = this.perfCounters.PerfCounterGetMemoryInfoMb();
+                _ = await cpuUtilizationProvider.NextValueAsync();
 
                 while (this.stopwatch.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
+                    await Task.Delay(500);
 
                     if (this.CpuWarningUsageThresholdPct > 0
                         && this.CpuWarningUsageThresholdPct <= 100)
                     {
-                        this.AllCpuTimeData.Data.Add(this.perfCounters.PerfCounterGetProcessorInfo());
+                        this.AllCpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
                     }
 
                     if (this.MemWarningUsageThresholdMb > 0)
                     {
-                        this.allMemDataCommittedBytes.Data.Add(this.perfCounters.PerfCounterGetMemoryInfoMb());
+                        float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
+                        this.allMemDataCommittedBytes.Data.Add(committedMegaBytes);
                     }
 
                     if (this.MemoryWarningLimitPercent > 0)
@@ -467,8 +443,6 @@ namespace FabricObserver.Observers
                         this.allMemDataPercentUsed.Data.Add(
                             OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                     }
-
-                    Thread.Sleep(250);
                 }
             }
             catch (OperationCanceledException)
@@ -484,8 +458,10 @@ namespace FabricObserver.Observers
 
                 throw;
             }
-
-            return Task.CompletedTask;
+            finally
+            {
+                cpuUtilizationProvider?.Dispose();
+            }
         }
     }
 }

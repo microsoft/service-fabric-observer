@@ -55,7 +55,6 @@ namespace FabricObserver.Observers
 
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList;
-        private WindowsPerfCounters perfCounters;
         private bool monitorWinEventLog;
         private int unhealthyNodesErrorThreshold;
         private int unhealthyNodesWarnThreshold;
@@ -115,8 +114,6 @@ namespace FabricObserver.Observers
 
             this.Initialize();
 
-            this.perfCounters = new WindowsPerfCounters();
-
             try
             {
                 foreach (var proc in this.processWatchList)
@@ -139,34 +136,24 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            try
+            if (ObserverManager.ObserverWebAppDeployed
+                && this.monitorWinEventLog)
             {
-                if (ObserverManager.ObserverWebAppDeployed
-                    && this.monitorWinEventLog)
-                {
-                    this.ReadServiceFabricWindowsEventLog();
-                }
-
-                // Set TTL.
-                this.stopwatch.Stop();
-                this.RunDuration = this.stopwatch.Elapsed;
-                this.stopwatch.Reset();
-
-                await this.ReportAsync(token).ConfigureAwait(true);
-
-                // No need to keep these objects in memory aross healthy iterations.
-                // Clear out/null list objects.
-                this.allCpuData.Clear();
-                this.allCpuData = null;
-                this.allMemData.Clear();
-                this.allMemData = null;
-                this.LastRunDateTime = DateTime.Now;
+                this.ReadServiceFabricWindowsEventLog();
             }
-            finally
-            {
-                this.perfCounters?.Dispose();
-                this.perfCounters = null;
-            }
+
+            // Set TTL.
+            this.stopwatch.Stop();
+            this.RunDuration = this.stopwatch.Elapsed;
+            this.stopwatch.Reset();
+
+            await this.ReportAsync(token).ConfigureAwait(true);
+
+            // No need to keep these objects in memory across healthy iterations.
+            // Clear out/null list objects.
+            this.allCpuData = null;
+            this.allMemData = null;
+            this.LastRunDateTime = DateTime.Now;
         }
 
         /// <inheritdoc/>
@@ -380,18 +367,6 @@ namespace FabricObserver.Observers
 
             if (disposing)
             {
-                if (this.perfCounters != null)
-                {
-                    this.perfCounters.Dispose();
-                    this.perfCounters = null;
-                }
-
-                // Data lists.
-                this.processWatchList?.Clear();
-                this.allCpuData?.Clear();
-                this.allMemData?.Clear();
-                this.evtRecordList?.Clear();
-
                 this.disposed = true;
             }
         }
@@ -688,8 +663,8 @@ namespace FabricObserver.Observers
                     }
 
                     // Warm up the counters.
-                    // TODO(Vladimir) use CpuUsage
-                    _ = this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
+                    CpuUsage cpuUsage = new CpuUsage();
+                    _ = cpuUsage.GetCpuUsageProcess(process);
                     _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
 
                     timer.Start();
@@ -701,8 +676,7 @@ namespace FabricObserver.Observers
                         try
                         {
                             // CPU Time for service process.
-                            // TODO(Vladimir) use CpuUsage
-                            int cpu = (int)this.perfCounters.PerfCounterGetProcessorInfo("% Processor Time", "Process", process.ProcessName);
+                            int cpu = (int)cpuUsage.GetCpuUsageProcess(process);
                             this.allCpuData.FirstOrDefault(x => x.Id == procName)?.Data.Add(cpu);
 
                             // Private Working Set for service process.
