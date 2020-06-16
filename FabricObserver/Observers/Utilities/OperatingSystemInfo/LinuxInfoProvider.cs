@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -61,6 +64,77 @@ namespace FabricObserver.Observers.Utilities
             string text = File.ReadAllText("/proc/sys/net/ipv4/ip_local_port_range");
             int tabIndex = text.IndexOf('\t');
             return (LowPort: int.Parse(text.AsSpan(0, tabIndex)), HighPort: int.Parse(text.AsSpan(tabIndex + 1)));
+        }
+
+        internal override async Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
+        {
+            OSInfo osInfo = default(OSInfo);
+            (int exitCode, List<string> outputLines) = await this.ExecuteProcessAsync("lsb_release", "-d");
+
+            if (exitCode == 0 && outputLines.Count == 1)
+            {
+                /*
+                ** Example:
+                ** Description:\tUbuntu 18.04.2 LTS
+                */
+                osInfo.Name = outputLines[0].Split(':', count: 2)[1].Trim();
+            }
+
+            osInfo.Version = File.ReadAllText("/proc/version");
+
+            osInfo.Language = string.Empty;
+            osInfo.Status = "OK";
+            osInfo.NumberOfProcesses = Process.GetProcesses().Length;
+
+            using (StreamReader sr = new StreamReader("/proc/meminfo", encoding: Encoding.UTF8))
+            {
+                string line;
+                ulong vmallocUsed = 0UL;
+
+                while ((line = sr.ReadLine()) != null)
+                {
+                    if (line.StartsWith("MemTotal:"))
+                    {
+                        // totalMemory is in KB. This is always first line.
+                        osInfo.TotalVisibleMemorySizeKB = (ulong)ReadInt64(line, "MemTotal:".Length + 1);
+                    }
+                    else if (line.StartsWith("MemFree:"))
+                    {
+                        // freeMem is in KB. Usually second line.
+                        osInfo.FreePhysicalMemoryKB = (ulong)ReadInt64(line, "MemFree:".Length + 1);
+                    }
+                    else if (line.StartsWith("VmallocTotal:"))
+                    {
+                        osInfo.TotalVirtualMemorySizeKB = (ulong)ReadInt64(line, "VmallocTotal:".Length + 1);
+                    }
+                    else if (line.StartsWith("VmallocUsed:"))
+                    {
+                        vmallocUsed = (ulong)ReadInt64(line, "VmallocUsed:".Length + 1);
+                    }
+                }
+
+                osInfo.FreeVirtualMemoryKB = osInfo.TotalVirtualMemorySizeKB - vmallocUsed;
+            }
+
+            // Doc: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/deployment_guide/s2-proc-uptime
+            string text = Encoding.UTF8.GetString(await File.ReadAllBytesAsync("/proc/uptime"));
+
+            // /proc/uptime contains to 2 decimal numbers. The first value represents the total number of seconds the system has been up.
+            // The second value is the sum of how much time each core has spent idle, in seconds.
+            string[] parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            osInfo.LastBootUpTime = DateTime.UtcNow.AddSeconds(-double.Parse(parts[0])).ToString("o");
+
+            try
+            {
+                osInfo.InstallDate = new DirectoryInfo("/var/log/installer").CreationTimeUtc.ToString("o");
+            }
+            catch
+            {
+                osInfo.InstallDate = "N/A";
+            }
+
+            return osInfo;
         }
 
         private static int GetPortCount(int processId, Predicate<string> predicate)
@@ -173,6 +247,36 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return -1;
+        }
+
+        private async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                Arguments = arguments,
+                FileName = fileName,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = false,
+            };
+
+            List<string> output = new List<string>();
+
+            using (Process process = Process.Start(startInfo))
+            {
+                string line;
+
+                while ((line = await process.StandardOutput.ReadLineAsync()) != null)
+                {
+                    output.Add(line);
+                }
+
+                process.WaitForExit();
+
+                return (process.ExitCode, output);
+            }
         }
     }
 }

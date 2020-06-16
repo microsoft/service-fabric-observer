@@ -10,6 +10,7 @@ namespace FabricObserverWeb
     using System.IO;
     using System.Linq;
     using System.Net;
+    using System.Runtime.InteropServices;
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Mvc;
@@ -81,14 +82,16 @@ namespace FabricObserverWeb
             {
                 try
                 {
-                    var netFileInfoPath = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "NetInfo.txt");
-                    var sysFileInfoPath = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "SysInfo.txt");
-                    var evtVwrErrorLogPath = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "EventVwrErrors.txt");
-                    var diskFileInfoPath = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "disks.txt");
-                    var sfInfraInfoPath = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "SFInfraInfo.txt");
+                    string fragment = Path.Combine("ObserverManager", "ObserverManager.log");
+
+                    var netFileInfoPath = observerLogFilePath.Replace(fragment, "NetInfo.txt");
+                    var sysFileInfoPath = observerLogFilePath.Replace(fragment, "SysInfo.txt");
+                    var evtVwrErrorLogPath = observerLogFilePath.Replace(fragment, "EventVwrErrors.txt");
+                    var diskFileInfoPath = observerLogFilePath.Replace(fragment, "disks.txt");
+                    var sfInfraInfoPath = observerLogFilePath.Replace(fragment, "SFInfraInfo.txt");
 
                     // These are the app-specific
-                    var currentDataHealthLogPathPart = observerLogFilePath.Replace(@"ObserverManager\ObserverManager.log", "apps");
+                    var currentDataHealthLogPathPart = observerLogFilePath.Replace(fragment, "apps");
                     string sysInfofileText = string.Empty, evtVwrErrorsText = string.Empty, log = string.Empty, diskInfoTxt = string.Empty, appHealthText = string.Empty, sfInfraText = string.Empty, netInfofileText = string.Empty;
 
                     // Only show info from current day, by default. This is just for web UI (html).

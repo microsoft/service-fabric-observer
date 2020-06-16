@@ -757,10 +757,7 @@ namespace FabricObserverTests
                 Assert.Inconclusive("This test can only be run on Windows as an admin.");
             }
 
-            var obs = new CertificateObserver
-            {
-                IsTestRun = true,
-            };
+            CertificateObserver obs = null;
 
             try
             {
@@ -770,12 +767,14 @@ namespace FabricObserverTests
                 ObserverManager.TelemetryEnabled = false;
                 ObserverManager.EtwEnabled = false;
 
+                obs = new CertificateObserver { IsTestRun = true };
+
                 var commonNamesToObserve = new List<string>
                 {
                     "MyValidCert", // Common name of valid cert
                 };
 
-                    var thumbprintsToObserve = new List<string>
+                var thumbprintsToObserve = new List<string>
                 {
                     "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
                 };
@@ -805,7 +804,7 @@ namespace FabricObserverTests
             finally
             {
                 UnInstallCerts();
-                obs.Dispose();
+                obs?.Dispose();
                 ObserverManager.FabricClientInstance?.Dispose();
             }
         }

@@ -17,7 +17,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using Microsoft.Win32;
 using WUApiLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
@@ -32,8 +31,6 @@ namespace FabricObserver.Observers
         private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
         private string osReport;
         private string osStatus;
-        private string auServiceEnabledMessage;
-        private int totalVisibleMemoryGb = -1;
         private bool auStateUnknown;
         private bool isWindowsUpdateAutoDownloadEnabled;
 
@@ -61,8 +58,13 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
+            }
+
             await this.GetComputerInfoAsync(token).ConfigureAwait(false);
+
             await this.ReportAsync(token).ConfigureAwait(false);
             this.LastRunDateTime = DateTime.Now;
         }
@@ -75,8 +77,7 @@ namespace FabricObserver.Observers
                 token.ThrowIfCancellationRequested();
 
                 // OS Health.
-                if (this.osStatus != null &&
-                    this.osStatus.ToUpper() != "OK")
+                if (this.osStatus != null && !string.Equals(this.osStatus, "OK", StringComparison.OrdinalIgnoreCase))
                 {
                     string healthMessage = $"OS reporting unhealthy: {this.osStatus}";
                     var healthReport = new HealthReport
@@ -105,9 +106,7 @@ namespace FabricObserver.Observers
                             this.Token);
                     }
                 }
-                else if (this.HasActiveFabricErrorOrWarning &&
-                         this.osStatus != null &&
-                         this.osStatus.ToUpper() == "OK")
+                else if (this.HasActiveFabricErrorOrWarning && string.Equals(this.osStatus, "OK", StringComparison.OrdinalIgnoreCase))
                 {
                     // Clear Error or Warning with an OK Health Report.
                     string healthMessage = $"OS reporting healthy: {this.osStatus}";
@@ -163,13 +162,13 @@ namespace FabricObserver.Observers
                         $"For Bronze durability clusters, please consider deploying the " +
                         $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\" target=\"blank\">Patch Orchestration Service</a>.";
 
-                    this.auServiceEnabledMessage = $"Windows Update Automatic Download is enabled.{linkText}";
+                    string auServiceEnabledMessage = $"Windows Update Automatic Download is enabled.{linkText}";
 
                     report = new HealthReport
                     {
                         Observer = this.ObserverName,
                         Property = "OSConfiguration",
-                        HealthMessage = this.auServiceEnabledMessage,
+                        HealthMessage = auServiceEnabledMessage,
                         State = HealthState.Warning,
                         NodeName = this.NodeName,
                         HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
@@ -177,12 +176,12 @@ namespace FabricObserver.Observers
 
                     this.HealthReporter.ReportHealthToServiceFabric(report);
 
-                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
                         var telemetryData = new TelemetryData(this.FabricClientInstance, token)
                         {
-                            HealthEventDescription = this.auServiceEnabledMessage,
+                            HealthEventDescription = auServiceEnabledMessage,
                             HealthState = "Warning",
                             Metric = "WUAutoDownloadEnabled",
                             Value = this.isWindowsUpdateAutoDownloadEnabled,
@@ -197,14 +196,14 @@ namespace FabricObserver.Observers
                     }
 
                     // ETW.
-                    if (this.IsEtwEnabled)
+                    if (this.IsEtwEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
                                 HealthState = "Warning",
-                                HealthEventDescription = this.auServiceEnabledMessage,
+                                HealthEventDescription = auServiceEnabledMessage,
                                 ObserverName = this.ObserverName,
                                 Metric = "WUAutoDownloadEnabled",
                                 Value = this.isWindowsUpdateAutoDownloadEnabled,
@@ -314,152 +313,70 @@ namespace FabricObserver.Observers
 
         private async Task GetComputerInfoAsync(CancellationToken token)
         {
-            ManagementObjectSearcher win32OsInfo = null;
-            ManagementObjectCollection results = null;
-
             var sb = new StringBuilder();
-            string osName = string.Empty;
-            string osVersion = string.Empty;
-            int numProcs = 0;
-            string lastBootTime = string.Empty;
-            string installDate = string.Empty;
             int logicalProcessorCount = Environment.ProcessorCount;
-            int totalVirtualMem = 0;
-            string osLang = string.Empty;
-            double freePhysicalMem = 0;
-            double freeVirtualMem = 0;
 
             try
             {
-                win32OsInfo = new ManagementObjectSearcher("SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory,TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
-                results = win32OsInfo.Get();
-
-                foreach (var prop in results)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    foreach (var p in prop.Properties)
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        string name = p.Name;
-                        string value = p.Value.ToString();
-
-                        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
-                        {
-                            continue;
-                        }
-
-                        switch (name.ToLower())
-                        {
-                            case "caption":
-                                osName = value;
-                                break;
-
-                            case "numberofprocesses":
-                                _ = int.TryParse(value, out numProcs);
-                                break;
-
-                            case "status":
-                                this.osStatus = value;
-                                break;
-
-                            case "oslanguage":
-                                osLang = value;
-                                break;
-
-                            case "version":
-                                osVersion = value;
-                                break;
-
-                            default:
-                            {
-                                if (name.ToLower().Contains("bootuptime"))
-                                {
-                                    value = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
-                                    lastBootTime = value;
-                                }
-                                else if (name.ToLower().Contains("date"))
-                                {
-                                    value = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
-                                    installDate = value;
-                                }
-                                else if (name.ToLower().Contains("memory"))
-                                {
-                                    // For output.
-                                    int i = int.Parse(value) / 1024 / 1024;
-
-                                    // TotalVisible only needs to be set once.
-                                    if (name.ToLower().Contains("totalvisible"))
-                                    {
-                                        this.totalVisibleMemoryGb = i;
-                                    }
-                                    else if (name.ToLower().Contains("totalvirtual"))
-                                    {
-                                        totalVirtualMem = i;
-                                    }
-                                    else if (name.ToLower().Contains("freephysical"))
-                                    {
-                                        _ = double.TryParse(value, out freePhysicalMem);
-                                    }
-                                    else if (name.ToLower().Contains("freevirtual"))
-                                    {
-                                        _ = double.TryParse(value, out freeVirtualMem);
-                                    }
-                                }
-
-                                break;
-                            }
-                        }
-                    }
-                }
+                OSInfo osInfo = await OperatingSystemInfoProvider.Instance.GetOSInfoAsync(token);
+                this.osStatus = osInfo.Status;
 
                 // Active, bound ports.
-                var activePorts = OperatingSystemInfoProvider.Instance.GetActivePortCount();
+                int activePorts = OperatingSystemInfoProvider.Instance.GetActivePortCount();
 
                 // Active, ephemeral ports.
-                var activeEphemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
-                var (lowPortOs, highPortOs) = OperatingSystemInfoProvider.Instance.TupleGetDynamicPortRange();
+                int activeEphemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
+                (int lowPortOS, int highPortOS) = OperatingSystemInfoProvider.Instance.TupleGetDynamicPortRange();
                 string osEphemeralPortRange = string.Empty;
-                var fabricAppPortRange = string.Empty;
+                string fabricAppPortRange = string.Empty;
 
-                var clusterManifestXml = this.IsTestRun ? File.ReadAllText(
+                string clusterManifestXml = this.IsTestRun ? File.ReadAllText(
                     this.TestManifestPath) : await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(
                         this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(false);
 
-                var (lowPortApp, highPortApp) =
+                (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(
                     this.FabricServiceContext.NodeContext.NodeType,
                     clusterManifestXml);
 
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
-                // WU AutoUpdate
-                string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
-
-                if (this.auStateUnknown)
-                {
-                    auMessage += "Unknown";
-                }
-                else
-                {
-                    auMessage += this.isWindowsUpdateAutoDownloadEnabled;
-                }
-
                 // OS info.
                 _ = sb.AppendLine("OS Information:\r\n");
-                _ = sb.AppendLine($"Name: {osName}");
-                _ = sb.AppendLine($"Version: {osVersion}");
-                _ = sb.AppendLine($"InstallDate: {installDate}");
-                _ = sb.AppendLine($"LastBootUpTime*: {lastBootTime}");
-                _ = sb.AppendLine(auMessage);
-                _ = sb.AppendLine($"OSLanguage: {osLang}");
-                _ = sb.AppendLine($"OSHealthStatus*: {this.osStatus}");
-                _ = sb.AppendLine($"NumberOfProcesses*: {numProcs}");
+                _ = sb.AppendLine($"Name: {osInfo.Name}");
+                _ = sb.AppendLine($"Version: {osInfo.Version}");
 
-                if (lowPortOs > -1)
+                if (string.IsNullOrEmpty(osInfo.InstallDate))
                 {
-                    osEphemeralPortRange = $"{lowPortOs} - {highPortOs}";
+                    _ = sb.AppendLine($"InstallDate: {osInfo.InstallDate}");
+                }
+
+                _ = sb.AppendLine($"LastBootUpTime*: {osInfo.LastBootUpTime}");
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    // WU AutoUpdate
+                    string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
+
+                    if (this.auStateUnknown)
+                    {
+                        auMessage += "Unknown";
+                    }
+                    else
+                    {
+                        auMessage += this.isWindowsUpdateAutoDownloadEnabled;
+                    }
+
+                    _ = sb.AppendLine(auMessage);
+                    _ = sb.AppendLine($"OSLanguage: {osInfo.Language}");
+                    _ = sb.AppendLine($"OSHealthStatus*: {osInfo.Status}");
+                }
+
+                _ = sb.AppendLine($"NumberOfProcesses*: {osInfo.NumberOfProcesses}");
+
+                if (lowPortOS > -1)
+                {
+                    osEphemeralPortRange = $"{lowPortOS} - {highPortOS}";
                     _ = sb.AppendLine($"WindowsEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
                 }
 
@@ -483,10 +400,19 @@ namespace FabricObserver.Observers
                 // Proc/Mem
                 _ = sb.AppendLine($"{Environment.NewLine}Hardware Information:{Environment.NewLine}");
                 _ = sb.AppendLine($"LogicalProcessorCount: {logicalProcessorCount}");
-                _ = sb.AppendLine($"TotalVirtualMemorySize: {totalVirtualMem} GB");
-                _ = sb.AppendLine($"TotalVisibleMemorySize: {this.totalVisibleMemoryGb} GB");
-                _ = sb.AppendLine($"FreePhysicalMemory*: {Math.Round(freePhysicalMem / 1024 / 1024, 2)} GB");
-                _ = sb.AppendLine($"FreeVirtualMemory*: {Math.Round(freeVirtualMem / 1024 / 1024, 2)} GB");
+
+                if (osInfo.TotalVirtualMemorySizeKB > 0)
+                {
+                    _ = sb.AppendLine($"TotalVirtualMemorySize: {osInfo.TotalVirtualMemorySizeKB / 1048576} GB");
+                }
+
+                if (osInfo.TotalVisibleMemorySizeKB > 0)
+                {
+                    _ = sb.AppendLine($"TotalVisibleMemorySize: {osInfo.TotalVisibleMemorySizeKB / 1048576} GB");
+                }
+
+                _ = sb.AppendLine($"FreePhysicalMemory*: {Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2)} GB");
+                _ = sb.AppendLine($"FreeVirtualMemory*: {Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2)} GB");
 
                 // Disk
                 var drivesInformationTuple = DiskUsage.GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit.Gigabytes);
@@ -497,15 +423,26 @@ namespace FabricObserver.Observers
 
                 foreach (var (driveName, diskSize, percentConsumed) in drivesInformationTuple)
                 {
-                    string systemDrv = "Data";
+                    string drvSize;
+                    string drvConsumed;
 
-                    if (string.Equals(Environment.SystemDirectory.Substring(0, 1), driveName.Substring(0, 1), StringComparison.OrdinalIgnoreCase))
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        systemDrv = "System";
-                    }
+                        string systemDrv = "Data";
 
-                    string drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB";
-                    string drvConsumed = $"Drive {driveName} ({systemDrv}) Consumed*: {percentConsumed}%";
+                        if (string.Equals(Environment.SystemDirectory.Substring(0, 1), driveName.Substring(0, 1), StringComparison.OrdinalIgnoreCase))
+                        {
+                            systemDrv = "System";
+                        }
+
+                        drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB";
+                        drvConsumed = $"Drive {driveName} ({systemDrv}) Consumed*: {percentConsumed}%";
+                    }
+                    else
+                    {
+                        drvSize = $"Mount point: {driveName}, Size: {diskSize} GB";
+                        drvConsumed = $"Mount point: {driveName}, Consumed*: {percentConsumed}%";
+                    }
 
                     _ = sb.AppendLine(drvSize);
                     _ = sb.AppendLine(drvConsumed);
@@ -513,7 +450,12 @@ namespace FabricObserver.Observers
                     driveInfo += $"{drvSize}{Environment.NewLine}{drvConsumed}{Environment.NewLine}";
                 }
 
-                string osHotFixes = GetWindowsHotFixes(token);
+                string osHotFixes = string.Empty;
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    osHotFixes = GetWindowsHotFixes(token);
+                }
 
                 if (!string.IsNullOrEmpty(osHotFixes))
                 {
@@ -525,9 +467,16 @@ namespace FabricObserver.Observers
 
                 this.osReport = sb.ToString();
 
+                string hotFixes = string.Empty;
+
                 // ETW.
                 if (this.IsEtwEnabled)
                 {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        hotFixes = GetWindowsHotFixes(token, generateUrl: false).Replace("\r\n", ", ").TrimEnd(',');
+                    }
+
                     Logger.EtwLogger?.Write(
                         ObserverConstants.FabricObserverETWEventName,
                         new
@@ -535,60 +484,62 @@ namespace FabricObserver.Observers
                             HealthState = "Ok",
                             Node = this.NodeName,
                             Observer = this.ObserverName,
-                            OS = osName,
-                            OSVersion = osVersion,
-                            OSInstallDate = installDate,
+                            OS = osInfo.Name,
+                            OSVersion = osInfo.Version,
+                            OSInstallDate = osInfo.InstallDate,
                             AutoUpdateEnabled = this.auStateUnknown ? "Unknown" : this.isWindowsUpdateAutoDownloadEnabled.ToString(),
-                            LastBootUpTime = lastBootTime,
+                            LastBootUpTime = osInfo.LastBootUpTime,
                             WindowsAutoUpdateEnabled = this.isWindowsUpdateAutoDownloadEnabled,
-                            TotalMemorySizeGB = this.totalVisibleMemoryGb,
-                            AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
-                            AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
+                            TotalMemorySizeGB = (int)(osInfo.TotalVisibleMemorySizeKB / 1048576),
+                            AvailablePhysicalMemoryGB = Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
+                            AvailableVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
                             LogicalProcessorCount = logicalProcessorCount,
                             LogicalDriveCount = logicalDriveCount,
                             DriveInfo = driveInfo,
-                            NumberOfRunningProcesses = numProcs,
+                            NumberOfRunningProcesses = osInfo.NumberOfProcesses,
                             ActiveFirewallRules = firewalls,
                             ActivePorts = activePorts,
                             ActiveEphemeralPorts = activeEphemeralPorts,
                             WindowsDynamicPortRange = osEphemeralPortRange,
                             FabricAppPortRange = fabricAppPortRange,
-                            HotFixes = GetWindowsHotFixes(token, false).Replace("\r\n", ", ").TrimEnd(','),
+                            HotFixes = hotFixes,
                         });
                 }
 
                 // Telemetry
                 if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
+                    if (string.IsNullOrEmpty(hotFixes) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        hotFixes = GetWindowsHotFixes(token, generateUrl: false).Replace("\r\n", ", ").TrimEnd(',');
+                    }
+
                     this.TelemetryClient?.ReportMetricAsync(
                         new MachineTelemetryData
                         {
                             HealthState = "Ok",
                             Node = this.NodeName,
                             Observer = this.ObserverName,
-                            OS = osName,
-                            OSVersion = osVersion,
-                            OSInstallDate = installDate,
-                            LastBootUpTime = lastBootTime,
+                            OS = osInfo.Name,
+                            OSVersion = osInfo.Version,
+                            OSInstallDate = osInfo.InstallDate,
+                            LastBootUpTime = osInfo.LastBootUpTime,
                             WindowsUpdateAutoDownloadEnabled = this.isWindowsUpdateAutoDownloadEnabled,
-                            TotalMemorySizeGB = this.totalVisibleMemoryGb,
-                            AvailablePhysicalMemoryGB = Math.Round(freePhysicalMem / 1024 / 1024, 2),
-                            AvailableVirtualMemoryGB = Math.Round(freeVirtualMem / 1024 / 1024, 2),
+                            TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
+                            AvailablePhysicalMemoryGB = Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
+                            AvailableVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
                             LogicalProcessorCount = logicalProcessorCount,
                             LogicalDriveCount = logicalDriveCount,
                             DriveInfo = driveInfo,
-                            NumberOfRunningProcesses = numProcs,
+                            NumberOfRunningProcesses = osInfo.NumberOfProcesses,
                             ActiveFirewallRules = firewalls,
                             ActivePorts = activePorts,
                             ActiveEphemeralPorts = activeEphemeralPorts,
                             WindowsDynamicPortRange = osEphemeralPortRange,
                             FabricAppPortRange = fabricAppPortRange,
-                            HotFixes = GetWindowsHotFixes(token, false).Replace("\r\n", ", ").TrimEnd(','),
+                            HotFixes = hotFixes,
                         }, this.Token);
                 }
-            }
-            catch (ManagementException)
-            {
             }
             catch (Exception e)
             {
@@ -599,12 +550,6 @@ namespace FabricObserver.Observers
                     $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
                 throw;
-            }
-            finally
-            {
-                results?.Dispose();
-                win32OsInfo?.Dispose();
-                _ = sb.Clear();
             }
         }
     }

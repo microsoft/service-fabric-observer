@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Management;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -257,6 +259,93 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return -1;
+        }
+
+        internal override Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
+        {
+            ManagementObjectSearcher win32OsInfo = null;
+            ManagementObjectCollection results = null;
+
+            OSInfo osInfo = default(OSInfo);
+
+            try
+            {
+                win32OsInfo = new ManagementObjectSearcher("SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory,TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+                results = win32OsInfo.Get();
+
+                foreach (var prop in results)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    foreach (var p in prop.Properties)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        string name = p.Name;
+                        string value = p.Value.ToString();
+
+                        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
+                        {
+                            continue;
+                        }
+
+                        switch (name.ToLowerInvariant())
+                        {
+                            case "caption":
+                                osInfo.Name = value;
+                                break;
+                            case "numberofprocesses":
+                                if (int.TryParse(value, out int numProcesses))
+                                {
+                                    osInfo.NumberOfProcesses = numProcesses;
+                                }
+                                else
+                                {
+                                    osInfo.NumberOfProcesses = -1;
+                                }
+
+                                break;
+                            case "status":
+                                osInfo.Status = value;
+                                break;
+                            case "oslanguage":
+                                osInfo.Language = value;
+                                break;
+                            case "version":
+                                osInfo.Version = value;
+                                break;
+                            case "installdate":
+                                osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
+                                break;
+                            case "lastbootuptime":
+                                osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
+                                break;
+                            case "freephysicalmemory":
+                                osInfo.FreePhysicalMemoryKB = ulong.Parse(value);
+                                break;
+                            case "freevirtualmemory":
+                                osInfo.FreeVirtualMemoryKB = ulong.Parse(value);
+                                break;
+                            case "totalvirtualmemorysize":
+                                osInfo.TotalVirtualMemorySizeKB = ulong.Parse(value);
+                                break;
+                            case "totalvisiblememorysize":
+                                osInfo.TotalVisibleMemorySizeKB = ulong.Parse(value);
+                                break;
+                        }
+                    }
+                }
+            }
+            catch (ManagementException)
+            {
+            }
+            finally
+            {
+                results?.Dispose();
+                win32OsInfo?.Dispose();
+            }
+
+            return Task.FromResult(osInfo);
         }
 
         private static int GetPortNumberFromConsoleOutputRow(string row)

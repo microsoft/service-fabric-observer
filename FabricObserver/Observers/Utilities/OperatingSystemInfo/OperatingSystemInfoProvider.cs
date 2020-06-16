@@ -1,4 +1,6 @@
 ﻿using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -44,5 +46,7 @@ namespace FabricObserver.Observers.Utilities
         internal abstract int GetActiveEphemeralPortCount(int processId = -1);
 
         internal abstract (int LowPort, int HighPort) TupleGetDynamicPortRange();
+
+        internal abstract Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken);
     }
 }
