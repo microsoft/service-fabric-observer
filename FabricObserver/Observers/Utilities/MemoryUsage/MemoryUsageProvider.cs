@@ -1,6 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -8,10 +6,6 @@ namespace FabricObserver.Observers.Utilities
     {
         private static MemoryUsageProvider instance;
         private static object lockObj = new object();
-
-        protected MemoryUsageProvider()
-        {
-        }
 
         internal static MemoryUsageProvider Instance
         {

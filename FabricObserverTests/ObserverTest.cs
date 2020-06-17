@@ -469,19 +469,7 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
-            {
-                if (!obsMgr.IsObserverRunning)
-                {
-                    Thread.Sleep(5); // sleep 5 ms
-                }
-                else
-                {
-                    break;
-                }
-            }
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -523,7 +511,7 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Thread.Sleep(10);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -556,7 +544,7 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Thread.Sleep(1000);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -589,7 +577,7 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Thread.Sleep(3000);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -622,7 +610,7 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Thread.Sleep(200);
+            Wait(() => obsMgr.IsObserverRunning, 1);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -654,7 +642,7 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Thread.Sleep(3000);
+            Wait(() => obsMgr.IsObserverRunning, 3);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -687,7 +675,7 @@ namespace FabricObserverTests
                 obsMgr.StartObserversAsync();
             });
 
-            Thread.Sleep(1000);
+            Wait(() => obsMgr.IsObserverRunning, 1);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -1178,6 +1166,8 @@ namespace FabricObserverTests
 
             string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "NetInfo.txt");
 
+            Console.WriteLine($"outputFilePath: {outputFilePath}");
+
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
                           && File.GetLastWriteTime(outputFilePath) > startDateTime
@@ -1482,6 +1472,16 @@ namespace FabricObserverTests
             catch (InvalidOperationException)
             {
                 return false;
+            }
+        }
+
+        private static void Wait(Func<bool> predicate, int timeoutInSeconds)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            while (stopwatch.Elapsed < TimeSpan.FromSeconds(timeoutInSeconds) && !predicate())
+            {
+                Thread.Sleep(5); // sleep 5 ms
             }
         }
     }

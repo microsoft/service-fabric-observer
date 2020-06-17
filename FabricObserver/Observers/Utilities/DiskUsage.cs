@@ -112,7 +112,6 @@ namespace FabricObserver.Observers.Utilities
                     if (e is ArgumentNullException || e is PlatformNotSupportedException
                         || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
                     {
-
                         logger.LogError($"{DiskUsage.diskAverageQueueLengthCounter.CategoryName} {DiskUsage.diskAverageQueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
 
                         // Don't throw.

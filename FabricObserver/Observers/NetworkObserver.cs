@@ -348,6 +348,8 @@ namespace FabricObserver.Observers
             {
                 var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "NetInfo.txt");
 
+                Console.WriteLine($"logPath: {logPath}");
+
                 if (!this.ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(this.cancellationToken)))
                 {
                     this.HealthReporter.ReportFabricObserverServiceHealth(

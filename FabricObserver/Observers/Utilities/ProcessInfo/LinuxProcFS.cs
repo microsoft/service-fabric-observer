@@ -21,11 +21,17 @@ namespace FabricObserver.Observers.Utilities
         internal ulong VmPeak;
     }
 
+    /// <summary>
+    /// This class contains method to read data from files under /proc directory on Linux.
+    /// </summary>
     internal static class LinuxProcFS
     {
         internal const string RootPath = "/proc/";
         private const string StatusFileName = "/status";
 
+        /// <summary>
+        /// Reads data from the /proc/meminfo file.
+        /// </summary>
         internal static Dictionary<string, ulong> ReadMemInfo()
         {
             // Currently /proc/meminfo contains 51 rows on Ubuntu 18.
@@ -50,7 +56,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Reads data from the /proc/uptime.
+        /// Reads data from the /proc/uptime file.
         /// </summary>
         /// <returns>An Uptime/IdleTime tuple. The first value represents the total number of seconds the system has been up.
         /// The second value is the sum of how much time each core has spent idle, in seconds.</returns>
@@ -68,6 +74,9 @@ namespace FabricObserver.Observers.Utilities
             return (uptime, idleTime);
         }
 
+        /// <summary>
+        /// Parses /proc/{pid}/status file.
+        /// </summary>
         internal static bool TryParseStatusFile(int pid, out ParsedStatus result)
         {
             string statusFilePath = RootPath + pid.ToString() + StatusFileName;
@@ -75,6 +84,9 @@ namespace FabricObserver.Observers.Utilities
             return TryParseStatusFile(statusFilePath, out result);
         }
 
+        /// <summary>
+        /// Parses /proc/{pid}/status file.
+        /// </summary>
         internal static bool TryParseStatusFile(string statusFilePath, out ParsedStatus result)
         {
             result = default(ParsedStatus);
@@ -130,21 +142,7 @@ namespace FabricObserver.Observers.Utilities
             return true;
         }
 
-        private static bool TryReadFile(string filePath, out string[] fileLines)
-        {
-            try
-            {
-                fileLines = File.ReadAllLines(filePath);
-                return true;
-            }
-            catch (IOException)
-            {
-                fileLines = null;
-                return false;
-            }
-        }
-
-        internal static ulong ReadUInt64(string line, int startIndex)
+        private static ulong ReadUInt64(string line, int startIndex)
         {
             ulong result = 0;
 
@@ -175,7 +173,7 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        internal static long ReadInt64(string line, int startIndex)
+        private static long ReadInt64(string line, int startIndex)
         {
             long result = 0;
 
@@ -204,6 +202,20 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return result;
+        }
+
+        private static bool TryReadFile(string filePath, out string[] fileLines)
+        {
+            try
+            {
+                fileLines = File.ReadAllLines(filePath);
+                return true;
+            }
+            catch (IOException)
+            {
+                fileLines = null;
+                return false;
+            }
         }
     }
 }

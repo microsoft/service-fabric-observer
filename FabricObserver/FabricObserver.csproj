@@ -59,7 +59,6 @@
     <Reference Include="System.ComponentModel.Composition" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     <PackageReference Include="System.IO" />
-    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Management" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" />
     <PackageReference Include="System.Numerics.Vectors" />

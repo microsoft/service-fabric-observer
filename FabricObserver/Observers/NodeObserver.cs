@@ -418,6 +418,7 @@ namespace FabricObserver.Observers
                 }
 
                 cpuUtilizationProvider = CpuUtilizationProvider.Create();
+
                 // Warn up the counters.
                 _ = await cpuUtilizationProvider.NextValueAsync();
 
