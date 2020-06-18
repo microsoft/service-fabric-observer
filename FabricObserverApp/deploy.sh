@@ -42,7 +42,7 @@ then
   exit 1
 fi
 
-echo sfctl application upload --path $PACKAGE_DIR --show-progress
+sfctl application upload --path $PACKAGE_DIR --show-progress
 
 if [ `sfctl application list --output json --query "items[?contains(name, 'fabric:/FabricObserver')]" | grep FabricObserver | wc -l` -gt 0 ]
 then
