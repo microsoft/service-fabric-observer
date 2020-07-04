@@ -14,6 +14,6 @@
     <summary>This package contains the Service Fabric FabricObserver Application, a highly flexible and configurable node-local (-1), stateless SF app service for SF user service and node (VM) health monitoring with telemetry.</summary>
   </metadata>
   <files>
-    <file src="**.*" target="content" />
+    <file src="**" target="content" />
   </files>
 </package>

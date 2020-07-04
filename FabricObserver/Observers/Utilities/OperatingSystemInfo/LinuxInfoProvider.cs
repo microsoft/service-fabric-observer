@@ -70,8 +70,14 @@ namespace FabricObserver.Observers.Utilities
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
             osInfo.TotalVisibleMemorySizeKB = memInfo[MemInfoConstants.MemTotal];
             osInfo.FreePhysicalMemoryKB = memInfo[MemInfoConstants.MemFree];
-            osInfo.TotalVirtualMemorySizeKB = memInfo[MemInfoConstants.VmallocTotal];
-            osInfo.FreeVirtualMemoryKB = osInfo.TotalVirtualMemorySizeKB - memInfo[MemInfoConstants.VmallocUsed];
+
+            // On Windows, TotalVirtualMemorySize = TotalVisibleMemorySize + SizeStoredInPagingFiles.
+            // SizeStoredInPagingFiles - Total number of kilobytes that can be stored in the operating system paging files—0 (zero)
+            // indicates that there are no paging files. Be aware that this number does not represent the actual physical size of the paging file on disk.
+            // https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-operatingsystem
+            osInfo.TotalVirtualMemorySizeKB = osInfo.TotalVisibleMemorySizeKB + memInfo[MemInfoConstants.SwapTotal];
+
+            osInfo.FreeVirtualMemoryKB = osInfo.FreePhysicalMemoryKB + memInfo[MemInfoConstants.SwapFree];
 
             (float uptime, float idleTime) = await LinuxProcFS.ReadUptimeAsync();
 

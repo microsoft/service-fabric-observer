@@ -28,6 +28,7 @@ namespace FabricObserver.Observers.Utilities
             if (driveInfo.TotalSize == 0 ||
                 string.Equals(driveInfo.DriveFormat, "squashfs", StringComparison.Ordinal) ||
                 string.Equals(driveInfo.DriveFormat, "tmpfs", StringComparison.Ordinal) ||
+                string.Equals(driveInfo.DriveFormat, "overlay", StringComparison.Ordinal) ||
                 string.Equals(driveInfo.RootDirectory.FullName, "/boot/efi", StringComparison.Ordinal))
             {
                 return false;

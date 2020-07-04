@@ -243,6 +243,23 @@ namespace FabricObserver.Observers
             return false;
         }
 
+        /// <summary>
+        /// This method is used on Linux to load certs from /var/lib/sfcerts or /var/lib/waagent directory.
+        /// </summary>
+        private static bool TryFindCertificate(string storePath, string thumbprint, out X509Certificate2 certificate)
+        {
+            string fileName = Path.Combine(storePath, thumbprint.ToUpperInvariant() + ".crt");
+
+            if (File.Exists(fileName))
+            {
+                certificate = new X509Certificate2(fileName);
+                return true;
+            }
+
+            certificate = null;
+            return false;
+        }
+
         private async Task Initialize(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
@@ -378,7 +395,7 @@ namespace FabricObserver.Observers
             }
 
             DateTime? expiry = newestCertificate?.NotAfter; // Expiration time in local time (not UTC)
-            var timeUntilExpiry = expiry?.Subtract(DateTime.Now);
+            TimeSpan? timeUntilExpiry = expiry?.Subtract(DateTime.Now);
 
             if (timeUntilExpiry?.TotalMilliseconds < 0)
             {
@@ -401,45 +418,59 @@ namespace FabricObserver.Observers
 
         private void CheckByThumbprint(X509Store store, string thumbprint, int warningThreshold)
         {
-            var certificates = store.Certificates.Find(
+            X509Certificate2Collection certificates = store.Certificates.Find(
                 X509FindType.FindByThumbprint,
                 thumbprint,
-                false);
+                validOnly: false);
+
+            X509Certificate2 certificate;
 
             if (certificates.Count == 0)
             {
-                this.NotFoundWarnings.Add(
-                    $"Could not find requested certificate with thumbprint: {thumbprint} in LocalMachine/My");
-
-                return;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    if (!TryFindCertificate("/var/lib/sfcerts", thumbprint, out certificate) &&
+                        !TryFindCertificate("/var/lib/waagent", thumbprint, out certificate))
+                    {
+                        this.NotFoundWarnings.Add(
+                            $"Could not find requested certificate with thumbprint: {thumbprint} in /var/lib/sfcerts, /var/lib/waagent, and LocalMachine/Root");
+                        return;
+                    }
+                }
+                else
+                {
+                    this.NotFoundWarnings.Add(
+                        $"Could not find requested certificate with thumbprint: {thumbprint} in LocalMachine/My");
+                    return;
+                }
+            }
+            else
+            {
+                certificate = certificates[0];
             }
 
-            // Return first value
-            var enumerator = certificates.GetEnumerator();
-            _ = enumerator.MoveNext();
-
-            var expiry = enumerator?.Current?.NotAfter; // Expiration time in local time (not UTC)
-            var timeUntilExpiry = expiry?.Subtract(DateTime.Now);
+            DateTime expiry = certificate.NotAfter; // Expiration time in local time (not UTC)
+            TimeSpan timeUntilExpiry = expiry.Subtract(DateTime.Now);
             var message = HowToUpdateCnCertsSfLinkHtml;
 
-            if (IsSelfSignedCertificate(enumerator.Current))
+            if (IsSelfSignedCertificate(certificate))
             {
                 message = HowToUpdateSelfSignedCertSfLinkHtml;
             }
 
-            if (timeUntilExpiry?.TotalMilliseconds < 0)
+            if (timeUntilExpiry.TotalMilliseconds < 0)
             {
-                this.ExpiredWarnings.Add($"Certificate Expired on {expiry?.ToShortDateString()}: " +
-                                         $"Thumbprint: {enumerator.Current.Thumbprint} " +
-                                         $"Issuer {enumerator.Current.Issuer}, " +
-                                         $"Subject: {enumerator.Current.Subject}{Environment.NewLine}{message}");
+                this.ExpiredWarnings.Add($"Certificate Expired on {expiry.ToShortDateString()}: " +
+                                         $"Thumbprint: {certificate.Thumbprint} " +
+                                         $"Issuer {certificate.Issuer}, " +
+                                         $"Subject: {certificate.Subject}{Environment.NewLine}{message}");
             }
-            else if (timeUntilExpiry?.TotalDays < warningThreshold)
+            else if (timeUntilExpiry.TotalDays < warningThreshold)
             {
-                this.ExpiringWarnings.Add($"Certificate Expiring on {expiry?.ToShortDateString()}: " +
-                                          $"Thumbprint: {enumerator.Current.Thumbprint} " +
-                                          $"Issuer {enumerator.Current.Issuer}, " +
-                                          $"Subject: {enumerator.Current.Subject}{Environment.NewLine}{message}");
+                this.ExpiringWarnings.Add($"Certificate Expiring on {expiry.ToShortDateString()}: " +
+                                          $"Thumbprint: {certificate.Thumbprint} " +
+                                          $"Issuer {certificate.Issuer}, " +
+                                          $"Subject: {certificate.Subject}{Environment.NewLine}{message}");
             }
         }
     }

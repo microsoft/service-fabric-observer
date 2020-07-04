@@ -377,7 +377,7 @@ namespace FabricObserver.Observers
                 if (lowPortOS > -1)
                 {
                     osEphemeralPortRange = $"{lowPortOS} - {highPortOS}";
-                    _ = sb.AppendLine($"WindowsEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
+                    _ = sb.AppendLine($"OSEphemeralTCPPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
                 }
 
                 if (lowPortApp > -1)
@@ -424,7 +424,6 @@ namespace FabricObserver.Observers
                 foreach (var (driveName, diskSize, percentConsumed) in drivesInformationTuple)
                 {
                     string drvSize;
-                    string drvConsumed;
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
@@ -435,19 +434,16 @@ namespace FabricObserver.Observers
                             systemDrv = "System";
                         }
 
-                        drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB";
-                        drvConsumed = $"Drive {driveName} ({systemDrv}) Consumed*: {percentConsumed}%";
+                        drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB, Consumed*: {percentConsumed}%";
                     }
                     else
                     {
-                        drvSize = $"Mount point: {driveName}, Size: {diskSize} GB";
-                        drvConsumed = $"Mount point: {driveName}, Consumed*: {percentConsumed}%";
+                        drvSize = $"Mount point: {driveName}, Size: {diskSize} GB, Consumed*: {percentConsumed}%";
                     }
 
                     _ = sb.AppendLine(drvSize);
-                    _ = sb.AppendLine(drvConsumed);
 
-                    driveInfo += $"{drvSize}{Environment.NewLine}{drvConsumed}{Environment.NewLine}";
+                    driveInfo += $"{drvSize}{Environment.NewLine}";
                 }
 
                 string osHotFixes = string.Empty;
