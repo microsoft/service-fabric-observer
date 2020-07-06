@@ -29,7 +29,7 @@ namespace FabricObserver.Observers
         private static bool etwEnabled;
         private static ObserverManager singleton = null;
         private readonly string nodeName;
-        private readonly List<ObserverBase> observers;
+        private readonly List<IObserver> observers;
         private readonly TelemetryEvents telemetryEvents;
         private EventWaitHandle globalShutdownEventHandle;
         private volatile bool shutdownSignaled;
@@ -53,7 +53,7 @@ namespace FabricObserver.Observers
             // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
 
-            this.observers = new List<ObserverBase>(new[]
+            this.observers = new List<IObserver>(new[]
             {
                 observer,
             });
@@ -359,11 +359,11 @@ namespace FabricObserver.Observers
         // Observers are instance types. Create them, store in persistent list.
         // List order matters. These are cycled through sequentially, one observer at a time.
         // The enabled state of an observer instance is determined during type construction. See ObserverBase.
-        private static List<ObserverBase> GetObservers()
+        private static List<IObserver> GetObservers()
         {
             // You can simply not create an instance of an observer you don't want to run. The list
             // below is just for reference. GetObservers only returns enabled observers, anyway.
-            var observers = new List<ObserverBase>(new ObserverBase[]
+            var observers = new List<IObserver>()
             {
                 // CertificateObserver monitors Certificate health and will emit Warnings for expiring
                 // Cluster and App certificates that are housed in the LocalMachine/My Certificate Store
@@ -401,7 +401,7 @@ namespace FabricObserver.Observers
 
                 // NetworkObserver for Internet connection state of user-supplied host/port pairs, active port and firewall rule count monitoring.
                 new NetworkObserver(),
-            });
+            };
 
             // Only return a list with user-enabled observer instances.
             return observers.Where(obs => obs.IsEnabled).ToList();
@@ -435,7 +435,7 @@ namespace FabricObserver.Observers
 
             if (this.observers?.Count > 0)
             {
-                foreach (var obs in this.observers)
+                foreach (IObserver obs in this.observers)
                 {
                     obs?.Dispose();
                 }

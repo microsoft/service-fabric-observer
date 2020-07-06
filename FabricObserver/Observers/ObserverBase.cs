@@ -9,8 +9,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Fabric.Query;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -21,12 +19,11 @@ using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using Microsoft.Win32;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
+    public abstract class ObserverBase : IObserver
     {
         private const int TtlAddMinutes = 5;
         private readonly int maxDumps = 5;
@@ -49,7 +46,7 @@ namespace FabricObserver.Observers
         public ObserverHealthReporter HealthReporter { get; }
 
         /// <inheritdoc/>
-        public StatelessServiceContext FabricServiceContext { get; }
+        public ServiceContext FabricServiceContext { get; }
 
         /// <inheritdoc/>
         public DateTime LastRunDateTime { get; set; }
@@ -363,59 +360,6 @@ namespace FabricObserver.Observers
             }
 
             return container;
-        }
-
-        /// <summary>
-        /// Gets the interval at which the Observer is to be run, i.e. "no more often than."
-        /// This is useful for Observers that do not need to run very often (a la OSObserver, Certificate Observer, etc.)
-        /// </summary>
-        /// <param name="configSectionName">Observer configuration section name.</param>
-        /// <param name="configParamName">Observer configuration parameter name.</param>
-        /// <param name="defaultTo">Specific an optional TimeSpan to default to if setting is not found in config.
-        /// else, it defaults to 24 hours.</param>
-        /// <returns>run interval.</returns>
-        public TimeSpan GetObserverRunInterval(
-            string configSectionName,
-            string configParamName,
-            TimeSpan? defaultTo = null)
-        {
-            TimeSpan interval;
-
-            try
-            {
-                interval = TimeSpan.Parse(
-                    this.GetSettingParameterValue(
-                                          configSectionName,
-                                          configParamName),
-                    CultureInfo.InvariantCulture);
-            }
-            catch (Exception e)
-            {
-                if (e is ArgumentNullException || e is FormatException || e is OverflowException)
-                {
-                    // Parameter is not present or invalid, default to 24 hours or supplied defaultTo
-                    if (defaultTo != null)
-                    {
-                        interval = (TimeSpan)defaultTo;
-                    }
-                    else
-                    {
-                        interval = TimeSpan.FromDays(1);
-                    }
-                }
-                else
-                {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        this.ObserverName,
-                        HealthState.Warning,
-                        $"Unhandled exception running GetObserverRunInterval:{Environment.NewLine}{e}");
-
-                    throw;
-                }
-            }
-
-            return interval;
         }
 
         /// <inheritdoc/>
