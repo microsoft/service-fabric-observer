@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="2.0.9" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
@@ -10,7 +10,7 @@
     <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="2.0.9" />
     <ConfigOverrides />
     <Policies>
-      <RunAsPolicy CodePackageRef="Code" UserRef="NetworkUser" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="root" />
     </Policies>
   </ServiceManifestImport>
   <DefaultServices>
@@ -31,13 +31,13 @@
       Set UserRef above to AdminUser or SystemUser *only* if your service processes need to run at one of these elevated security levels.
       Make sure you understand the implications of running as Admin or System and err on the side of NOT running at these levels...
       FabricObserver does not need to run at levels higher than NETWORK SERVICE (UserRef="NetworkUser", as defined below).-->
-      <User Name="AdminUser">
+      <!--<User Name="AdminUser">
         <MemberOf>
           <SystemGroup Name="Administrators" />
         </MemberOf>
-      </User>
-      <User Name="SystemUser" AccountType="LocalSystem" />
-      <User Name="NetworkUser" AccountType="NetworkService" />
+      </User>-->
+      <User Name="root" AccountType="LocalSystem" />
+      <User Name="sfuser" AccountType="NetworkService" />
     </Users>
   </Principals>
 </ApplicationManifest>

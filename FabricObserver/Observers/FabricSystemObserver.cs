@@ -35,13 +35,13 @@ namespace FabricObserver.Observers
         {
             "Fabric",
             "FabricApplicationGateway",
-            "FabricCAS",
-            "FabricDCA",
+            "dotnet FabricCAS.dll",
+            "dotnet FabricDCA.dll",
             "FabricDnsService",
             "FabricFAS",
-            "FabricGateway",
+            "FabricGateway.exe", // Linux
             "FabricHost",
-            "FabricIS",
+            "FabricIS.dll",
             "FabricRM",
             "FabricUS",
         };
@@ -116,11 +116,11 @@ namespace FabricObserver.Observers
 
             try
             {
-                foreach (var proc in this.processWatchList)
+                foreach (var procName in this.processWatchList)
                 {
                     this.Token.ThrowIfCancellationRequested();
 
-                    this.GetProcessInfo(proc);
+                    this.GetProcessInfo(procName);
                 }
             }
             catch (Exception e)
@@ -166,7 +166,14 @@ namespace FabricObserver.Observers
                 Observer = this.ObserverName,
                 NodeName = this.NodeName,
                 HealthMessage = $"Number of ports in use by Fabric services: {this.TotalActivePortCount}\n" +
-                                $"Number of ephemeral ports in use by Fabric services: {this.TotalActiveEphemeralPortCount}",
+                                $"Number of ephemeral ports in use by Fabric services: {this.TotalActiveEphemeralPortCount}\n" +
+                                $"Number of elements in allCpuData container: {this.allCpuData.Count}\n" +
+                                $"Number of elements in allMemData container: {this.allMemData.Count}\n" +
+                                $"Fabric cpu use: {this.allCpuData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
+                                $"FabricGateway cpu use: {this.allCpuData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n" +
+                                $"Fabric mem use: {this.allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
+                                $"FabricDCA mem use: {this.allMemData.Where(x => x.Id == "dotnet FabricDCA.dll")?.FirstOrDefault()?.AverageDataValue}\n" +
+                                $"FabricGateway mem use: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n",
                 State = HealthState.Ok,
                 HealthReportTimeToLive = timeToLiveWarning,
             };
@@ -401,12 +408,12 @@ namespace FabricObserver.Observers
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricCAS",
+                        "dotnet FabricCAS.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricDCA",
+                        "dotnet FabricDCA.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
@@ -421,7 +428,7 @@ namespace FabricObserver.Observers
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricGateway",
+                        "FabricGateway.exe",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
@@ -431,7 +438,7 @@ namespace FabricObserver.Observers
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricIS",
+                        "FabricIS.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
@@ -464,12 +471,12 @@ namespace FabricObserver.Observers
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
-                        "FabricCAS",
+                        "dotnet FabricCAS.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
-                        "FabricDCA",
+                        "dotnet FabricDCA.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
@@ -484,7 +491,7 @@ namespace FabricObserver.Observers
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
-                        "FabricGateway",
+                        "FabricGateway.exe",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
@@ -494,7 +501,7 @@ namespace FabricObserver.Observers
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
-                        "FabricIS",
+                        "FabricIS.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(

@@ -14,7 +14,7 @@
   <CodePackage Name="Code" Version="2.0.9">
     <EntryPoint>
       <ExeHost>
-        <Program>FabricObserver.exe</Program>
+        <Program>FabricObserver</Program>
       </ExeHost>
     </EntryPoint>
   </CodePackage>

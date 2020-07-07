@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.ComponentModel;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
@@ -17,7 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using WUApiLib;
+//using WUApiLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -58,10 +57,10 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            /*if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
-            }
+            }*/
 
             await this.GetComputerInfoAsync(token).ConfigureAwait(false);
 
@@ -281,7 +280,7 @@ namespace FabricObserver.Observers
             return ret;
         }
 
-        private Task CheckWuAutoDownloadEnabledAsync(CancellationToken token)
+        /*private Task CheckWuAutoDownloadEnabledAsync(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
@@ -309,7 +308,7 @@ namespace FabricObserver.Observers
             }
 
             return Task.CompletedTask;
-        }
+        }*/
 
         private async Task GetComputerInfoAsync(CancellationToken token)
         {
