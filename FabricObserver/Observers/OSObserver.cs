@@ -10,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
-using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,7 +26,7 @@ namespace FabricObserver.Observers
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OsObserver : ObserverBase
     {
-        private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
+        // private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
         private string osReport;
         private string osStatus;
         private bool auStateUnknown;
@@ -410,7 +409,7 @@ namespace FabricObserver.Observers
                     _ = sb.AppendLine($"TotalVisibleMemorySize: {osInfo.TotalVisibleMemorySizeKB / 1048576} GB");
                 }
 
-                _ = sb.AppendLine($"FreePhysicalMemory*: {Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2)} GB");
+                _ = sb.AppendLine($"FreePhysicalMemory*: {Math.Round(osInfo.AvailableMemory / 1048576.0, 2)} GB");
                 _ = sb.AppendLine($"FreeVirtualMemory*: {Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2)} GB");
 
                 // Disk

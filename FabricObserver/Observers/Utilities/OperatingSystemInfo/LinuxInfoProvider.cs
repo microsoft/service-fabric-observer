@@ -15,9 +15,10 @@ namespace FabricObserver.Observers.Utilities
 
             long totalMemory = (long)memInfo[MemInfoConstants.MemTotal];
             long freeMem = (long)memInfo[MemInfoConstants.MemFree];
+            long availableMem = (long)memInfo[MemInfoConstants.MemAvailable];
 
             // Divide by 1048576 to convert total memory from KB to GB.
-            return (totalMemory / 1048576, (int)(((double)(totalMemory - freeMem)) / totalMemory * 100));
+            return (totalMemory / 1048576, (int)(((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100));
         }
 
         internal override int GetActivePortCount(int processId = -1)
@@ -70,6 +71,7 @@ namespace FabricObserver.Observers.Utilities
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
             osInfo.TotalVisibleMemorySizeKB = memInfo[MemInfoConstants.MemTotal];
             osInfo.FreePhysicalMemoryKB = memInfo[MemInfoConstants.MemFree];
+            osInfo.AvailableMemory = memInfo[MemInfoConstants.MemAvailable];
 
             // On Windows, TotalVirtualMemorySize = TotalVisibleMemorySize + SizeStoredInPagingFiles.
             // SizeStoredInPagingFiles - Total number of kilobytes that can be stored in the operating system paging files—0 (zero)

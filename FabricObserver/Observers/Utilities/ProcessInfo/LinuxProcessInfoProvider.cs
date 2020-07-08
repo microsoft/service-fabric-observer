@@ -1,4 +1,6 @@
-﻿namespace FabricObserver.Observers.Utilities
+﻿using System.Diagnostics;
+
+namespace FabricObserver.Observers.Utilities
 {
     internal class LinuxProcessInfoProvider : ProcessInfoProvider
     {
@@ -6,7 +8,7 @@
         {
             if (LinuxProcFS.TryParseStatusFile(processId, out ParsedStatus status))
             {
-                return (status.VmRSS - status.RssFile) / 1048576f;
+               return (status.VmRSS - status.RssFile) / 1048576f;
             }
             else
             {

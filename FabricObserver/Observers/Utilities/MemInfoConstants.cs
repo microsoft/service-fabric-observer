@@ -1,4 +1,6 @@
-﻿namespace FabricObserver.Observers.Utilities
+﻿using NLog.LayoutRenderers;
+
+namespace FabricObserver.Observers.Utilities
 {
     internal static class MemInfoConstants
     {
@@ -16,5 +18,7 @@
         internal const string VmallocTotal = nameof(VmallocTotal);
 
         internal const string VmallocUsed = nameof(VmallocUsed);
+
+        internal const string MemAvailable = nameof(MemAvailable);
     }
 }

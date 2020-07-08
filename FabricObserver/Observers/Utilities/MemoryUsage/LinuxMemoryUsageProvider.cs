@@ -14,10 +14,11 @@ namespace FabricObserver.Observers.Utilities
 
             ulong memTotal = memInfo[MemInfoConstants.MemTotal];
             ulong memFree = memInfo[MemInfoConstants.MemFree];
+            ulong memAvail = memInfo[MemInfoConstants.MemAvailable];
             ulong swapTotal = memInfo[MemInfoConstants.SwapTotal];
             ulong swapFree = memInfo[MemInfoConstants.SwapFree];
 
-            return (memTotal - memFree + swapTotal - swapFree) * 1024;
+            return (memTotal - memAvail - memFree + (swapTotal - swapFree)) * 1024;
         }
     }
 }

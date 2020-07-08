@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Fabric;
+using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Globalization;
 using System.IO;
@@ -35,8 +36,8 @@ namespace FabricObserver.Observers
         {
             "Fabric",
             "FabricApplicationGateway",
-            "dotnet FabricCAS.dll",
-            "dotnet FabricDCA.dll",
+            "FabricCAS.dll",
+            "FabricDCA.dll",
             "FabricDnsService",
             "FabricFAS",
             "FabricGateway.exe", // Linux
@@ -119,8 +120,14 @@ namespace FabricObserver.Observers
                 foreach (var procName in this.processWatchList)
                 {
                     this.Token.ThrowIfCancellationRequested();
+                    string dotnet = string.Empty;
 
-                    this.GetProcessInfo(procName);
+                    if (procName == "FabricDCA.dll" || procName == "FabricCAS.dll")
+                    {
+                        dotnet = "dotnet ";
+                    }
+
+                    this.GetProcessInfo($"{dotnet}{procName}");
                 }
             }
             catch (Exception e)
@@ -172,7 +179,7 @@ namespace FabricObserver.Observers
                                 $"Fabric cpu use: {this.allCpuData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
                                 $"FabricGateway cpu use: {this.allCpuData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n" +
                                 $"Fabric mem use: {this.allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
-                                $"FabricDCA mem use: {this.allMemData.Where(x => x.Id == "dotnet FabricDCA.dll")?.FirstOrDefault()?.AverageDataValue}\n" +
+                                $"FabricDCA mem use: {this.allMemData.Where(x => x.Id == "FabricDCA.dll")?.FirstOrDefault()?.AverageDataValue}\n" +
                                 $"FabricGateway mem use: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n",
                 State = HealthState.Ok,
                 HealthReportTimeToLive = timeToLiveWarning,
@@ -378,6 +385,32 @@ namespace FabricObserver.Observers
             }
         }
 
+        private static Process[] GetDotnetProcessesByFirstArgument(string argument)
+        {
+            List<Process> result = new List<Process>();
+            Process[] processes = Process.GetProcessesByName("dotnet");
+            for (int i = 0; i < processes.Length; ++i)
+            {
+                Process p = processes[i];
+                try
+                {
+                    string cmdline = File.ReadAllText($"/proc/{p.Id}/cmdline");
+                    string[] parts = cmdline.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+
+                    if (parts.Length > 1 && string.Equals(argument, parts[1], StringComparison.Ordinal))
+                    {
+                        result.Add(p);
+                    }
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // It is possible that the process already exited.
+                }
+            }
+
+            return result.ToArray();
+        }
+
         private void Initialize()
         {
             if (this.stopwatch == null)
@@ -408,12 +441,12 @@ namespace FabricObserver.Observers
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "dotnet FabricCAS.dll",
+                        "FabricCAS.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
                         ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "dotnet FabricDCA.dll",
+                        "FabricDCA.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<float>(
@@ -471,12 +504,12 @@ namespace FabricObserver.Observers
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
-                        "dotnet FabricCAS.dll",
+                        "FabricCAS.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
                         ErrorWarningProperty.TotalCpuTime,
-                        "dotnet FabricDCA.dll",
+                        "FabricDCA.dll",
                         this.DataCapacity,
                         this.UseCircularBuffer),
                     new FabricResourceUsageData<int>(
@@ -643,7 +676,18 @@ namespace FabricObserver.Observers
 
         private void GetProcessInfo(string procName)
         {
-            var processes = Process.GetProcessesByName(procName);
+            string dotnetArg = procName;
+            Process[] processes = null;
+
+            if (procName.Contains("dotnet "))
+            {
+                dotnetArg = $"{procName.Replace("dotnet ", string.Empty)}";
+                processes = GetDotnetProcessesByFirstArgument(dotnetArg);
+            }
+            else
+            {
+                processes = Process.GetProcessesByName(procName);
+            }
 
             if (processes.Length == 0)
             {
@@ -684,11 +728,11 @@ namespace FabricObserver.Observers
                         {
                             // CPU Time for service process.
                             int cpu = (int)cpuUsage.GetCpuUsageProcess(process);
-                            this.allCpuData.FirstOrDefault(x => x.Id == procName)?.Data.Add(cpu);
+                            this.allCpuData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(cpu);
 
                             // Private Working Set for service process.
                             float mem = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
-                            this.allMemData.FirstOrDefault(x => x.Id == procName)?.Data.Add(mem);
+                            this.allMemData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(mem);
 
                             Thread.Sleep(250);
                         }

@@ -14,5 +14,6 @@
         public ulong TotalVisibleMemorySizeKB;
         public string InstallDate;
         public string LastBootUpTime;
+        public ulong AvailableMemory;
     }
 }
