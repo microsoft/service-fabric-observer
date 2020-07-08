@@ -79,6 +79,8 @@
     <PackageReference Include="System.Security.Cryptography.Encoding" />
     <PackageReference Include="System.Security.Cryptography.Primitives" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="..\Interop\Interop.WUApiLib.dll" />
   </ItemGroup>
