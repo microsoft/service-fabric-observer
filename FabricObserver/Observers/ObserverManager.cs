@@ -751,6 +751,8 @@ namespace FabricObserver.Observers
                     }
 
                     _ = exceptionBuilder.AppendLine($"Exception from {observer.ObserverName}:\r\n{ex.InnerException}");
+
+                    // TODO: Add debug output code to SFX...
                     allExecuted = false;
                 }
 

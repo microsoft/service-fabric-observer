@@ -15,7 +15,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-//using WUApiLib;
+#if Windows
+using System.ComponentModel;
+using System.Security;
+using WUApiLib;
+#endif
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -26,7 +30,7 @@ namespace FabricObserver.Observers
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public class OsObserver : ObserverBase
     {
-        // private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
+        private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
         private string osReport;
         private string osStatus;
         private bool auStateUnknown;
@@ -56,10 +60,10 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            /*if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
-            }*/
+            }
 
             await this.GetComputerInfoAsync(token).ConfigureAwait(false);
 
@@ -151,7 +155,7 @@ namespace FabricObserver.Observers
                 this.HealthReporter.ReportHealthToServiceFabric(report);
 
                 // Windows Update automatic download enabled?
-                if (this.isWindowsUpdateAutoDownloadEnabled)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.isWindowsUpdateAutoDownloadEnabled)
                 {
                     string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
@@ -210,9 +214,12 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // reset au globals for fresh detection during next observer run.
-                this.isWindowsUpdateAutoDownloadEnabled = false;
-                this.auStateUnknown = false;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    // reset au globals for fresh detection during next observer run.
+                    this.isWindowsUpdateAutoDownloadEnabled = false;
+                    this.auStateUnknown = false;
+                }
 
                 return Task.CompletedTask;
             }
@@ -279,7 +286,7 @@ namespace FabricObserver.Observers
             return ret;
         }
 
-        /*private Task CheckWuAutoDownloadEnabledAsync(CancellationToken token)
+        private Task CheckWuAutoDownloadEnabledAsync(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
@@ -307,7 +314,7 @@ namespace FabricObserver.Observers
             }
 
             return Task.CompletedTask;
-        }*/
+        }
 
         private async Task GetComputerInfoAsync(CancellationToken token)
         {

@@ -9,11 +9,11 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Fabric;
-using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,21 +32,7 @@ namespace FabricObserver.Observers
     // As with all observers, you should first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy states.
     public class FabricSystemObserver : ObserverBase
     {
-        private readonly List<string> processWatchList = new List<string>
-        {
-            "Fabric",
-            "FabricApplicationGateway",
-            "FabricCAS.dll",
-            "FabricDCA.dll",
-            "FabricDnsService",
-            "FabricFAS",
-            "FabricGateway.exe", // Linux
-            "FabricHost",
-            "FabricIS.dll",
-            "FabricRM",
-            "FabricUS",
-        };
-
+        private readonly List<string> processWatchList;
         private Stopwatch stopwatch;
         private bool disposed;
 
@@ -66,6 +52,39 @@ namespace FabricObserver.Observers
         public FabricSystemObserver()
             : base(ObserverConstants.FabricSystemObserverName)
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                this.processWatchList = new List<string>
+                {
+                    "Fabric",
+                    "FabricCAS.dll",
+                    "FabricDCA.dll",
+                    "FabricDnsService",
+                    "FabricFAS.dll",
+                    "FabricGateway.exe",
+                    "FabricHost",
+                    "FabricIS.dll",
+                    "FabricRM",
+                    "FabricUS",
+                };
+            }
+            else
+            {
+                this.processWatchList = new List<string>
+                {
+                    "Fabric",
+                    "FabricApplicationGateway",
+                    "FabricCAS",
+                    "FabricDCA",
+                    "FabricDnsService",
+                    "FabricFAS",
+                    "FabricGateway",
+                    "FabricHost",
+                    "FabricIS.dll",
+                    "FabricRM",
+                    "FabricUS",
+                };
+            }
         }
 
         public int CpuErrorUsageThresholdPct { get; set; }
@@ -122,7 +141,7 @@ namespace FabricObserver.Observers
                     this.Token.ThrowIfCancellationRequested();
                     string dotnet = string.Empty;
 
-                    if (procName == "FabricDCA.dll" || procName == "FabricCAS.dll")
+                    if (procName.EndsWith(".dll"))
                     {
                         dotnet = "dotnet ";
                     }
@@ -143,7 +162,7 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            if (ObserverManager.ObserverWebAppDeployed
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && ObserverManager.ObserverWebAppDeployed
                 && this.monitorWinEventLog)
             {
                 this.ReadServiceFabricWindowsEventLog();
@@ -205,7 +224,7 @@ namespace FabricObserver.Observers
                 this.MemWarnUsageThresholdMb);
 
             // Windows Event Log
-            if (ObserverManager.ObserverWebAppDeployed
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && ObserverManager.ObserverWebAppDeployed
                 && this.monitorWinEventLog)
             {
                 // SF Eventlog Errors?
@@ -426,131 +445,35 @@ namespace FabricObserver.Observers
 
             if (this.allMemData == null)
             {
-                this.allMemData = new List<FabricResourceUsageData<float>>
+                this.allMemData = new List<FabricResourceUsageData<float>>(this.processWatchList.Count);
+
+                foreach (var proc in this.processWatchList)
                 {
-                    // Mem data.
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "Fabric",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricApplicationGateway",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricCAS.dll",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricDCA.dll",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricDnsService",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricFAS",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricGateway.exe",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricHost",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricIS.dll",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricRM",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<float>(
-                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                        "FabricUS",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                };
+                    this.allMemData.Add(
+                        new FabricResourceUsageData<float>(
+                            ErrorWarningProperty.TotalMemoryConsumptionMb,
+                            proc,
+                            this.DataCapacity,
+                            this.UseCircularBuffer));
+                }
             }
 
             if (this.allCpuData == null)
             {
-                this.allCpuData = new List<FabricResourceUsageData<int>>
+                this.allCpuData = new List<FabricResourceUsageData<int>>(this.processWatchList.Count);
+
+                foreach (var proc in this.processWatchList)
                 {
-                    // Cpu data.
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "Fabric",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricApplicationGateway",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricCAS.dll",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricDCA.dll",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricDnsService",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricFAS",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricGateway.exe",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricHost",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricIS.dll",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricRM",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                    new FabricResourceUsageData<int>(
-                        ErrorWarningProperty.TotalCpuTime,
-                        "FabricUS",
-                        this.DataCapacity,
-                        this.UseCircularBuffer),
-                };
+                    this.allCpuData.Add(
+                        new FabricResourceUsageData<int>(
+                            ErrorWarningProperty.TotalMemoryConsumptionMb,
+                            proc,
+                            this.DataCapacity,
+                            this.UseCircularBuffer));
+                }
             }
 
-            if (this.monitorWinEventLog)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.monitorWinEventLog)
             {
                 this.evtRecordList = new List<EventRecord>();
             }
@@ -660,6 +583,11 @@ namespace FabricObserver.Observers
                 }
 
                 this.unhealthyNodesWarnThreshold = threshold;
+            }
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return;
             }
 
             // Monitor Windows event log for SF and System Error/Critical events?

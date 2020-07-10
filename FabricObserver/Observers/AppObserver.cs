@@ -82,6 +82,9 @@ namespace FabricObserver.Observers
                     HealthState.Warning,
                     "This observer was unable to initialize correctly due to missing configuration info.");
 
+                this.stopwatch.Stop();
+                this.stopwatch.Reset();
+
                 return;
             }
 
@@ -177,6 +180,26 @@ namespace FabricObserver.Observers
                         if (this.CsvFileLogger.EnableCsvLogging)
                         {
                             this.LogAllAppResourceDataToCsv(id);
+                        }
+
+                        // DEBUG \\
+                        if (id.Contains("CpuStress"))
+                        {
+                            // Emit an Ok Health Report for debug output.
+                            var healthReport = new Utilities.HealthReport
+                            {
+                                AppName = new Uri("fabric:/CpuStress"),
+                                HealthMessage = $"CpuData Count: {this.allAppCpuData.Count}\n" +
+                                $"Average: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).AverageDataValue}",
+                                State = HealthState.Ok,
+                                Code = FoErrorWarningCodes.Ok,
+                                NodeName = this.NodeName,
+                                Observer = this.ObserverName,
+                                Property = id,
+                                ReportType = HealthReportType.Application,
+                            };
+
+                            this.HealthReporter.ReportHealthToServiceFabric(healthReport);
                         }
 
                         // CPU
@@ -419,6 +442,20 @@ namespace FabricObserver.Observers
                         this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1));
                     }
 
+                    var healthReport = new Utilities.HealthReport
+                    {
+                        AppName = repOrInst.ApplicationName,
+                        HealthMessage = $"ProcessId = {currentProcess.Id}\n",
+                        State = HealthState.Ok,
+                        Code = FoErrorWarningCodes.Ok,
+                        NodeName = this.NodeName,
+                        Observer = this.ObserverName,
+                        Property = id,
+                        ReportType = HealthReportType.Application,
+                    };
+
+                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+
                     TimeSpan duration = TimeSpan.FromSeconds(15);
 
                     if (this.MonitorDuration > TimeSpan.MinValue)
@@ -432,7 +469,7 @@ namespace FabricObserver.Observers
 
                     timer.Start();
 
-                    while (!currentProcess.HasExited && timer.Elapsed <= duration)
+                    while (!currentProcess.HasExited && timer.Elapsed.Seconds <= duration.Seconds)
                     {
                         this.Token.ThrowIfCancellationRequested();
 
@@ -441,6 +478,12 @@ namespace FabricObserver.Observers
 
                         if (cpu >= 0)
                         {
+                            if (cpu > 100)
+                            {
+                                cpu = 100;
+                            }
+
+                            // Add debug info here (SFX).
                             this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
                         }
 
@@ -458,7 +501,7 @@ namespace FabricObserver.Observers
                             this.allAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
                         }
 
-                        await Task.Delay(250);
+                        await Task.Delay(250, this.Token);
                     }
 
                     timer.Stop();
@@ -473,6 +516,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e)
                 {
+                    // Add debug info here (SFX).
                     if (e is Win32Exception || e is ArgumentException || e is InvalidOperationException)
                     {
                         this.WriteToLogWithLevel(
