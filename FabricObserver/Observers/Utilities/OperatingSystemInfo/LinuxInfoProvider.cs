@@ -71,7 +71,7 @@ namespace FabricObserver.Observers.Utilities
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
             osInfo.TotalVisibleMemorySizeKB = memInfo[MemInfoConstants.MemTotal];
             osInfo.FreePhysicalMemoryKB = memInfo[MemInfoConstants.MemFree];
-            osInfo.AvailableMemory = memInfo[MemInfoConstants.MemAvailable];
+            osInfo.AvailableMemoryKB = memInfo[MemInfoConstants.MemAvailable];
 
             // On Windows, TotalVirtualMemorySize = TotalVisibleMemorySize + SizeStoredInPagingFiles.
             // SizeStoredInPagingFiles - Total number of kilobytes that can be stored in the operating system paging files—0 (zero)

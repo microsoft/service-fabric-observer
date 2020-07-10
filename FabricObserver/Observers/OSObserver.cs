@@ -416,7 +416,7 @@ namespace FabricObserver.Observers
                     _ = sb.AppendLine($"TotalVisibleMemorySize: {osInfo.TotalVisibleMemorySizeKB / 1048576} GB");
                 }
 
-                _ = sb.AppendLine($"FreePhysicalMemory*: {Math.Round(osInfo.AvailableMemory / 1048576.0, 2)} GB");
+                _ = sb.AppendLine($"FreePhysicalMemory*: {Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2)} GB");
                 _ = sb.AppendLine($"FreeVirtualMemory*: {Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2)} GB");
 
                 // Disk
