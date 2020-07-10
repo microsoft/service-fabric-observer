@@ -181,7 +181,7 @@ namespace FabricObserver.Observers
                         {
                             this.LogAllAppResourceDataToCsv(id);
                         }
-
+#if DEBUG
                         // DEBUG \\
                         if (id.Contains("CpuStress"))
                         {
@@ -189,7 +189,7 @@ namespace FabricObserver.Observers
                             var healthReport = new Utilities.HealthReport
                             {
                                 AppName = new Uri("fabric:/CpuStress"),
-                                HealthMessage = $"CpuData Count: {this.allAppCpuData.Count}\n" +
+                                HealthMessage = $"{p.Id} CpuData Count: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Count}\n" +
                                 $"Average: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).AverageDataValue}",
                                 State = HealthState.Ok,
                                 Code = FoErrorWarningCodes.Ok,
@@ -201,6 +201,7 @@ namespace FabricObserver.Observers
 
                             this.HealthReporter.ReportHealthToServiceFabric(healthReport);
                         }
+#endif
 
                         // CPU
                         this.ProcessResourceDataReportHealth(
@@ -442,20 +443,6 @@ namespace FabricObserver.Observers
                         this.allAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1));
                     }
 
-                    var healthReport = new Utilities.HealthReport
-                    {
-                        AppName = repOrInst.ApplicationName,
-                        HealthMessage = $"ProcessId = {currentProcess.Id}\n",
-                        State = HealthState.Ok,
-                        Code = FoErrorWarningCodes.Ok,
-                        NodeName = this.NodeName,
-                        Observer = this.ObserverName,
-                        Property = id,
-                        ReportType = HealthReportType.Application,
-                    };
-
-                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
-
                     TimeSpan duration = TimeSpan.FromSeconds(15);
 
                     if (this.MonitorDuration > TimeSpan.MinValue)
@@ -483,8 +470,23 @@ namespace FabricObserver.Observers
                                 cpu = 100;
                             }
 
-                            // Add debug info here (SFX).
                             this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
+#if DEBUG
+                            // DEBUG INFO
+                            var healthReport = new Utilities.HealthReport
+                            {
+                                AppName = repOrInst.ApplicationName,
+                                HealthMessage = $"ProcessId = {currentProcess.Id}: Cpu%: {cpu} CpuContainerCnt: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Count}\n",
+                                State = HealthState.Ok,
+                                Code = FoErrorWarningCodes.Ok,
+                                NodeName = this.NodeName,
+                                Observer = this.ObserverName,
+                                Property = id,
+                                ReportType = HealthReportType.Application,
+                            };
+
+                            this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+#endif
                         }
 
                         // Memory (private working set (process)).
@@ -516,7 +518,22 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e)
                 {
-                    // Add debug info here (SFX).
+#if DEBUG
+                    // DEBUG INFO
+                    var healthReport = new Utilities.HealthReport
+                    {
+                        AppName = repOrInst.ApplicationName,
+                        HealthMessage = $"Error: {e}\n\n",
+                        State = HealthState.Ok,
+                        Code = FoErrorWarningCodes.Ok,
+                        NodeName = this.NodeName,
+                        Observer = this.ObserverName,
+                        Property = $"{e.Source}",
+                        ReportType = HealthReportType.Application,
+                    };
+
+                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+#endif
                     if (e is Win32Exception || e is ArgumentException || e is InvalidOperationException)
                     {
                         this.WriteToLogWithLevel(
