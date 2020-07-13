@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver.Interfaces;
@@ -138,6 +139,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     { "HealthState", telemetryData.HealthState ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
+                    { "OSPlatform", $"{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux")}" },
                     { "Partition", $"{telemetryData.PartitionId}" },
                     { "Replica", $"{telemetryData.ReplicaId}" },
                     { "Source", telemetryData.Source ?? string.Empty },

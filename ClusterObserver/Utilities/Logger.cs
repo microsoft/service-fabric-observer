@@ -57,12 +57,12 @@ namespace FabricClusterObserver.Utilities
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 string windrive = Environment.SystemDirectory.Substring(0, 2);
-                logFolderBase = windrive + "\\observer_logs";
+                logFolderBase = windrive + "\\clusterobserver_logs";
             }
             else
             {
                 // Linux
-                logFolderBase = "/tmp/observer_logs";
+                logFolderBase = "clusterobserver_logs";
             }
 
             // log directory supplied in config. Set in ObserverManager.
@@ -71,7 +71,7 @@ namespace FabricClusterObserver.Utilities
                 logFolderBase = this.LogFolderBasePath;
             }
 
-            string file = Path.Combine(logFolderBase, "fabric_observer.log");
+            string file = Path.Combine(logFolderBase, "cluster_observer.log");
 
             if (!string.IsNullOrEmpty(this.FolderName) && !string.IsNullOrEmpty(this.Filename))
             {

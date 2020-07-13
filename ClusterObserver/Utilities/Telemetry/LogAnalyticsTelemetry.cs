@@ -9,6 +9,7 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -144,7 +145,8 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     healthState = state.ToString(),
                     healthEvaluation = unhealthyEvaluations,
                     serviceName = serviceName ?? string.Empty,
-                    instanceName = instanceName ?? string.Empty
+                    instanceName = instanceName ?? string.Empty,
+                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                 });
 
             await SendTelemetryAsync(jsonPayload).ConfigureAwait(false);

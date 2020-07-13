@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
-using System.Fabric;
 using System.Fabric.Health;
 using System.Globalization;
 using System.IO;
@@ -43,8 +42,6 @@ namespace FabricObserver.Observers
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList;
         private bool monitorWinEventLog;
-        private int unhealthyNodesErrorThreshold;
-        private int unhealthyNodesWarnThreshold;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
@@ -70,6 +67,7 @@ namespace FabricObserver.Observers
             }
             else
             {
+                // Windows
                 this.processWatchList = new List<string>
                 {
                     "Fabric",
@@ -80,7 +78,7 @@ namespace FabricObserver.Observers
                     "FabricFAS",
                     "FabricGateway",
                     "FabricHost",
-                    "FabricIS.dll",
+                    "FabricIS",
                     "FabricRM",
                     "FabricUS",
                 };
@@ -123,15 +121,6 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            // Don't run this observer if the aggregated health state of the cluster is Warning or Error.
-            if (this.FabricClientInstance.QueryManager.GetNodeListAsync().GetAwaiter().GetResult()?.Count > 3
-                && await this.GetClusterHealthStateWithPercentErrorNodesAsync(
-                    this.unhealthyNodesWarnThreshold,
-                    this.unhealthyNodesErrorThreshold).ConfigureAwait(true) == HealthState.Error)
-            {
-                return;
-            }
-
             this.Initialize();
 
             try
@@ -141,7 +130,7 @@ namespace FabricObserver.Observers
                     this.Token.ThrowIfCancellationRequested();
                     string dotnet = string.Empty;
 
-                    if (procName.EndsWith(".dll"))
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.EndsWith(".dll"))
                     {
                         dotnet = "dotnet ";
                     }
@@ -162,7 +151,8 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && ObserverManager.ObserverWebAppDeployed
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                && ObserverManager.ObserverWebAppDeployed
                 && this.monitorWinEventLog)
             {
                 this.ReadServiceFabricWindowsEventLog();
@@ -192,20 +182,27 @@ namespace FabricObserver.Observers
                 Observer = this.ObserverName,
                 NodeName = this.NodeName,
                 HealthMessage = $"Number of ports in use by Fabric services: {this.TotalActivePortCount}\n" +
-                                $"Number of ephemeral ports in use by Fabric services: {this.TotalActiveEphemeralPortCount}\n" +
-                                $"Number of elements in allCpuData container: {this.allCpuData.Count}\n" +
+                                $"Number of ephemeral ports in use by Fabric services: {this.TotalActiveEphemeralPortCount}\n",
+                               /* $"Number of elements in allCpuData container: {this.allCpuData.Count}\n" +
                                 $"Number of elements in allMemData container: {this.allMemData.Count}\n" +
                                 $"Fabric cpu use: {this.allCpuData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
                                 $"FabricGateway cpu use: {this.allCpuData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n" +
                                 $"Fabric mem use: {this.allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
                                 $"FabricDCA mem use: {this.allMemData.Where(x => x.Id == "FabricDCA.dll")?.FirstOrDefault()?.AverageDataValue}\n" +
-                                $"FabricGateway mem use: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n",
+                                $"FabricGateway mem use: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n",*/
+
                 State = HealthState.Ok,
                 HealthReportTimeToLive = timeToLiveWarning,
             };
 
             // TODO: Report on port count based on thresholds PortCountWarning/Error.
             this.HealthReporter.ReportHealthToServiceFabric(portInformationReport);
+
+            // DEBUG
+            this.WriteToLogWithLevel(
+                this.ObserverName,
+                $"Number of ports in use by Fabric services: {this.TotalActivePortCount}\nNumber of ephemeral ports in use by Fabric services: {this.TotalActiveEphemeralPortCount}\n",
+                LogLevel.Information);
 
             // Reset ports counters.
             this.TotalActivePortCount = 0;
@@ -521,18 +518,6 @@ namespace FabricObserver.Observers
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverErrorPercentUnhealthyNodes);
 
-            if (!string.IsNullOrEmpty(percentErrorUnhealthyNodes))
-            {
-                _ = int.TryParse(percentErrorUnhealthyNodes, out int threshold);
-
-                if (threshold > 100 || threshold < 0)
-                {
-                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorPercentUnhealthyNodes}.");
-                }
-
-                this.unhealthyNodesErrorThreshold = threshold;
-            }
-
             /* Warning thresholds */
 
             this.Token.ThrowIfCancellationRequested();
@@ -573,18 +558,6 @@ namespace FabricObserver.Observers
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverWarnPercentUnhealthyNodes);
 
-            if (!string.IsNullOrEmpty(percentWarnUnhealthyNodes))
-            {
-                _ = int.TryParse(percentWarnUnhealthyNodes, out int threshold);
-
-                if (threshold > 100 || threshold < 0)
-                {
-                    throw new ArgumentException($"{threshold}% is not a meaningful threshold for a {ObserverConstants.FabricSystemObserverWarnPercentUnhealthyNodes}.");
-                }
-
-                this.unhealthyNodesWarnThreshold = threshold;
-            }
-
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return;
@@ -604,10 +577,12 @@ namespace FabricObserver.Observers
 
         private void GetProcessInfo(string procName)
         {
+            // This is to support differences between Linux and Windows dotnet process naming pattern.
+            // Default value is what Windows expects for proc name. In linux, the procname is an argument (typically) dotnet command.
             string dotnetArg = procName;
             Process[] processes = null;
 
-            if (procName.Contains("dotnet "))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.Contains("dotnet "))
             {
                 dotnetArg = $"{procName.Replace("dotnet ", string.Empty)}";
                 processes = GetDotnetProcessesByFirstArgument(dotnetArg);
@@ -741,53 +716,6 @@ namespace FabricObserver.Observers
                     this.SetHealthReportTimeToLive(),
                     HealthReportType.Application);
             }
-        }
-
-        private async Task<HealthState> GetClusterHealthStateWithPercentErrorNodesAsync(int warningThreshold, int errorThreshold)
-        {
-            try
-            {
-                var clusterHealth = await this.FabricClientInstance.HealthManager.GetClusterHealthAsync(
-                                            this.AsyncClusterOperationTimeoutSeconds,
-                                            this.Token).ConfigureAwait(true);
-
-                // The cluster is in an Error state.
-                if (clusterHealth.AggregatedHealthState == HealthState.Error)
-                {
-                    return clusterHealth.AggregatedHealthState;
-                }
-
-                // If you we get here, then see if your supplied (FSO configuration setting) thresholds of sustainable nodes in error/warning have been reached or exceeded.
-                double errorNodesCount = clusterHealth.NodeHealthStates.Count(nodeHealthState => nodeHealthState.AggregatedHealthState == HealthState.Error);
-                int errorNodesCountPercentage = (int)((errorNodesCount / clusterHealth.NodeHealthStates.Count) * 100);
-
-                if (errorNodesCountPercentage >= errorThreshold)
-                {
-                    return HealthState.Error;
-                }
-
-                if (errorNodesCountPercentage >= warningThreshold)
-                {
-                    return HealthState.Warning;
-                }
-            }
-            catch (TimeoutException)
-            {
-                return HealthState.Unknown;
-            }
-            catch (FabricException)
-            {
-                return HealthState.Unknown;
-            }
-            catch (Exception e)
-            {
-                this.ObserverLogger.LogWarning(
-                    $"Unhandled Exception querying Cluster health:{Environment.NewLine}{e}");
-
-                throw;
-            }
-
-            return HealthState.Ok;
         }
     }
 }

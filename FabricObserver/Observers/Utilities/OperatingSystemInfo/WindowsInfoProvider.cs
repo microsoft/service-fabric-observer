@@ -321,7 +321,7 @@ namespace FabricObserver.Observers.Utilities
                                 osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
                                 break;
                             case "freephysicalmemory":
-                                osInfo.FreePhysicalMemoryKB = ulong.Parse(value);
+                                osInfo.AvailableMemoryKB = ulong.Parse(value);
                                 break;
                             case "freevirtualmemory":
                                 osInfo.FreeVirtualMemoryKB = ulong.Parse(value);
