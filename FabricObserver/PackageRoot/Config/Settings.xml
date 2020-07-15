@@ -14,10 +14,11 @@
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          Each observer will write to their own directory on this path.
-         **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
-    <Parameter Name="ObserverLogPath" Value="C:\observer_logs" />
-    <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data. -->
-    <Parameter Name="DataLogPath" Value="C:\observer_logs\fabric_observer_data" />
+        **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you for Windows).** -->
+    <Parameter Name="ObserverLogPath" Value="observer_logs" />
+    <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data.
+         **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you for Windows).**-->
+    <Parameter Name="DataLogPath" Value="observer_logs\fabric_observer_data" />
     <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
          These files will be written to the DataLogPath supplied above.-->
     <Parameter Name="EnableLongRunningCSVLogging" Value="False"/>
@@ -145,9 +146,9 @@
          only works if you deploy the FabricObserverWebApi service and enable it above (ObserverWebApiEnabled). -->
     <Parameter Name="MonitorWindowsEventLog" Value="False" />
     <Parameter Name="ErrorCpuThresholdPercent" Value="" />
-    <Parameter Name="WarnCpuThresholdPercent" Value="50" />
+    <Parameter Name="WarnCpuThresholdPercent" Value="80" />
     <Parameter Name="ErrorMemoryThresholdMb" Value="" />
-    <Parameter Name="WarnMemoryThresholdMb" Value="4024" /><!-- There is a Gateway Memory Leak on Linux... This is for DEV only.-->
+    <Parameter Name="WarnMemoryThresholdMb" Value="2048" /><!-- There is a Gateway Memory Leak on Linux... This is for DEV only.-->
     <Parameter Name="PercentUnhealthyNodesWarnThreshold" Value="" />
     <Parameter Name="PercentUnhealthyNodesErrorThreshold" Value="" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />

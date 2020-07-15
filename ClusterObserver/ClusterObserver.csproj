@@ -7,7 +7,7 @@
     <AssemblyName>FabricClusterObserver</AssemblyName>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <!-- For Linux, use linux-x64. For Windows, use win7-x64. Nothing else needs to be changed in this file. -->
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PlatformTarget>x64</PlatformTarget>

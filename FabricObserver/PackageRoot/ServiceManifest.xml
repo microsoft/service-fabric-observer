@@ -14,6 +14,7 @@
   <CodePackage Name="Code" Version="2.0.9">
     <EntryPoint>
       <ExeHost>
+        <!-- Add .exe to process name only if targetting Windows. Else, do not. -->
         <Program>FabricObserver</Program>
       </ExeHost>
     </EntryPoint>

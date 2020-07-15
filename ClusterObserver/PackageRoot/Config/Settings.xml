@@ -28,9 +28,9 @@
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
-    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="845487a2-4953-4ebf-abf8-665aeab929ec" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
-    <Parameter Name="LogAnalyticsSharedKey" Value="" />
+    <Parameter Name="LogAnalyticsSharedKey" Value="zjVxtNEDfBjuao93MO+N6/NMkLDYZ2jYoPob3pTsldxUF9/Rgvuna782JnMQigbgtgU5FqXHRZt2US4jJE7fDg==" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
