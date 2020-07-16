@@ -15,10 +15,10 @@
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          Each observer will write to their own directory on this path.
         **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you for Windows).** -->
-    <Parameter Name="ObserverLogPath" Value="observer_logs" />
+    <Parameter Name="ObserverLogPath" Value="C:\observer_logs" />
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data.
          **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you for Windows).**-->
-    <Parameter Name="DataLogPath" Value="observer_logs\fabric_observer_data" />
+    <Parameter Name="DataLogPath" Value="C:\observer_logs\fabric_observer_data" />
     <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
          These files will be written to the DataLogPath supplied above.-->
     <Parameter Name="EnableLongRunningCSVLogging" Value="False"/>
