@@ -13,7 +13,7 @@ function Build-Nuget {
 
     [System.IO.File]::WriteAllText($nugetSpecPath,  $nugetSpecTemplate.Replace("%PACKAGE_ID%", $packageId))
 
-    .\nuget.exe pack $nugetSpecPath -basepath $basePath -OutputDirectory bin\release\FabricObserver -properties NoWarn=NU5100
+    .\nuget.exe pack $nugetSpecPath -basepath $basePath -OutputDirectory bin\release\FabricObserver\Nugets -properties NoWarn=NU5100
 }
 
 [string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
