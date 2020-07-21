@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Fabric;
 using System.IO;
 using System.Linq;
@@ -26,7 +25,7 @@ namespace FabricObserver
     /// </summary>
     internal sealed class FabricObserver : StatelessService
     {
-        private ObserverManager observerManager = null;
+        private ObserverManager observerManager;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserver"/> class.
@@ -53,11 +52,6 @@ namespace FabricObserver
         /// <returns>a Task.</returns>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            while (!Debugger.IsAttached)
-            {
-                await Task.Delay(10);
-            }
-
             ServiceCollection services = new ServiceCollection();
 
             this.ConfigureServices(services);
@@ -92,25 +86,18 @@ namespace FabricObserver
 
                 foreach (string pluginDll in pluginDlls)
                 {
-                    try
-                    {
-                        Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
-                        FabricObserverStartupAttribute[] startupAttributes =
-                            pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
+                    Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
+                    FabricObserverStartupAttribute[] startupAttributes =
+                        pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
 
-                        for (int i = 0; i < startupAttributes.Length; ++i)
+                    for (int i = 0; i < startupAttributes.Length; ++i)
+                    {
+                        object startupObject = System.Activator.CreateInstance(startupAttributes[i].StartupType);
+
+                        if (startupObject is IFabricObserverStartup fabricObserverStartup)
                         {
-                            object startupObject = System.Activator.CreateInstance(startupAttributes[i].StartupType);
-
-                            if (startupObject is IFabricObserverStartup fabricObserverStartup)
-                            {
-                                fabricObserverStartup.ConfigureServices(services);
-                            }
+                            fabricObserverStartup.ConfigureServices(services);
                         }
-                    }
-                    catch (Exception ex)
-                    {
-
                     }
                 }
             }
