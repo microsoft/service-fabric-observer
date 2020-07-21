@@ -6,12 +6,7 @@
     <AssemblyName>FabricObserver</AssemblyName>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <!-- For Linux, use linux-x64. For windows, use win7-x64. Nothing else needs to be changed in this file. -->
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
-    <IsWindows Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' == 'true'">true</IsWindows>
-    <IsOSX Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true'">true</IsOSX>
-    <IsLinux Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' == 'true'">true</IsLinux>
-    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
     <FileVersion>1.0.0</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>FabricObserver</Product>
@@ -23,19 +18,9 @@
     <NoWarn>CA1822;$(NoWarn)</NoWarn>
     <ResolveComReferenceSilent>true</ResolveComReferenceSilent>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(IsWindows)'=='true'">
-    <DefineConstants>Windows</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(IsOSX)'=='true'">
-    <DefineConstants>OSX</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(IsLinux)'=='true'">
-    <DefineConstants>Linux</DefineConstants>
-  </PropertyGroup>
   <ItemGroup>
     <None Remove="NLog.config" />
   </ItemGroup>
-
   <ItemGroup>
     <!--
     <PackageReference Include="Microsoft.ApplicationInsights.Agent.Intercept"/>

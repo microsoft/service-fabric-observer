@@ -4,22 +4,20 @@
 // ------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-#if Windows
-using System.ComponentModel;
-using System.Security;
 using WUApiLib;
-#endif
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
