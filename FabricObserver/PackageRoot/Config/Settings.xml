@@ -62,7 +62,7 @@
          if the web API app (log reader API service for observer warnings/errors) is not present,
          then FO will not run code that the app needs (like files written to OS disk and 
          other aspects of FO log management).-->
-    <Parameter Name="ObserverWebApiEnabled" Value="False" />
+    <Parameter Name="ObserverWebApiEnabled" Value="True" />
   </Section>
   <!-- Observer Configuration Settings -->
   <Section Name="AppObserverConfiguration">
@@ -146,9 +146,9 @@
          only works if you deploy the FabricObserverWebApi service and enable it above (ObserverWebApiEnabled). -->
     <Parameter Name="MonitorWindowsEventLog" Value="False" />
     <Parameter Name="ErrorCpuThresholdPercent" Value="" />
-    <Parameter Name="WarnCpuThresholdPercent" Value="80" />
+    <Parameter Name="WarnCpuThresholdPercent" Value="90" />
     <Parameter Name="ErrorMemoryThresholdMb" Value="" />
-    <Parameter Name="WarnMemoryThresholdMb" Value="2048" /><!-- There is a Gateway Memory Leak on Linux... This is for DEV only.-->
+    <Parameter Name="WarnMemoryThresholdMb" Value="2048" />
     <Parameter Name="PercentUnhealthyNodesWarnThreshold" Value="" />
     <Parameter Name="PercentUnhealthyNodesErrorThreshold" Value="" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
@@ -190,7 +190,7 @@
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="SFConfigurationObserverConfiguration">
-    <Parameter Name="Enabled" Value="False" />
+    <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>

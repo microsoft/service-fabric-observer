@@ -485,6 +485,15 @@ namespace FabricObserver.Observers
                 this.Fqdn = fqdn;
             }
 
+            // FabricObserver runtime telemetry (Non-PII)
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
+            {
+                FabricObserverInternalTelemetryEnabled = foTelemEnabled;
+            }
+
+            // ObserverWebApi.
+            ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiAppDeployed), out bool obsWeb) ? obsWeb : IsObserverWebApiAppInstalled();
+
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
@@ -563,15 +572,6 @@ namespace FabricObserver.Observers
                         break;
                 }
             }
-
-            // FabricObserver runtime telemetry (Non-PII)
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
-            {
-                FabricObserverInternalTelemetryEnabled = foTelemEnabled;
-            }
-
-            // ObserverWebApi.
-            ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiAppDeployed), out bool obsWeb) ? obsWeb : IsObserverWebApiAppInstalled();
         }
 
         private void SignalAbortToRunningObserver()

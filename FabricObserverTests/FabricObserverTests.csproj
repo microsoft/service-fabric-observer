@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk;Microsoft.Build.CentralPackageVersions">
-
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <ProjectGuid>{48C88BEB-9960-4183-861B-DF25C193E4C9}</ProjectGuid>
@@ -7,18 +6,14 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <NoWarn>CS0414</NoWarn>
-
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>FabricObserverTests</Product>
     <AssemblyTitle>FabricObserverTests</AssemblyTitle>
   </PropertyGroup>
-
   <ItemGroup>
-
   </ItemGroup>
-
   <ItemGroup>
     <None Include="MyExpiredCert.p12">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -66,5 +61,4 @@
     <PackageReference Include="MSTest.TestFramework" />
     <PackageReference Include="coverlet.collector" />
   </ItemGroup>
-
 </Project>

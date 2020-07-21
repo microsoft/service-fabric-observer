@@ -58,10 +58,7 @@ namespace FabricObserverWeb
                                     .UseKestrel(opt =>
                                     {
                                         int port = serviceContext.CodePackageActivationContext.GetEndpoint("ServiceEndpoint").Port;
-                                        opt.Listen(IPAddress.Loopback, port, listenOptions =>
-                                        {
-                                            listenOptions.NoDelay = true;
-                                        });
+                                        opt.Listen(IPAddress.Loopback, port);
                                     })
                                     .ConfigureServices(services => services.AddSingleton(serviceContext))
                                     .ConfigureServices(services => services.AddSingleton(this.fabricClient))

@@ -67,11 +67,12 @@ namespace FabricObserver
         {
             services.AddScoped(typeof(IObserver), typeof(AppObserver));
             services.AddScoped(typeof(IObserver), typeof(CertificateObserver));
+            services.AddScoped(typeof(IObserver), typeof(DiskObserver));
             services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
             services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
             services.AddScoped(typeof(IObserver), typeof(OsObserver));
             services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
-            services.AddSingleton(typeof(System.Fabric.StatelessServiceContext), this.Context);
+            services.AddSingleton(typeof(StatelessServiceContext), this.Context);
 
             this.LoadObserversFromPlugins(services);
         }

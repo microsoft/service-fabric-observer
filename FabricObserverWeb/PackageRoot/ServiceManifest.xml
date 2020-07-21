@@ -13,7 +13,7 @@
   <CodePackage Name="Code" Version="1.0.0">
     <EntryPoint>
       <ExeHost>
-        <Program>FabricObserverWeb.exe</Program>
+        <Program>FabricObserverWeb</Program>
         <WorkingFolder>CodePackage</WorkingFolder>
       </ExeHost>
     </EntryPoint>
