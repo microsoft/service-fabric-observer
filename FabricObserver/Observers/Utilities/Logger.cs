@@ -6,7 +6,6 @@
 using System;
 using System.Diagnostics.Tracing;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
@@ -14,7 +13,6 @@ using NLog;
 using NLog.Config;
 using NLog.Targets;
 using NLog.Time;
-using WUApiLib;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -193,8 +191,8 @@ namespace FabricObserver.Observers.Utilities
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string windrive = Environment.SystemDirectory.Substring(0, 2);
-                logFolderBase = windrive + "\\observer_logs";
+                string windrive = Environment.SystemDirectory.Substring(0, 3);
+                logFolderBase = windrive + "observer_logs";
             }
             else
             {
@@ -206,7 +204,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    string windrive = Environment.SystemDirectory.Substring(0, 2);
+                    string windrive = Environment.SystemDirectory.Substring(0, 3);
                     if (!this.LogFolderBasePath.StartsWith(windrive))
                     {
                         logFolderBase = windrive + this.LogFolderBasePath;

@@ -31,18 +31,29 @@ namespace FabricObserver.Observers.Utilities
             string logPath;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string windrive = Environment.SystemDirectory.Substring(0, 2);
-                logPath = windrive + "\\observer_logs\\fabric_observer_data";
+                string windrive = Environment.SystemDirectory.Substring(0, 3);
+                logPath = windrive + "\\fabric_observer_csvdata";
             }
             else
             {
-                logPath = "/tmp/observer_logs/fabric_observer_data";
+                logPath = "/tmp/fabric_observer_csvdata";
             }
 
             // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrEmpty(this.DataLogFolderPath))
             {
-                logPath = this.DataLogFolderPath;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    string windrive = Environment.SystemDirectory.Substring(0, 3);
+                    if (!this.DataLogFolderPath.StartsWith(windrive))
+                    {
+                        logPath = windrive + this.DataLogFolderPath;
+                    }
+                }
+                else
+                {
+                    logPath = this.DataLogFolderPath;
+                }
             }
 
             var csvPath = Path.Combine(logPath, filename + ".csv");
