@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
@@ -13,6 +14,7 @@ using NLog;
 using NLog.Config;
 using NLog.Targets;
 using NLog.Time;
+using WUApiLib;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -188,9 +190,10 @@ namespace FabricObserver.Observers.Utilities
         {
             // default log directory.
             string logFolderBase;
+            string windrive = Environment.SystemDirectory.Substring(0, 2);
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string windrive = Environment.SystemDirectory.Substring(0, 2);
                 logFolderBase = windrive + "\\observer_logs";
             }
             else
@@ -201,7 +204,15 @@ namespace FabricObserver.Observers.Utilities
             // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrEmpty(this.LogFolderBasePath))
             {
-                logFolderBase = this.LogFolderBasePath;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    && !this.LogFolderBasePath.Contains(windrive))
+                {
+                    logFolderBase = windrive + this.LogFolderBasePath;
+                }
+                else
+                {
+                    logFolderBase = this.LogFolderBasePath;
+                }
             }
 
             string file = Path.Combine(logFolderBase, "fabric_observer.log");

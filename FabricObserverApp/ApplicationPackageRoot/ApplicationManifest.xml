@@ -11,7 +11,7 @@
     <ConfigOverrides />
     <Policies>
       <!-- For Linux, this must be root. For Windows, NetworkUser.-->
-      <RunAsPolicy CodePackageRef="Code" UserRef="NetworkUser" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="root" />
     </Policies>
   </ServiceManifestImport>
   <DefaultServices>
@@ -32,20 +32,20 @@
       Example: <RunAsPolicy CodePackageRef="Code" UserRef="NetworkUser" /> 
       Set UserRef above to AdminUser or SystemUser *only* if your service processes need to run at one of these elevated security levels.
       Make sure you understand the implications of running as Admin or System and err on the side of NOT running at these levels...
-      FabricObserver does not need to run at levels higher than NETWORK SERVICE (UserRef="NetworkUser", as defined below). -->
+      FabricObserver does not need to run at levels higher than NETWORK SERVICE (UserRef="NetworkUser", as defined below). 
       <User Name="AdminUser">
         <MemberOf>
           <SystemGroup Name="Administrators" />
         </MemberOf>
       </User>
       <User Name="SystemUser" AccountType="LocalSystem" />
-      <User Name="NetworkUser" AccountType="NetworkService" />
+      <User Name="NetworkUser" AccountType="NetworkService" /> -->
       <!-- 
       Linux - Comment this out when targetting Windows. Use the supplied Name param for UserRef:
       Example: <RunAsPolicy CodePackageRef="Code" UserRef="root" /> 
-      For Linux, this must be root.
+      For Linux, this must be root. -->
       <User Name="root" AccountType="LocalSystem" />
-      <User Name="sfuser" AccountType="NetworkService" /> -->
+      <User Name="sfuser" AccountType="NetworkService" />
     </Users>
   </Principals>
 </ApplicationManifest>

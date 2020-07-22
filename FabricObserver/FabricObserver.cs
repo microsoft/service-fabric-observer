@@ -53,26 +53,23 @@ namespace FabricObserver
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
             ServiceCollection services = new ServiceCollection();
-
             this.ConfigureServices(services);
 
-            using (ServiceProvider serviceProvider = services.BuildServiceProvider())
-            {
-                this.observerManager = new ObserverManager(serviceProvider, cancellationToken);
-                await this.observerManager.StartObserversAsync().ConfigureAwait(false);
-            }
+            using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            this.observerManager = new ObserverManager(serviceProvider, cancellationToken);
+            await this.observerManager.StartObserversAsync().ConfigureAwait(false);
         }
 
         private void ConfigureServices(ServiceCollection services)
         {
-            services.AddScoped(typeof(IObserver), typeof(AppObserver));
-            services.AddScoped(typeof(IObserver), typeof(CertificateObserver));
-            services.AddScoped(typeof(IObserver), typeof(DiskObserver));
-            services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
-            services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
-            services.AddScoped(typeof(IObserver), typeof(OsObserver));
-            services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
-            services.AddSingleton(typeof(StatelessServiceContext), this.Context);
+            _ = services.AddScoped(typeof(IObserver), typeof(AppObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(CertificateObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(DiskObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(OsObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
+            _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
 
             this.LoadObserversFromPlugins(services);
         }
@@ -93,7 +90,7 @@ namespace FabricObserver
 
                     for (int i = 0; i < startupAttributes.Length; ++i)
                     {
-                        object startupObject = System.Activator.CreateInstance(startupAttributes[i].StartupType);
+                        object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
 
                         if (startupObject is IFabricObserverStartup fabricObserverStartup)
                         {
