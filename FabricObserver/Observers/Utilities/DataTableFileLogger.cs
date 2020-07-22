@@ -29,6 +29,7 @@ namespace FabricObserver.Observers.Utilities
         {
             // default log directory.
             string logPath;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 string windrive = Environment.SystemDirectory.Substring(0, 3);
@@ -44,14 +45,21 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    string windrive = Environment.SystemDirectory.Substring(0, 3);
-                    if (!this.DataLogFolderPath.StartsWith(windrive))
+                    // Add current drive letter if not supplied for Windows path target.
+                    if (!this.DataLogFolderPath.Substring(0, 3).Contains(":\\"))
                     {
+                        string windrive = Environment.SystemDirectory.Substring(0, 3);
                         logPath = windrive + this.DataLogFolderPath;
                     }
                 }
                 else
                 {
+                    // Remove supplied drive letter if Linux is the runtime target.
+                    if (this.DataLogFolderPath.Substring(0, 3).Contains(":\\"))
+                    {
+                        this.DataLogFolderPath = this.DataLogFolderPath.Remove(0, 3);
+                    }
+
                     logPath = this.DataLogFolderPath;
                 }
             }
