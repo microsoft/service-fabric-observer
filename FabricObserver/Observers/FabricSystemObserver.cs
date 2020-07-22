@@ -183,11 +183,10 @@ namespace FabricObserver.Observers
                 NodeName = this.NodeName,
                 HealthMessage = $"Number of ports in use by Fabric services: {this.TotalActivePortCount}\n" +
                                 $"Number of ephemeral ports in use by Fabric services: {this.TotalActiveEphemeralPortCount}\n" +
-                                (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? $"Fabric cpu use: {this.allCpuData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
-                                $"FabricGateway cpu use: {this.allCpuData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n" +
-                                $"Fabric mem use: {this.allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
-                                $"FabricDCA mem use: {this.allMemData.Where(x => x.Id == "FabricDCA.dll")?.FirstOrDefault()?.AverageDataValue}\n" +
-                                $"FabricGateway mem use: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n" : string.Empty),
+                                (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+                                    $"Fabric mem use: {this.allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
+                                    $"FabricGateway mem use: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n" +
+                                    $"FabricHost mem use: {this.allMemData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue}\n" : string.Empty),
 
                 State = HealthState.Ok,
                 HealthReportTimeToLive = timeToLiveWarning,
