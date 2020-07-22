@@ -190,10 +190,10 @@ namespace FabricObserver.Observers.Utilities
         {
             // default log directory.
             string logFolderBase;
-            string windrive = Environment.SystemDirectory.Substring(0, 2);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
+                string windrive = Environment.SystemDirectory.Substring(0, 2);
                 logFolderBase = windrive + "\\observer_logs";
             }
             else
@@ -204,10 +204,13 @@ namespace FabricObserver.Observers.Utilities
             // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrEmpty(this.LogFolderBasePath))
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    && !this.LogFolderBasePath.Contains(windrive))
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    logFolderBase = windrive + this.LogFolderBasePath;
+                    string windrive = Environment.SystemDirectory.Substring(0, 2);
+                    if (!this.LogFolderBasePath.StartsWith(windrive))
+                    {
+                        logFolderBase = windrive + this.LogFolderBasePath;
+                    }
                 }
                 else
                 {
