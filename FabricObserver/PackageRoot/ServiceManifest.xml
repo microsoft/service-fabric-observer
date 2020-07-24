@@ -23,6 +23,9 @@
   <!-- Config package is the contents of the Config directory under PackageRoot that contains an 
        independently-updateable and versioned set of custom configuration settings for your service. -->
   <ConfigPackage Name="Config" Version="2.0.9" />
+  
+  <!-- Observer plugin dlls must live in this folder. -->
+  <DataPackage Name="Data" Version="2.0.9" />
   <Resources>
     <Endpoints>
       <!-- This endpoint is used by the communication listener to obtain the port on which to 

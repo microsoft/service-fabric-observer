@@ -194,4 +194,12 @@
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
+  <!-- Plugin model sample. Just add the configuration info here that your observer needs. Also, follow the pattern
+       of all the other observers in this file. Like, Enabled, EnableVerboseLogging, EnableTelemetry, etc.. 
+       Whatever makes sense for your implementation. -->
+  <Section Name="SampleObserverConfiguration">
+    <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+  </Section>
 </Settings>

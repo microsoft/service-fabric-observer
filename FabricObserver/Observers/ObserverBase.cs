@@ -66,6 +66,11 @@ namespace FabricObserver.Observers
         // Only set for unit test runs.
         public bool IsTestRun { get; set; } = false;
 
+        /*public bool IsRunning
+        {
+            get; set;
+        }*/
+
         /// <inheritdoc/>
         public Logger ObserverLogger { get; set; }
 

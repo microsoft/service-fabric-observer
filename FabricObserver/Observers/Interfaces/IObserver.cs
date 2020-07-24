@@ -24,6 +24,11 @@ namespace FabricObserver.Observers.Interfaces
 
         bool IsEnabled { get; set; }
 
+        /*bool IsRunning
+        {
+            get; set;
+        }*/
+
         bool HasActiveFabricErrorOrWarning { get; set; }
 
         bool IsUnhealthy { get; set; }

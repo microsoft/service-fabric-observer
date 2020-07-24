@@ -8,8 +8,6 @@ using System.Fabric;
 using System.Fabric.Health;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 
 namespace FabricObserver.Observers.Utilities
 {
