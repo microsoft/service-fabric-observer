@@ -28,6 +28,7 @@ namespace FabricObserver.Observers
     {
         private static bool etwEnabled;
         private readonly string nodeName;
+        private readonly List<IObserver> observers;
         private readonly TelemetryEvents telemetryEvents;
         private EventWaitHandle globalShutdownEventHandle;
         private volatile bool shutdownSignaled;
@@ -51,7 +52,7 @@ namespace FabricObserver.Observers
             // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
 
-            this.Observers = new List<IObserver>(new[]
+            this.observers = new List<IObserver>(new[]
             {
                 observer,
             });
@@ -62,13 +63,11 @@ namespace FabricObserver.Observers
         /// </summary>
         /// <param name="context">service context.</param>
         /// <param name="token">cancellation token.</param>
-        public ObserverManager(
-            StatelessServiceContext context,
-            CancellationToken token)
+        public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
         {
             this.token = token;
             FabricClientInstance = new FabricClient();
-            FabricServiceContext = context;
+            FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
             this.nodeName = FabricServiceContext?.NodeContext.NodeName;
 
             // Observer Logger setup.
@@ -95,6 +94,9 @@ namespace FabricObserver.Observers
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertiesFromConfigurationParameters();
 
+            // Populate the Observer list for the sequential run loop.
+            this.observers = serviceProvider.GetServices<IObserver>().Where(o => o.IsEnabled).ToList();
+
             // FabricObserver Internal Diagnostic Telemetry (Non-PII).
             // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
             if (!FabricObserverInternalTelemetryEnabled)
@@ -106,8 +108,6 @@ namespace FabricObserver.Observers
             {
                 return;
             }
-
-/* This crashes app when employing plugin... -CT
 
             string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
             string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
@@ -134,7 +134,6 @@ namespace FabricObserver.Observers
                 // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates.).
                 this.Logger.TryWriteLogFile(filepath, "_");
             }
-            */
         }
 
         public static FabricClient FabricClientInstance
@@ -144,15 +143,27 @@ namespace FabricObserver.Observers
 
         public static int ObserverExecutionLoopSleepSeconds { get; private set; } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
-        public static StatelessServiceContext FabricServiceContext { get; set; }
+        public static StatelessServiceContext FabricServiceContext
+        {
+            get; set;
+        }
 
-        public static ITelemetryProvider TelemetryClient { get; set; }
+        public static ITelemetryProvider TelemetryClient
+        {
+            get; set;
+        }
 
-        public static bool TelemetryEnabled { get; set; }
+        public static bool TelemetryEnabled
+        {
+            get; set;
+        }
 
         public static bool FabricObserverInternalTelemetryEnabled { get; set; } = true;
 
-        public static bool ObserverWebAppDeployed { get; set; }
+        public static bool ObserverWebAppDeployed
+        {
+            get; set;
+        }
 
         public static bool EtwEnabled
         {
@@ -186,28 +197,32 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        internal List<IObserver> Observers
+        private ObserverHealthReporter HealthReporter
         {
             get; set;
         }
 
-        private ObserverHealthReporter HealthReporter { get; set; }
+        private string Fqdn
+        {
+            get; set;
+        }
 
-        private string Fqdn { get; set; }
+        private Logger Logger
+        {
+            get; set;
+        }
 
-        private Logger Logger { get; set; }
+        private DataTableFileLogger DataLogger
+        {
+            get; set;
+        }
 
-        private DataTableFileLogger DataLogger { get; set; }
-
-        public async Task StartObserversAsync(IServiceProvider serviceProvider)
+        public async Task StartObserversAsync()
         {
             try
             {
-                // Populate the Observer list for the sequential run loop.
-                this.Observers = serviceProvider.GetServices<IObserver>().Where(o => o.IsEnabled).ToList();
-
                 // Nothing to do here.
-                if (this.Observers.Count == 0)
+                if (this.observers.Count == 0)
                 {
                     return;
                 }
@@ -369,14 +384,14 @@ namespace FabricObserver.Observers
 
             _ = this.globalShutdownEventHandle?.Set();
 
-            if (this.Observers?.Count > 0)
+            if (this.observers?.Count > 0)
             {
-                foreach (IObserver obs in this.Observers)
+                foreach (IObserver obs in this.observers)
                 {
                     obs?.Dispose();
                 }
 
-                this.Observers.Clear();
+                this.observers.Clear();
             }
 
             if (this.cts != null)
@@ -400,9 +415,9 @@ namespace FabricObserver.Observers
         /// </summary>
         private string GetFabricObserverInternalConfiguration()
         {
-            int enabledObserverCount = this.Observers.Count(obs => obs.IsEnabled);
+            int enabledObserverCount = this.observers.Count(obs => obs.IsEnabled);
             string ret;
-            string observerList = this.Observers.Aggregate("{ ", (current, obs) => current + $"{obs.ObserverName} ");
+            string observerList = this.observers.Aggregate("{ ", (current, obs) => current + $"{obs.ObserverName} ");
 
             observerList += "}";
             ret = $"EnabledObserverCount: {enabledObserverCount}, EnabledObservers: {observerList}";
@@ -595,7 +610,7 @@ namespace FabricObserver.Observers
             var exceptionBuilder = new StringBuilder();
             bool allExecuted = true;
 
-            foreach (var observer in this.Observers)
+            foreach (var observer in this.observers)
             {
                 try
                 {
@@ -613,7 +628,6 @@ namespace FabricObserver.Observers
 
                     this.Logger.LogInfo($"Starting {observer.ObserverName}");
 
-                    //observer.IsRunning = true;
                     this.IsObserverRunning = true;
 
                     // Synchronous call.
@@ -694,7 +708,6 @@ namespace FabricObserver.Observers
                 }
 
                 this.IsObserverRunning = false;
-                //observer.IsRunning = false;
             }
 
             if (allExecuted)

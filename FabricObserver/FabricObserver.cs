@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
-using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -17,16 +16,16 @@ using FabricObserver.Observers;
 using FabricObserver.Observers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
+using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricObserver
 {
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class FabricObserver : Microsoft.ServiceFabric.Services.Runtime.StatelessService
+    internal sealed class FabricObserver : StatelessService
     {
         private ObserverManager observerManager;
-        private ServiceCollection services;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserver"/> class.
@@ -35,8 +34,6 @@ namespace FabricObserver
         public FabricObserver(StatelessServiceContext context)
             : base(context)
         {
-            context.CodePackageActivationContext.ConfigurationPackageModifiedEvent += this.CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-            context.CodePackageActivationContext.DataPackageModifiedEvent += this.CodePackageActivationContext_DataPackageModifiedEvent;
         }
 
         /// <summary>
@@ -55,129 +52,53 @@ namespace FabricObserver
         /// <returns>a Task.</returns>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            this.observerManager = new ObserverManager(this.Context, cancellationToken);
+            ServiceCollection services = new ServiceCollection();
+            this.ConfigureServices(services);
 
-            this.services = new ServiceCollection();
-            await this.ConfigureServices();
-            using ServiceProvider serviceProvider = this.services.BuildServiceProvider();
-            await this.observerManager.StartObserversAsync(serviceProvider).ConfigureAwait(false);
+            using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            this.observerManager = new ObserverManager(serviceProvider, cancellationToken);
+            await this.observerManager.StartObserversAsync().ConfigureAwait(false);
         }
 
-        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
+        private void ConfigureServices(ServiceCollection services)
         {
-            var oldCnt = e.OldPackage.Settings.Sections.Count;
-            var newCnt = e.NewPackage.Settings.Sections.Count;
-            int diff = newCnt - oldCnt;
+            _ = services.AddScoped(typeof(IObserver), typeof(AppObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(CertificateObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(DiskObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(OsObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
+            _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
 
-            // Check/apply config changes. So, if there is a new observer in the Settings.xml file and it's enabled, load it...
-            if (diff > 0)
-            {
-                for (int i = 1; i <= diff; i++)
-                {
-                    // A new section was added and this means it's a new observer since top level observer config must live in Settings.xml.
-                    var newObsSection = e.NewPackage.Settings.Sections[newCnt - i];
-
-                    if (newObsSection.Parameters.Any(p => p.Name == "Enabled" && p.Value.ToLower() == "true"))
-                    {
-                        string obs = newObsSection.Name.Replace("Configuration", string.Empty);
-
-                        await this.LoadObserversFromPluginsAsync(obs);
-                    }
-                }
-            }
+            this.LoadObserversFromPlugins(services);
         }
 
-        private void CodePackageActivationContext_DataPackageModifiedEvent(object sender, PackageModifiedEventArgs<DataPackage> e)
-        {
-            if (File.Exists(e.NewPackage.Path))
-            {
-
-            }
-        }
-
-        private async Task ConfigureServices()
-        {
-            _ = this.services.AddScoped(typeof(IObserver), typeof(AppObserver));
-            _ = this.services.AddScoped(typeof(IObserver), typeof(CertificateObserver));
-            _ = this.services.AddScoped(typeof(IObserver), typeof(DiskObserver));
-            _ = this.services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
-            _ = this.services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
-            _ = this.services.AddScoped(typeof(IObserver), typeof(OsObserver));
-            _ = this.services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
-
-            await this.LoadObserversFromPluginsAsync();
-        }
-
-        private Task LoadObserversFromPluginsAsync(string observerName = null)
+        private void LoadObserversFromPlugins(ServiceCollection services)
         {
             string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "plugins");
 
-            if (!Directory.Exists(pluginsDir))
+            if (Directory.Exists(pluginsDir))
             {
-                return Task.CompletedTask;
-            }
+                string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.TopDirectoryOnly);
 
-            string searchExp = "*.dll";
-
-            if (!string.IsNullOrEmpty(observerName))
-            {
-                searchExp = $"{observerName}.dll";
-            }
-
-            string[] pluginDlls = Directory.GetFiles(pluginsDir, searchExp, SearchOption.TopDirectoryOnly);
-
-            if (pluginDlls.Length == 0)
-            {
-                return Task.CompletedTask;
-            }
-
-            foreach (string pluginDll in pluginDlls)
-            {
-                Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
-                FabricObserverStartupAttribute[] startupAttributes =
-                    pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
-
-                for (int i = 0; i < startupAttributes.Length; ++i)
+                foreach (string pluginDll in pluginDlls)
                 {
-                    object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
+                    Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
+                    FabricObserverStartupAttribute[] startupAttributes =
+                        pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
 
-                    /*if (this.observerManager.Observers.Contains((IObserver)startupObject))
+                    for (int i = 0; i < startupAttributes.Length; ++i)
                     {
-                        while (true)
+                        object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
+
+                        if (startupObject is IFabricObserverStartup fabricObserverStartup)
                         {
-                            var isObserverRunning =
-                                this.observerManager.Observers.Any(
-                                        o => o.ObserverName == ((IObserver)startupObject).ObserverName && o.IsRunning);
-
-                            if (!isObserverRunning)
-                            {
-                                this.observerManager.Observers.Remove((IObserver)startupObject);
-
-                                break;
-                            }
-                            else
-                            {
-                                await Task.Delay(1000);
-                            }
+                            fabricObserverStartup.ConfigureServices(services);
                         }
-                    }*/
-
-                    this.services.AddScoped(typeof(IObserver), startupObject.GetType());
-
-                    /*if (isConfigUpdate)
-                    {
-                        this.observerManager.Observers.Add((IObserver)startupObject);
-                    }*/
-
-                    /*if (startupObject is IFabricObserverStartup fabricObserverStartup)
-                    {
-                        // this.services.AddScoped(typeof(IObserver), startupObject.GetType());
-                        fabricObserverStartup.ConfigureServices(this.services);
-                    }*/
+                    }
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }
