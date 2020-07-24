@@ -27,50 +27,34 @@
     <None Remove="NLog.config" />
   </ItemGroup>
   <ItemGroup>
-    <!--
-    <PackageReference Include="Microsoft.ApplicationInsights.Agent.Intercept"/>
-    -->
-    <PackageReference Include="Microsoft.ApplicationInsights.DependencyCollector" />
-    <PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" />
-    <PackageReference Include="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" />
-    
-    <PackageReference Include="Microsoft.ApplicationInsights.WindowsServer" />
-    <PackageReference Include="Microsoft.ApplicationInsights" />
-    <PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" />
-
-    <!--
-    <Reference Include="Microsoft.AI.Web, Version=2.12.0.21496, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.ApplicationInsights.Web.2.12.0\lib\net45\Microsoft.AI.Web.dll</HintPath>
-    </Reference>
-    -->
-<!--
-    <Reference Include="Microsoft.AspNet.TelemetryCorrelation, Version=1.0.7.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.TelemetryCorrelation.1.0.7\lib\net45\Microsoft.AspNet.TelemetryCorrelation.dll</HintPath>
-    </Reference>
-    -->
-
-    <PackageReference Include="Microsoft.ServiceFabric.Data" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data.Extensions" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data.Interfaces" />
-    <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" />
-    <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="NLog" />
+    <PackageReference Include="Microsoft.ApplicationInsights.DependencyCollector" Version="2.14.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.14.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" Version="2.14.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights.WindowsServer" Version="2.14.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.14.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" Version="2.14.0" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="4.1.428" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data.Extensions" Version="4.1.428" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data.Interfaces" Version="4.1.428" />
+    <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="4.1.428" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.1.428" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="NLog" Version="4.7.2" />
     <Reference Include="System.ComponentModel.Composition" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
-    <PackageReference Include="System.IO" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="4.7.1" />
+    <PackageReference Include="System.IO" Version="4.3.0" />
     <Reference Include="System.Management" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.Client" />
-    <PackageReference Include="System.Numerics.Vectors" />
-    <PackageReference Include="System.Runtime" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+    <PackageReference Include="System.Runtime" Version="4.3.1" />
     <Reference Include="System.Runtime.Caching" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
-    <PackageReference Include="System.Security.Cryptography.Algorithms" />
-    <PackageReference Include="System.Security.Cryptography.Encoding" />
-    <PackageReference Include="System.Security.Cryptography.Primitives" />
-    <PackageReference Include="System.Security.Cryptography.X509Certificates" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.7.1" />
+    <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
+    <PackageReference Include="System.Security.Cryptography.Encoding" Version="4.3.0" />
+    <PackageReference Include="System.Security.Cryptography.Primitives" Version="4.3.0" />
+    <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.6" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.6" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="..\Interop\Interop.WUApiLib.dll" />
   </ItemGroup>
@@ -90,15 +74,15 @@
     <None Include="stylecop.json" />
   </ItemGroup>
   <ItemGroup>
-  <PackageReference Include="Microsoft.CodeQuality.Analyzers">
+  <PackageReference Include="Microsoft.CodeQuality.Analyzers" Version="3.0.0">
     <PrivateAssets>all</PrivateAssets>
     <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
   </PackageReference>
-  <PackageReference Include="Microsoft.NetFramework.Analyzers">
+  <PackageReference Include="Microsoft.NetFramework.Analyzers" Version="3.0.0">
     <PrivateAssets>all</PrivateAssets>
     <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
   </PackageReference>
-  <PackageReference Include="StyleCop.Analyzers">
+  <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
     <PrivateAssets>all</PrivateAssets>
     <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
   </PackageReference>
