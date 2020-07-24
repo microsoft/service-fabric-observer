@@ -36,6 +36,7 @@ namespace FabricObserver
             : base(context)
         {
             context.CodePackageActivationContext.ConfigurationPackageModifiedEvent += this.CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            context.CodePackageActivationContext.DataPackageModifiedEvent += this.CodePackageActivationContext_DataPackageModifiedEvent;
         }
 
         /// <summary>
@@ -64,16 +65,33 @@ namespace FabricObserver
 
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            // Check/apply config changes. So, if there is a new observer in the Settings.xml file and it's enabled, load it...
-            if (e.NewPackage.Settings.Sections.Count > e.OldPackage.Settings.Sections.Count)
-            {
-                // A new section was added and this means it's a new observer since top level observer config must live in Settings.xml.
-                var newObsSection = e.NewPackage.Settings.Sections[^1];
+            var oldCnt = e.OldPackage.Settings.Sections.Count;
+            var newCnt = e.NewPackage.Settings.Sections.Count;
+            int diff = newCnt - oldCnt;
 
-                if (newObsSection.Parameters.Any(p => p.Name == "Enabled" && p.Value.ToLower() == "true"))
+            // Check/apply config changes. So, if there is a new observer in the Settings.xml file and it's enabled, load it...
+            if (diff > 0)
+            {
+                for (int i = 1; i <= diff; i++)
                 {
-                    await this.LoadObserversFromPluginsAsync(true);
+                    // A new section was added and this means it's a new observer since top level observer config must live in Settings.xml.
+                    var newObsSection = e.NewPackage.Settings.Sections[newCnt - i];
+
+                    if (newObsSection.Parameters.Any(p => p.Name == "Enabled" && p.Value.ToLower() == "true"))
+                    {
+                        string obs = newObsSection.Name.Replace("Configuration", string.Empty);
+
+                        await this.LoadObserversFromPluginsAsync(obs);
+                    }
                 }
+            }
+        }
+
+        private void CodePackageActivationContext_DataPackageModifiedEvent(object sender, PackageModifiedEventArgs<DataPackage> e)
+        {
+            if (File.Exists(e.NewPackage.Path))
+            {
+
             }
         }
 
@@ -90,58 +108,72 @@ namespace FabricObserver
             await this.LoadObserversFromPluginsAsync();
         }
 
-        private Task LoadObserversFromPluginsAsync(bool isConfigUpdate = false)
+        private Task LoadObserversFromPluginsAsync(string observerName = null)
         {
             string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "plugins");
 
-            if (Directory.Exists(pluginsDir))
+            if (!Directory.Exists(pluginsDir))
             {
-                string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.TopDirectoryOnly);
+                return Task.CompletedTask;
+            }
 
-                foreach (string pluginDll in pluginDlls)
+            string searchExp = "*.dll";
+
+            if (!string.IsNullOrEmpty(observerName))
+            {
+                searchExp = $"{observerName}.dll";
+            }
+
+            string[] pluginDlls = Directory.GetFiles(pluginsDir, searchExp, SearchOption.TopDirectoryOnly);
+
+            if (pluginDlls.Length == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            foreach (string pluginDll in pluginDlls)
+            {
+                Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
+                FabricObserverStartupAttribute[] startupAttributes =
+                    pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
+
+                for (int i = 0; i < startupAttributes.Length; ++i)
                 {
-                    Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
-                    FabricObserverStartupAttribute[] startupAttributes =
-                        pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
+                    object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
 
-                    for (int i = 0; i < startupAttributes.Length; ++i)
+                    /*if (this.observerManager.Observers.Contains((IObserver)startupObject))
                     {
-                        object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
-
-                        /*if (this.observerManager.Observers.Contains((IObserver)startupObject))
+                        while (true)
                         {
-                            while (true)
+                            var isObserverRunning =
+                                this.observerManager.Observers.Any(
+                                        o => o.ObserverName == ((IObserver)startupObject).ObserverName && o.IsRunning);
+
+                            if (!isObserverRunning)
                             {
-                                var isObserverRunning =
-                                    this.observerManager.Observers.Any(
-                                         o => o.ObserverName == ((IObserver)startupObject).ObserverName && o.IsRunning);
+                                this.observerManager.Observers.Remove((IObserver)startupObject);
 
-                                if (!isObserverRunning)
-                                {
-                                    this.observerManager.Observers.Remove((IObserver)startupObject);
-
-                                    break;
-                                }
-                                else
-                                {
-                                    await Task.Delay(1000);
-                                }
+                                break;
                             }
-                        }*/
+                            else
+                            {
+                                await Task.Delay(1000);
+                            }
+                        }
+                    }*/
 
-                        this.services.AddScoped(typeof(IObserver), startupObject.GetType());
+                    this.services.AddScoped(typeof(IObserver), startupObject.GetType());
 
-                        /*if (isConfigUpdate)
-                        {
-                            this.observerManager.Observers.Add((IObserver)startupObject);
-                        }*/
+                    /*if (isConfigUpdate)
+                    {
+                        this.observerManager.Observers.Add((IObserver)startupObject);
+                    }*/
 
-                        /*if (startupObject is IFabricObserverStartup fabricObserverStartup)
-                        {
-                            // this.services.AddScoped(typeof(IObserver), startupObject.GetType());
-                            fabricObserverStartup.ConfigureServices(this.services);
-                        }*/
-                    }
+                    /*if (startupObject is IFabricObserverStartup fabricObserverStartup)
+                    {
+                        // this.services.AddScoped(typeof(IObserver), startupObject.GetType());
+                        fabricObserverStartup.ConfigureServices(this.services);
+                    }*/
                 }
             }
 

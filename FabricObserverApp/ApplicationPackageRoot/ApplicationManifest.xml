@@ -7,7 +7,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="2.0.9" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="2.0.10" />
     <ConfigOverrides />
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />

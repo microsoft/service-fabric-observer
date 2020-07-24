@@ -202,4 +202,9 @@
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
+  <Section Name="SampleNewObserverConfiguration">
+    <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+  </Section>
 </Settings>
