@@ -35,7 +35,7 @@
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="True" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
-    <Parameter Name="TelemetryProvider" Value="" />
+    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. 
          You have to also add this key to [repo root]\FabricObserver\ApplicationInsights.config -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
@@ -69,7 +69,7 @@
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="True" />
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
-    <Parameter Name="EnableTelemetry" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="False" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -111,7 +111,7 @@
   </Section>
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableTelemetry" Value="True"/>
+    <Parameter Name="EnableTelemetry" Value="False"/>
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="MonitorDuration" Value="00:00:05"/>
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="80" />
@@ -155,7 +155,7 @@
   </Section>
   <Section Name="NetworkObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableTelemetry" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="False" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
@@ -185,25 +185,23 @@
   </Section>
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableTelemetry" Value="True"/>
+    <Parameter Name="EnableTelemetry" Value="False"/>
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="SFConfigurationObserverConfiguration">
-    <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="Enabled" Value="False" />
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <!-- Plugin model sample. Just add the configuration info here that your observer needs. Also, follow the pattern
        of all the other observers in this file. Like, Enabled, EnableVerboseLogging, EnableTelemetry, etc.. 
-       Whatever makes sense for your implementation. -->
-  <Section Name="SampleObserverConfiguration">
-    <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-  </Section>
+       Whatever makes sense for your implementation. 
+       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration. See below. 
+       SampleNewObserver is the type name of the observer plugin class - See Extensibility/Samples folder in FabricObserver project. -->
   <Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="True"/>
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>

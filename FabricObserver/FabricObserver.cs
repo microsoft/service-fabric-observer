@@ -76,7 +76,7 @@ namespace FabricObserver
 
         private void LoadObserversFromPlugins(ServiceCollection services)
         {
-            string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "plugins");
+            string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
             if (Directory.Exists(pluginsDir))
             {
