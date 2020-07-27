@@ -24,6 +24,11 @@
     <ResolveComReferenceSilent>true</ResolveComReferenceSilent>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Extensibility\Samples\**" />
+    <EmbeddedResource Remove="Extensibility\Samples\**" />
+    <None Remove="Extensibility\Samples\**" />
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="NLog.config" />
   </ItemGroup>
   <ItemGroup>
@@ -62,7 +67,6 @@
     <None Include="ApplicationInsights.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Extensibility\Samples\SampleObserver.csproj" />
     <None Include="NLog.xsd">
       <SubType>Designer</SubType>
     </None>
