@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
@@ -15,7 +14,6 @@ using System.Threading.Tasks;
 using FabricObserver.Observers;
 using FabricObserver.Observers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricObserver
@@ -34,15 +32,6 @@ namespace FabricObserver
         public FabricObserver(StatelessServiceContext context)
             : base(context)
         {
-        }
-
-        /// <summary>
-        /// Optional override to create listeners (e.g., TCP, HTTP) for this service replica to handle client or user requests.
-        /// </summary>
-        /// <returns>A collection of listeners.</returns>
-        protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
-        {
-            return Array.Empty<ServiceInstanceListener>();
         }
 
         /// <summary>
