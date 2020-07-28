@@ -95,7 +95,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             this.telemetryClient.TrackAvailability(at);
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -151,7 +151,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 throw;
             }
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -211,7 +211,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 throw;
             }
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -347,7 +347,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             _ = this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -444,7 +444,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             // Track the telemetry.
             this.telemetryClient.TrackMetric(mt);
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
