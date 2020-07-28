@@ -4,16 +4,18 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers;
 using FabricObserver.Observers.Interfaces;
+using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricObserver
@@ -56,7 +58,6 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(IObserver), typeof(DiskObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(NodeObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(OsObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
             _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
@@ -75,9 +76,23 @@ namespace FabricObserver
 
             string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.TopDirectoryOnly);
 
+            List<PluginLoader> pluginLoaders = new List<PluginLoader>(capacity: pluginDlls.Length);
+
+            Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup) };
+
             foreach (string pluginDll in pluginDlls)
             {
-                Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
+                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(
+                    pluginDll,
+                    sharedTypes);
+
+                pluginLoaders.Add(loader);
+            }
+
+            foreach (PluginLoader pluginLoader in pluginLoaders)
+            {
+                Assembly pluginAssembly = pluginLoader.LoadDefaultAssembly();
+
                 FabricObserverStartupAttribute[] startupAttributes =
                     pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
 
@@ -88,6 +103,10 @@ namespace FabricObserver
                     if (startupObject is IFabricObserverStartup fabricObserverStartup)
                     {
                         fabricObserverStartup.ConfigureServices(services);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup");
                     }
                 }
             }
