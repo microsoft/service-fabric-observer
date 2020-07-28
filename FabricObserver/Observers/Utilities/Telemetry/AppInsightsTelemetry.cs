@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
@@ -153,15 +154,75 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             return Task.FromResult(0);
         }
 
-       /// <summary>
-       /// Sends metrics to a telemetry service.
-       /// </summary>
-       /// <typeparam name="T">type of data.</typeparam>
-       /// <param name="name">name of metric.</param>
-       /// <param name="value">value of metric.</param>
-       /// <param name="source">source of event.</param>
-       /// <param name="cancellationToken">cancellation token.</param>
-       /// <returns>A Task of bool.</returns>
+        /// <summary>
+        /// Calls telemetry provider to report health.
+        /// </summary>
+        /// <param name="telemetryData">TelemetryData instance.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <returns>a Task.</returns>
+        public Task ReportHealthAsync(
+            TelemetryData telemetryData,
+            CancellationToken cancellationToken)
+        {
+            if (!this.IsEnabled
+                || cancellationToken.IsCancellationRequested
+                || telemetryData == null)
+            {
+                return Task.FromResult(1);
+            }
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string value = null;
+
+                if (telemetryData.Value != null)
+                {
+                    value = telemetryData.Value.ToString();
+                }
+
+                Dictionary<string, string> properties = new Dictionary<string, string>
+                {
+                    { "Application", telemetryData.ApplicationName ?? string.Empty },
+                    { "ClusterId", telemetryData.ClusterId ?? string.Empty },
+                    { "ErrorCode", telemetryData.Code ?? string.Empty },
+                    { "HealthEventDescription", telemetryData.HealthEventDescription ?? string.Empty },
+                    { "HealthState", telemetryData.HealthState ?? string.Empty },
+                    { "Metric", telemetryData.Metric ?? string.Empty },
+                    { "NodeName", telemetryData.NodeName ?? string.Empty },
+                    { "OSPlatform", $"{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux")}" },
+                    { "Partition", $"{telemetryData.PartitionId}" },
+                    { "Replica", $"{telemetryData.ReplicaId}" },
+                    { "Source", telemetryData.Source ?? string.Empty },
+                    { "Value", value ?? string.Empty },
+                };
+
+                this.telemetryClient.TrackEvent(
+                    $"{telemetryData.ObserverName ?? "ClusterObserver"}DataEvent",
+                    properties);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogWarning(
+                    $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
+                    $"{Environment.NewLine}{e}");
+
+                throw;
+            }
+
+            return Task.FromResult(0);
+        }
+
+        /// <summary>
+        /// Sends metrics to a telemetry service.
+        /// </summary>
+        /// <typeparam name="T">type of data.</typeparam>
+        /// <param name="name">name of metric.</param>
+        /// <param name="value">value of metric.</param>
+        /// <param name="source">source of event.</param>
+        /// <param name="cancellationToken">cancellation token.</param>
+        /// <returns>A Task of bool.</returns>
         public async Task<bool> ReportMetricAsync<T>(
             string name,
             T value,

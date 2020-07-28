@@ -67,7 +67,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
-                    id = $"FO_{Guid.NewGuid().ToString()}",
+                    id = $"FO_{Guid.NewGuid()}",
                     datetime = DateTime.UtcNow,
                     clusterId = clusterId ?? string.Empty,
                     clusterType = clusterType ?? string.Empty,
@@ -80,12 +80,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     instanceName = instanceName ?? string.Empty,
                 });
 
-            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ReportMetricAsync(
-          TelemetryData telemetryData,
-          CancellationToken cancellationToken)
+        public async Task ReportHealthAsync(
+            TelemetryData telemetryData,
+            CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
@@ -94,12 +94,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
-            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+
+            return;
         }
 
         public async Task ReportMetricAsync(
-         MachineTelemetryData telemetryData,
-         CancellationToken cancellationToken)
+            TelemetryData telemetryData,
+            CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
@@ -108,7 +110,21 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
-            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task ReportMetricAsync(
+            MachineTelemetryData telemetryData,
+            CancellationToken cancellationToken)
+        {
+            if (telemetryData == null)
+            {
+                return;
+            }
+
+            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
+
+            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -133,7 +149,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     value,
                 });
 
-            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
 
             return await Task.FromResult(true).ConfigureAwait(false);
         }
@@ -203,7 +219,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// </summary>
         /// <param name="payload">Json string containing telemetry data.</param>
         /// <returns>A completed task or task containing exception info.</returns>
-        private Task SendTelemetryAsync(string payload)
+        private Task SendTelemetryAsync(string payload, CancellationToken token)
         {
             var requestUri = new Uri($"https://{this.WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={this.ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
@@ -222,29 +238,28 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 requestStreamAsync.Write(content, 0, content.Length);
             }
 
-            using (var responseAsync = (HttpWebResponse)request.GetResponse())
+            using var responseAsync = (HttpWebResponse)request.GetResponse();
+
+            token.ThrowIfCancellationRequested();
+
+            if (responseAsync.StatusCode == HttpStatusCode.OK ||
+                responseAsync.StatusCode == HttpStatusCode.Accepted)
             {
-                if (responseAsync.StatusCode == HttpStatusCode.OK ||
-                    responseAsync.StatusCode == HttpStatusCode.Accepted)
-                {
-                    return Task.CompletedTask;
-                }
-
-                var responseStream = responseAsync.GetResponseStream();
-
-                if (responseStream == null)
-                {
-                    return Task.CompletedTask;
-                }
-
-                using (var streamReader = new StreamReader(responseStream))
-                {
-                    string err = $"Exception sending LogAnalytics Telemetry:{Environment.NewLine}{streamReader.ReadToEnd()}";
-                    this.logger.LogWarning(err);
-
-                    return Task.FromException(new Exception(err));
-                }
+                return Task.CompletedTask;
             }
+
+            var responseStream = responseAsync.GetResponseStream();
+
+            if (responseStream == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            using var streamReader = new StreamReader(responseStream);
+            string err = $"Exception sending LogAnalytics Telemetry:{Environment.NewLine}{streamReader.ReadToEnd()}";
+            this.logger.LogWarning(err);
+
+            return Task.FromException(new Exception(err));
         }
 
         private string GetSignature(

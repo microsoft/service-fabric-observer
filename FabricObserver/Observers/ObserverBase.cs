@@ -791,7 +791,7 @@ namespace FabricObserver.Observers
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
                 {
-                    _ = this.TelemetryClient?.ReportMetricAsync(
+                    _ = this.TelemetryClient?.ReportHealthAsync(
                             telemetryData,
                             this.Token);
                 }

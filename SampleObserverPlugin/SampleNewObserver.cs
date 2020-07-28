@@ -91,29 +91,29 @@ namespace FabricObserver.Observers
 
         public override Task ReportAsync(CancellationToken token)
         {
+            // Report to Fabric.
             var healthReporter = new ObserverHealthReporter(this.ObserverLogger);
             var healthReport = new Utilities.HealthReport
             {
                 Code = FoErrorWarningCodes.Ok,
                 HealthMessage = this._message.ToString(),
                 NodeName = this.NodeName,
-                Observer = base.ObserverName,
+                Observer = this.ObserverName,
                 ReportType = HealthReportType.Node,
                 State = HealthState.Ok,
             };
 
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-            // Telemetry - This will use whatever telemetry provider you have configured in FabricObserver Settings.xml.
+            // Emit Telemetry - This will use whatever telemetry provider you have configured in FabricObserver Settings.xml.
             var telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
             {
                 Code = FoErrorWarningCodes.Ok,
+                HealthEventDescription = this._message.ToString(),
                 HealthState = "Ok",
                 NodeName = this.NodeName,
                 ObserverName = this.ObserverName,
-                Metric = $"Unhealthy Replicas",
                 Source = ObserverConstants.FabricObserverName,
-                Value = this._replicasInWarningError,
             };
 
             // Remember that these settings live in FabricObserver project's Settings.xml. You are writing
@@ -122,9 +122,9 @@ namespace FabricObserver.Observers
             // the FabricObserver project's PackageRoot/Data/Plugins folder.
             if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
             {
-                _ = this.TelemetryClient?.ReportMetricAsync(
-                    telemetryData,
-                    this.Token);
+                _ = this.TelemetryClient?.ReportHealthAsync(
+                        telemetryData,
+                        this.Token);
             }
 
             this._message.Clear();

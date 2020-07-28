@@ -105,8 +105,8 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <summary>
         /// Calls telemetry provider to report health.
         /// </summary>
-        /// <param name="telemtryData">TelemetryData instance.</param>
-        /// <param name="token">CancellationToken instance.</param>
+        /// <param name="telemetryData">TelemetryData instance.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>a Task.</returns>
         public Task ReportHealthAsync(
             TelemetryData telemetryData, 
@@ -143,7 +143,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     { "Partition", $"{telemetryData.PartitionId}" },
                     { "Replica", $"{telemetryData.ReplicaId}" },
                     { "Source", telemetryData.Source ?? string.Empty },
-                    { "Value", value ?? string.Empty }
+                    { "Value", value ?? string.Empty },
                 };
 
                 this.telemetryClient.TrackEvent(

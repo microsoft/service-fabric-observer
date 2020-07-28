@@ -70,6 +70,15 @@ namespace FabricObserver.Observers.Interfaces
             string instanceName = null);
 
         /// <summary>
+        /// Calls telemetry provider to report Health.
+        /// </summary>
+        /// <param name="telemetryData">MachineTelemetryData instance.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        Task ReportHealthAsync(
+            TelemetryData telemetryData,
+            CancellationToken cancellationToken);
+
+        /// <summary>
         /// Calls telemetry provider to report a metric.
         /// </summary>
         /// <param name="name">Name of the metric.</param>
