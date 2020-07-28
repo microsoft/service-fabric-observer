@@ -56,6 +56,7 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(IObserver), typeof(DiskObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(NodeObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(OsObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
             _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
@@ -67,24 +68,26 @@ namespace FabricObserver
         {
             string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
-            if (Directory.Exists(pluginsDir))
+            if (!Directory.Exists(pluginsDir))
             {
-                string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.TopDirectoryOnly);
+                return;
+            }
 
-                foreach (string pluginDll in pluginDlls)
+            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.TopDirectoryOnly);
+
+            foreach (string pluginDll in pluginDlls)
+            {
+                Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
+                FabricObserverStartupAttribute[] startupAttributes =
+                    pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
+
+                for (int i = 0; i < startupAttributes.Length; ++i)
                 {
-                    Assembly pluginAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(pluginDll);
-                    FabricObserverStartupAttribute[] startupAttributes =
-                        pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
+                    object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
 
-                    for (int i = 0; i < startupAttributes.Length; ++i)
+                    if (startupObject is IFabricObserverStartup fabricObserverStartup)
                     {
-                        object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
-
-                        if (startupObject is IFabricObserverStartup fabricObserverStartup)
-                        {
-                            fabricObserverStartup.ConfigureServices(services);
-                        }
+                        fabricObserverStartup.ConfigureServices(services);
                     }
                 }
             }

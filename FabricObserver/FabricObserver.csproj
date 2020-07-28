@@ -103,8 +103,5 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="PackageRoot\Data\Plugins\" />
-  </ItemGroup>
 </Project>
 
