@@ -15,7 +15,6 @@ using FabricObserver.Observers;
 using FabricObserver.Observers.Interfaces;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricObserver
@@ -58,6 +57,7 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(IObserver), typeof(DiskObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(NodeObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(OsObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
             _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
@@ -106,7 +106,7 @@ namespace FabricObserver
                     }
                     else
                     {
-                        throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup");
+                        throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
                     }
                 }
             }
