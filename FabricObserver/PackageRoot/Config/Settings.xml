@@ -195,10 +195,15 @@
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <!-- Plugin model sample. Just add the configuration info here that your observer needs. Also, follow the pattern
-       of all the other observers in this file. Like, Enabled, EnableVerboseLogging, EnableTelemetry, etc.. 
-       Whatever makes sense for your implementation. 
-       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration. See below. 
-       SampleNewObserver is the type name of the observer plugin class - See Extensibility/Samples folder in FabricObserver project. -->
+       of all the other observers in this file. 
+       Required: Enabled. 
+       Optional: ClusterOperationTimeoutSeconds, EnableVerboseLogging, EnableTelemetry, etc..
+       Then, you can create settings specific to your observer and store them below.
+       Whatever makes sense for your implementation.
+       **NOTE**: You must name these Sections in the following way: 
+       [ObserverName]Configuration.
+       Example: SampleNewObserverConfiguration where SampleNewObserver is the type name of the observer plugin.
+       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
   <Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="True" />
     <Parameter Name="EnableTelemetry" Value="True"/>
