@@ -13,9 +13,7 @@ namespace FabricObserver.Observers
     public class SampleNewObserver : ObserverBase
     {
         StringBuilder _message = new StringBuilder();
-        int _totalNumberOfDeployedSFApps = 0, _totalNumberOfDeployedServices = 0, _totalNumberOfPartitions = 0, _totalNumberOfReplicas = 0;
-        int _appsInWarningError = 0, _servicesInWarningError = 0, _partitionsInWarningError = 0, _replicasInWarningError = 0;
-
+        
         public SampleNewObserver()
             : base(nameof(SampleNewObserver))
         {
@@ -25,6 +23,8 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             var stopwatch = Stopwatch.StartNew();
+            int _totalNumberOfDeployedSFApps = 0, _totalNumberOfDeployedServices = 0, _totalNumberOfPartitions = 0, _totalNumberOfReplicas = 0;
+            int _appsInWarningError = 0, _servicesInWarningError = 0, _partitionsInWarningError = 0, _replicasInWarningError = 0;
 
             var apps = await this.FabricClientInstance.QueryManager.GetApplicationListAsync(
                 null,
