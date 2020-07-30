@@ -1,7 +1,5 @@
 ﻿using System;
-using Microsoft.Win32;
 using System.Fabric;
-using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +13,6 @@ namespace FabricClusterObserver.Utilities
     /// </summary>
     public sealed class ClusterIdentificationUtility
     {
-        private const string FabricRegistryKeyPath = "Software\\Microsoft\\Service Fabric";
         private static string paasClusterId;
         private static string diagnosticsClusterId;
         private static XmlDocument clusterManifestXdoc;
@@ -24,7 +21,7 @@ namespace FabricClusterObserver.Utilities
         /// Gets ClusterID, tenantID and ClusterType for current ServiceFabric cluster
         /// The logic to compute these values closely resembles the logic used in SF runtime telemetry client.
         /// </summary>
-        public static async Task<(string ClusterId, string TenantId, string ClusterType)> TupleGetClusterIdAndTypeAsync(
+        public static async Task<(string ClusterId, string ClusterType)> TupleGetClusterIdAndTypeAsync(
             FabricClient fabricClient, CancellationToken token)
         {
             string clusterManifest = await fabricClient.ClusterManager.GetClusterManifestAsync(
@@ -32,7 +29,6 @@ namespace FabricClusterObserver.Utilities
                 token);
 
             // Get tenantId for PaasV1 clusters or SFRP.
-            string tenantId = GetTenantId() ?? ObserverConstants.Undefined;
             string clusterId = ObserverConstants.Undefined;
             string clusterType = ObserverConstants.Undefined;
 
@@ -41,35 +37,26 @@ namespace FabricClusterObserver.Utilities
                 // Safe XML pattern - *Do not use LoadXml*.
                 clusterManifestXdoc = new XmlDocument {XmlResolver = null};
 
-                using (var sreader = new StringReader(clusterManifest))
+                using var sreader = new StringReader(clusterManifest);
+                using var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                clusterManifestXdoc?.Load(xreader);
+
+                // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
+                GetValuesFromClusterManifest();
+
+                if (paasClusterId != null)
                 {
-                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings() {XmlResolver = null}))
-                    {
-                        clusterManifestXdoc?.Load(xreader);
-
-                        // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
-                        GetValuesFromClusterManifest();
-
-                        if (paasClusterId != null)
-                        {
-                            clusterId = paasClusterId;
-                            clusterType = ObserverConstants.ClusterTypeSfrp;
-                        }
-                        else if (tenantId != ObserverConstants.Undefined)
-                        {
-                            clusterId = tenantId;
-                            clusterType = ObserverConstants.ClusterTypePaasV1;
-                        }
-                        else if (diagnosticsClusterId != null)
-                        {
-                            clusterId = diagnosticsClusterId;
-                            clusterType = ObserverConstants.ClusterTypeStandalone;
-                        }
-                    }
+                    clusterId = paasClusterId;
+                    clusterType = ObserverConstants.ClusterTypeSfrp;
+                }
+                else if (diagnosticsClusterId != null)
+                {
+                    clusterId = diagnosticsClusterId;
+                    clusterType = ObserverConstants.ClusterTypeStandalone;
                 }
             }
 
-            return (clusterId, tenantId, clusterType);
+            return (clusterId, clusterType);
         }
 
         /// <summary>
@@ -103,15 +90,6 @@ namespace FabricClusterObserver.Utilities
         private static string GetClusterIdFromDiagnosticsSection()
         {
             return GetParamValueFromSection("Diagnostics", "ClusterId");
-        }
-
-        private static string GetTenantId()
-        {
-            const string TenantIdValueName = "WATenantID";
-            string tenantIdKeyName = string.Format(CultureInfo.InvariantCulture, "{0}\\{1}",
-                Registry.LocalMachine.Name, FabricRegistryKeyPath);
-
-            return (string) Registry.GetValue(tenantIdKeyName, TenantIdValueName, null);
         }
 
         private static void GetValuesFromClusterManifest()
