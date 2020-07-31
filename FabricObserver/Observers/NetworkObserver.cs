@@ -73,7 +73,6 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="NetworkObserver"/> class.
         /// </summary>
         public NetworkObserver()
-            : base(ObserverConstants.NetworkObserverName)
         {
             this.dataPackagePath = ConfigSettings.ConfigPackagePath;
             this.stopwatch = new Stopwatch();
@@ -372,7 +371,7 @@ namespace FabricObserver.Observers
 
             ConfigSettings.Initialize(
                 settings,
-                ObserverConstants.NetworkObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 "NetworkObserverDataFileName");
 
             var networkObserverConfigFileName =

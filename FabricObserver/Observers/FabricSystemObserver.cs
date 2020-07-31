@@ -47,7 +47,6 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
         /// </summary>
         public FabricSystemObserver()
-            : base(ObserverConstants.FabricSystemObserverName)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -480,7 +479,7 @@ namespace FabricObserver.Observers
             this.Token.ThrowIfCancellationRequested();
 
             var cpuError = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverErrorCpu);
 
             if (!string.IsNullOrEmpty(cpuError))
@@ -496,7 +495,7 @@ namespace FabricObserver.Observers
             }
 
             var memError = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverErrorMemory);
 
             if (!string.IsNullOrEmpty(memError))
@@ -512,7 +511,7 @@ namespace FabricObserver.Observers
             }
 
             var percentErrorUnhealthyNodes = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverErrorPercentUnhealthyNodes);
 
             /* Warning thresholds */
@@ -520,7 +519,7 @@ namespace FabricObserver.Observers
             this.Token.ThrowIfCancellationRequested();
 
             var cpuWarn = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverWarnCpu);
 
             if (!string.IsNullOrEmpty(cpuWarn))
@@ -536,7 +535,7 @@ namespace FabricObserver.Observers
             }
 
             var memWarn = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverWarnMemory);
 
             if (!string.IsNullOrEmpty(memWarn))
@@ -552,7 +551,7 @@ namespace FabricObserver.Observers
             }
 
             var percentWarnUnhealthyNodes = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverWarnPercentUnhealthyNodes);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -563,7 +562,7 @@ namespace FabricObserver.Observers
             // Monitor Windows event log for SF and System Error/Critical events?
             // This can be noisy. Use wisely.
             var watchEvtLog = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
 
             if (!string.IsNullOrEmpty(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))

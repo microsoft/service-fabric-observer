@@ -45,7 +45,6 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="DiskObserver"/> class.
         /// </summary>
         public DiskObserver()
-            : base(ObserverConstants.DiskObserverName)
         {
             this.diskSpacePercentageUsageData = new List<FabricResourceUsageData<double>>();
             this.diskSpaceUsageData = new List<FabricResourceUsageData<double>>();
@@ -302,7 +301,7 @@ namespace FabricObserver.Observers
             {
                 if (int.TryParse(
                     this.GetSettingParameterValue(
-                    ObserverConstants.DiskObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
                     this.DiskSpacePercentErrorThreshold = diskUsedError;
@@ -310,7 +309,7 @@ namespace FabricObserver.Observers
 
                 if (int.TryParse(
                     this.GetSettingParameterValue(
-                    ObserverConstants.DiskObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
                     this.DiskSpacePercentWarningThreshold = diskUsedWarning;
@@ -318,7 +317,7 @@ namespace FabricObserver.Observers
 
                 if (int.TryParse(
                     this.GetSettingParameterValue(
-                    ObserverConstants.DiskObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
                 {
                     this.AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
@@ -326,7 +325,7 @@ namespace FabricObserver.Observers
 
                 if (int.TryParse(
                     this.GetSettingParameterValue(
-                    ObserverConstants.DiskObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
                     this.AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;

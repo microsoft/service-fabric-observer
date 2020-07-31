@@ -47,7 +47,6 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
         /// </summary>
         public AppObserver()
-            : base(ObserverConstants.AppObserverName)
         {
             this.ConfigPackagePath = ConfigSettings.ConfigPackagePath;
             this.allAppCpuData = new List<FabricResourceUsageData<int>>();
@@ -298,7 +297,7 @@ namespace FabricObserver.Observers
                 ConfigSettings.Initialize(
                     this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                         ObserverConstants.ObserverConfigurationPackageName)?.Settings,
-                    ObserverConstants.AppObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     "AppObserverDataFileName");
             }
 

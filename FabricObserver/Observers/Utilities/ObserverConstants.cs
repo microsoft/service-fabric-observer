@@ -104,8 +104,8 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverMemoryUsePercentWarning = "MemoryWarningLimitPercent";
 
         // OSObserver.
-        public const string OsObserverName = "OSObserver";
-        public const string OsObserverConfigurationSectionName = "OSObserverConfiguration";
+        public const string OSObserverName = "OSObserver";
+        public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
 
         // SFConfigurationObserver.
         public const string SfConfigurationObserverName = "SFConfigurationObserver";

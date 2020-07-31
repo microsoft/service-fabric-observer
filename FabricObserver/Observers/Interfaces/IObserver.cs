@@ -12,7 +12,7 @@ namespace FabricObserver.Observers.Interfaces
 {
     public interface IObserver : IDisposable
     {
-        string ObserverName { get; set; }
+        string ObserverName { get; }
 
         string NodeName { get; set; }
 

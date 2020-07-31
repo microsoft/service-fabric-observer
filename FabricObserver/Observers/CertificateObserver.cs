@@ -24,7 +24,6 @@ namespace FabricObserver.Observers
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
 
         public CertificateObserver()
-               : base(ObserverConstants.CertificateObserverName)
         {
         }
 
@@ -265,25 +264,25 @@ namespace FabricObserver.Observers
             token.ThrowIfCancellationRequested();
 
             var daysUntilClusterExpireWarningThreshold = this.GetSettingParameterValue(
-                ObserverConstants.CertificateObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.CertificateObserverDaysUntilClusterExpiryWarningThreshold);
 
             this.DaysUntilClusterExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilClusterExpireWarningThreshold) ? int.Parse(daysUntilClusterExpireWarningThreshold) : 14;
 
             var daysUntilAppExpireWarningClusterThreshold = this.GetSettingParameterValue(
-            ObserverConstants.CertificateObserverConfigurationSectionName,
+            this.ConfigurationSectionName,
             ObserverConstants.CertificateObserverDaysUntilAppExpiryWarningThreshold);
 
             this.DaysUntilAppExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilAppExpireWarningClusterThreshold) ? int.Parse(daysUntilAppExpireWarningClusterThreshold) : 14;
 
             var appThumbprintsToObserve = this.GetSettingParameterValue(
-                    ObserverConstants.CertificateObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     ObserverConstants.CertificateObserverAppCertificateThumbprints);
 
             this.AppCertificateThumbprintsToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve) : new List<string>();
 
             var appCommonNamesToObserve = this.GetSettingParameterValue(
-                    ObserverConstants.CertificateObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     ObserverConstants.CertificateObserverAppCertificateCommonNames);
 
             this.AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();

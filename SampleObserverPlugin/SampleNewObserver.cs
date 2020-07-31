@@ -13,11 +13,9 @@ namespace FabricObserver.Observers
     public class SampleNewObserver : ObserverBase
     {
         StringBuilder _message = new StringBuilder();
-        
+
         public SampleNewObserver()
-            : base(nameof(SampleNewObserver))
         {
-           
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -30,10 +28,10 @@ namespace FabricObserver.Observers
                 null,
                 this.AsyncClusterOperationTimeoutSeconds,
                 token).ConfigureAwait(false);
-            
+
             _totalNumberOfDeployedSFApps = apps.Count;
             _appsInWarningError = apps.Where(a => a.HealthState == HealthState.Warning || a.HealthState == HealthState.Error).Count();
-            
+
             foreach (var app in apps)
             {
                 var services = await this.FabricClientInstance.QueryManager.GetServiceListAsync(
@@ -84,7 +82,7 @@ namespace FabricObserver.Observers
             this.RunDuration = stopwatch.Elapsed;
 
             this._message.AppendLine($"Time it took to run {base.ObserverName}.ObserveAsync: {this.RunDuration}");
-            
+
             await this.ReportAsync(token);
             this.LastRunDateTime = DateTime.Now;
         }
@@ -128,7 +126,7 @@ namespace FabricObserver.Observers
             }
 
             this._message.Clear();
-           
+
             return Task.CompletedTask;
         }
     }

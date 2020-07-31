@@ -271,12 +271,12 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new OsObserver();
+            var obs = new OSObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.CsvFileLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.OsObserverName);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
 
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();
@@ -291,7 +291,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new SfConfigurationObserver();
+            var obs = new SFConfigurationObserver();
 
             // These are set in derived ObserverBase.
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -658,7 +658,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new OsObserver
+            var obs = new OSObserver
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
@@ -955,7 +955,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new OsObserver()
+            var obs = new OSObserver()
             {
                 IsTestRun = true,
                 TestManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
@@ -1243,7 +1243,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new SfConfigurationObserver
+            var obs = new SFConfigurationObserver
             {
                 IsTestRun = true,
             };

@@ -26,7 +26,7 @@ namespace FabricObserver.Observers
     // It will signal Ok Health Reports that will show up under node details in SFX as well as emit ETW events.
     // If FabricObserverWebApi is installed, the output includes a local file that is used
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
-    public class OsObserver : ObserverBase
+    public class OSObserver : ObserverBase
     {
         private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
         private string osReport;
@@ -34,17 +34,16 @@ namespace FabricObserver.Observers
         private bool auStateUnknown;
         private bool isWindowsUpdateAutoDownloadEnabled;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="OSObserver"/> class.
+        /// </summary>
+        public OSObserver()
+        {
+        }
+
         public string TestManifestPath
         {
             get; set;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="OsObserver"/> class.
-        /// </summary>
-        public OsObserver()
-            : base(ObserverConstants.OsObserverName)
-        {
         }
 
         /// <inheritdoc/>
