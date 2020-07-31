@@ -135,23 +135,44 @@ namespace FabricObserver.Observers
                 this.SetDefaultSfDumpPath();
             }
 
-            // Observer Logger setup.
-            string logFolderBasePath;
-            string observerLogPath = this.GetSettingParameterValue(
-                ObserverConstants.ObserverManagerConfigurationSectionName,
-                ObserverConstants.ObserverLogPathParameter);
+            this.UpdateConfigurationSettings(observerName);
+            this.HealthReporter = new ObserverHealthReporter(this.ObserverLogger);
+            this.FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+        }
 
-            if (!string.IsNullOrEmpty(observerLogPath))
+        private void UpdateConfigurationSettings(string observerName)
+        {
+            if (this.ObserverLogger == null)
             {
-                logFolderBasePath = observerLogPath;
-            }
-            else
-            {
-                string logFolderBase = Path.Combine(Environment.CurrentDirectory, "observer_logs");
-                logFolderBasePath = logFolderBase;
-            }
+                // Observer Logger setup.
+                string logFolderBasePath;
+                string observerLogPath = this.GetSettingParameterValue(
+                    ObserverConstants.ObserverManagerConfigurationSectionName,
+                    ObserverConstants.ObserverLogPathParameter);
 
-            this.ObserverLogger = new Logger(observerName, logFolderBasePath);
+                if (!string.IsNullOrEmpty(observerLogPath))
+                {
+                    logFolderBasePath = observerLogPath;
+                }
+                else
+                {
+                    string logFolderBase = Path.Combine(Environment.CurrentDirectory, "observer_logs");
+                    logFolderBasePath = logFolderBase;
+                }
+
+                this.ObserverLogger = new Logger(observerName, logFolderBasePath);
+
+                // DataLogger setup.
+                this.CsvFileLogger = new DataTableFileLogger();
+                string dataLogPath = this.GetSettingParameterValue(
+                    ObserverConstants.ObserverManagerConfigurationSectionName,
+                    ObserverConstants.DataLogPathParameter);
+
+                if (!string.IsNullOrEmpty(observerLogPath))
+                {
+                    this.CsvFileLogger.DataLogFolderPath = dataLogPath;
+                }
+            }
 
             // Observer enabled?
             if (bool.TryParse(
@@ -213,16 +234,6 @@ namespace FabricObserver.Observers
                 this.AsyncClusterOperationTimeoutSeconds = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
             }
 
-            // DataLogger setup.
-            this.CsvFileLogger = new DataTableFileLogger();
-            string dataLogPath = this.GetSettingParameterValue(
-                ObserverConstants.ObserverManagerConfigurationSectionName,
-                ObserverConstants.DataLogPathParameter);
-            if (!string.IsNullOrEmpty(observerLogPath))
-            {
-                this.CsvFileLogger.DataLogFolderPath = dataLogPath;
-            }
-
             if (bool.TryParse(
                 this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
@@ -251,8 +262,11 @@ namespace FabricObserver.Observers
             {
                 this.UseCircularBuffer = useCircularBuffer;
             }
+        }
 
-            this.HealthReporter = new ObserverHealthReporter(this.ObserverLogger);
+        private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
+        {
+            throw new NotImplementedException();
         }
 
         /// <inheritdoc/>

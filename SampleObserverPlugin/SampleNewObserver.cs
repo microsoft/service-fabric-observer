@@ -22,6 +22,14 @@ namespace FabricObserver.Observers
 
         public override async Task ObserveAsync(CancellationToken token)
         {
+            // If set, this observer will only run during the supplied interval.
+            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
+            if (this.RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            {
+                return;
+            }
+
             var stopwatch = Stopwatch.StartNew();
             int _totalNumberOfDeployedSFApps = 0, _totalNumberOfDeployedServices = 0, _totalNumberOfPartitions = 0, _totalNumberOfReplicas = 0;
             int _appsInWarningError = 0, _servicesInWarningError = 0, _partitionsInWarningError = 0, _replicasInWarningError = 0;

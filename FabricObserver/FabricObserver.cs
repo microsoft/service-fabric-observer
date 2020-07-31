@@ -76,9 +76,19 @@ namespace FabricObserver
 
             string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.TopDirectoryOnly);
 
+            if (pluginDlls.Length == 0)
+            {
+                return;
+            }
+
             List<PluginLoader> pluginLoaders = new List<PluginLoader>(capacity: pluginDlls.Length);
 
             Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup) };
+
+            if (sharedTypes.Length == 0)
+            {
+                return;
+            }
 
             foreach (string pluginDll in pluginDlls)
             {
@@ -106,7 +116,8 @@ namespace FabricObserver
                     }
                     else
                     {
-                        throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
+                        // Log....
+                        //throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
                     }
                 }
             }

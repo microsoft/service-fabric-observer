@@ -3,6 +3,7 @@
     "targetApp": "fabric:/BadApp",
     "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
+    "memoryErrorLimitPercent": 80,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40
   },

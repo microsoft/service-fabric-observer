@@ -481,7 +481,7 @@ namespace FabricObserver.Observers
 
             var cpuError = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverErrorCpu);
+                ObserverConstants.FabricSystemObserverCpuErrorLimitPct);
 
             if (!string.IsNullOrEmpty(cpuError))
             {
@@ -489,7 +489,7 @@ namespace FabricObserver.Observers
 
                 if (threshold > 100 || threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorCpu}.");
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverCpuErrorLimitPct}.");
                 }
 
                 this.CpuErrorUsageThresholdPct = threshold;
@@ -497,7 +497,7 @@ namespace FabricObserver.Observers
 
             var memError = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverErrorMemory);
+                ObserverConstants.FabricSystemObserverMemoryErrorLimitMb);
 
             if (!string.IsNullOrEmpty(memError))
             {
@@ -505,15 +505,11 @@ namespace FabricObserver.Observers
 
                 if (threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold} is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverErrorMemory}.");
+                    throw new ArgumentException($"{threshold} is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverMemoryErrorLimitMb}.");
                 }
 
                 this.MemErrorUsageThresholdMb = threshold;
             }
-
-            var percentErrorUnhealthyNodes = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverErrorPercentUnhealthyNodes);
 
             /* Warning thresholds */
 
@@ -521,7 +517,7 @@ namespace FabricObserver.Observers
 
             var cpuWarn = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverWarnCpu);
+                ObserverConstants.FabricSystemObserverCpuWarningLimitPct);
 
             if (!string.IsNullOrEmpty(cpuWarn))
             {
@@ -529,7 +525,7 @@ namespace FabricObserver.Observers
 
                 if (threshold > 100 || threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnCpu}.");
+                    throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverCpuWarningLimitPct}.");
                 }
 
                 this.CpuWarnUsageThresholdPct = threshold;
@@ -537,7 +533,7 @@ namespace FabricObserver.Observers
 
             var memWarn = this.GetSettingParameterValue(
                 ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverWarnMemory);
+                ObserverConstants.FabricSystemObserverMemoryWarningLimitMb);
 
             if (!string.IsNullOrEmpty(memWarn))
             {
@@ -545,15 +541,11 @@ namespace FabricObserver.Observers
 
                 if (threshold < 0)
                 {
-                    throw new ArgumentException($"{threshold} MB is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverWarnMemory}.");
+                    throw new ArgumentException($"{threshold} MB is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverMemoryWarningLimitMb}.");
                 }
 
                 this.MemWarnUsageThresholdMb = threshold;
             }
-
-            var percentWarnUnhealthyNodes = this.GetSettingParameterValue(
-                ObserverConstants.FabricSystemObserverConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverWarnPercentUnhealthyNodes);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
