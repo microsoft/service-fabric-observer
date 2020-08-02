@@ -55,7 +55,6 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="NodeObserver"/> class.
         /// </summary>
         public NodeObserver()
-            : base(ObserverConstants.NodeObserverName)
         {
             this.stopwatch = new Stopwatch();
         }
@@ -94,7 +93,7 @@ namespace FabricObserver.Observers
             {
                 token.ThrowIfCancellationRequested();
 
-                if (this.CsvFileLogger.EnableCsvLogging)
+                if (this.CsvFileLogger != null && this.CsvFileLogger.EnableCsvLogging)
                 {
                     var fileName = "CpuMemFirewallsPorts" + this.NodeName;
 
@@ -227,7 +226,7 @@ namespace FabricObserver.Observers
         {
             if (!this.IsTestRun)
             {
-                this.SetThresholdsFromConfiguration();
+                this.SetThresholdSFromConfiguration();
             }
 
             this.InitializeDataContainers();
@@ -266,7 +265,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void SetThresholdsFromConfiguration()
+        private void SetThresholdSFromConfiguration()
         {
             /* Error thresholds */
 

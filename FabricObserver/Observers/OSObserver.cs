@@ -7,6 +7,8 @@ using System;
 using System.ComponentModel;
 using System.Fabric;
 using System.Fabric.Health;
+using System.Fabric.Management.ServiceModel;
+using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -26,7 +28,7 @@ namespace FabricObserver.Observers
     // It will signal Ok Health Reports that will show up under node details in SFX as well as emit ETW events.
     // If FabricObserverWebApi is installed, the output includes a local file that is used
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
-    public class OsObserver : ObserverBase
+    public class OSObserver : ObserverBase
     {
         private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
         private string osReport;
@@ -40,11 +42,11 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="OsObserver"/> class.
+        /// Initializes a new instance of the <see cref="OSObserver"/> class.
         /// </summary>
-        public OsObserver()
-            : base(ObserverConstants.OsObserverName)
+        public OSObserver()
         {
+
         }
 
         /// <inheritdoc/>
@@ -58,9 +60,26 @@ namespace FabricObserver.Observers
                 return;
             }
 
+            // This only makes sense for Windows and only for non-dev clusters.
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
+                var nodes = FabricClientInstance.QueryManager.GetNodeListAsync(
+                                null,
+                                this.AsyncClusterOperationTimeoutSeconds,
+                                Token).GetAwaiter().GetResult();
+
+                if (nodes.Count > 1 && bool.TryParse(
+                                        this.GetSettingParameterValue(
+                                            this.ConfigurationSectionName,
+                                            ObserverConstants.EnableWindowsAutoUpdateCheck,
+                                            "true"),
+                                         out bool enableWindowsAUCheck))
+                {
+                    if (enableWindowsAUCheck)
+                    {
+                        await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
+                    }
+                }
             }
 
             await this.GetComputerInfoAsync(token).ConfigureAwait(false);

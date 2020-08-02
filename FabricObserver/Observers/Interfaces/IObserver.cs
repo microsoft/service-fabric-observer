@@ -33,6 +33,11 @@ namespace FabricObserver.Observers.Interfaces
 
         bool IsUnhealthy { get; set; }
 
+        ConfigSettings ConfigurationSettings
+        {
+            get; set;
+        }
+
         /// <summary>
         /// The function where observers observe.
         /// </summary>

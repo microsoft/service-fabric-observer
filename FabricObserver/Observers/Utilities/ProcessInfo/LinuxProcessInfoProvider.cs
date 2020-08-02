@@ -6,9 +6,9 @@ namespace FabricObserver.Observers.Utilities
     {
         public override float GetProcessPrivateWorkingSetInMB(int processId)
         {
-            if (LinuxProcFS.TryParseStatusFile(processId, out ParsedStatus status))
+            if (LinuxProcFS.TryParseStatuSFile(processId, out ParsedStatus status))
             {
-               return (status.VmRSS - status.RssFile) / 1048576f;
+               return (status.VmRSS - status.RsSFile) / 1048576f;
             }
             else
             {

@@ -7,7 +7,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
-         For Windows, use win-x64. For Linux, use linux-x64. 
+         For Windows, use win-x64. For Linux, use linux-x64.
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier> -->
     <!-- For multi-target publish (say, from Azure Pipeline build), you can use multi-target RIDs: 
          linux-x64;win-x64. -->
@@ -60,7 +60,7 @@
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.6" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.6" />
-    <PackageReference Include="McMaster.NETCore.Plugins" Version="1.3.0"/>
+    <PackageReference Include="McMaster.NETCore.Plugins" Version="1.3.0" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="..\Interop\Interop.WUApiLib.dll" />
   </ItemGroup>
@@ -78,20 +78,6 @@
     <None Include="PackageRoot\Config\NetworkObserver.config.json" />
     <None Include="PackageRoot\ServiceManifest.xml" />
     <None Include="stylecop.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeQuality.Analyzers" Version="3.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.NetFramework.Analyzers" Version="3.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj">

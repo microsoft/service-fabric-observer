@@ -28,7 +28,7 @@ namespace FabricObserver.Observers
         private const int TtlAddMinutes = 5;
         private readonly int maxDumps = 5;
         private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
-        private string sFLogRoot;
+        private string SFLogRoot;
         private string dumpsPath;
 
         /// <inheritdoc/>
@@ -71,6 +71,18 @@ namespace FabricObserver.Observers
             get; set;
         }*/
 
+        public Utilities.ConfigSettings ConfigurationSettings
+        {
+            get;
+            set;
+        }
+
+        public bool EnableVerboseLogging
+        {
+            get;
+            private set;
+        }
+
         /// <inheritdoc/>
         public Logger ObserverLogger { get; set; }
 
@@ -106,18 +118,18 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        /// <inheritdoc/>
-        public abstract Task ObserveAsync(CancellationToken token);
-
-        /// <inheritdoc/>
-        public abstract Task ReportAsync(CancellationToken token);
+        protected string ConfigurationSectionName
+        {
+            get;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverBase"/> class.
         /// </summary>
-        /// <param name="observerName">Name of observer.</param>
-        protected ObserverBase(string observerName)
+        protected ObserverBase()
         {
+            this.ObserverName = this.GetType().Name;
+            this.ConfigurationSectionName = this.ObserverName + "Configuration";
             this.FabricClientInstance = ObserverManager.FabricClientInstance;
 
             if (this.IsTelemetryProviderEnabled)
@@ -125,16 +137,11 @@ namespace FabricObserver.Observers
                 this.TelemetryClient = ObserverManager.TelemetryClient;
             }
 
-            this.ObserverName = observerName;
             this.FabricServiceContext = ObserverManager.FabricServiceContext;
             this.NodeName = this.FabricServiceContext.NodeContext.NodeName;
             this.NodeType = this.FabricServiceContext.NodeContext.NodeType;
-
-            if (string.IsNullOrEmpty(this.dumpsPath))
-            {
-                this.SetDefaultSfDumpPath();
-            }
-
+            this.ConfigurationSectionName = this.ObserverName + "Configuration";
+            
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = this.GetSettingParameterValue(
@@ -151,111 +158,67 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            this.ObserverLogger = new Logger(observerName, logFolderBasePath);
+            this.ObserverLogger = new Logger(this.ObserverName, logFolderBasePath);
 
-            // Observer enabled?
+            if (string.IsNullOrEmpty(this.dumpsPath))
+            {
+                this.SetDefaultSfDumpPath();
+            }
+
+            // DataLogger setup
             if (bool.TryParse(
                 this.GetSettingParameterValue(
-                observerName + "Configuration",
-                ObserverConstants.ObserverEnabledParameter),
-                out bool enabled))
-            {
-                this.IsEnabled = enabled;
-            }
-
-            // Observer telemetry enabled?
-            if (bool.TryParse(
-                this.GetSettingParameterValue(
-                observerName + "Configuration",
-                ObserverConstants.ObserverTelemetryEnabledParameter),
-                out bool telemetryEnabled))
-            {
-                this.IsObserverTelemetryEnabled = telemetryEnabled;
-            }
-
-            // Verbose logging?
-            if (bool.TryParse(
-                this.GetSettingParameterValue(
-                observerName + "Configuration",
-                ObserverConstants.EnableVerboseLoggingParameter),
-                out bool enableVerboseLogging))
-            {
-                this.ObserverLogger.EnableVerboseLogging = enableVerboseLogging;
-            }
-
-            // RunInterval?
-            if (TimeSpan.TryParse(
-                this.GetSettingParameterValue(
-                observerName + "Configuration",
-                ObserverConstants.ObserverRunIntervalParameter),
-                out TimeSpan runInterval))
-            {
-                this.RunInterval = runInterval;
-            }
-
-            // Monitor duration.
-            if (TimeSpan.TryParse(
-                this.GetSettingParameterValue(
-                observerName + "Configuration",
-                ObserverConstants.MonitorDurationParameter),
-                out TimeSpan monitorDuration))
-            {
-                this.MonitorDuration = monitorDuration;
-            }
-
-            // Async cluster operation timeout setting..
-            if (int.TryParse(
-                this.GetSettingParameterValue(
-                observerName + "Configuration",
-                ObserverConstants.AsyncClusterOperationTimeoutSeconds),
-                out int asyncOpTimeoutSeconds))
-            {
-                this.AsyncClusterOperationTimeoutSeconds = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
-            }
-
-            // DataLogger setup.
-            this.CsvFileLogger = new DataTableFileLogger();
-            string dataLogPath = this.GetSettingParameterValue(
-                ObserverConstants.ObserverManagerConfigurationSectionName,
-                ObserverConstants.DataLogPathParameter);
-            if (!string.IsNullOrEmpty(observerLogPath))
-            {
-                this.CsvFileLogger.DataLogFolderPath = dataLogPath;
-            }
-
-            if (bool.TryParse(
-                this.GetSettingParameterValue(
-                ObserverConstants.ObserverManagerConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.EnableLongRunningCsvLogging),
                 out bool enableDataLogging))
             {
-                this.CsvFileLogger.EnableCsvLogging = enableDataLogging;
+                if (enableDataLogging)
+                {
+                    this.CsvFileLogger = new DataTableFileLogger
+                    {
+                        EnableCsvLogging = enableDataLogging,
+                    };
+
+                    string dataLogPath = this.GetSettingParameterValue(
+                        ObserverConstants.ObserverManagerConfigurationSectionName,
+                        ObserverConstants.DataLogPathParameter);
+
+                    if (!string.IsNullOrEmpty(dataLogPath))
+                    {
+                        this.CsvFileLogger.DataLogFolderPath = dataLogPath;
+                    }
+                    else
+                    {
+                        this.CsvFileLogger.DataLogFolderPath = Path.Combine(Environment.CurrentDirectory, "observer_data_logs");
+                    }
+                }
+            }
+            
+            if (string.IsNullOrEmpty(this.dumpsPath))
+            {
+                this.SetDefaultSfDumpPath();
             }
 
-            // Resource usage data collection item capacity.
-            if (int.TryParse(
-               this.GetSettingParameterValue(
-               observerName + "Configuration",
-               ObserverConstants.DataCapacityParameter),
-               out int dataCapacity))
-            {
-                this.DataCapacity = dataCapacity;
-            }
+            this.ConfigurationSettings = new Utilities.ConfigSettings(
+                FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings,
+                this.ConfigurationSectionName);
 
-            // Resource usage data collection type.
-            if (bool.TryParse(
-                this.GetSettingParameterValue(
-                observerName + "Configuration",
-                ObserverConstants.UseCircularBufferParameter),
-                out bool useCircularBuffer))
-            {
-                this.UseCircularBuffer = useCircularBuffer;
-            }
+            this.EnableVerboseLogging = this.ConfigurationSettings.EnableVerboseLogging;
+            this.IsEnabled = this.ConfigurationSettings.IsEnabled;
+            this.IsObserverTelemetryEnabled = this.ConfigurationSettings.IsObserverTelemetryEnabled;
+            this.MonitorDuration = this.ConfigurationSettings.MonitorDuration;
+            this.RunInterval = this.ConfigurationSettings.RunInterval;
+            this.ObserverLogger.EnableVerboseLogging = this.EnableVerboseLogging;
 
             this.HealthReporter = new ObserverHealthReporter(this.ObserverLogger);
         }
 
         /// <inheritdoc/>
+        public abstract Task ObserveAsync(CancellationToken token);
+
+        /// <inheritdoc/>
+        public abstract Task ReportAsync(CancellationToken token);
+
         public void WriteToLogWithLevel(
             string property,
             string description,
@@ -288,7 +251,10 @@ namespace FabricObserver.Observers
         /// <param name="parameterName">Name of the parameter.</param>
         /// <param name="defaultValue">Default value.</param>
         /// <returns>parameter value.</returns>
-        public string GetSettingParameterValue(string sectionName, string parameterName, string defaultValue = null)
+        public string GetSettingParameterValue(
+            string sectionName,
+            string parameterName,
+            string defaultValue = null)
         {
             if (string.IsNullOrEmpty(sectionName) || string.IsNullOrEmpty(parameterName))
             {
@@ -304,12 +270,12 @@ namespace FabricObserver.Observers
                     return null;
                 }
 
-                if (serviceConfiguration.Settings.Sections.All(sec => sec.Name != sectionName))
+                if (!serviceConfiguration.Settings.Sections.Any(sec => sec.Name == sectionName))
                 {
                     return null;
                 }
 
-                if (serviceConfiguration.Settings.Sections[sectionName].Parameters.All(param => param.Name != parameterName))
+                if (!serviceConfiguration.Settings.Sections[sectionName].Parameters.Any(param => param.Name == parameterName))
                 {
                     return null;
                 }
@@ -326,45 +292,8 @@ namespace FabricObserver.Observers
             catch (ArgumentException)
             {
             }
-            catch (KeyNotFoundException)
-            {
-            }
-            catch (NullReferenceException)
-            {
-            }
 
             return null;
-        }
-
-        /// <summary>
-        /// Gets a dictionary of Parameters of the specified section.
-        /// </summary>
-        /// <param name="sectionName">Name of the section.</param>
-        /// <returns>A dictionary of Parameters key/value pairs (string, string) or null upon failure.</returns>
-        public IDictionary<string, string> GetConfigSettingSectionParameters(string sectionName)
-        {
-            if (string.IsNullOrEmpty(sectionName))
-            {
-                return null;
-            }
-
-            IDictionary<string, string> container = new Dictionary<string, string>();
-
-            var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
-
-            var sections = serviceConfiguration.Settings.Sections.FirstOrDefault(sec => sec.Name == sectionName);
-
-            if (sections == null)
-            {
-                return null;
-            }
-
-            foreach (var param in sections.Parameters)
-            {
-                container.Add(param.Name, param.Value);
-            }
-
-            return container;
         }
 
         /// <inheritdoc/>
@@ -981,11 +910,11 @@ namespace FabricObserver.Observers
             // This only needs to be set once.
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
-                this.sFLogRoot = ServiceFabricConfiguration.Instance.FabricLogRoot;
+                this.SFLogRoot = ServiceFabricConfiguration.Instance.FabricLogRoot;
 
-                if (!string.IsNullOrEmpty(this.sFLogRoot))
+                if (!string.IsNullOrEmpty(this.SFLogRoot))
                 {
-                    this.dumpsPath = Path.Combine(this.sFLogRoot, "CrashDumps");
+                    this.dumpsPath = Path.Combine(this.SFLogRoot, "CrashDumps");
                 }
             }
 

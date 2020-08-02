@@ -13,7 +13,7 @@ namespace FabricObserver.Observers.Utilities
         internal ulong VmHWM;
         internal ulong VmRSS;
         internal ulong RssAnon;
-        internal ulong RssFile;
+        internal ulong RsSFile;
         internal ulong RssShmem;
         internal ulong VmData;
         internal ulong VmSwap;
@@ -27,7 +27,7 @@ namespace FabricObserver.Observers.Utilities
     internal static class LinuxProcFS
     {
         internal const string RootPath = "/proc/";
-        private const string StatusFileName = "/status";
+        private const string StatuSFileName = "/status";
 
         /// <summary>
         /// Reads data from the /proc/meminfo file.
@@ -77,21 +77,21 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Parses /proc/{pid}/status file.
         /// </summary>
-        internal static bool TryParseStatusFile(int pid, out ParsedStatus result)
+        internal static bool TryParseStatuSFile(int pid, out ParsedStatus result)
         {
-            string statusFilePath = RootPath + pid.ToString() + StatusFileName;
+            string statuSFilePath = RootPath + pid.ToString() + StatuSFileName;
 
-            return TryParseStatusFile(statusFilePath, out result);
+            return TryParseStatuSFile(statuSFilePath, out result);
         }
 
         /// <summary>
         /// Parses /proc/{pid}/status file.
         /// </summary>
-        internal static bool TryParseStatusFile(string statusFilePath, out ParsedStatus result)
+        internal static bool TryParseStatuSFile(string statuSFilePath, out ParsedStatus result)
         {
             result = default(ParsedStatus);
 
-            if (!TryReadFile(statusFilePath, out string[] fileLines))
+            if (!TryReadFile(statuSFilePath, out string[] fileLines))
             {
                 return false;
             }
@@ -118,8 +118,8 @@ namespace FabricObserver.Observers.Utilities
                     case nameof(ParsedStatus.RssAnon):
                         result.RssAnon = ReadUInt64(line, idx + 2) * 1024;
                         break;
-                    case nameof(ParsedStatus.RssFile):
-                        result.RssFile = ReadUInt64(line, idx + 2) * 1024;
+                    case nameof(ParsedStatus.RsSFile):
+                        result.RsSFile = ReadUInt64(line, idx + 2) * 1024;
                         break;
                     case nameof(ParsedStatus.RssShmem):
                         result.RssShmem = ReadUInt64(line, idx + 2) * 1024;
