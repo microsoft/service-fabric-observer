@@ -24,7 +24,6 @@ namespace FabricObserver.Observers
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
 
         public CertificateObserver()
-               : base(ObserverConstants.CertificateObserverName)
         {
         }
 

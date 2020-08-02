@@ -28,14 +28,17 @@ namespace FabricObserver.Observers
     {
         private static bool etwEnabled;
         private readonly string nodeName;
-        private readonly List<IObserver> observers;
         private readonly TelemetryEvents telemetryEvents;
+        private List<IObserver> observers;
         private EventWaitHandle globalShutdownEventHandle;
         private volatile bool shutdownSignaled;
         private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(30);
         private CancellationToken token;
         private CancellationTokenSource cts;
+        private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
         private bool disposedValue;
+        private IEnumerable<IObserver> serviceCollection;
+        private bool isConfigurationUpdateInProgess;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
@@ -66,10 +69,13 @@ namespace FabricObserver.Observers
         public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
         {
             this.token = token;
+            this.cts = new CancellationTokenSource();
+            this.linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, this.token);
             FabricClientInstance = new FabricClient();
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
             this.nodeName = FabricServiceContext?.NodeContext.NodeName;
-
+            FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetConfigSettingValue(
@@ -92,10 +98,12 @@ namespace FabricObserver.Observers
             // this logs error/warning/info messages for ObserverManager.
             this.Logger = new Logger("ObserverManager", logFolderBasePath);
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
-            this.SetPropertiesFromConfigurationParameters();
+            this.SetPropertieSFromConfigurationParameters();
 
+            this.serviceCollection = serviceProvider.GetServices<IObserver>();
+            
             // Populate the Observer list for the sequential run loop.
-            this.observers = serviceProvider.GetServices<IObserver>().Where(o => o.IsEnabled).ToList();
+            this.observers = this.serviceCollection.Where(o => o.IsEnabled).ToList();
 
             // FabricObserver Internal Diagnostic Telemetry (Non-PII).
             // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
@@ -300,7 +308,7 @@ namespace FabricObserver.Observers
             this.ShutDown();
         }
 
-        public void StopObservers()
+        public void StopObservers(bool shutdownSignaled = false)
         {
             try
             {
@@ -339,6 +347,8 @@ namespace FabricObserver.Observers
                         FabricClientInstance = null;
                     }
                 }
+
+                FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= this.CodePackageActivationContext_ConfigurationPackageModifiedEvent;
 
                 this.disposedValue = true;
             }
@@ -459,7 +469,44 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void SetPropertiesFromConfigurationParameters()
+        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
+        {
+            this.isConfigurationUpdateInProgess = true;
+            this.SignalAbortToRunningObserver();
+
+            await Task.Delay(
+                TimeSpan.FromSeconds(2),
+                this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token : this.token).ConfigureAwait(false);
+            
+            try
+            {
+                foreach (var observer in this.serviceCollection)
+                {
+                    observer.ConfigurationSettings.UpdateConfigSettings(e.NewPackage.Settings);
+                }
+
+                this.observers = this.serviceCollection.Where(o => o.IsEnabled).ToList();
+            }
+            catch (Exception err)
+            {
+                var healthReport = new Utilities.HealthReport
+                {
+                    AppName = new Uri(FabricServiceContext.CodePackageActivationContext.ApplicationName),
+                    Code = FoErrorWarningCodes.Ok,
+                    ReportType = HealthReportType.Application,
+                    HealthMessage = $"Error updating observer with new configuration:{Environment.NewLine}{err}",
+                    NodeName = FabricServiceContext.NodeContext.NodeName,
+                    State = HealthState.Ok,
+                    Property = $"Configuration_Upate_Error",
+                };
+
+                this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+            }
+
+            this.isConfigurationUpdateInProgess = false;
+        }
+
+        private void SetPropertieSFromConfigurationParameters()
         {
             this.ApplicationName = FabricRuntime.GetActivationContext().ApplicationName;
 
@@ -601,7 +648,16 @@ namespace FabricObserver.Observers
         private void SignalAbortToRunningObserver()
         {
             this.Logger.LogInfo("Signalling task cancellation to currently running Observer.");
-            this.cts?.Cancel();
+            
+            if (this.linkedSFRuntimeObserverTokenSource != null)
+            {
+                this.linkedSFRuntimeObserverTokenSource.Cancel();
+            }
+            else 
+            {
+                this.cts?.Cancel();
+            }
+
             this.Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
         }
 
@@ -615,7 +671,9 @@ namespace FabricObserver.Observers
                 try
                 {
                     // Shutdown/cancellation signaled, so stop.
-                    if (this.token.IsCancellationRequested || this.shutdownSignaled)
+                    bool taskCancelled = this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token.IsCancellationRequested : this.token.IsCancellationRequested;
+                    
+                    if (taskCancelled || this.shutdownSignaled)
                     {
                         return false;
                     }
@@ -631,7 +689,8 @@ namespace FabricObserver.Observers
                     this.IsObserverRunning = true;
 
                     // Synchronous call.
-                    var isCompleted = observer.ObserveAsync(this.token).Wait(this.observerExecTimeout);
+                    var isCompleted = observer.ObserveAsync(
+                        this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token : this.token).Wait(this.observerExecTimeout);
 
                     // The observer is taking too long (hung?), move on to next observer.
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
@@ -656,6 +715,8 @@ namespace FabricObserver.Observers
 
                         continue;
                     }
+
+                    this.Logger.LogInfo($"Successfully ran {observer.ObserverName}.");
 
                     if (!ObserverWebAppDeployed)
                     {
@@ -687,8 +748,6 @@ namespace FabricObserver.Observers
                         catch (IOException)
                         {
                         }
-
-                        this.Logger.LogInfo($"Successfully ran {observer.ObserverName}.");
                     }
                 }
                 catch (AggregateException ex)
@@ -698,6 +757,12 @@ namespace FabricObserver.Observers
                     if (ex.InnerException is OperationCanceledException ||
                         ex.InnerException is TaskCanceledException)
                     {
+                        if (this.isConfigurationUpdateInProgess)
+                        {
+                            this.IsObserverRunning = false;
+                            return false;
+                        }
+
                         continue;
                     }
 
@@ -713,11 +778,6 @@ namespace FabricObserver.Observers
             if (allExecuted)
             {
                 this.Logger.LogInfo(ObserverConstants.AllObserversExecutedMessage);
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    ObserverConstants.ObserverManagerName,
-                    this.ApplicationName,
-                    HealthState.Ok,
-                    ObserverConstants.AllObserversExecutedMessage);
             }
             else
             {

@@ -15,7 +15,6 @@ namespace FabricObserver.Observers
         StringBuilder _message = new StringBuilder();
         
         public SampleNewObserver()
-            : base(nameof(SampleNewObserver))
         {
            
         }

@@ -55,7 +55,6 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="NodeObserver"/> class.
         /// </summary>
         public NodeObserver()
-            : base(ObserverConstants.NodeObserverName)
         {
             this.stopwatch = new Stopwatch();
         }
@@ -227,7 +226,7 @@ namespace FabricObserver.Observers
         {
             if (!this.IsTestRun)
             {
-                this.SetThresholdsFromConfiguration();
+                this.SetThresholdSFromConfiguration();
             }
 
             this.InitializeDataContainers();
@@ -266,7 +265,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void SetThresholdsFromConfiguration()
+        private void SetThresholdSFromConfiguration()
         {
             /* Error thresholds */
 

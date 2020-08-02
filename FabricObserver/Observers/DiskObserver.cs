@@ -45,7 +45,6 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="DiskObserver"/> class.
         /// </summary>
         public DiskObserver()
-            : base(ObserverConstants.DiskObserverName)
         {
             this.diskSpacePercentageUsageData = new List<FabricResourceUsageData<double>>();
             this.diskSpaceUsageData = new List<FabricResourceUsageData<double>>();

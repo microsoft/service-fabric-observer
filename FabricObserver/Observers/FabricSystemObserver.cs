@@ -47,7 +47,6 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
         /// </summary>
         public FabricSystemObserver()
-            : base(ObserverConstants.FabricSystemObserverName)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -435,7 +434,7 @@ namespace FabricObserver.Observers
 
             this.stopwatch.Start();
 
-            this.SetThresholdsFromConfiguration();
+            this.SetThresholdSFromConfiguration();
 
             if (this.allMemData == null)
             {
@@ -473,7 +472,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void SetThresholdsFromConfiguration()
+        private void SetThresholdSFromConfiguration()
         {
             /* Error thresholds */
 

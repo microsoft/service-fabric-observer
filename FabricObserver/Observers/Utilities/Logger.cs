@@ -247,6 +247,7 @@ namespace FabricObserver.Observers.Utilities
                 var target = new FileTarget
                 {
                     Name = targetName,
+                    OptimizeBufferReuse = true,
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",
                     OpenFileCacheTimeout = 5,

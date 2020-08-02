@@ -271,7 +271,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new OsObserver();
+            var obs = new OSObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.CsvFileLogger != null);
@@ -291,7 +291,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new SfConfigurationObserver();
+            var obs = new SFConfigurationObserver();
 
             // These are set in derived ObserverBase.
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -466,7 +466,7 @@ namespace FabricObserverTests
 
             _ = Task.Factory.StartNew(() =>
             {
-                obsMgr.StartObserversAsync();
+                _ = obsMgr.StartObserversAsync();
             });
 
             Wait(() => obsMgr.IsObserverRunning, 10);
@@ -508,7 +508,7 @@ namespace FabricObserverTests
 
             _ = Task.Factory.StartNew(() =>
             {
-                obsMgr.StartObserversAsync();
+                _ = obsMgr.StartObserversAsync();
             });
 
             Wait(() => obsMgr.IsObserverRunning, 10);
@@ -541,7 +541,7 @@ namespace FabricObserverTests
 
             _ = Task.Factory.StartNew(() =>
             {
-                obsMgr.StartObserversAsync();
+                _ = obsMgr.StartObserversAsync();
             });
 
             Wait(() => obsMgr.IsObserverRunning, 10);
@@ -574,7 +574,7 @@ namespace FabricObserverTests
 
             _ = Task.Factory.StartNew(() =>
             {
-                obsMgr.StartObserversAsync();
+                _ = obsMgr.StartObserversAsync();
             });
 
             Wait(() => obsMgr.IsObserverRunning, 10);
@@ -607,7 +607,7 @@ namespace FabricObserverTests
 
             _ = Task.Factory.StartNew(() =>
             {
-                obsMgr.StartObserversAsync();
+                _ = obsMgr.StartObserversAsync();
             });
 
             Wait(() => obsMgr.IsObserverRunning, 1);
@@ -639,7 +639,7 @@ namespace FabricObserverTests
 
             _ = Task.Factory.StartNew(() =>
             {
-                obsMgr.StartObserversAsync();
+                _ = obsMgr.StartObserversAsync();
             });
 
             Wait(() => obsMgr.IsObserverRunning, 3);
@@ -658,7 +658,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new OsObserver
+            var obs = new OSObserver
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
@@ -672,7 +672,7 @@ namespace FabricObserverTests
 
             _ = Task.Factory.StartNew(() =>
             {
-                obsMgr.StartObserversAsync();
+                _ = obsMgr.StartObserversAsync();
             });
 
             Wait(() => obsMgr.IsObserverRunning, 1);
@@ -955,7 +955,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new OsObserver()
+            var obs = new OSObserver()
             {
                 IsTestRun = true,
                 TestManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
@@ -1243,7 +1243,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new SfConfigurationObserver
+            var obs = new SFConfigurationObserver
             {
                 IsTestRun = true,
             };

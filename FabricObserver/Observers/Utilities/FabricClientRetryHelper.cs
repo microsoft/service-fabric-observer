@@ -133,7 +133,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             if (fabricException != null
-                && errors.RetrySuccessFabricErrorCodes.Contains(fabricException.ErrorCode))
+                && errors.RetrySuccesSFabricErrorCodes.Contains(fabricException.ErrorCode))
             {
                 retryElseSuccess = false /*success*/;
 
@@ -150,7 +150,7 @@ namespace FabricObserver.Observers.Utilities
             if (fabricException?.InnerException != null)
             {
                 if (fabricException.InnerException is COMException ex
-                    && errors.InternalRetrySuccessFabricErrorCodes.Contains((uint)ex.ErrorCode))
+                    && errors.InternalRetrySuccesSFabricErrorCodes.Contains((uint)ex.ErrorCode))
                 {
                     retryElseSuccess = false /*success*/;
 

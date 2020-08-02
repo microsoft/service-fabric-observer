@@ -58,14 +58,14 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
             _ = services.AddScoped(typeof(IObserver), typeof(NodeObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(OsObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(SfConfigurationObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(OSObserver));
+            _ = services.AddScoped(typeof(IObserver), typeof(SFConfigurationObserver));
             _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
 
-            this.LoadObserversFromPlugins(services);
+            this.LoadObserverSFromPlugins(services);
         }
 
-        private void LoadObserversFromPlugins(ServiceCollection services)
+        private void LoadObserverSFromPlugins(ServiceCollection services)
         {
             string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
@@ -116,8 +116,9 @@ namespace FabricObserver
                     }
                     else
                     {
-                        // Log....
-                        //throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
+                        // We should not throw here. There is no reason to take down the FO process just because
+                        // a plugin could not be loaded. Instead, emit a health report so the developer can see the issue details in SFX/Telemetry.
+                        // throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
                     }
                 }
             }

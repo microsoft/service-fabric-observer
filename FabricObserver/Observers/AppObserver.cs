@@ -47,9 +47,8 @@ namespace FabricObserver.Observers
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
         /// </summary>
         public AppObserver()
-            : base(ObserverConstants.AppObserverName)
         {
-            this.ConfigPackagePath = ConfigSettings.ConfigPackagePath;
+            this.ConfigPackagePath = MachineInfoModel.ConfigSettings.ConfigPackagePath;
             this.allAppCpuData = new List<FabricResourceUsageData<int>>();
             this.allAppMemDataMb = new List<FabricResourceUsageData<float>>();
             this.allAppMemDataPercent = new List<FabricResourceUsageData<double>>();
@@ -295,7 +294,7 @@ namespace FabricObserver.Observers
 
             if (!this.IsTestRun)
             {
-                ConfigSettings.Initialize(
+                MachineInfoModel.ConfigSettings.Initialize(
                     this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                         ObserverConstants.ObserverConfigurationPackageName)?.Settings,
                     ObserverConstants.AppObserverConfigurationSectionName,
@@ -305,7 +304,7 @@ namespace FabricObserver.Observers
             // For unit tests, this path will be an empty string and not generate an exception.
             var appObserverConfigFileName = Path.Combine(
                 this.ConfigPackagePath ?? string.Empty,
-                ConfigSettings.AppObserverDataFileName ?? string.Empty);
+                MachineInfoModel.ConfigSettings.AppObserverDataFileName ?? string.Empty);
 
             if (!File.Exists(appObserverConfigFileName))
             {
@@ -349,7 +348,7 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            int settingsFail = 0;
+            int settingSFail = 0;
 
             foreach (var application in this.targetList)
             {
@@ -362,13 +361,13 @@ namespace FabricObserver.Observers
                         HealthState.Warning,
                         $"Initialize() | {application.TargetApp}: Required setting, target, is not set.");
 
-                    settingsFail++;
+                    settingSFail++;
 
                     continue;
                 }
 
                 // No required settings supplied for deployed application(s).
-                if (settingsFail == this.targetList.Count)
+                if (settingSFail == this.targetList.Count)
                 {
                     return false;
                 }

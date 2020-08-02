@@ -106,6 +106,7 @@ namespace FabricObserver.Observers.Utilities
         // OSObserver.
         public const string OsObserverName = "OSObserver";
         public const string OsObserverConfigurationSectionName = "OSObserverConfiguration";
+        public const string EnableWindowsAutoUpdateCheck = "EnableWindowsAutoUpdateCheck";
 
         // SFConfigurationObserver.
         public const string SfConfigurationObserverName = "SFConfigurationObserver";
