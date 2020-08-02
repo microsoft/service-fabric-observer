@@ -61,7 +61,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!this.IsTestRun)
+            if (!IsTestRun)
             {
                 await this.Initialize(token).ConfigureAwait(true);
             }

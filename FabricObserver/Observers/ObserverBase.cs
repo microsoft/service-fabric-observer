@@ -64,7 +64,7 @@ namespace FabricObserver.Observers
         public bool IsUnhealthy { get; set; } = false;
 
         // Only set for unit test runs.
-        public bool IsTestRun { get; set; } = false;
+        public static bool IsTestRun { get; set; } = false;
 
         /*public bool IsRunning
         {
@@ -199,16 +199,19 @@ namespace FabricObserver.Observers
                 this.SetDefaultSfDumpPath();
             }
 
-            this.ConfigurationSettings = new Utilities.ConfigSettings(
-                FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings,
-                this.ConfigurationSectionName);
+            if (!IsTestRun)
+            {
+                this.ConfigurationSettings = new Utilities.ConfigSettings(
+                    FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings,
+                    this.ConfigurationSectionName);
 
-            this.EnableVerboseLogging = this.ConfigurationSettings.EnableVerboseLogging;
-            this.IsEnabled = this.ConfigurationSettings.IsEnabled;
-            this.IsObserverTelemetryEnabled = this.ConfigurationSettings.IsObserverTelemetryEnabled;
-            this.MonitorDuration = this.ConfigurationSettings.MonitorDuration;
-            this.RunInterval = this.ConfigurationSettings.RunInterval;
-            this.ObserverLogger.EnableVerboseLogging = this.EnableVerboseLogging;
+                this.EnableVerboseLogging = this.ConfigurationSettings.EnableVerboseLogging;
+                this.IsEnabled = this.ConfigurationSettings.IsEnabled;
+                this.IsObserverTelemetryEnabled = this.ConfigurationSettings.IsObserverTelemetryEnabled;
+                this.MonitorDuration = this.ConfigurationSettings.MonitorDuration;
+                this.RunInterval = this.ConfigurationSettings.RunInterval;
+                this.ObserverLogger.EnableVerboseLogging = this.EnableVerboseLogging;
+            }
 
             this.HealthReporter = new ObserverHealthReporter(this.ObserverLogger);
         }

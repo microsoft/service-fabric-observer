@@ -194,7 +194,7 @@ namespace FabricObserver.Observers
             var sb = new StringBuilder();
             string clusterManifestXml = null;
 
-            if (this.IsTestRun)
+            if (IsTestRun)
             {
                 clusterManifestXml = File.ReadAllText(Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"));
             }
@@ -279,7 +279,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Stop here for unit testing.
-                if (this.IsTestRun)
+                if (IsTestRun)
                 {
                     ret = sb.ToString();
                     _ = sb.Clear();

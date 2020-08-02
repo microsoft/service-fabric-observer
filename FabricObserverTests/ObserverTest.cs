@@ -62,12 +62,14 @@ namespace FabricObserverTests
         private readonly bool isSFRuntimePresentOnTestMachine;
         private readonly CancellationToken token = new CancellationToken { };
 
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverTest"/> class.
         /// </summary>
         public ObserverTest()
         {
             this.isSFRuntimePresentOnTestMachine = this.IsLocalSFRuntimePresent();
+            FabricObserver.Observers.ObserverBase.IsTestRun = true;
         }
 
         private static bool InstallCerts()
@@ -81,19 +83,17 @@ namespace FabricObserverTests
             var validCert = new X509Certificate2("MyValidCert.p12");
             var expiredCert = new X509Certificate2("MyExpiredCert.p12");
 
-            using (var store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
+            using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            try
             {
-                try
-                {
-                    store.Open(OpenFlags.ReadWrite);
-                    store.Add(validCert);
-                    store.Add(expiredCert);
-                    return true;
-                }
-                catch (CryptographicException ex) when (ex.HResult == 5) // access denied
-                {
-                    return false;
-                }
+                store.Open(OpenFlags.ReadWrite);
+                store.Add(validCert);
+                store.Add(expiredCert);
+                return true;
+            }
+            catch (CryptographicException ex) when (ex.HResult == 5) // access denied
+            {
+                return false;
             }
         }
 
@@ -102,12 +102,10 @@ namespace FabricObserverTests
             var validCert = new X509Certificate2("MyValidCert.p12");
             var expiredCert = new X509Certificate2("MyExpiredCert.p12");
 
-            using (var store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
-            {
-                store.Open(OpenFlags.ReadWrite);
-                store.Remove(validCert);
-                store.Remove(expiredCert);
-            }
+            using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.ReadWrite);
+            store.Remove(validCert);
+            store.Remove(expiredCert);
         }
 
         [ClassCleanup]
@@ -229,10 +227,11 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
+            FabricObserver.Observers.ObserverBase.IsTestRun = true;
 
             var obs = new NetworkObserver
             {
-                IsTestRun = true,
+                
             };
 
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -315,9 +314,9 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+
             var obs = new AppObserver
             {
-                IsTestRun = true,
                 MonitorDuration = TimeSpan.FromSeconds(5),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
@@ -361,7 +360,6 @@ namespace FabricObserverTests
 
             var obs = new AppObserver
             {
-                IsTestRun = true,
                 MonitorDuration = TimeSpan.FromSeconds(5),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
@@ -435,7 +433,7 @@ namespace FabricObserverTests
 
             var obs = new CertificateObserver
             {
-                IsTestRun = true,
+
             };
 
             var commonNamesToObserve = new List<string>
@@ -469,7 +467,7 @@ namespace FabricObserverTests
                 _ = obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 10);
+            Wait(() => obsMgr.IsObserverRunning, 3);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -487,7 +485,6 @@ namespace FabricObserverTests
 
             var obs = new AppObserver
             {
-                IsTestRun = true,
                 MonitorDuration = TimeSpan.FromSeconds(15),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
@@ -511,7 +508,7 @@ namespace FabricObserverTests
                 _ = obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 10);
+            Wait(() => obsMgr.IsObserverRunning, 1);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -531,7 +528,6 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
-                IsTestRun = true,
             };
 
             var obsMgr = new ObserverManager(obs)
@@ -544,7 +540,7 @@ namespace FabricObserverTests
                 _ = obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 10);
+            Wait(() => obsMgr.IsObserverRunning, 1);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -564,7 +560,6 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
-                IsTestRun = true,
             };
 
             var obsMgr = new ObserverManager(obs)
@@ -577,7 +572,7 @@ namespace FabricObserverTests
                 _ = obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 10);
+            Wait(() => obsMgr.IsObserverRunning, 1);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -597,7 +592,6 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
-                IsTestRun = true,
             };
 
             var obsMgr = new ObserverManager(obs)
@@ -629,7 +623,6 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
-                IsTestRun = true,
             };
 
             var obsMgr = new ObserverManager(obs)
@@ -642,7 +635,7 @@ namespace FabricObserverTests
                 _ = obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 3);
+            Wait(() => obsMgr.IsObserverRunning, 1);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -662,7 +655,6 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
-                IsTestRun = true,
             };
 
             var obsMgr = new ObserverManager(obs)
@@ -708,8 +700,7 @@ namespace FabricObserverTests
 
             var obs = new NodeObserver
             {
-                IsTestRun = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
                 UseCircularBuffer = true,
                 DataCapacity = 5,
             };
@@ -755,7 +746,7 @@ namespace FabricObserverTests
                 ObserverManager.TelemetryEnabled = false;
                 ObserverManager.EtwEnabled = false;
 
-                obs = new CertificateObserver { IsTestRun = true };
+                obs = new CertificateObserver { };
 
                 var commonNamesToObserve = new List<string>
                 {
@@ -813,7 +804,7 @@ namespace FabricObserverTests
 
             var obs = new CertificateObserver
             {
-                IsTestRun = true,
+
             };
 
             var commonNamesToObserve = new List<string>
@@ -872,9 +863,8 @@ namespace FabricObserverTests
 
             var obs = new NodeObserver
             {
-                IsTestRun = true,
                 DataCapacity = 2,
-                MonitorDuration = TimeSpan.FromSeconds(2),
+                MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = 10000,
             };
 
@@ -916,9 +906,8 @@ namespace FabricObserverTests
 
             var obs = new NodeObserver
             {
-                IsTestRun = true,
                 DataCapacity = 2,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
                 EphemeralPortsErrorThreshold = -42,
@@ -957,7 +946,6 @@ namespace FabricObserverTests
 
             var obs = new OSObserver()
             {
-                IsTestRun = true,
                 TestManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
             };
 
@@ -1007,7 +995,7 @@ namespace FabricObserverTests
 
             var obs = new DiskObserver
             {
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1058,8 +1046,7 @@ namespace FabricObserverTests
             {
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
-                MonitorDuration = TimeSpan.FromSeconds(5),
-                IsTestRun = true,
+                MonitorDuration = TimeSpan.FromSeconds(1),
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1107,7 +1094,7 @@ namespace FabricObserverTests
 
             var obs = new NetworkObserver
             {
-                IsTestRun = true,
+
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1148,7 +1135,7 @@ namespace FabricObserverTests
 
             var obs = new NetworkObserver
             {
-                IsTestRun = true,
+
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1200,8 +1187,7 @@ namespace FabricObserverTests
 
             var obs = new NodeObserver
             {
-                IsTestRun = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
                 DataCapacity = 5,
                 UseCircularBuffer = true,
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
@@ -1245,7 +1231,7 @@ namespace FabricObserverTests
 
             var obs = new SFConfigurationObserver
             {
-                IsTestRun = true,
+
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1299,9 +1285,8 @@ namespace FabricObserverTests
 
             var obs = new FabricSystemObserver
             {
-                IsTestRun = true,
                 DataCapacity = 5,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
             };
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
@@ -1347,8 +1332,7 @@ namespace FabricObserverTests
 
             var obs = new FabricSystemObserver
             {
-                IsTestRun = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
                 MemWarnUsageThresholdMb = 20, // This will definitely cause Warning alerts.
             };
 
@@ -1394,8 +1378,7 @@ namespace FabricObserverTests
 
             var obs = new FabricSystemObserver
             {
-                IsTestRun = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarnUsageThresholdPct = -42,
             };
 
@@ -1440,8 +1423,7 @@ namespace FabricObserverTests
 
             var obs = new FabricSystemObserver
             {
-                IsTestRun = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarnUsageThresholdPct = 420,
             };
 

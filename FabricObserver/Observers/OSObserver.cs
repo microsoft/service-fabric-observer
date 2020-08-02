@@ -352,7 +352,7 @@ namespace FabricObserver.Observers
                 string osEphemeralPortRange = string.Empty;
                 string fabricAppPortRange = string.Empty;
 
-                string clusterManifestXml = this.IsTestRun ? File.ReadAllText(
+                string clusterManifestXml = IsTestRun ? File.ReadAllText(
                     this.TestManifestPath) : await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(
                         this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(false);
 

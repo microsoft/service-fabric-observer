@@ -360,7 +360,7 @@ namespace FabricObserver.Observers
             }
 
             // Is this a unit test run?
-            if (this.IsTestRun)
+            if (IsTestRun)
             {
                 return true;
             }

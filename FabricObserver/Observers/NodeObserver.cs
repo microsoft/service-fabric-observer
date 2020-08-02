@@ -224,7 +224,7 @@ namespace FabricObserver.Observers
 
         private void Initialize()
         {
-            if (!this.IsTestRun)
+            if (!IsTestRun)
             {
                 this.SetThresholdSFromConfiguration();
             }

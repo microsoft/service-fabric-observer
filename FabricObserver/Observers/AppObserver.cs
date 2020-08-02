@@ -292,7 +292,7 @@ namespace FabricObserver.Observers
                 this.ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             }
 
-            if (!this.IsTestRun)
+            if (!IsTestRun)
             {
                 MachineInfoModel.ConfigSettings.Initialize(
                     this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
@@ -384,7 +384,7 @@ namespace FabricObserver.Observers
         {
             List<ReplicaOrInstanceMonitoringInfo> repOrInstList;
 
-            if (this.IsTestRun)
+            if (IsTestRun)
             {
                 repOrInstList = this.ReplicaOrInstanceList;
             }
