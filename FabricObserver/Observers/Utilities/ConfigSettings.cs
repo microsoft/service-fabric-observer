@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Description;
+using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -169,7 +170,12 @@ namespace FabricObserver.Observers.Utilities
                     return null;
                 }
 
-                var parameter = this.section.Parameters[parameterName];
+                ConfigurationProperty parameter = null;
+                
+                if (this.section.Parameters.Any(p => p.Name == parameterName))
+                {
+                    parameter = this.section.Parameters[parameterName];
+                }
 
                 if (parameter == null)
                 {

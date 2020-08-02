@@ -91,15 +91,10 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            // this logs metrics from observers, if enabled, and/or sends
-            // resource usage telemetry data to your implemented provider.
-            this.DataLogger = new DataTableFileLogger();
-
             // this logs error/warning/info messages for ObserverManager.
             this.Logger = new Logger("ObserverManager", logFolderBasePath);
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertieSFromConfigurationParameters();
-
             this.serviceCollection = serviceProvider.GetServices<IObserver>();
             
             // Populate the Observer list for the sequential run loop.
@@ -216,11 +211,6 @@ namespace FabricObserver.Observers
         }
 
         private Logger Logger
-        {
-            get; set;
-        }
-
-        private DataTableFileLogger DataLogger
         {
             get; set;
         }
@@ -512,7 +502,7 @@ namespace FabricObserver.Observers
                 this.observerExecTimeout = TimeSpan.FromSeconds(result);
             }
 
-            // Loggers
+            // Logger
             if (bool.TryParse(
                 GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter),
                 out bool enableVerboseLogging))
@@ -527,19 +517,6 @@ namespace FabricObserver.Observers
                 ObserverExecutionLoopSleepSeconds = execFrequency;
 
                 this.Logger.LogInfo($"ExecutionFrequency is {ObserverExecutionLoopSleepSeconds} Seconds");
-            }
-
-            if (bool.TryParse(
-                GetConfigSettingValue(ObserverConstants.EnableLongRunningCsvLogging),
-                out bool enableCsvLogging))
-            {
-                this.DataLogger.EnableCsvLogging = enableCsvLogging;
-            }
-
-            string dataLogPath = GetConfigSettingValue(ObserverConstants.DataLogPathParameter);
-            if (!string.IsNullOrEmpty(dataLogPath))
-            {
-                this.DataLogger.DataLogFolderPath = dataLogPath;
             }
 
             // FQDN for use in warning or error hyperlinks in HTML output

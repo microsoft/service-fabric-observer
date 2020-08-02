@@ -165,25 +165,35 @@ namespace FabricObserver.Observers
                 this.SetDefaultSfDumpPath();
             }
 
-            // DataLogger setup.
-            this.CsvFileLogger = new DataTableFileLogger();
-            string dataLogPath = this.GetSettingParameterValue(
-                ObserverConstants.ObserverManagerConfigurationSectionName,
-                ObserverConstants.DataLogPathParameter);
-            if (!string.IsNullOrEmpty(observerLogPath))
-            {
-                this.CsvFileLogger.DataLogFolderPath = dataLogPath;
-            }
-
+            // DataLogger setup
             if (bool.TryParse(
                 this.GetSettingParameterValue(
-                ObserverConstants.ObserverManagerConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.EnableLongRunningCsvLogging),
                 out bool enableDataLogging))
             {
-                this.CsvFileLogger.EnableCsvLogging = enableDataLogging;
-            }
+                if (enableDataLogging)
+                {
+                    this.CsvFileLogger = new DataTableFileLogger
+                    {
+                        EnableCsvLogging = enableDataLogging,
+                    };
 
+                    string dataLogPath = this.GetSettingParameterValue(
+                        ObserverConstants.ObserverManagerConfigurationSectionName,
+                        ObserverConstants.DataLogPathParameter);
+
+                    if (!string.IsNullOrEmpty(dataLogPath))
+                    {
+                        this.CsvFileLogger.DataLogFolderPath = dataLogPath;
+                    }
+                    else
+                    {
+                        this.CsvFileLogger.DataLogFolderPath = Path.Combine(Environment.CurrentDirectory, "observer_data_logs");
+                    }
+                }
+            }
+            
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
                 this.SetDefaultSfDumpPath();
@@ -241,7 +251,10 @@ namespace FabricObserver.Observers
         /// <param name="parameterName">Name of the parameter.</param>
         /// <param name="defaultValue">Default value.</param>
         /// <returns>parameter value.</returns>
-        public string GetSettingParameterValue(string sectionName, string parameterName, string defaultValue = null)
+        public string GetSettingParameterValue(
+            string sectionName,
+            string parameterName,
+            string defaultValue = null)
         {
             if (string.IsNullOrEmpty(sectionName) || string.IsNullOrEmpty(parameterName))
             {
@@ -257,12 +270,12 @@ namespace FabricObserver.Observers
                     return null;
                 }
 
-                if (serviceConfiguration.Settings.Sections.All(sec => sec.Name != sectionName))
+                if (!serviceConfiguration.Settings.Sections.Any(sec => sec.Name == sectionName))
                 {
                     return null;
                 }
 
-                if (serviceConfiguration.Settings.Sections[sectionName].Parameters.All(param => param.Name != parameterName))
+                if (!serviceConfiguration.Settings.Sections[sectionName].Parameters.Any(param => param.Name == parameterName))
                 {
                     return null;
                 }
@@ -277,12 +290,6 @@ namespace FabricObserver.Observers
                 return setting;
             }
             catch (ArgumentException)
-            {
-            }
-            catch (KeyNotFoundException)
-            {
-            }
-            catch (NullReferenceException)
             {
             }
 

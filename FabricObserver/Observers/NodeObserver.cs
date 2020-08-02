@@ -93,7 +93,7 @@ namespace FabricObserver.Observers
             {
                 token.ThrowIfCancellationRequested();
 
-                if (this.CsvFileLogger.EnableCsvLogging)
+                if (this.CsvFileLogger != null && this.CsvFileLogger.EnableCsvLogging)
                 {
                     var fileName = "CpuMemFirewallsPorts" + this.NodeName;
 

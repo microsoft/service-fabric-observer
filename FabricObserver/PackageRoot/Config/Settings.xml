@@ -19,9 +19,6 @@
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data.
          **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you do for Windows).** -->
     <Parameter Name="DataLogPath" Value="fabric_observer_csvdata" />
-    <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
-         These files will be written to the DataLogPath supplied above.-->
-    <Parameter Name="EnableLongRunningCSVLogging" Value="false"/>
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="true" />
@@ -70,6 +67,9 @@
     <Parameter Name="Enabled" Value="true" MustOverride="true" />
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
     <Parameter Name="EnableTelemetry" Value="false" MustOverride="true" />
+    <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
+         These files will be written to the DataLogPath supplied above.-->
+    <Parameter Name="EnableLongRunningCSVLogging" Value="false" MustOverride="true"/>
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -132,6 +132,7 @@
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="false" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="true" MustOverride="true" />
+    <Parameter Name="EnableLongRunningCSVLogging" Value="false" MustOverride="true"/>
     <Parameter Name="EnableVerboseLogging" Value="true" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="00:00:10" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
@@ -171,6 +172,7 @@
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="true" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="false" MustOverride="true" />
+    <Parameter Name="EnableLongRunningCSVLogging" Value="false" MustOverride="true"/>
     <Parameter Name="EnableVerboseLogging" Value="false" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="00:00:30" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />

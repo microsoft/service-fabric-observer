@@ -674,7 +674,7 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                if (this.CsvFileLogger.EnableCsvLogging)
+                if (this.CsvFileLogger != null && this.CsvFileLogger.EnableCsvLogging)
                 {
                     var fileName = "FabricSystemServices_" + this.NodeName;
                     var propertyName = data.First().Property;

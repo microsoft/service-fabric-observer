@@ -139,7 +139,7 @@ namespace FabricObserverTests
             var obs = new AppObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
+            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.AppObserverName);
 
@@ -158,7 +158,7 @@ namespace FabricObserverTests
             var obs = new CertificateObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
+            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.CertificateObserverName);
 
@@ -194,7 +194,7 @@ namespace FabricObserverTests
             var obs = new DiskObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
+            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.DiskObserverName);
 
@@ -213,7 +213,7 @@ namespace FabricObserverTests
             var obs = new FabricSystemObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
+            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.FabricSystemObserverName);
 
@@ -236,7 +236,7 @@ namespace FabricObserverTests
             };
 
             Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
+            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.NetworkObserverName);
 
@@ -255,7 +255,7 @@ namespace FabricObserverTests
             var obs = new NodeObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
+            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.NodeObserverName);
 
@@ -274,7 +274,7 @@ namespace FabricObserverTests
             var obs = new OSObserver();
 
             Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
+            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.OsObserverName);
 
@@ -295,7 +295,7 @@ namespace FabricObserverTests
 
             // These are set in derived ObserverBase.
             Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.CsvFileLogger != null);
+            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.SfConfigurationObserverName);
 
