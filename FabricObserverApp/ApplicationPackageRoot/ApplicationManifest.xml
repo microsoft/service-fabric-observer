@@ -2,11 +2,11 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="1" />
+    <!-- Observer Enablement -->
     <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
          (See ObserverBase.cs) -->
-    <!-- Observer Enablement -->
     <Parameter Name="AppObserverEnabled" DefaultValue="True" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="True" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="True" />
@@ -51,8 +51,8 @@
     <Parameter Name="OSObserverRunInterval" DefaultValue="" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
     <Parameter Name="SampleNewObserverRunInterval" DefaultValue="" />
-    <!-- Certificate Observer Overrides -->
     <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
+    <!-- Certificate Observer Overrides -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->

@@ -91,9 +91,9 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <inheritdoc/>
-        public void LogTrace(string observer, string format, params object[] parameters)
+        public void LogTrace(string format, params object[] parameters)
         {
-            this.OLogger.Trace(observer + "|" + format, parameters);
+            this.OLogger.Trace(format, parameters);
         }
 
         /// <inheritdoc/>
@@ -189,7 +189,7 @@ namespace FabricObserver.Observers.Utilities
             // default log directory.
             string logFolderBase = string.Empty;
 
-            // log directory supplied in config. Set in ObserverManager.
+            // Log directory supplied in Settings.xml.
             if (!string.IsNullOrEmpty(this.LogFolderBasePath))
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -206,7 +206,7 @@ namespace FabricObserver.Observers.Utilities
                     // Remove supplied drive letter if Linux is the runtime target.
                     if (this.LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
-                        this.LogFolderBasePath = this.LogFolderBasePath.Remove(0, 3);
+                        this.LogFolderBasePath = this.LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
                     }
 
                     logFolderBase = this.LogFolderBasePath;
@@ -248,6 +248,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     Name = targetName,
                     OptimizeBufferReuse = true,
+                    ConcurrentWrites = true,
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",
                     OpenFileCacheTimeout = 5,

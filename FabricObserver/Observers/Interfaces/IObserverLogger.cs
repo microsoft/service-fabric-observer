@@ -15,7 +15,7 @@ namespace FabricObserver.Observers.Interfaces
 
         void LogError(string format, params object[] parameters);
 
-        void LogTrace(string observer, string format, params object[] parameters);
+        void LogTrace(string format, params object[] parameters);
 
         void LogWarning(string format, params object[] parameters);
 

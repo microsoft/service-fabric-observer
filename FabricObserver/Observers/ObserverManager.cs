@@ -261,8 +261,6 @@ namespace FabricObserver.Observers
                         this.Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again.");
                         this.ThreadSleep(this.globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
                     }
-
-                    Logger.Flush();
                 }
             }
             catch (Exception ex)
@@ -308,15 +306,11 @@ namespace FabricObserver.Observers
             this.ShutDown();
         }
 
-        public void StopObservers(bool shutdownSignaled = false)
+        public void StopObservers(bool shutdownSignaled = true)
         {
             try
             {
-                if (!this.shutdownSignaled)
-                {
-                    this.shutdownSignaled = true;
-                }
-
+                this.shutdownSignaled = shutdownSignaled;
                 this.SignalAbortToRunningObserver();
                 this.IsObserverRunning = false;
             }
@@ -472,10 +466,10 @@ namespace FabricObserver.Observers
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
             this.isConfigurationUpdateInProgess = true;
-            this.SignalAbortToRunningObserver();
+            this.StopObservers(false);
 
             await Task.Delay(
-                TimeSpan.FromSeconds(2),
+                TimeSpan.FromSeconds(1),
                 this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token : this.token).ConfigureAwait(false);
             
             try
@@ -760,15 +754,13 @@ namespace FabricObserver.Observers
                         if (this.isConfigurationUpdateInProgess)
                         {
                             this.IsObserverRunning = false;
-                            return false;
+                            return true;
                         }
 
                         continue;
                     }
 
                     _ = exceptionBuilder.AppendLine($"Exception from {observer.ObserverName}:\r\n{ex.InnerException}");
-
-                    // TODO: Add debug output code to SFX...
                     allExecuted = false;
                 }
 

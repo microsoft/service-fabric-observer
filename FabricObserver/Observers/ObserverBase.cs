@@ -170,10 +170,18 @@ namespace FabricObserver.Observers
             string dataLogPath = this.GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
                 ObserverConstants.DataLogPathParameter);
-
             if (!string.IsNullOrEmpty(observerLogPath))
             {
                 this.CsvFileLogger.DataLogFolderPath = dataLogPath;
+            }
+
+            if (bool.TryParse(
+                this.GetSettingParameterValue(
+                ObserverConstants.ObserverManagerConfigurationSectionName,
+                ObserverConstants.EnableLongRunningCsvLogging),
+                out bool enableDataLogging))
+            {
+                this.CsvFileLogger.EnableCsvLogging = enableDataLogging;
             }
 
             if (string.IsNullOrEmpty(this.dumpsPath))
@@ -190,7 +198,6 @@ namespace FabricObserver.Observers
             this.IsObserverTelemetryEnabled = this.ConfigurationSettings.IsObserverTelemetryEnabled;
             this.MonitorDuration = this.ConfigurationSettings.MonitorDuration;
             this.RunInterval = this.ConfigurationSettings.RunInterval;
-
             this.ObserverLogger.EnableVerboseLogging = this.EnableVerboseLogging;
 
             this.HealthReporter = new ObserverHealthReporter(this.ObserverLogger);

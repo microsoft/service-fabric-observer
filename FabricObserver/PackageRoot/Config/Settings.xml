@@ -21,10 +21,10 @@
     <Parameter Name="DataLogPath" Value="fabric_observer_csvdata" />
     <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
          These files will be written to the DataLogPath supplied above.-->
-    <Parameter Name="EnableLongRunningCSVLogging" Value="False"/>
+    <Parameter Name="EnableLongRunningCSVLogging" Value="false"/>
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
-    <Parameter Name="EnableVerboseLogging" Value="false" />
+    <Parameter Name="EnableVerboseLogging" Value="true" />
     <!-- Optional: This is for use by the text logger to build node warning/error hyperlinks 
          that FabricObserverWebApi uses in html output. The API does not communicate directly with FabricObserver.
          It relies on the existence of local log files, across ObserverManager and individual observers (they log to their own folders). 
@@ -33,7 +33,7 @@
     <Parameter Name="FQDN" Value="" />
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="True" />
+    <Parameter Name="EnableTelemetryProvider" Value="true" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. 
@@ -46,7 +46,7 @@
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
     <!-- Optional: EventSource Tracing. -->
-    <Parameter Name="EnableEventSourceProvider" Value="True" />
+    <Parameter Name="EnableEventSourceProvider" Value="true" />
     <Parameter Name="EventSourceProviderName" Value="FabricObserverETWProvider" />
     <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII. 
          Please enable so we can learn how FO is being used. Nothing more.
@@ -55,25 +55,25 @@
          We just want to know if FO is running somewhere and that it is healthy. We collect no personal identifiable information, 
          as you can see in the source code. See ObserverManager.cs for examples of a collected data for FO.
          See TelemetryLib project for SF info that is collected. -->
-    <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="True" />
+    <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="true" />
     <!-- Optional: If you deploy the FabricObserverWebApi app, set this to True.
          If set to True or False, ObserverManager won't check to see if "fabric:/FabricObserverWebApi" app is deployed 
          so you can rename the FO API app to whatever you want. The point here is that 
          if the web API app (log reader API service for observer warnings/errors) is not present,
          then FO will not run code that the app needs (like files written to OS disk and 
          other aspects of FO log management).-->
-    <Parameter Name="ObserverWebApiEnabled" Value="True" />
+    <Parameter Name="ObserverWebApiEnabled" Value="false" />
   </Section>
   <!-- Observer Configuration Settings -->
   <Section Name="AppObserverConfiguration">
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="true" MustOverride="true" />
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
-    <Parameter Name="EnableTelemetry" Value="False" MustOverride="true" />
+    <Parameter Name="EnableTelemetry" Value="false" MustOverride="true" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
-    <Parameter Name="EnableVerboseLogging" Value="False" MustOverride="true" />
+    <Parameter Name="EnableVerboseLogging" Value="false" MustOverride="true" />
     <!-- Optional: The amount of time this observer conducts resource usage probing. 
          Each observer has a default value set, but you should override by setting this
          parameter to what makes sense for your service(s). Note that this value represents
@@ -89,7 +89,7 @@
          It just depends upon how much data you are collecting per observer run and if you only care about
          the most recent data (where number of most recent items in collection 
          type equals the ResourceUsageDataCapacity you specify). -->
-    <Parameter Name="UseCircularBuffer" Value="False" />
+    <Parameter Name="UseCircularBuffer" Value="false" />
     <!-- Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for
          the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
          like 0 or a negative number (or omit the parameter altogether). -->
@@ -140,7 +140,7 @@
          It just depends upon how much data you are collecting per observer run and if you only care about
          the most recent data (where number of most recent items in collection 
          type equals the ResourceUsageDataCapacity you specify). -->
-    <Parameter Name="UseCircularBuffer" Value="False" />
+    <Parameter Name="UseCircularBuffer" Value="false" />
     
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" />
