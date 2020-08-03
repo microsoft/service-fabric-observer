@@ -453,6 +453,11 @@ namespace FabricObserver.Observers
             }
         }
 
+        /// <summary>
+        /// Event handler for application parameter updates (Application Upgrades).
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e">Contains the information necessary for setting new config params from updated package.</param>
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
             this.isConfigurationUpdateInProgess = true;
@@ -490,6 +495,10 @@ namespace FabricObserver.Observers
             this.isConfigurationUpdateInProgess = false;
         }
 
+        /// <summary>
+        /// Sets ObserverManager's related properties/fields to their corresponding Settings.xml 
+        /// configuration settings (parameter values).
+        /// </summary>
         private void SetPropertieSFromConfigurationParameters()
         {
             this.ApplicationName = FabricRuntime.GetActivationContext().ApplicationName;
@@ -616,6 +625,11 @@ namespace FabricObserver.Observers
             }
         }
 
+        /// <summary>
+        /// This function will signal cancellation on the token passed to an observer's ObserveAsync. 
+        /// This will eventually cause the observer to stop processing as this will throw an OperationCancelledExeption 
+        /// in one of the observer's executing code paths.
+        /// </summary>
         private void SignalAbortToRunningObserver()
         {
             this.Logger.LogInfo("Signalling task cancellation to currently running Observer.");
@@ -632,6 +646,10 @@ namespace FabricObserver.Observers
             this.Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
         }
 
+        /// <summary>
+        /// Runs all observers in a sequential loop.
+        /// </summary>
+        /// <returns>A boolean value indicating success of a complete observer loop run.</returns>
         private async Task<bool> RunObserversAsync()
         {
             var exceptionBuilder = new StringBuilder();
