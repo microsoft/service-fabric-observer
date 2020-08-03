@@ -69,6 +69,8 @@ namespace FabricObserverTests
         public ObserverTest()
         {
             this.isSFRuntimePresentOnTestMachine = this.IsLocalSFRuntimePresent();
+
+            // You must set ObserverBase's static IsTestRun to true to run these unit tests.
             FabricObserver.Observers.ObserverBase.IsTestRun = true;
         }
 
