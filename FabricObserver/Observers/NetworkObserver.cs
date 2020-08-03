@@ -371,7 +371,7 @@ namespace FabricObserver.Observers
 
             MachineInfoModel.ConfigSettings.Initialize(
                 settings,
-                ObserverConstants.NetworkObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 "NetworkObserverDataFileName");
 
             var networkObserverConfigFileName =

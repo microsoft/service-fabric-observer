@@ -101,7 +101,7 @@ namespace FabricObserver.Observers.Utilities
                     case ObserverConstants.NetworkObserverName:
                         property = "NetworkHealth";
                         break;
-                    case ObserverConstants.OsObserverName:
+                    case ObserverConstants.OSObserverName:
                         property = "MachineInformation";
                         break;
                     case ObserverConstants.NodeObserverName:
@@ -132,10 +132,10 @@ namespace FabricObserver.Observers.Utilities
                     $"{Enum.GetName(typeof(HealthState), healthReport.State)} threshold breach. ";
 
                 // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
-                if (healthReport.Observer == ObserverConstants.OsObserverName
+                if (healthReport.Observer == ObserverConstants.OSObserverName
                     && property == "OSConfiguration")
                 {
-                    errWarnPreamble = $"{ObserverConstants.OsObserverName} detected potential problem with OS configuration: ";
+                    errWarnPreamble = $"{ObserverConstants.OSObserverName} detected potential problem with OS configuration: ";
                     property = "OSConfiguration";
                 }
             }

@@ -272,7 +272,7 @@ namespace FabricObserver.Observers
             this.Token.ThrowIfCancellationRequested();
 
             var cpuError = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverCpuErrorLimitPct);
 
             if (!string.IsNullOrEmpty(cpuError) && int.TryParse(cpuError, out int cpuErrorUsageThresholdPct))
@@ -281,7 +281,7 @@ namespace FabricObserver.Observers
             }
 
             var memError = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverMemoryErrorLimitMb);
 
             if (!string.IsNullOrEmpty(memError) && int.TryParse(memError, out int memErrorUsageThresholdMb))
@@ -290,7 +290,7 @@ namespace FabricObserver.Observers
             }
 
             var portsErr = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkErrorActivePorts);
 
             if (!string.IsNullOrEmpty(portsErr) && !int.TryParse(portsErr, out int activePortsErrorThreshold))
@@ -299,7 +299,7 @@ namespace FabricObserver.Observers
             }
 
             var ephemeralPortsErr = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkErrorEphemeralPorts);
 
             if (!string.IsNullOrEmpty(portsErr) && int.TryParse(ephemeralPortsErr, out int ephemeralPortsErrorThreshold))
@@ -308,7 +308,7 @@ namespace FabricObserver.Observers
             }
 
             var errFirewallRules = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkErrorFirewallRules);
 
             if (!string.IsNullOrEmpty(errFirewallRules) && int.TryParse(errFirewallRules, out int firewallRulesErrorThreshold))
@@ -317,7 +317,7 @@ namespace FabricObserver.Observers
             }
 
             var errMemPercentUsed = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverMemoryUsePercentError);
 
             if (!string.IsNullOrEmpty(errMemPercentUsed) && int.TryParse(errMemPercentUsed, out int memoryPercentUsedErrorThreshold))
@@ -330,7 +330,7 @@ namespace FabricObserver.Observers
             this.Token.ThrowIfCancellationRequested();
 
             var cpuWarn = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverCpuWarningLimitPct);
 
             if (!string.IsNullOrEmpty(cpuWarn) && int.TryParse(cpuWarn, out int cpuWarningUsageThresholdPct))
@@ -339,7 +339,7 @@ namespace FabricObserver.Observers
             }
 
             var memWarn = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverMemoryWarningLimitMb);
 
             if (!string.IsNullOrEmpty(memWarn) && int.TryParse(memWarn, out int memWarningUsageThresholdMb))
@@ -348,7 +348,7 @@ namespace FabricObserver.Observers
             }
 
             var portsWarn = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkWarningActivePorts);
 
             if (!string.IsNullOrEmpty(portsWarn) && int.TryParse(portsWarn, out int activePortsWarningThreshold))
@@ -357,7 +357,7 @@ namespace FabricObserver.Observers
             }
 
             var ephemeralPortsWarn = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkWarningEphemeralPorts);
 
             if (!string.IsNullOrEmpty(ephemeralPortsWarn) && int.TryParse(ephemeralPortsWarn, out int ephemeralPortsWarningThreshold))
@@ -366,7 +366,7 @@ namespace FabricObserver.Observers
             }
 
             var warnFirewallRules = this.GetSettingParameterValue(
-                ObserverConstants.NodeObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkWarningFirewallRules);
 
             if (!string.IsNullOrEmpty(warnFirewallRules) && int.TryParse(warnFirewallRules, out int firewallRulesWarningThreshold))
@@ -375,7 +375,7 @@ namespace FabricObserver.Observers
             }
 
             var warnMemPercentUsed = this.GetSettingParameterValue(
-              ObserverConstants.NodeObserverConfigurationSectionName,
+              this.ConfigurationSectionName,
               ObserverConstants.NodeObserverMemoryUsePercentWarning);
 
             if (!string.IsNullOrEmpty(warnMemPercentUsed) && int.TryParse(warnMemPercentUsed, out int memoryPercentUsedWarningThreshold))

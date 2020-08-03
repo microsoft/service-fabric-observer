@@ -297,7 +297,7 @@ namespace FabricObserver.Observers
                 MachineInfoModel.ConfigSettings.Initialize(
                     this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                         ObserverConstants.ObserverConfigurationPackageName)?.Settings,
-                    ObserverConstants.AppObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     "AppObserverDataFileName");
             }
 
