@@ -63,13 +63,9 @@ namespace FabricObserver.Observers
         /// <inheritdoc/>
         public bool IsUnhealthy { get; set; } = false;
 
-        // Only set for unit test runs.
+        // This static property is *only* used - and set to true - for local development unit test runs. 
+        // Do not set this to true otherwise.
         public static bool IsTestRun { get; set; } = false;
-
-        /*public bool IsRunning
-        {
-            get; set;
-        }*/
 
         public Utilities.ConfigSettings ConfigurationSettings
         {

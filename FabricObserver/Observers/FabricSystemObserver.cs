@@ -48,6 +48,7 @@ namespace FabricObserver.Observers
         /// </summary>
         public FabricSystemObserver()
         {
+            // Linux
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 this.processWatchList = new List<string>

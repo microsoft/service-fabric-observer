@@ -2,11 +2,11 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
-    <!-- Observer Enablement -->
     <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
          (See ObserverBase.cs) -->
+    <!-- Observer Enablement -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
@@ -55,8 +55,8 @@
     <Parameter Name="OSObserverRunInterval" DefaultValue="" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
     <Parameter Name="SampleNewObserverRunInterval" DefaultValue="" />
-    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <!-- Certificate Observer Overrides -->
+    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
@@ -74,7 +74,7 @@
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="85" />
     <Parameter Name="FabricSystemObserverMemoryErrorLimitMb" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="1024" />
+    <Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="2048" />
     <Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="1000" />
     <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
@@ -100,7 +100,7 @@
     <!-- OSObserver Windows AutoUpdate Settings Check -->
     <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
     <!-- Observers with JSON config - File names.
-         TODO: Enable support for consuming external files over https. -->
+         You can point to a different, existing file name in PackageRoot's Config, for example. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <Parameter Name="NetworkObserverConfigurationFile" DefaultValue="NetworkObserver.config.json" />
   </Parameters>
