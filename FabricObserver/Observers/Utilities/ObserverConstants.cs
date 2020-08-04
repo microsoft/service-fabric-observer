@@ -104,8 +104,8 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
 
         // OSObserver.
-        public const string OsObserverName = "OSObserver";
-        public const string OsObserverConfigurationSectionName = "OSObserverConfiguration";
+        public const string OSObserverName = "OSObserver";
+        public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
         public const string EnableWindowsAutoUpdateCheck = "EnableWindowsAutoUpdateCheck";
 
         // SFConfigurationObserver.
