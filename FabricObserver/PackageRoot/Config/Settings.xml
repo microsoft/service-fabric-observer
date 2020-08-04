@@ -69,7 +69,7 @@
     <Parameter Name="EnableTelemetry" Value="false" MustOverride="true" />
     <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
          These files will be written to the DataLogPath supplied above.-->
-    <Parameter Name="EnableLongRunningCSVLogging" Value="false" MustOverride="true"/>
+    <Parameter Name="EnableLongRunningCSVLogging" Value="false" MustOverride="true" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -219,11 +219,11 @@
        [ObserverName]Configuration.
        Example: SampleNewObserverConfiguration where SampleNewObserver is the type name of the observer plugin.
        See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
-  <Section Name="SampleNewObserverConfiguration">
+  <!--<Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="true" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="true" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="true" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
-  </Section>
+  </Section>-->
 </Settings>

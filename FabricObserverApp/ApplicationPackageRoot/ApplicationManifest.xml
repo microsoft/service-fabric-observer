@@ -2,11 +2,11 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
+    <!-- Observer Enablement -->
     <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
          (See ObserverBase.cs) -->
-    <!-- Observer Enablement -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
@@ -15,8 +15,8 @@
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />
     <!-- Observer Telemetry Enablement -->
+    <!--<Parameter Name="SampleNewObserverEnabled" DefaultValue="true" /> -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="true" />
@@ -25,8 +25,8 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="true" />
     <!-- Observer Verbose Logging Enablement -->
+    <!--<Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="true" /> -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
@@ -35,8 +35,8 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" />
     <!-- Enable Local Observer Data Logging (CSV) -->
+    <!--<Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" /> -->
     <Parameter Name="AppObserverEnableDataLogging" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableDataLogging" DefaultValue="false" />
@@ -54,9 +54,9 @@
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <Parameter Name="SampleNewObserverRunInterval" DefaultValue="" />
-    <!-- Certificate Observer Overrides -->
     <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
+    <!-- Certificate Observer Overrides -->
+    <!--<Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
@@ -203,12 +203,12 @@
             <Parameter Name="EnableVerboseLogging" Value="[SFConfigurationObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[SFConfigurationObserverRunInterval]" />
           </Section>
-          <Section Name="SampleNewObserverConfiguration">
+          <!--<Section Name="SampleNewObserverConfiguration">
             <Parameter Name="Enabled" Value="[SampleNewObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[SampleNewObserverEnableTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[SampleNewObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[SampleNewObserverRunInterval]" />
-          </Section>
+          </Section>-->
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
