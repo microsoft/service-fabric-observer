@@ -45,7 +45,7 @@ namespace FabricObserver.Observers
 
         public TimeSpan HealthReportTimeToLive { get; set; } = TimeSpan.FromDays(1);
 
-        /// <inheritdoc/>
+        
         public override async Task ObserveAsync(CancellationToken token)
         {
             // Only run once per specified time in Settings.xml. (default is already set to 1 day for CertificateObserver)
@@ -113,7 +113,6 @@ namespace FabricObserver.Observers
             }
         }
 
-        /// <inheritdoc/>
         public override Task ReportAsync(CancellationToken token)
         {
             if (token.IsCancellationRequested)
@@ -197,10 +196,10 @@ namespace FabricObserver.Observers
                         {
                             Code = FoErrorWarningCodes.WarningCertificateExpiration,
                             HealthState = "Warning",
-                            NodeName = this.NodeName,
+                            this.NodeName,
                             Metric = ErrorWarningProperty.CertificateExpiration,
                             HealthEventDescription = healthMessage,
-                            ObserverName = this.ObserverName,
+                            this.ObserverName,
                             Source = ObserverConstants.FabricObserverName,
                             Value = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
                                 FoErrorWarningCodes.WarningCertificateExpiration,

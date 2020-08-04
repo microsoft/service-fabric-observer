@@ -61,7 +61,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string serviceName = null,
             string instanceName = null)
         {
-            var (clusterId, tenantId, clusterType) =
+            var (clusterId, _, clusterType) =
                 await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(this.fabricClient, this.token).ConfigureAwait(true);
 
             string jsonPayload = JsonConvert.SerializeObject(
@@ -272,10 +272,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);
 
-            using (var encryptor = new HMACSHA256(Convert.FromBase64String(this.Key)))
-            {
-                return $"SharedKey {this.WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
-            }
+            using var encryptor = new HMACSHA256(Convert.FromBase64String(this.Key));
+            return $"SharedKey {this.WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
         }
     }
 }

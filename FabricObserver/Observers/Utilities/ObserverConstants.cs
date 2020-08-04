@@ -104,15 +104,15 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
 
         // OSObserver.
-        public const string OsObserverName = "OSObserver";
-        public const string OsObserverConfigurationSectionName = "OSObserverConfiguration";
+        public const string OSObserverName = "OSObserver";
+        public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
         public const string EnableWindowsAutoUpdateCheck = "EnableWindowsAutoUpdateCheck";
 
         // SFConfigurationObserver.
-        public const string SfConfigurationObserverName = "SFConfigurationObserver";
-        public const string SfConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
-        public const string SfConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
-        public const string SfConfigurationObserverRunIntervalParameterName = "RunInterval";
+        public const string SFConfigurationObserverName = "SFConfigurationObserver";
+        public const string SFConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
+        public const string SFConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
+        public const string SFConfigurationObserverRunIntervalParameterName = "RunInterval";
 
         // Telemetry Settings Parameters.
         public const string AiKey = "AppInsightsInstrumentationKey";

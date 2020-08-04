@@ -12,10 +12,11 @@ namespace FabricObserver.Observers
 {
     public class SampleNewObserver : ObserverBase
     {
-        StringBuilder _message = new StringBuilder();
+        private readonly StringBuilder message;
 
         public SampleNewObserver()
         {
+            this.message = new StringBuilder();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -28,17 +29,17 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            var stopwatch = Stopwatch.StartNew();
-            int _totalNumberOfDeployedSFApps = 0, _totalNumberOfDeployedServices = 0, _totalNumberOfPartitions = 0, _totalNumberOfReplicas = 0;
-            int _appsInWarningError = 0, _servicesInWarningError = 0, _partitionsInWarningError = 0, _replicasInWarningError = 0;
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            int totalNumberOfDeployedSFApps = 0, totalNumberOfDeployedServices = 0, totalNumberOfPartitions = 0, totalNumberOfReplicas = 0;
+            int appsInWarningError = 0, servicesInWarningError = 0, partitionsInWarningError = 0, replicasInWarningError = 0;
 
             var apps = await this.FabricClientInstance.QueryManager.GetApplicationListAsync(
                 null,
                 this.AsyncClusterOperationTimeoutSeconds,
                 token).ConfigureAwait(false);
 
-            _totalNumberOfDeployedSFApps = apps.Count;
-            _appsInWarningError = apps.Where(a => a.HealthState == HealthState.Warning || a.HealthState == HealthState.Error).Count();
+            totalNumberOfDeployedSFApps = apps.Count;
+            appsInWarningError = apps.Where(a => a.HealthState == HealthState.Warning || a.HealthState == HealthState.Error).Count();
 
             foreach (var app in apps)
             {
@@ -48,8 +49,8 @@ namespace FabricObserver.Observers
                     this.AsyncClusterOperationTimeoutSeconds,
                     token).ConfigureAwait(false);
 
-                _totalNumberOfDeployedServices += services.Count;
-                _servicesInWarningError += services.Where(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error).Count();
+                totalNumberOfDeployedServices += services.Count;
+                servicesInWarningError += services.Where(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error).Count();
                 
                 foreach (var service in services)
                 {
@@ -59,8 +60,8 @@ namespace FabricObserver.Observers
                         this.AsyncClusterOperationTimeoutSeconds,
                         token).ConfigureAwait(false);
 
-                    _totalNumberOfPartitions += partitions.Count;
-                    _partitionsInWarningError += partitions.Where(p => p.HealthState == HealthState.Warning || p.HealthState == HealthState.Error).Count();
+                    totalNumberOfPartitions += partitions.Count;
+                    partitionsInWarningError += partitions.Where(p => p.HealthState == HealthState.Warning || p.HealthState == HealthState.Error).Count();
 
                     foreach (var partition in partitions)
                     {
@@ -70,26 +71,26 @@ namespace FabricObserver.Observers
                             this.AsyncClusterOperationTimeoutSeconds,
                             token).ConfigureAwait(false);
 
-                        _totalNumberOfReplicas += replicas.Count;
-                        _replicasInWarningError += replicas.Where(r => r.HealthState == HealthState.Warning || r.HealthState == HealthState.Error).Count();
+                        totalNumberOfReplicas += replicas.Count;
+                        replicasInWarningError += replicas.Where(r => r.HealthState == HealthState.Warning || r.HealthState == HealthState.Error).Count();
                     }
                 }
             }
 
-            this._message.AppendLine($"Total number of Applications: {_totalNumberOfDeployedSFApps}");
-            this._message.AppendLine($"Total number of Applications in Warning or Error: {_appsInWarningError}");
-            this._message.AppendLine($"Total number of Services: {_totalNumberOfDeployedServices}");
-            this._message.AppendLine($"Total number of Services in Warning or Error: {_servicesInWarningError}");
-            this._message.AppendLine($"Total number of Partitions: {_totalNumberOfPartitions}");
-            this._message.AppendLine($"Total number of Partitions in Warning or Error: {_partitionsInWarningError}");
-            this._message.AppendLine($"Total number of Replicas: {_totalNumberOfReplicas}");
-            this._message.AppendLine($"Total number of Replicas in Warning or Error: {_replicasInWarningError}");
+            this.message.AppendLine($"Total number of Applications: {totalNumberOfDeployedSFApps}");
+            this.message.AppendLine($"Total number of Applications in Warning or Error: {appsInWarningError}");
+            this.message.AppendLine($"Total number of Services: {totalNumberOfDeployedServices}");
+            this.message.AppendLine($"Total number of Services in Warning or Error: {servicesInWarningError}");
+            this.message.AppendLine($"Total number of Partitions: {totalNumberOfPartitions}");
+            this.message.AppendLine($"Total number of Partitions in Warning or Error: {partitionsInWarningError}");
+            this.message.AppendLine($"Total number of Replicas: {totalNumberOfReplicas}");
+            this.message.AppendLine($"Total number of Replicas in Warning or Error: {replicasInWarningError}");
 
             // The time it took to run ObserveAsync; for use in computing HealthReport TTL.
             stopwatch.Stop();
             this.RunDuration = stopwatch.Elapsed;
 
-            this._message.AppendLine($"Time it took to run {base.ObserverName}.ObserveAsync: {this.RunDuration}");
+            this.message.AppendLine($"Time it took to run {base.ObserverName}.ObserveAsync: {this.RunDuration}");
 
             await this.ReportAsync(token);
             this.LastRunDateTime = DateTime.Now;
@@ -97,12 +98,15 @@ namespace FabricObserver.Observers
 
         public override Task ReportAsync(CancellationToken token)
         {
+            // Local log.
+            this.ObserverLogger.LogInfo(message.ToString());
+
             // Report to Fabric.
             var healthReporter = new ObserverHealthReporter(this.ObserverLogger);
             var healthReport = new Utilities.HealthReport
             {
                 Code = FoErrorWarningCodes.Ok,
-                HealthMessage = this._message.ToString(),
+                HealthMessage = this.message.ToString(),
                 NodeName = this.NodeName,
                 Observer = this.ObserverName,
                 ReportType = HealthReportType.Node,
@@ -115,17 +119,13 @@ namespace FabricObserver.Observers
             var telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
             {
                 Code = FoErrorWarningCodes.Ok,
-                HealthEventDescription = this._message.ToString(),
+                HealthEventDescription = this.message.ToString(),
                 HealthState = "Ok",
                 NodeName = this.NodeName,
                 ObserverName = this.ObserverName,
                 Source = ObserverConstants.FabricObserverName,
             };
 
-            // Remember that these settings live in FabricObserver project's Settings.xml. You are writing
-            // an observer plugin that will, well, plug into the existing FabricObserver runtime environment
-            // simply by putting the compiled output of this project (a .NET Core 3.1 dll) into the plugins folder in
-            // the FabricObserver project's PackageRoot/Data/Plugins folder.
             if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
             {
                 _ = this.TelemetryClient?.ReportHealthAsync(
@@ -133,7 +133,23 @@ namespace FabricObserver.Observers
                         this.Token);
             }
 
-            this._message.Clear();
+            // ETW.
+            if (this.IsEtwEnabled)
+            {
+                Logger.EtwLogger?.Write(
+                    ObserverConstants.FabricObserverETWEventName,
+                    new
+                    {
+                        Code = FoErrorWarningCodes.Ok,
+                        HealthEventDescription = this.message.ToString(),
+                        HealthState = "Ok",
+                        this.NodeName,
+                        this.ObserverName,
+                        Source = ObserverConstants.FabricObserverName,
+                    });
+            }
+
+            this.message.Clear();
 
             return Task.CompletedTask;
         }

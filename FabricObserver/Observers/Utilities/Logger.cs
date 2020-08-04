@@ -30,10 +30,9 @@ namespace FabricObserver.Observers.Utilities
             get; private set;
         }
 
-        /// <inheritdoc/>
         public bool EnableVerboseLogging { get; set; } = false;
 
-        /// <inheritdoc/>
+        
         public string LogFolderBasePath { get; set; }
 
         public string FilePath { get; set; }
@@ -90,13 +89,13 @@ namespace FabricObserver.Observers.Utilities
             LogManager.Flush();
         }
 
-        /// <inheritdoc/>
+        
         public void LogTrace(string format, params object[] parameters)
         {
             this.OLogger.Trace(format, parameters);
         }
 
-        /// <inheritdoc/>
+        
         public void LogInfo(string format, params object[] parameters)
         {
             if (!this.EnableVerboseLogging)
@@ -107,19 +106,16 @@ namespace FabricObserver.Observers.Utilities
             this.OLogger.Info(format, parameters);
         }
 
-        /// <inheritdoc/>
         public void LogError(string format, params object[] parameters)
         {
             this.OLogger.Error(format, parameters);
         }
 
-        /// <inheritdoc/>
         public void LogWarning(string format, params object[] parameters)
         {
             this.OLogger.Warn(format, parameters);
         }
 
-        /// <inheritdoc/>
         public bool TryWriteLogFile(string path, string content)
         {
             if (string.IsNullOrEmpty(content))

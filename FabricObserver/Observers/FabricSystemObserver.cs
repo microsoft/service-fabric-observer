@@ -103,7 +103,6 @@ namespace FabricObserver.Observers
 
         public string ErrorOrWarningKind { get; set; } = null;
 
-        /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -172,7 +171,6 @@ namespace FabricObserver.Observers
             this.LastRunDateTime = DateTime.Now;
         }
 
-        /// <inheritdoc/>
         public override Task ReportAsync(CancellationToken token)
         {
             this.Token.ThrowIfCancellationRequested();

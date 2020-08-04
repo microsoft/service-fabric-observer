@@ -373,7 +373,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
 
         // This code added to correctly implement the disposable pattern.
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.

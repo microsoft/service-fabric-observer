@@ -193,19 +193,17 @@ namespace FabricObserver.Observers.Utilities
 
             List<string> output = new List<string>();
 
-            using (Process process = Process.Start(startInfo))
+            using Process process = Process.Start(startInfo);
+            string line;
+
+            while ((line = await process.StandardOutput.ReadLineAsync()) != null)
             {
-                string line;
-
-                while ((line = await process.StandardOutput.ReadLineAsync()) != null)
-                {
-                    output.Add(line);
-                }
-
-                process.WaitForExit();
-
-                return (process.ExitCode, output);
+                output.Add(line);
             }
+
+            process.WaitForExit();
+
+            return (process.ExitCode, output);
         }
     }
 }

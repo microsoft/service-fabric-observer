@@ -55,149 +55,109 @@ namespace FabricObserverTests
 
         private string ServiceManifestVersion { get; set; }
 
-        /// <inheritdoc/>
         public string ApplicationName { get; private set; }
 
-        /// <inheritdoc/>
         public string ApplicationTypeName { get; private set; }
 
-        /// <inheritdoc/>
         public string CodePackageName { get; private set; }
 
-        /// <inheritdoc/>
         public string CodePackageVersion { get; private set; }
 
-        /// <inheritdoc/>
         public string ContextId { get; private set; }
 
-        /// <inheritdoc/>
         public string LogDirectory { get; private set; }
 
-        /// <inheritdoc/>
         public string TempDirectory { get; private set; }
 
-        /// <inheritdoc/>
         public string WorkDirectory { get; private set; }
 
         // Interface required events. These are never used. Ignore the Warnings(CS0067) The event 'MockCodePackageActivationContext.CodePackageRemovedEvent' is never used
 #pragma warning disable CS0067
-        /// <inheritdoc/>
+        
         public event EventHandler<PackageAddedEventArgs<CodePackage>> CodePackageAddedEvent;
-
-        /// <inheritdoc/>
         public event EventHandler<PackageModifiedEventArgs<CodePackage>> CodePackageModifiedEvent;
-
-        /// <inheritdoc/>
         public event EventHandler<PackageRemovedEventArgs<CodePackage>> CodePackageRemovedEvent;
-
-        /// <inheritdoc/>
         public event EventHandler<PackageAddedEventArgs<ConfigurationPackage>> ConfigurationPackageAddedEvent;
-
-        /// <inheritdoc/>
         public event EventHandler<PackageModifiedEventArgs<ConfigurationPackage>> ConfigurationPackageModifiedEvent;
-
-        /// <inheritdoc/>
         public event EventHandler<PackageRemovedEventArgs<ConfigurationPackage>> ConfigurationPackageRemovedEvent;
-
-        /// <inheritdoc/>
         public event EventHandler<PackageAddedEventArgs<DataPackage>> DataPackageAddedEvent;
-
-        /// <inheritdoc/>
         public event EventHandler<PackageModifiedEventArgs<DataPackage>> DataPackageModifiedEvent;
-
-        /// <inheritdoc/>
         public event EventHandler<PackageRemovedEventArgs<DataPackage>> DataPackageRemovedEvent;
 #pragma warning restore
 
-        /// <inheritdoc/>
         public ApplicationPrincipalsDescription GetApplicationPrincipals()
         {
             return default(ApplicationPrincipalsDescription);
         }
 
-        /// <inheritdoc/>
         public IList<string> GetCodePackageNames()
         {
             return new List<string>() { this.CodePackageName };
         }
 
-        /// <inheritdoc/>
         public CodePackage GetCodePackageObject(string packageName)
         {
             return default(CodePackage);
         }
 
-        /// <inheritdoc/>
         public IList<string> GetConfigurationPackageNames()
         {
             return new List<string>() { string.Empty };
         }
 
-        /// <inheritdoc/>
         public ConfigurationPackage GetConfigurationPackageObject(string packageName)
         {
             return default(ConfigurationPackage);
         }
 
-        /// <inheritdoc/>
         public IList<string> GetDataPackageNames()
         {
             return new List<string>() { string.Empty };
         }
 
-        /// <inheritdoc/>
         public DataPackage GetDataPackageObject(string packageName)
         {
             return default(DataPackage);
         }
 
-        /// <inheritdoc/>
         public EndpointResourceDescription GetEndpoint(string endpointName)
         {
             return default(EndpointResourceDescription);
         }
 
-        /// <inheritdoc/>
         public KeyedCollection<string, EndpointResourceDescription> GetEndpoints()
         {
             return null;
         }
 
-        /// <inheritdoc/>
         public KeyedCollection<string, ServiceGroupTypeDescription> GetServiceGroupTypes()
         {
             return null;
         }
 
-        /// <inheritdoc/>
         public string GetServiceManifestName()
         {
             return this.ServiceManifestName;
         }
 
-        /// <inheritdoc/>
         public string GetServiceManifestVersion()
         {
             return this.ServiceManifestVersion;
         }
 
-        /// <inheritdoc/>
         public KeyedCollection<string, ServiceTypeDescription> GetServiceTypes()
         {
             return null;
         }
 
-        /// <inheritdoc/>
         public void ReportApplicationHealth(HealthInformation healthInformation)
         {
         }
 
-        /// <inheritdoc/>
         public void ReportDeployedServicePackageHealth(HealthInformation healthInformation)
         {
         }
 
-        /// <inheritdoc/>
         public void ReportDeployedApplicationHealth(HealthInformation healthInformation)
         {
         }
@@ -219,24 +179,20 @@ namespace FabricObserverTests
             this.disposedValue = true;
         }
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             this.Dispose(true);
         }
 
-        /// <inheritdoc/>
         public void ReportApplicationHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
         {
         }
 
-        /// <inheritdoc/>
         public void ReportDeployedApplicationHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
         {
         }
 
-        /// <inheritdoc/>
         public void ReportDeployedServicePackageHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
         {
         }

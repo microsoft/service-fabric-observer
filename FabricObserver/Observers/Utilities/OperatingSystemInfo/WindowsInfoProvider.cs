@@ -53,13 +53,10 @@ namespace FabricObserver.Observers.Utilities
                     return (visibleTotal / 1024 / 1024, usedPct);
                 }
             }
-            catch (FormatException)
-            {
-            }
-            catch (InvalidCastException)
-            {
-            }
-            catch (ManagementException)
+            catch (Exception e) when (
+                e is FormatException
+                || e is InvalidCastException
+                || e is ManagementException)
             {
             }
             finally
@@ -79,70 +76,68 @@ namespace FabricObserver.Observers.Utilities
 
                 int count = 0;
 
-                using (var p = new Process())
+                using var p = new Process();
+                var ps = new ProcessStartInfo
                 {
-                    var ps = new ProcessStartInfo
+                    Arguments = $"-ano -p {protoParam}",
+                    FileName = "netstat.exe",
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
+
+                p.StartInfo = ps;
+                _ = p.Start();
+                var stdOutput = p.StandardOutput;
+
+                (int lowPortRange, int highPortRange) = this.TupleGetDynamicPortRange();
+
+                string portRow;
+
+                ReadOnlySpan<char> processIdSpan = (processId > -1 ? processId.ToString() : string.Empty).AsSpan();
+
+                while ((portRow = stdOutput.ReadLine()) != null)
+                {
+                    if (!portRow.Contains(protoParam, StringComparison.OrdinalIgnoreCase))
                     {
-                        Arguments = $"-ano -p {protoParam}",
-                        FileName = "netstat.exe",
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                    };
+                        continue;
+                    }
 
-                    p.StartInfo = ps;
-                    _ = p.Start();
-                    var stdOutput = p.StandardOutput;
-
-                    (int lowPortRange, int highPortRange) = this.TupleGetDynamicPortRange();
-
-                    string portRow;
-
-                    ReadOnlySpan<char> processIdSpan = (processId > -1 ? processId.ToString() : string.Empty).AsSpan();
-
-                    while ((portRow = stdOutput.ReadLine()) != null)
+                    if (processId > -1)
                     {
-                        if (!portRow.Contains(protoParam, StringComparison.OrdinalIgnoreCase))
+                        int lastSpaceIndex = portRow.LastIndexOf(' ');
+
+                        if (portRow.AsSpan(lastSpaceIndex + 1).CompareTo(processIdSpan, StringComparison.Ordinal) != 0)
                         {
                             continue;
                         }
-
-                        if (processId > -1)
-                        {
-                            int lastSpaceIndex = portRow.LastIndexOf(' ');
-
-                            if (portRow.AsSpan(lastSpaceIndex + 1).CompareTo(processIdSpan, StringComparison.Ordinal) != 0)
-                            {
-                                continue;
-                            }
-                        }
-
-                        int port = GetPortNumberFromConsoleOutputRow(portRow);
-
-                        if (port >= lowPortRange && port <= highPortRange)
-                        {
-                            ++count;
-                        }
                     }
 
-                    int exitStatus = p.ExitCode;
-                    stdOutput.Close();
+                    int port = GetPortNumberFromConsoleOutputRow(portRow);
 
-                    if (exitStatus != 0)
+                    if (port >= lowPortRange && port <= highPortRange)
                     {
-                        return -1;
+                        ++count;
                     }
-
-                    // Compute count of active ports in dynamic range.
-                    return count;
                 }
+
+                int exitStatus = p.ExitCode;
+                stdOutput.Close();
+
+                if (exitStatus != 0)
+                {
+                    return -1;
+                }
+
+                // Compute count of active ports in dynamic range.
+                return count;
             }
-            catch (Exception e) when
-            (e is ArgumentException
-             || e is InvalidOperationException
-             || e is Win32Exception)
+            catch (Exception e) when (
+                e is ArgumentException
+                || e is InvalidOperationException
+                || e is Win32Exception)
             {
             }
 
@@ -151,56 +146,54 @@ namespace FabricObserver.Observers.Utilities
 
         internal override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
-            using (var p = new Process())
+            using var p = new Process();
+            string protoParam = "tcp";
+
+            try
             {
-                string protoParam = "tcp";
-
-                try
+                var ps = new ProcessStartInfo
                 {
-                    var ps = new ProcessStartInfo
-                    {
-                        Arguments = $"/c netsh int ipv4 show dynamicportrange {protoParam} | find /i \"port\"",
-                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                    };
+                    Arguments = $"/c netsh int ipv4 show dynamicportrange {protoParam} | find /i \"port\"",
+                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                };
 
-                    p.StartInfo = ps;
-                    _ = p.Start();
+                p.StartInfo = ps;
+                _ = p.Start();
 
-                    var stdOutput = p.StandardOutput;
-                    string output = stdOutput.ReadToEnd();
-                    Match match = Regex.Match(
-                        output,
-                        @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
-                        RegexOptions.Singleline | RegexOptions.IgnoreCase);
+                var stdOutput = p.StandardOutput;
+                string output = stdOutput.ReadToEnd();
+                Match match = Regex.Match(
+                    output,
+                    @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
+                    RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-                    string startPort = match.Groups["startPort"].Value;
-                    string portCount = match.Groups["numberOfPorts"].Value;
-                    string exitStatus = p.ExitCode.ToString();
-                    stdOutput.Close();
+                string startPort = match.Groups["startPort"].Value;
+                string portCount = match.Groups["numberOfPorts"].Value;
+                string exitStatus = p.ExitCode.ToString();
+                stdOutput.Close();
 
-                    if (exitStatus != "0")
-                    {
-                        return (-1, -1);
-                    }
-
-                    int lowPortRange = int.Parse(startPort);
-                    int highPortRange = lowPortRange + int.Parse(portCount);
-
-                    return (lowPortRange, highPortRange);
-                }
-                catch (Exception e) when
-                 (e is IOException
-                 || e is InvalidOperationException
-                 || e is Win32Exception)
+                if (exitStatus != "0")
                 {
+                    return (-1, -1);
                 }
 
-                return (-1, -1);
+                int lowPortRange = int.Parse(startPort);
+                int highPortRange = lowPortRange + int.Parse(portCount);
+
+                return (lowPortRange, highPortRange);
             }
+            catch (Exception e) when (
+                e is IOException
+                || e is InvalidOperationException
+                || e is Win32Exception)
+            {
+            }
+
+            return (-1, -1);
         }
 
         internal override int GetActivePortCount(int processId = -1)
@@ -220,41 +213,36 @@ namespace FabricObserver.Observers.Utilities
                     findStrProc = $"| find \"{processId}\"";
                 }
 
-                using (var p = new Process())
+                using var p = new Process();
+                var ps = new ProcessStartInfo
                 {
-                    var ps = new ProcessStartInfo
-                    {
-                        Arguments = $"/c netstat -ano {protoParam} {findStrProc} /c",
-                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                    };
+                    Arguments = $"/c netstat -ano {protoParam} {findStrProc} /c",
+                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                };
 
-                    p.StartInfo = ps;
-                    _ = p.Start();
+                p.StartInfo = ps;
+                _ = p.Start();
 
-                    var stdOutput = p.StandardOutput;
-                    string output = stdOutput.ReadToEnd().Trim('\n', '\r');
-                    string exitStatus = p.ExitCode.ToString();
-                    stdOutput.Close();
+                var stdOutput = p.StandardOutput;
+                string output = stdOutput.ReadToEnd().Trim('\n', '\r');
+                string exitStatus = p.ExitCode.ToString();
+                stdOutput.Close();
 
-                    if (exitStatus != "0")
-                    {
-                        return -1;
-                    }
-
-                    return int.TryParse(output, out int ret) ? ret : 0;
+                if (exitStatus != "0")
+                {
+                    return -1;
                 }
+
+                return int.TryParse(output, out int ret) ? ret : 0;
             }
-            catch (ArgumentException)
-            {
-            }
-            catch (InvalidOperationException)
-            {
-            }
-            catch (Win32Exception)
+            catch (Exception e) when (
+                e is ArgumentException
+                || e is InvalidOperationException
+                || e is Win32Exception)
             {
             }
 

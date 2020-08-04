@@ -298,7 +298,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverLogger != null);
             
             Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.SfConfigurationObserverName);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.SFConfigurationObserverName);
 
             obs.Dispose();
             ObserverManager.FabricClientInstance.Dispose();

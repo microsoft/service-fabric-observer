@@ -7,8 +7,6 @@ using System;
 using System.ComponentModel;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Fabric.Management.ServiceModel;
-using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -48,8 +46,7 @@ namespace FabricObserver.Observers
         {
 
         }
-
-        /// <inheritdoc/>
+        
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -88,7 +85,6 @@ namespace FabricObserver.Observers
             this.LastRunDateTime = DateTime.Now;
         }
 
-        /// <inheritdoc/>
         public override Task ReportAsync(CancellationToken token)
         {
             try
@@ -223,10 +219,10 @@ namespace FabricObserver.Observers
                             {
                                 HealthState = "Warning",
                                 HealthEventDescription = auServiceEnabledMessage,
-                                ObserverName = this.ObserverName,
+                                this.ObserverName,
                                 Metric = "WUAutoDownloadEnabled",
                                 Value = this.isWindowsUpdateAutoDownloadEnabled,
-                                NodeName = this.NodeName,
+                                this.NodeName,
                             });
                     }
                 }
@@ -506,7 +502,7 @@ namespace FabricObserver.Observers
                             OSVersion = osInfo.Version,
                             OSInstallDate = osInfo.InstallDate,
                             AutoUpdateEnabled = this.auStateUnknown ? "Unknown" : this.isWindowsUpdateAutoDownloadEnabled.ToString(),
-                            LastBootUpTime = osInfo.LastBootUpTime,
+                            osInfo.LastBootUpTime,
                             WindowsAutoUpdateEnabled = this.isWindowsUpdateAutoDownloadEnabled,
                             TotalMemorySizeGB = (int)(osInfo.TotalVisibleMemorySizeKB / 1048576),
                             AvailablePhysicalMemoryGB = Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),

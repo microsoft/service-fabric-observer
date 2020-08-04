@@ -75,29 +75,25 @@ namespace FabricClusterObserver.Utilities.Telemetry
                 requestStreamAsync.Write(content, 0, content.Length);
             }
 
-            using (var responseAsync = (HttpWebResponse)request.GetResponse())
+            using var responseAsync = (HttpWebResponse)request.GetResponse();
+            if (responseAsync.StatusCode == HttpStatusCode.OK ||
+                responseAsync.StatusCode == HttpStatusCode.Accepted)
             {
-                if (responseAsync.StatusCode == HttpStatusCode.OK ||
-                    responseAsync.StatusCode == HttpStatusCode.Accepted)
-                {
-                    return Task.CompletedTask;
-                }
-
-                var responseStream = responseAsync.GetResponseStream();
-
-                if (responseStream == null)
-                {
-                    return Task.CompletedTask;
-                }
-
-                using (var streamReader = new StreamReader(responseStream))
-                {
-                    string err = $"Exception sending LogAnalytics Telemetry:{Environment.NewLine}{streamReader.ReadToEnd()}";
-                    logger.LogWarning(err);
-
-                    return Task.FromException(new Exception(err));
-                }
+                return Task.CompletedTask;
             }
+
+            var responseStream = responseAsync.GetResponseStream();
+
+            if (responseStream == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            using var streamReader = new StreamReader(responseStream);
+            string err = $"Exception sending LogAnalytics Telemetry:{Environment.NewLine}{streamReader.ReadToEnd()}";
+            logger.LogWarning(err);
+
+            return Task.FromException(new Exception(err));
         }
 
         private string GetSignature(
@@ -110,10 +106,8 @@ namespace FabricClusterObserver.Utilities.Telemetry
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);
 
-            using (var encryptor = new HMACSHA256(Convert.FromBase64String(Key)))
-            {
-                return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
-            }
+            using var encryptor = new HMACSHA256(Convert.FromBase64String(Key));
+            return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
         }
 
         // This is the only function impl that really makes sense for ClusterObserver 

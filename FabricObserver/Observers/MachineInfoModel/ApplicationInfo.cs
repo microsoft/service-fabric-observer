@@ -41,7 +41,6 @@ namespace FabricObserver.Observers.MachineInfoModel
 
         public bool DumpProcessOnError { get; set; }
 
-        /// <inheritdoc/>
         public override string ToString() => $"ApplicationName: {this.TargetApp ?? string.Empty}\n" +
                                              $"ApplicationTypeName: {this.TargetAppType ?? string.Empty}\n" +
                                              $"ServiceExcludeList: {this.ServiceExcludeList ?? string.Empty}\n" +

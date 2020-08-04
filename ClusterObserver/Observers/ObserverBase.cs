@@ -24,26 +24,26 @@ namespace FabricClusterObserver.Observers
 
         protected FabricClient FabricClientInstance { get; set; }
 
-        /// <inheritdoc/>
+        
         public string ObserverName { get; set; }
 
-        /// <inheritdoc/>
+        
         public string NodeName { get; set; }
 
         public string NodeType { get; private set; }
 
-        /// <inheritdoc/>
+        
         public StatelessServiceContext FabricServiceContext { get; }
 
-        /// <inheritdoc/>
+        
         public DateTime LastRunDateTime { get; set; }
 
         public CancellationToken Token { get; set; }
 
-        /// <inheritdoc/>
+        
         public bool IsEnabled { get; set; } = true;
 
-        /// <inheritdoc/>
+        
         public bool IsUnhealthy { get; set; } = false;
 
         // Only set for unit test runs.
@@ -51,26 +51,26 @@ namespace FabricClusterObserver.Observers
 
         // Loggers.
 
-        /// <inheritdoc/>
+        
         public Logger ObserverLogger { get; set; }
 
         // Each derived Observer can set this to maintain health status across iterations.
         // This information is used by ObserverManager.
 
-        /// <inheritdoc/>
+        
         public bool HasActiveFabricErrorOrWarning { get; set; } = false;
 
-        /// <inheritdoc/>
+        
         public TimeSpan RunInterval { get; set; } = TimeSpan.MinValue;
 
         public TimeSpan AsyncClusterOperationTimeoutSeconds { get; set; } = TimeSpan.FromSeconds(60);
 
         public List<string> Settings { get; }
 
-        /// <inheritdoc/>
+        
         public abstract Task ObserveAsync(CancellationToken token);
 
-        /// <inheritdoc/>
+        
         public abstract Task ReportAsync(CancellationToken token);
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace FabricClusterObserver.Observers
             }
         }
 
-        /// <inheritdoc/>
+        
         public void WriteToLogWithLevel(string property, string description, LogLevel level)
         {
             switch (level)
@@ -328,7 +328,7 @@ namespace FabricClusterObserver.Observers
             }
         }
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.

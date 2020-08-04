@@ -31,36 +31,29 @@ namespace FabricObserver.Observers
         private string SFLogRoot;
         private string dumpsPath;
 
-        /// <inheritdoc/>
         public string ObserverName
         {
             get; set;
         }
 
-        /// <inheritdoc/>
         public string NodeName { get; set; }
 
         public string NodeType { get; private set; }
 
-        /// <inheritdoc/>
         public ObserverHealthReporter HealthReporter { get; }
-
-        /// <inheritdoc/>
+        
         public ServiceContext FabricServiceContext { get; }
 
-        /// <inheritdoc/>
         public DateTime LastRunDateTime { get; set; }
 
         public TimeSpan RunDuration { get; set; }
 
         public CancellationToken Token { get; set; }
 
-        /// <inheritdoc/>
         public bool IsEnabled { get; set; } = true;
 
         public bool IsObserverTelemetryEnabled { get; set; }
 
-        /// <inheritdoc/>
         public bool IsUnhealthy { get; set; } = false;
 
         // This static property is *only* used - and set to true - for local development unit test runs. 
@@ -79,17 +72,15 @@ namespace FabricObserver.Observers
             private set;
         }
 
-        /// <inheritdoc/>
+        
         public Logger ObserverLogger { get; set; }
 
-        /// <inheritdoc/>
         public DataTableFileLogger CsvFileLogger { get; set; }
 
         // Each derived Observer can set this to maintain health status across iterations.
         // This information is used by ObserverManager.
         public bool HasActiveFabricErrorOrWarning { get; set; }
 
-        /// <inheritdoc/>
         public TimeSpan RunInterval { get; set; } = TimeSpan.MinValue;
 
         public TimeSpan AsyncClusterOperationTimeoutSeconds { get; set; } = TimeSpan.FromSeconds(60);
@@ -212,10 +203,8 @@ namespace FabricObserver.Observers
             this.HealthReporter = new ObserverHealthReporter(this.ObserverLogger);
         }
 
-        /// <inheritdoc/>
         public abstract Task ObserveAsync(CancellationToken token);
 
-        /// <inheritdoc/>
         public abstract Task ReportAsync(CancellationToken token);
 
         public void WriteToLogWithLevel(
@@ -295,7 +284,6 @@ namespace FabricObserver.Observers
             return null;
         }
 
-        /// <inheritdoc/>
         public void Dispose()
         {
             this.Dispose(true);
@@ -487,8 +475,8 @@ namespace FabricObserver.Observers
                                 ApplicationName = appName?.OriginalString ?? string.Empty,
                                 Code = FoErrorWarningCodes.Ok,
                                 HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                                NodeName = this.NodeName,
-                                ObserverName = this.ObserverName,
+                                this.NodeName,
+                                this.ObserverName,
                                 Metric = data.Property,
                                 Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                                 PartitionId = replicaOrInstance?.PartitionId.ToString(),
@@ -545,8 +533,8 @@ namespace FabricObserver.Observers
                         {
                             Code = FoErrorWarningCodes.Ok,
                             HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                            NodeName = this.NodeName,
-                            ObserverName = this.ObserverName,
+                            this.NodeName,
+                            this.ObserverName,
                             Metric = $"{drive}{data.Property}",
                             Source = ObserverConstants.FabricObserverName,
                             Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
@@ -681,18 +669,6 @@ namespace FabricObserver.Observers
                 }
 
                 var healthMessage = new StringBuilder();
-
-                /*if (name != null)
-                {
-                    string partitionAndReplicaInfo = string.Empty;
-
-                    if (replicaOrInstance != null)
-                    {
-                        partitionAndReplicaInfo = $", {repPartitionId}, {repOrInstanceId}";
-                    }
-
-                    _ = healthMessage.Append($"{name} (Node: {this.NodeName}, Service Process: {procName}.exe{partitionAndReplicaInfo}): ");
-                }*/
 
                 string drive = string.Empty;
 

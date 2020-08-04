@@ -77,10 +77,8 @@ namespace FabricClusterObserver.Utilities
 
         public static T ConvertFromString<T>(string jsonInput)
         {
-            using (var stream = CreateStreamFromString(jsonInput))
-            {
-                return ReadFromJsonStream<T>(stream);
-            }
+            using var stream = CreateStreamFromString(jsonInput);
+            return ReadFromJsonStream<T>(stream);
         }
 
         public static void WriteToStream<T>(T data, Stream stream)
@@ -95,12 +93,10 @@ namespace FabricClusterObserver.Utilities
 
         public static string ConvertToString<T>(T data)
         {
-            using (var stream = new MemoryStream())
-            {
-                WriteToStream(data, stream);
-                stream.Position = 0;
-                return Encoding.UTF8.GetString(stream.GetBuffer());
-            }
+            using var stream = new MemoryStream();
+            WriteToStream(data, stream);
+            stream.Position = 0;
+            return Encoding.UTF8.GetString(stream.GetBuffer());
         }
 
         private static Stream CreateStreamFromString(string s)

@@ -78,7 +78,6 @@ namespace FabricObserver.Observers
             this.stopwatch = new Stopwatch();
         }
 
-        /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -116,7 +115,6 @@ namespace FabricObserver.Observers
             this.hasRun = true;
         }
 
-        /// <inheritdoc/>
         public override async Task ReportAsync(CancellationToken token)
         {
             var timeToLiveWarning = this.SetHealthReportTimeToLive();
@@ -198,9 +196,9 @@ namespace FabricObserver.Observers
                                     Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                                     HealthState = "Warning",
                                     HealthEventDescription = healthMessage,
-                                    ObserverName = this.ObserverName,
+                                    this.ObserverName,
                                     Metric = ErrorWarningProperty.InternetConnectionFailure,
-                                    NodeName = this.NodeName,
+                                    this.NodeName,
                                 });
                         }
                     }
@@ -261,9 +259,9 @@ namespace FabricObserver.Observers
                                     Code = FoErrorWarningCodes.Ok,
                                     HealthState = "Ok",
                                     HealthEventDescription = healthMessage,
-                                    ObserverName = this.ObserverName,
+                                    this.ObserverName,
                                     Metric = "Internet Connection State",
-                                    NodeName = this.NodeName,
+                                    this.NodeName,
                                 });
                         }
 
@@ -528,16 +526,14 @@ namespace FabricObserver.Observers
                             request.Timeout = 60000;
                             request.Method = "GET";
 
-                            using (var response = (HttpWebResponse)request.GetResponse())
-                            {
-                                var status = response.StatusCode;
+                            using var response = (HttpWebResponse)request.GetResponse();
+                            var status = response.StatusCode;
 
-                                // The target server responded with something.
-                                // It doesn't really matter what it "said".
-                                if (status == HttpStatusCode.OK || response?.Headers?.Count > 0)
-                                {
-                                    passed = true;
-                                }
+                            // The target server responded with something.
+                            // It doesn't really matter what it "said".
+                            if (status == HttpStatusCode.OK || response?.Headers?.Count > 0)
+                            {
+                                passed = true;
                             }
                         }
                         catch (IOException ie)

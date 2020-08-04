@@ -468,7 +468,7 @@ namespace FabricClusterObserver.Observers
                                                 ObserverConstants.ClusterObserverETWEventName,
                                                 new
                                                 {
-                                                    NodeName = node.NodeName,
+                                                    node.NodeName,
                                                     NodeStatus = targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty,
                                                     HealthScope = "Node",
                                                     HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),

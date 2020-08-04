@@ -310,5 +310,27 @@ Example Configuration:
     <Parameter Name="MaxTimeNodeStatusNotOk" Value="02:00:00"/>
   </Section>
 ``` 
-
 You deploy CO into your cluster just as you would any other Service Fabric service.
+### Application Parameter Updates
+
+Problem: I want to update an Observer's settings without having to redeploy the application and I do not want to take down the FabricObserver process. 
+
+Solution: Application Update with ApplicationParameters to the rescue.
+
+Example: 
+
+Open an Admin Powershell console.
+
+Connect to your Service Fabric cluster using Connect-ServiceFabricCluster command. 
+
+Create a variable that contains all the settings you want update:
+
+```Powershell
+$appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMemoryWarningLimitMb" = "2048"; }
+```
+
+Then execute the application upgrade with
+
+```Powershell
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.0.0 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+```

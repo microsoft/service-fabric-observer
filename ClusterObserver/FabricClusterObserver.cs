@@ -28,7 +28,7 @@ namespace FabricClusterObserver
             await Task.Factory.StartNew(() => this.observerManager.StartObservers()).ConfigureAwait(true);
         }
 
-        /// <inheritdoc/>
+        
         protected override Task OnCloseAsync(CancellationToken cancellationToken)
         {
             if (this.observerManager != null)

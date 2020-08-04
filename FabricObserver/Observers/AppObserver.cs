@@ -58,7 +58,6 @@ namespace FabricObserver.Observers
             this.stopwatch = new Stopwatch();
         }
 
-        /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -110,7 +109,6 @@ namespace FabricObserver.Observers
             this.LastRunDateTime = DateTime.Now;
         }
 
-        /// <inheritdoc/>
         public override Task ReportAsync(CancellationToken token)
         {
             try
