@@ -394,7 +394,11 @@ This observer doesn't monitor or report health status.
 It provides information about the currently installed Service Fabric runtime environment.
 The output (a local file) is used by the FabricObserver API service, rendered as HTML (e.g., http://localhost:5000/api/ObserverManager). You can learn more about API service [here](/FabricObserverWeb/ReadMe.md).
 
-# Writing a New Observer
+# Writing a New Observer outside the FabricObserver project - Plugins
+Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme.
+Also, see [How to implement an observer plugin using our extensibility model](/Documentation/Plugins.md)
+
+# Writing a New Observer inside the FabricObserver project.
 
 Writing a new observer consists of extending `ObserverBase`, creating configuration, and writing your logic.
 

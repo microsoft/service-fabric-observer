@@ -312,10 +312,10 @@ Example Configuration:
 ``` 
 You deploy CO into your cluster just as you would any other Service Fabric service.
 ### Application Parameter Updates
+<a name="parameterUpdates"></a>
+***Problem***: I want to update an Observer's settings without having to redeploy the application.
 
-Problem: I want to update an Observer's settings without having to redeploy the application and I do not want to take down the FabricObserver process. 
-
-Solution: Application Update with ApplicationParameters to the rescue.
+***Solution***: Application Update with ApplicationParameters to the rescue.
 
 Example: 
 

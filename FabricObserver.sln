@@ -15,6 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		FabricObserverApp.nuspec = FabricObserverApp.nuspec
 		nuget.exe = nuget.exe
 		Documentation\Observers.md = Documentation\Observers.md
+		Plugins.md = Plugins.md
 		README.md = README.md
 		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection
@@ -35,7 +36,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricObserverWeb", "Fabric
 EndProject
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "FabricObserverWebApi", "FabricObserverWebApp\FabricObserverWebApi.sfproj", "{D7D76690-9650-433F-99DF-7D0FE4975102}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleObserver", "SampleObserverPlugin\SampleObserver.csproj", "{4549560C-4604-42C3-B055-BDBD80B5B291}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleObserverPlugin", "SampleObserverPlugin\SampleObserverPlugin.csproj", "{4549560C-4604-42C3-B055-BDBD80B5B291}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
