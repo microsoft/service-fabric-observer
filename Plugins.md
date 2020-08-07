@@ -1,6 +1,6 @@
 ## How to implement an observer plugin using our extensibility model*
 
-Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and very useful readme. This document is a simple 
+Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme. This document is a simple 
 overview of how to get started with building an observer plugin.
 
 #### Steps 

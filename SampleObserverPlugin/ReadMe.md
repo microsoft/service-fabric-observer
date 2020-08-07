@@ -55,7 +55,7 @@ As you can see in this project, there are two key files:
 1. Your observer implementation.
 2. The IFabricObserverStartup implementation.
 
-For 2., it's designed to be a trivial impl:
+For 2., it's designed to be a trivial - and required - impl:
 
 ``` C#
 using FabricObserver.Observers.Interfaces;
@@ -74,3 +74,9 @@ namespace FabricObserver.Observers
 }
 ```
 
+When you build your plugin as a .NET Core 3.1 library, copy the dll file into the /PackageRoot/Data/Plugins folder.
+Update FabricObserver/PackageRoot/Config/Settings.xml with your new observer config setting. You will see a commented out 
+example of one for the SampleNewObserver plugin. Just follow that pattern and add any specific configuration parameters for your
+observer. If you want to configure your observer via an Application Parameter update after it's been deployed, you will need to add the
+override parameters to FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml. You will see several examples of how to do this in that
+file.

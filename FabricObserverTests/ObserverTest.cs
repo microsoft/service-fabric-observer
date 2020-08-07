@@ -433,10 +433,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new CertificateObserver
-            {
-
-            };
+            var obs = new CertificateObserver();
 
             var commonNamesToObserve = new List<string>
             {
@@ -464,12 +461,12 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            _ = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(async () =>
             {
-                _ = obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 3);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -505,12 +502,12 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            _ = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(async () =>
             {
-                _ = obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 1);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -537,12 +534,12 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            _ = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(async () =>
             {
-                _ = obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 1);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -569,12 +566,12 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            _ = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(async () =>
             {
-                _ = obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 1);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -601,12 +598,12 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            _ = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(async () =>
             {
-                _ = obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 1);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -632,12 +629,12 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            _ = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(async () =>
             {
-                _ = obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 1);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -664,12 +661,12 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0",
             };
 
-            _ = Task.Factory.StartNew(() =>
+            _ = Task.Factory.StartNew(async () =>
             {
-                _ = obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 1);
+            Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             obsMgr.StopObservers();
             Assert.IsFalse(obsMgr.IsObserverRunning);

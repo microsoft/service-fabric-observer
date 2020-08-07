@@ -50,6 +50,10 @@ namespace FabricObserver
             await this.observerManager.StartObserversAsync().ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// This function will add observer instances, both static (so, part of the FO impl) and dynamic (so, observer plugin dlls).
+        /// </summary>
+        /// <param name="services">ServiceCollection collection instance.</param>
         private void ConfigureServices(ServiceCollection services)
         {
             _ = services.AddScoped(typeof(IObserver), typeof(AppObserver));
@@ -65,6 +69,10 @@ namespace FabricObserver
             this.LoadObserverSFromPlugins(services);
         }
 
+        /// <summary>
+        /// This function will load observer plugin dlls from PackageRoot/Data/Plugins folder and add them to the ServiceCollection instance.
+        /// </summary>
+        /// <param name="services"></param>
         private void LoadObserverSFromPlugins(ServiceCollection services)
         {
             string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
@@ -116,9 +124,7 @@ namespace FabricObserver
                     }
                     else
                     {
-                        // We should not throw here. There is no reason to take down the FO process just because
-                        // a plugin could not be loaded. Instead, emit a health report so the developer can see the issue details in SFX/Telemetry.
-                        // throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
+                        throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
                     }
                 }
             }

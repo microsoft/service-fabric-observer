@@ -1,4 +1,4 @@
-Your Observer plugins live here.
+Your Observer plugins must live here.
 
 How to implement an observer in our extensibility model*
 
@@ -11,7 +11,7 @@ Navigate to top level directory (where the SLN lives, for example) then,
 
 1. ./Build-FabricObserver.ps1
 2. ./Build-NugetPackages.ps1
-3. Create a new .NET Core 3.1 library project, reference the nupkg you want 
+3. Create a new .NET Core 3.1 library project, reference the nupkg you want: 
 	Target OS - Framework-dependent  = .NET Core 3.1 is already installed on target server
 	Target OS - Self-contained = includes all the files necessary for running .NET Core 3.1 applications
 4. Write an observer plugin!
