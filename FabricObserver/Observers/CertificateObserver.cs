@@ -269,8 +269,8 @@ namespace FabricObserver.Observers
             this.DaysUntilClusterExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilClusterExpireWarningThreshold) ? int.Parse(daysUntilClusterExpireWarningThreshold) : 14;
 
             var daysUntilAppExpireWarningClusterThreshold = this.GetSettingParameterValue(
-            this.ConfigurationSectionName,
-            ObserverConstants.CertificateObserverDaysUntilAppExpiryWarningThreshold);
+                this.ConfigurationSectionName,
+                ObserverConstants.CertificateObserverDaysUntilAppExpiryWarningThreshold);
 
             this.DaysUntilAppExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilAppExpireWarningClusterThreshold) ? int.Parse(daysUntilAppExpireWarningClusterThreshold) : 14;
 
