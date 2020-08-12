@@ -8,8 +8,11 @@ overview of how to get started with building an observer plugin.
 - Install .Net Core 3.1.
 - Navigate to top level directory (where the SLN lives, for example) then,
 
-*Note that for now - while we are still developing FO 3.0 in the develop branch - 
-you can build the nupkgs by running the build and package ps1 files first.
+For now, you can use the related nugets (target OS) available [here](https://github.com/microsoft/service-fabric-observer/releases/tag/33734835).
+
+OR
+
+You can build them yourself by simply running these scripts, in this order: 
 
 - ./Build-FabricObserver.ps1
 - ./Build-NugetPackages.ps1
