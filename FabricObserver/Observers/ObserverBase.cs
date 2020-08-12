@@ -198,6 +198,8 @@ namespace FabricObserver.Observers
                 this.MonitorDuration = this.ConfigurationSettings.MonitorDuration;
                 this.RunInterval = this.ConfigurationSettings.RunInterval;
                 this.ObserverLogger.EnableVerboseLogging = this.EnableVerboseLogging;
+                this.DataCapacity = this.ConfigurationSettings.DataCapacity;
+                this.UseCircularBuffer = this.ConfigurationSettings.UseCircularBuffer;
             }
 
             this.HealthReporter = new ObserverHealthReporter(this.ObserverLogger);

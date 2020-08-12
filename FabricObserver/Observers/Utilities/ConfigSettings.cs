@@ -28,10 +28,11 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
+        // Default enablement for any observer is enabled (true).
         public bool IsEnabled
         {
             get; set;
-        }
+        } = true;
 
         public bool EnableVerboseLogging
         {

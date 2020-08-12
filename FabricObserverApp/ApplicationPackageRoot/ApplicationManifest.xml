@@ -6,14 +6,15 @@
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
          (See ObserverBase.cs) -->
-    <!-- Observer Enablement -->
-    <Parameter Name="AppObserverEnabled" DefaultValue="true" />
-    <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
-    <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
-    <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
-    <Parameter Name="OSObserverEnabled" DefaultValue="true" />
+    <!-- Observer Enablement - NOTE: By default, observers are enabled. If you leave DefaultValue as empty string, 
+         then it's the same thing as setting it to "true". -->
+    <Parameter Name="AppObserverEnabled" DefaultValue="" />
+    <Parameter Name="CertificateObserverEnabled" DefaultValue="" />
+    <Parameter Name="DiskObserverEnabled" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="" />
+    <Parameter Name="NodeObserverEnabled" DefaultValue="" />
+    <Parameter Name="OSObserverEnabled" DefaultValue="" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
     <!--<Parameter Name="SampleNewObserverEnabled" DefaultValue="true" /> -->
     <!-- Observer Telemetry Enablement -->
