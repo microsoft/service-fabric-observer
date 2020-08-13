@@ -37,10 +37,6 @@
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!--<Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" /> -->
-    <!-- Enable Local Observer Data Logging (CSV) -->
-    <Parameter Name="AppObserverEnableDataLogging" DefaultValue="false" />
-    <Parameter Name="FabricSystemObserverEnableDataLogging" DefaultValue="false" />
-    <Parameter Name="NodeObserverEnableDataLogging" DefaultValue="false" />
     <!-- Observer Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:10" />
     <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:05" />
@@ -121,7 +117,6 @@
           <Section Name="AppObserverConfiguration">
             <Parameter Name="Enabled" Value="[AppObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[AppObserverEnableTelemetry]" />
-            <Parameter Name="EnableLongRunningCSVLogging" Value="[AppObserverEnableDataLogging]" />
             <Parameter Name="EnableVerboseLogging" Value="[AppObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[AppObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[AppObserverRunInterval]" />
@@ -156,7 +151,6 @@
           <Section Name="FabricSystemObserverConfiguration">
             <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[FabricSystemObserverEnableTelemetry]" />
-            <Parameter Name="EnableLongRunningCSVLogging" Value="[FabricSystemObserverEnableDataLogging]" />
             <Parameter Name="EnableVerboseLogging" Value="[FabricSystemObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[FabricSystemObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[FabricSystemObserverRunInterval]" />
@@ -185,7 +179,6 @@
           <Section Name="NodeObserverConfiguration">
             <Parameter Name="Enabled" Value="[NodeObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[NodeObserverEnableTelemetry]" />
-            <Parameter Name="EnableLongRunningCSVLogging" Value="[NodeObserverEnableDataLogging]" />
             <Parameter Name="EnableVerboseLogging" Value="[NodeObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[NodeObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[NodeObserverRunInterval]" />
