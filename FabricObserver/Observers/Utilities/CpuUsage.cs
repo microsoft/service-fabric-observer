@@ -36,6 +36,7 @@ namespace FabricObserver.Observers.Utilities
                 var cpuUsage = currentUsage / Environment.ProcessorCount;
                 this.prevTime = this.currentTimeTime;
                 this.prevTotalProcessorTime = this.currentTotalProcessorTime;
+
                 return (int)(cpuUsage * 100);
             }
 

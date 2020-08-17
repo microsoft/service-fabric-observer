@@ -96,5 +96,24 @@ namespace FabricObserver.Observers.Utilities
             { NodeErrorTooManyActiveEphemeralPorts, "NodeErrorTooManyActiveEphemeralPorts" },
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
         };
+
+        public static string GetErrorWarningNameFromFOCode(string id, HealthScope scope)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return string.Empty;
+            }
+
+            IDictionary<string, string> dict = AppErrorCodesDictionary;
+
+            if (scope == HealthScope.Node)
+            {
+                dict = NodeErrorCodesDictionary;
+            }
+
+            return dict.TryGetValue(
+                id,
+                out string err) != false ? err : string.Empty;
+        }
     }
 }

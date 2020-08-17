@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricClusterObserver.Interfaces;
@@ -40,10 +41,11 @@ namespace FabricClusterObserver.Utilities.Telemetry
 
             this.logger = new Logger("TelemetryLog");
 
+            TelemetryConfiguration configuration = new TelemetryConfiguration() { InstrumentationKey = key };
             this.telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
 #if DEBUG
             // Expedites the flow of data through the pipeline.
-            TelemetryConfiguration.Active.TelemetryChannel.DeveloperMode = true;
+            configuration.TelemetryChannel.DeveloperMode = true;
 #endif
         }
 
@@ -103,8 +105,8 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <summary>
         /// Calls telemetry provider to report health.
         /// </summary>
-        /// <param name="telemtryData">TelemetryData instance.</param>
-        /// <param name="token">CancellationToken instance.</param>
+        /// <param name="telemetryData">TelemetryData instance.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>a Task.</returns>
         public Task ReportHealthAsync(
             TelemetryData telemetryData, 
@@ -137,19 +139,22 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     { "HealthState", telemetryData.HealthState ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "Partition", telemetryData.PartitionId ?? string.Empty },
-                    { "Replica", telemetryData.ReplicaId ?? string.Empty },
+                    { "OSPlatform", $"{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux")}" },
+                    { "Partition", $"{telemetryData.PartitionId}" },
+                    { "Replica", $"{telemetryData.ReplicaId}" },
                     { "Source", telemetryData.Source ?? string.Empty },
-                    { "Value", value ?? string.Empty }
+                    { "Value", value ?? string.Empty },
                 };
 
                 this.telemetryClient.TrackEvent(
-                    $"{telemetryData.ObserverName ?? "ClusterObserver"}Event",
+                    $"{telemetryData.ObserverName ?? "ClusterObserver"}DataEvent",
                     properties);
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                this.logger.LogWarning(
+                    $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
+                    $"{Environment.NewLine}{e}");
                 
                 throw;
             }
@@ -368,7 +373,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
 
         // This code added to correctly implement the disposable pattern.
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.

@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
@@ -12,67 +13,48 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using FabricObserver.Observers.Utilities;
-using Microsoft.Win32;
 
 namespace FabricObserver.Observers
 {
-    // This observer doesn't monitor or report health status.
+    // This observer doesn't monitor or report health status. It is only useful if you employ the FabricObserverWebApi App.
     // It provides information about the currently installed Service Fabric runtime environment, apps, and services.
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
-    public class SfConfigurationObserver : ObserverBase
+    public class SFConfigurationObserver : ObserverBase
     {
-        // SF Reg Key Path.
-        private const string SfWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
-
-        // Keys.
-        private const string SfInfrastructureCompatibilityJsonPathRegistryName = "CompatibilityJsonPath";
-        private const string SfInfrastructureEnableCircularTraceSessionRegistryName = "EnableCircularTraceSession";
-        private const string SfInfrastructureBinRootRegistryName = "FabricBinRoot";
-        private const string SfInfrastructureCodePathRegistryName = "FabricCodePath";
-        private const string SfInfrastructureDataRootRegistryName = "FabricDataRoot";
-        private const string SfInfrastructureLogRootRegistryName = "FabricLogRoot";
-        private const string SfInfrastructureRootDirectoryRegistryName = "FabricRoot";
-        private const string SfInfrastructureVersionRegistryName = "FabricVersion";
-        private const string SfInfrastructureIsSfVolumeDiskServiceEnabledName = "IsSFVolumeDiskServiceEnabled";
-        private const string SfInfrastructureEnableUnsupportedPreviewFeaturesName = "EnableUnsupportedPreviewFeatures";
-        private const string SfInfrastructureNodeLastBootUpTime = "NodeLastBootUpTime";
+        // Values.
+        private string SFVersion;
 
         // Values.
-        private string sFVersion;
+        private string SFBinRoot;
 
         // Values.
-        private string sFBinRoot;
+        private string SFCodePath;
 
         // Values.
-        private string sFCodePath;
+        private string SFDataRoot;
 
         // Values.
-        private string sFDataRoot;
-
-        // Values.
-        private string sFLogRoot;
+        private string SFLogRoot;
 
         // Values.
         public string SFRootDir { get; private set; }
 
         // Values.
-        private string sFNodeLastBootTime;
+        private string SFNodeLastBootTime;
 
         // Values.
-        private string sFCompatibilityJsonPath;
-        private bool? sFVolumeDiskServiceEnabled;
+        private string SFCompatibilityJsonPath;
+        private bool? SFVolumeDiskServiceEnabled;
         private bool? unsupportedPreviewFeaturesEnabled;
-        private bool? sFEnableCircularTraceSession;
+        private bool? SFEnableCircularTraceSession;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SfConfigurationObserver"/> class.
+        /// Initializes a new instance of the <see cref="SFConfigurationObserver"/> class.
         /// </summary>
-        public SfConfigurationObserver()
-            : base(ObserverConstants.SfConfigurationObserverName)
+        public SFConfigurationObserver()
         {
         }
 
-        /// <inheritdoc/>
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -90,33 +72,26 @@ namespace FabricObserver.Observers
 
             try
             {
-                this.sFVersion = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureVersionRegistryName, null);
-                this.sFBinRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureBinRootRegistryName, null);
-                this.sFCompatibilityJsonPath = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureCompatibilityJsonPathRegistryName, null);
-                this.sFCodePath = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureCodePathRegistryName, null);
-                this.sFDataRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureDataRootRegistryName, null);
-                this.sFLogRoot = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureLogRootRegistryName, null);
-                this.SFRootDir = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureRootDirectoryRegistryName, null);
-                this.sFEnableCircularTraceSession = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableCircularTraceSessionRegistryName, null));
-                this.sFVolumeDiskServiceEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureIsSfVolumeDiskServiceEnabledName, null));
-                this.unsupportedPreviewFeaturesEnabled = Convert.ToBoolean(Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureEnableUnsupportedPreviewFeaturesName, null));
-                this.sFNodeLastBootTime = (string)Registry.GetValue(SfWindowsRegistryPath, SfInfrastructureNodeLastBootUpTime, null);
+                ServiceFabricConfiguration config = ServiceFabricConfiguration.Instance;
+                this.SFVersion = config.FabricVersion;
+                this.SFBinRoot = config.FabricBinRoot;
+                this.SFCompatibilityJsonPath = config.CompatibilityJsonPath;
+                this.SFCodePath = config.FabricCodePath;
+                this.SFDataRoot = config.FabricDataRoot;
+                this.SFLogRoot = config.FabricLogRoot;
+                this.SFRootDir = config.FabricRoot;
+                this.SFEnableCircularTraceSession = config.EnableCircularTraceSession;
+                this.SFVolumeDiskServiceEnabled = config.IsSFVolumeDiskServiceEnabled;
+                this.unsupportedPreviewFeaturesEnabled = config.EnableUnsupportedPreviewFeatures;
+                this.SFNodeLastBootTime = config.NodeLastBootUpTime;
             }
-            catch (ArgumentException ae)
+            catch (Exception e) when (e is ArgumentException || e is IOException)
             {
                 this.HealthReporter.ReportFabricObserverServiceHealth(
                     this.FabricServiceContext.ServiceName.OriginalString,
                     this.ObserverName,
                     HealthState.Warning,
-                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n{ae}");
-            }
-            catch (IOException ie)
-            {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
-                    HealthState.Warning,
-                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n {ie}");
+                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n{e}");
             }
             catch (Exception e)
             {
@@ -125,6 +100,7 @@ namespace FabricObserver.Observers
                     this.ObserverName,
                     HealthState.Warning,
                     $"this.NodeName | Unhandled Exception trying to read registry value:\n{e}");
+
                 throw;
             }
 
@@ -133,6 +109,79 @@ namespace FabricObserver.Observers
             await this.ReportAsync(token).ConfigureAwait(true);
 
             this.LastRunDateTime = DateTime.Now;
+        }
+    
+        public override async Task ReportAsync(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var sb = new StringBuilder();
+
+            _ = sb.AppendLine("\nService Fabric information:\n");
+
+            if (!string.IsNullOrEmpty(this.SFVersion))
+            {
+                _ = sb.AppendLine("Runtime Version: " + this.SFVersion);
+            }
+
+            if (this.SFBinRoot != null)
+            {
+                _ = sb.AppendLine("Fabric Bin root directory: " + this.SFBinRoot);
+            }
+
+            if (this.SFCodePath != null)
+            {
+                _ = sb.AppendLine("Fabric Code Path: " + this.SFCodePath);
+            }
+
+            if (!string.IsNullOrEmpty(this.SFDataRoot))
+            {
+                _ = sb.AppendLine("Data root directory: " + this.SFDataRoot);
+            }
+
+            if (!string.IsNullOrEmpty(this.SFLogRoot))
+            {
+                _ = sb.AppendLine("Log root directory: " + this.SFLogRoot);
+            }
+
+            if (this.SFVolumeDiskServiceEnabled != null)
+            {
+                _ = sb.AppendLine("Volume Disk Service Enabled: " + this.SFVolumeDiskServiceEnabled);
+            }
+
+            if (this.unsupportedPreviewFeaturesEnabled != null)
+            {
+                _ = sb.AppendLine("Unsupported Preview Features Enabled: " + this.unsupportedPreviewFeaturesEnabled);
+            }
+
+            if (this.SFCompatibilityJsonPath != null)
+            {
+                _ = sb.AppendLine("Compatibility Json path: " + this.SFCompatibilityJsonPath);
+            }
+
+            if (this.SFEnableCircularTraceSession != null)
+            {
+                _ = sb.AppendLine("Enable Circular trace session: " + this.SFEnableCircularTraceSession);
+            }
+
+            _ = sb.Append(await this.GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
+            _ = sb.AppendLine();
+
+            token.ThrowIfCancellationRequested();
+
+            var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SFInfraInfo.txt");
+
+            // This file is used by the web application (ObserverWebApi).
+            if (!this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
+            {
+                this.HealthReporter.ReportFabricObserverServiceHealth(
+                    this.FabricServiceContext.ServiceName.OriginalString,
+                    this.ObserverName,
+                    HealthState.Warning,
+                    "Unable to create SFInfraInfo.txt file.");
+            }
+
+            _ = sb.Clear();
         }
 
         private async Task<string> GetDeployedAppsInfoAsync(CancellationToken token)
@@ -143,7 +192,7 @@ namespace FabricObserver.Observers
             var sb = new StringBuilder();
             string clusterManifestXml = null;
 
-            if (this.IsTestRun)
+            if (IsTestRun)
             {
                 clusterManifestXml = File.ReadAllText(Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"));
             }
@@ -154,10 +203,7 @@ namespace FabricObserver.Observers
                     appList = await this.FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
                     clusterManifestXml = await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(true);
                 }
-                catch (System.Fabric.FabricException)
-                {
-                }
-                catch (TimeoutException)
+                catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
                 }
             }
@@ -225,13 +271,13 @@ namespace FabricObserver.Observers
 
                 token.ThrowIfCancellationRequested();
 
-                if (!string.IsNullOrEmpty(this.sFNodeLastBootTime))
+                if (!string.IsNullOrEmpty(this.SFNodeLastBootTime))
                 {
-                    _ = sb.AppendLine("Last Rebooted: " + this.sFNodeLastBootTime);
+                    _ = sb.AppendLine("Last Rebooted: " + this.SFNodeLastBootTime);
                 }
 
                 // Stop here for unit testing.
-                if (this.IsTestRun)
+                if (IsTestRun)
                 {
                     ret = sb.ToString();
                     _ = sb.Clear();
@@ -287,8 +333,8 @@ namespace FabricObserver.Observers
 
                                 if (procId > -1)
                                 {
-                                    ports = NetworkUsage.GetActivePortCount(procId);
-                                    ephemeralPorts = NetworkUsage.GetActiveEphemeralPortCount(procId);
+                                    ports = OperatingSystemInfoProvider.Instance.GetActivePortCount(procId);
+                                    ephemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId);
                                 }
 
                                 _ = sb.AppendLine("\tService Name: " + serviceName.OriginalString);
@@ -313,7 +359,7 @@ namespace FabricObserver.Observers
                                 if (this.IsEtwEnabled)
                                 {
                                     Logger.EtwLogger?.Write(
-                                        "FabricObserverDataEvent",
+                                        ObserverConstants.FabricObserverETWEventName,
                                         new
                                         {
                                             Level = 0, // Info
@@ -350,80 +396,6 @@ namespace FabricObserver.Observers
             }
 
             return ret;
-        }
-
-        /// <inheritdoc/>
-        public override async Task ReportAsync(CancellationToken token)
-        {
-            token.ThrowIfCancellationRequested();
-
-            var sb = new StringBuilder();
-
-            _ = sb.AppendLine("\nService Fabric information:\n");
-
-            if (!string.IsNullOrEmpty(this.sFVersion))
-            {
-                _ = sb.AppendLine("Runtime Version: " + this.sFVersion);
-            }
-
-            if (this.sFBinRoot != null)
-            {
-                _ = sb.AppendLine("Fabric Bin root directory: " + this.sFBinRoot);
-            }
-
-            if (this.sFCodePath != null)
-            {
-                _ = sb.AppendLine("Fabric Code Path: " + this.sFCodePath);
-            }
-
-            if (!string.IsNullOrEmpty(this.sFDataRoot))
-            {
-                _ = sb.AppendLine("Data root directory: " + this.sFDataRoot);
-            }
-
-            if (!string.IsNullOrEmpty(this.sFLogRoot))
-            {
-                _ = sb.AppendLine("Log root directory: " + this.sFLogRoot);
-            }
-
-            if (this.sFVolumeDiskServiceEnabled != null)
-            {
-                _ = sb.AppendLine("Volume Disk Service Enabled: " + this.sFVolumeDiskServiceEnabled);
-            }
-
-            if (this.unsupportedPreviewFeaturesEnabled != null)
-            {
-                _ = sb.AppendLine("Unsupported Preview Features Enabled: " + this.unsupportedPreviewFeaturesEnabled);
-            }
-
-            if (this.sFCompatibilityJsonPath != null)
-            {
-                _ = sb.AppendLine("Compatibility Json path: " + this.sFCompatibilityJsonPath);
-            }
-
-            if (this.sFEnableCircularTraceSession != null)
-            {
-                _ = sb.AppendLine("Enable Circular trace session: " + this.sFEnableCircularTraceSession);
-            }
-
-            _ = sb.Append(await this.GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
-            _ = sb.AppendLine();
-
-            token.ThrowIfCancellationRequested();
-
-            var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SFInfraInfo.txt");
-
-            // This file is used by the web application (ObserverWebApi).
-            if (!this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
-            {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
-                    HealthState.Warning,
-                    "Unable to create SFInfraInfo.txt file.");
-            }
-
-            _ = sb.Clear();
         }
     }
 }

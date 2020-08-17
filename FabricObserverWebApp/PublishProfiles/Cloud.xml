@@ -5,7 +5,7 @@
                                ServerCertThumbprint=""
                                FindType="FindByThumbprint"
                                FindValue=""
-                               StoreLocation="CurrentUser"
+                               StoreLocation="LocalMachine"
                                StoreName="My"/>
   <ApplicationParameterFile Path="..\ApplicationParameters\Cloud.xml" />
   <CopyPackageParameters CompressPackage="true" />

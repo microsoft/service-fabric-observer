@@ -1,46 +1,16 @@
 ﻿[*.cs]
 
-# SA1600: Elements should be documented
-dotnet_diagnostic.SA1600.severity = none
-
-# SA1312: Variable names should begin with lower-case letter
-dotnet_diagnostic.SA1312.severity = silent
-
-# SA1101: Prefix local calls with this
-dotnet_diagnostic.SA1101.severity = none
-
-# SA1611: Element parameters should be documented
-dotnet_diagnostic.SA1611.severity = none
-
 # CA2227: Collection properties should be read only
 dotnet_diagnostic.CA2227.severity = none
 
-# SA1201: Elements should appear in the correct order
-dotnet_diagnostic.SA1201.severity = none
+# SA1600: Elements must be documented
+dotnet_diagnostic.SA1600.severity = none
 
-# SA1202: Elements should be ordered by access
-dotnet_diagnostic.SA1202.severity = none
+# CA2007: Consider calling ConfigureAwait on the awaited task
+dotnet_diagnostic.CA2007.severity = silent
 
-# SA1602: Enumeration items should be documented
-dotnet_diagnostic.SA1602.severity = none
+# SA1611: Element parameters should be documented
+dotnet_diagnostic.SA1611.severity = silent
 
-# SA1204: Static elements should appear before instance elements
-dotnet_diagnostic.SA1204.severity = none
-
-# CA1822: Mark members as static
-dotnet_diagnostic.CA1822.severity = none
-
-# CA1031: Do not catch general exception types
-dotnet_diagnostic.CA1031.severity = none
-
-# SA1214: Readonly fields should appear before non-readonly fields
-dotnet_diagnostic.SA1214.severity = none
-
-# CA1710: Identifiers should have correct suffix
-dotnet_diagnostic.CA1710.severity = none
-
-# SA1118: Parameter should not span multiple lines
-dotnet_diagnostic.SA1118.severity = none
-
-# SA1618: Generic type parameters should be documented
-dotnet_diagnostic.SA1618.severity = none
+# SA1615: Element return value should be documented
+dotnet_diagnostic.SA1615.severity = silent

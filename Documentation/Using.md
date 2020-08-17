@@ -215,15 +215,18 @@ In NetworkObserver's configuration file (PackageRoot/Config/NetworkObserver.conf
     "endpoints": [
       {
         "hostname": "critical.endpoint.com",
-        "port": 443
+        "port": 443,
+        "protocol": "http"
       },
       {
         "hostname": "another.critical.endpoint.net",
-        "port": 443
+        "port": 443,
+        "protocol": "http"
       },
       {
         "hostname": "eastusserver0042.database.windows.net",
-        "port": 1433
+        "port": 1433,
+        "protocol": "tcp"
       }
     ]
   },
@@ -232,15 +235,18 @@ In NetworkObserver's configuration file (PackageRoot/Config/NetworkObserver.conf
     "endpoints": [
       {
         "hostname": "critical.endpoint42.com",
-        "port": 443
+        "port": 443,
+        "protocol": "http"
       },
       {
         "hostname": "another.critical.endpoint.net",
-        "port": 443
+        "port": 443,
+        "protocol": "http"
       },
       {
         "hostname": "westusserver0007.database.windows.net",
-        "port": 1433
+        "port": 1433,
+        "protocol": "tcp"
       }
     ]
   }
@@ -304,5 +310,27 @@ Example Configuration:
     <Parameter Name="MaxTimeNodeStatusNotOk" Value="02:00:00"/>
   </Section>
 ``` 
-
 You deploy CO into your cluster just as you would any other Service Fabric service.
+### Application Parameter Updates
+<a name="parameterUpdates"></a>
+***Problem***: I want to update an Observer's settings without having to redeploy the application.
+
+***Solution***: Application Update with ApplicationParameters to the rescue.
+
+Example: 
+
+Open an Admin Powershell console.
+
+Connect to your Service Fabric cluster using Connect-ServiceFabricCluster command. 
+
+Create a variable that contains all the settings you want update:
+
+```Powershell
+$appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMemoryWarningLimitMb" = "2048"; }
+```
+
+Then execute the application upgrade with
+
+```Powershell
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.0.0 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+```

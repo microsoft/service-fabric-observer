@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
@@ -36,10 +37,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             this.logger = new Logger("TelemetryLog");
 
-            this.telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
+            TelemetryConfiguration configuration = new TelemetryConfiguration() { InstrumentationKey = key };
+            this.telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
-            TelemetryConfiguration.Active.TelemetryChannel.DeveloperMode = true;
+            configuration.TelemetryChannel.DeveloperMode = true;
 #endif
         }
 
@@ -93,7 +95,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             this.telemetryClient.TrackAvailability(at);
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -149,17 +151,78 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 throw;
             }
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Calls AI to report a metric.
+        /// Calls telemetry provider to report health.
         /// </summary>
-        /// <param name="name">Name of the metric.</param>
-        /// <param name="value">Value of the property.</param>
-        /// <param name="source">Value for source of telemetry signal.</param>
+        /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>Task of bool.</returns>
+        /// <returns>a Task.</returns>
+        public Task ReportHealthAsync(
+            TelemetryData telemetryData,
+            CancellationToken cancellationToken)
+        {
+            if (!this.IsEnabled
+                || cancellationToken.IsCancellationRequested
+                || telemetryData == null)
+            {
+                return Task.FromResult(1);
+            }
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string value = null;
+
+                if (telemetryData.Value != null)
+                {
+                    value = telemetryData.Value.ToString();
+                }
+
+                Dictionary<string, string> properties = new Dictionary<string, string>
+                {
+                    { "Application", telemetryData.ApplicationName ?? string.Empty },
+                    { "ClusterId", telemetryData.ClusterId ?? string.Empty },
+                    { "ErrorCode", telemetryData.Code ?? string.Empty },
+                    { "HealthEventDescription", telemetryData.HealthEventDescription ?? string.Empty },
+                    { "HealthState", telemetryData.HealthState ?? string.Empty },
+                    { "Metric", telemetryData.Metric ?? string.Empty },
+                    { "NodeName", telemetryData.NodeName ?? string.Empty },
+                    { "OSPlatform", $"{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux")}" },
+                    { "Partition", $"{telemetryData.PartitionId}" },
+                    { "Replica", $"{telemetryData.ReplicaId}" },
+                    { "Source", telemetryData.Source ?? string.Empty },
+                    { "Value", value ?? string.Empty },
+                };
+
+                this.telemetryClient.TrackEvent(
+                    $"{telemetryData.ObserverName ?? "ClusterObserver"}DataEvent",
+                    properties);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogWarning(
+                    $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
+                    $"{Environment.NewLine}{e}");
+
+                throw;
+            }
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Sends metrics to a telemetry service.
+        /// </summary>
+        /// <typeparam name="T">type of data.</typeparam>
+        /// <param name="name">name of metric.</param>
+        /// <param name="value">value of metric.</param>
+        /// <param name="source">source of event.</param>
+        /// <param name="cancellationToken">cancellation token.</param>
+        /// <returns>A Task of bool.</returns>
         public async Task<bool> ReportMetricAsync<T>(
             string name,
             T value,
@@ -179,6 +242,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             return await Task.FromResult(true).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Reports a metric to a telemetry service.
+        /// </summary>
+        /// <param name="telemetryData">TelemetryData instance.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A task.</returns>
         public Task ReportMetricAsync(
           TelemetryData telemetryData,
           CancellationToken cancellationToken)
@@ -211,6 +280,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Reports a metric to a telemetry service.
+        /// </summary>
+        /// <param name="telemetryData">TelemetryData instance.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A task.</returns>
         public Task ReportMetricAsync(
             MachineTelemetryData telemetryData,
             CancellationToken cancellationToken)
@@ -225,8 +300,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 { "ActiveEphemeralPorts", telemetryData.ActiveEphemeralPorts.ToString() },
                 { "ActiveFirewallRules", telemetryData.ActiveFirewallRules.ToString() },
                 { "ActivePorts", telemetryData.ActivePorts.ToString() },
-                { "AvailablePhysicalMemory", telemetryData.AvailablePhysicalMemory.ToString() },
-                { "AvailableVirtualMemory", telemetryData.AvailableVirtualMemory.ToString() },
+                { "AvailablePhysicalMemory", telemetryData.AvailablePhysicalMemoryGB.ToString() },
+                { "AvailableVirtualMemory", telemetryData.AvailableVirtualMemoryGB.ToString() },
                 { "DriveInfo", telemetryData.DriveInfo },
                 { "FabricAppPortRange", telemetryData.FabricAppPortRange.ToString() },
                 { "HotFixes", telemetryData.HotFixes.ToString() },
@@ -272,7 +347,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             _ = this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -369,7 +444,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             // Track the telemetry.
             this.telemetryClient.TrackMetric(mt);
 
-            return Task.FromResult(0);
+            return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            this.Dispose(true);
         }
 
         private bool disposedValue; // To detect redundant calls
@@ -386,13 +467,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             this.disposedValue = true;
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            this.Dispose(true);
         }
     }
 }

@@ -5,6 +5,7 @@
 
 using System;
 using System.Fabric.Health;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -28,6 +29,14 @@ namespace FabricObserver.Observers.Utilities
 
         public string Observer { get; set; }
 
+        public string Property { get; set; }
+
         public string ResourceUsageDataProperty { get; set; }
+
+        public TelemetryData HealthData
+        {
+            get;
+            set;
+        }
     }
 }

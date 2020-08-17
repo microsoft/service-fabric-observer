@@ -6,6 +6,8 @@
 using System;
 using System.Fabric;
 using System.Fabric.Health;
+using FabricObserver.Observers.Utilities.Telemetry;
+using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -77,51 +79,77 @@ namespace FabricObserver.Observers.Utilities
                 timeToLive = healthReport.HealthReportTimeToLive;
             }
 
-            // In order for multiple Error/Warning/Ok events to show up in SFX Details view from observer instances,
-            // Event Source Ids must be unique, thus the seemingly strange conditionals inside the cases below:
-            // The apparent duplicity in OR checks is for the case when the incoming report is an OK report, where there is
-            // no error code, but the specific ErrorWarningProperty is known.
-            string property;
+            // Set property for health event.
+            string property = healthReport.Property;
 
-            switch (healthReport.Observer)
+            if (string.IsNullOrEmpty(property))
             {
-                case ObserverConstants.AppObserverName:
-                    property = "ApplicationHealth";
-                    break;
-                case ObserverConstants.CertificateObserverName:
-                    property = "SecurityHealth";
-                    break;
-                case ObserverConstants.DiskObserverName:
-                    property = "DiskHealth";
-                    break;
-                case ObserverConstants.FabricSystemObserverName:
-                    property = "FabricSystemServiceHealth";
-                    break;
-                case ObserverConstants.NetworkObserverName:
-                    property = "NetworkHealth";
-                    break;
-                case ObserverConstants.OsObserverName:
-                    property = "MachineInformation";
-                    break;
-                case ObserverConstants.NodeObserverName:
-                    property = "MachineResourceHealth";
-                    break;
-                default:
-                    property = "FOGenericHealth";
-                    break;
+                switch (healthReport.Observer)
+                {
+                    case ObserverConstants.AppObserverName:
+                        property = "ApplicationHealth";
+                        break;
+                    case ObserverConstants.CertificateObserverName:
+                        property = "SecurityHealth";
+                        break;
+                    case ObserverConstants.DiskObserverName:
+                        property = "DiskHealth";
+                        break;
+                    case ObserverConstants.FabricSystemObserverName:
+                        property = "FabricSystemServiceHealth";
+                        break;
+                    case ObserverConstants.NetworkObserverName:
+                        property = "NetworkHealth";
+                        break;
+                    case ObserverConstants.OSObserverName:
+                        property = "MachineInformation";
+                        break;
+                    case ObserverConstants.NodeObserverName:
+                        property = "MachineResourceHealth";
+                        break;
+                    default:
+                        property = "FOGenericHealth";
+                        break;
+                }
             }
 
             string sourceId = healthReport.Observer;
+            TelemetryData healthData = healthReport.HealthData;
 
             if (!string.IsNullOrEmpty(healthReport.Code))
             {
                 // Only use FOErrorWarningCode for source
-                sourceId = $"{healthReport.Code}";
+                sourceId += $"({healthReport.Code})";
+            }
+
+            string errWarnPreamble = string.Empty;
+
+            if (healthReport.State == HealthState.Error
+                || healthReport.State == HealthState.Warning)
+            {
+                errWarnPreamble =
+                    $"{healthReport.Observer} detected " +
+                    $"{Enum.GetName(typeof(HealthState), healthReport.State)} threshold breach. ";
+
+                // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
+                if (healthReport.Observer == ObserverConstants.OSObserverName
+                    && property == "OSConfiguration")
+                {
+                    errWarnPreamble = $"{ObserverConstants.OSObserverName} detected potential problem with OS configuration: ";
+                    property = "OSConfiguration";
+                }
+            }
+
+            string message = $"{errWarnPreamble}{healthReport.HealthMessage}";
+
+            if (healthData != null)
+            {
+                message = JsonConvert.SerializeObject(healthData);
             }
 
             var healthInformation = new HealthInformation(sourceId, property, healthReport.State)
             {
-                Description = healthReport.HealthMessage,
+                Description = $"{message}",
                 TimeToLive = timeToLive,
                 RemoveWhenExpired = true,
             };
@@ -144,7 +172,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            // To SFX and Telemetry provider.
+            // To SFX.
             if (healthReport.ReportType == HealthReportType.Application && healthReport.AppName != null)
             {
                 var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);

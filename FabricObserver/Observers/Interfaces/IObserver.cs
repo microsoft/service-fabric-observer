@@ -6,11 +6,18 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Observers.Utilities;
 
 namespace FabricObserver.Observers.Interfaces
 {
     public interface IObserver : IDisposable
     {
+        string ObserverName { get; }
+
+        string NodeName { get; set; }
+
+        Logger ObserverLogger { get; set; }
+
         DateTime LastRunDateTime { get; set; }
 
         TimeSpan RunInterval { get; set; }
@@ -20,6 +27,11 @@ namespace FabricObserver.Observers.Interfaces
         bool HasActiveFabricErrorOrWarning { get; set; }
 
         bool IsUnhealthy { get; set; }
+
+        ConfigSettings ConfigurationSettings
+        {
+            get; set;
+        }
 
         /// <summary>
         /// The function where observers observe.

@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http.Formatting;
@@ -39,15 +40,10 @@ namespace FabricObserver.Observers.Utilities
                 _ = JsonConvert.DeserializeObject<T>(text);
                 return true;
             }
-            catch (JsonSerializationException)
-            {
-                return false;
-            }
-            catch (JsonReaderException)
-            {
-                return false;
-            }
-            catch (JsonWriterException)
+            catch (Exception e) when (
+                e is JsonSerializationException 
+                || e is JsonReaderException 
+                || e is JsonWriterException)
             {
                 return false;
             }
@@ -75,6 +71,12 @@ namespace FabricObserver.Observers.Utilities
             return data;
         }
 
+        public static T ConvertFromString<T>(string jsonInput)
+        {
+            using var stream = CreateStreamFromString(jsonInput);
+            return ReadFromJsonStream<T>(stream);
+        }
+
         public static void WriteToStream<T>(T data, Stream stream)
         {
             JsonMediaTypeFormatter.WriteToStreamAsync(
@@ -85,6 +87,14 @@ namespace FabricObserver.Observers.Utilities
                 null).Wait();
         }
 
+        public static string ConvertToString<T>(T data)
+        {
+            using var stream = new MemoryStream();
+            WriteToStream(data, stream);
+            stream.Position = 0;
+            return Encoding.UTF8.GetString(stream.GetBuffer());
+        }
+
         private static Stream CreateStreamFromString(string s)
         {
             var stream = new MemoryStream();
@@ -93,24 +103,6 @@ namespace FabricObserver.Observers.Utilities
             writer.Flush();
             stream.Position = 0;
             return stream;
-        }
-
-        public static T ConvertFromString<T>(string jsonInput)
-        {
-            using (var stream = CreateStreamFromString(jsonInput))
-            {
-                return ReadFromJsonStream<T>(stream);
-            }
-        }
-
-        public static string ConvertToString<T>(T data)
-        {
-            using (var stream = new MemoryStream())
-            {
-                WriteToStream(data, stream);
-                stream.Position = 0;
-                return Encoding.UTF8.GetString(stream.GetBuffer());
-            }
         }
     }
 }

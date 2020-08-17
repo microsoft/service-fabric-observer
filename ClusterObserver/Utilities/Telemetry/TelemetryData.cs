@@ -3,6 +3,7 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using Newtonsoft.Json;
 using System;
 using System.Fabric;
 using System.Threading;
@@ -58,15 +59,19 @@ namespace FabricClusterObserver.Utilities.Telemetry
             get; set;
         }
 
-        public string PartitionId
+        public Guid PartitionId
         {
             get; set;
         }
 
-        public string ReplicaId
+        = Guid.Empty;
+
+        public long ReplicaId
         {
             get; set;
         }
+
+        = 0;
 
         public string ServiceName
         {
@@ -80,11 +85,16 @@ namespace FabricClusterObserver.Utilities.Telemetry
             get; set;
         }
 
+        [JsonConstructor]
+        public TelemetryData()
+        {
+        }
+
         public TelemetryData(
             FabricClient fabricClient,
             CancellationToken cancellationToken)
         {
-            var (clusterId, tenantId, clusterType) =
+            var (clusterId, _) =
               ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
 
             this.ClusterId = clusterId;

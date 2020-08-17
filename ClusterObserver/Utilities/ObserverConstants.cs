@@ -18,6 +18,7 @@ namespace FabricClusterObserver.Utilities
         public const string AiKey = "AppInsightsInstrumentationKey";
         public const string TelemetryEnabled = "EnableTelemetryProvider";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
+        public const string ClusterObserverETWEventName = "ClusterObserverDataEvent";
 
         // The name of the package that contains this Observer's configuration.
         public const string ObserverConfigurationPackageName = "Config";

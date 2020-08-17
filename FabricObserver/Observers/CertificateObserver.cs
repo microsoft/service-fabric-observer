@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -22,7 +24,6 @@ namespace FabricObserver.Observers
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
 
         public CertificateObserver()
-               : base(ObserverConstants.CertificateObserverName)
         {
         }
 
@@ -44,7 +45,7 @@ namespace FabricObserver.Observers
 
         public TimeSpan HealthReportTimeToLive { get; set; } = TimeSpan.FromDays(1);
 
-        /// <inheritdoc/>
+        
         public override async Task ObserveAsync(CancellationToken token)
         {
             // Only run once per specified time in Settings.xml. (default is already set to 1 day for CertificateObserver)
@@ -60,7 +61,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!this.IsTestRun)
+            if (!IsTestRun)
             {
                 await this.Initialize(token).ConfigureAwait(true);
             }
@@ -69,7 +70,8 @@ namespace FabricObserver.Observers
             this.ExpiringWarnings = new List<string>();
             this.NotFoundWarnings = new List<string>();
 
-            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            // Unix LocalMachine X509Store is limited to the Root and CertificateAuthority stores.
+            var store = new X509Store(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? StoreName.Root : StoreName.My, StoreLocation.LocalMachine);
 
             try
             {
@@ -111,7 +113,6 @@ namespace FabricObserver.Observers
             }
         }
 
-        /// <inheritdoc/>
         public override Task ReportAsync(CancellationToken token)
         {
             if (token.IsCancellationRequested)
@@ -165,6 +166,46 @@ namespace FabricObserver.Observers
                 };
 
                 this.HasActiveFabricErrorOrWarning = true;
+
+                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                {
+                    TelemetryData telemetryData = new TelemetryData(this.FabricClientInstance, token)
+                    {
+                        Code = FoErrorWarningCodes.WarningCertificateExpiration,
+                        HealthState = "Warning",
+                        NodeName = this.NodeName,
+                        Metric = ErrorWarningProperty.CertificateExpiration,
+                        HealthEventDescription = healthMessage,
+                        ObserverName = this.ObserverName,
+                        Source = ObserverConstants.FabricObserverName,
+                        Value = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
+                            FoErrorWarningCodes.WarningCertificateExpiration,
+                            HealthScope.Node),
+                    };
+
+                    _ = this.TelemetryClient?.ReportMetricAsync(
+                        telemetryData,
+                        this.Token);
+                }
+
+                if (this.IsEtwEnabled)
+                {
+                    Logger.EtwLogger?.Write(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Code = FoErrorWarningCodes.WarningCertificateExpiration,
+                            HealthState = "Warning",
+                            this.NodeName,
+                            Metric = ErrorWarningProperty.CertificateExpiration,
+                            HealthEventDescription = healthMessage,
+                            this.ObserverName,
+                            Source = ObserverConstants.FabricObserverName,
+                            Value = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
+                                FoErrorWarningCodes.WarningCertificateExpiration,
+                                HealthScope.Node),
+                        });
+                }
             }
 
             this.HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -172,7 +213,6 @@ namespace FabricObserver.Observers
             this.ExpiredWarnings = null;
             this.ExpiringWarnings = null;
             this.NotFoundWarnings = null;
-
             this.LastRunDateTime = DateTime.Now;
 
             return Task.CompletedTask;
@@ -201,30 +241,47 @@ namespace FabricObserver.Observers
             return false;
         }
 
+        /// <summary>
+        /// This method is used on Linux to load certs from /var/lib/sfcerts or /var/lib/waagent directory.
+        /// </summary>
+        private static bool TryFindCertificate(string storePath, string thumbprint, out X509Certificate2 certificate)
+        {
+            string fileName = Path.Combine(storePath, thumbprint.ToUpperInvariant() + ".crt");
+
+            if (File.Exists(fileName))
+            {
+                certificate = new X509Certificate2(fileName);
+                return true;
+            }
+
+            certificate = null;
+            return false;
+        }
+
         private async Task Initialize(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
             var daysUntilClusterExpireWarningThreshold = this.GetSettingParameterValue(
-                ObserverConstants.CertificateObserverConfigurationSectionName,
+                this.ConfigurationSectionName,
                 ObserverConstants.CertificateObserverDaysUntilClusterExpiryWarningThreshold);
 
             this.DaysUntilClusterExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilClusterExpireWarningThreshold) ? int.Parse(daysUntilClusterExpireWarningThreshold) : 14;
 
             var daysUntilAppExpireWarningClusterThreshold = this.GetSettingParameterValue(
-            ObserverConstants.CertificateObserverConfigurationSectionName,
-            ObserverConstants.CertificateObserverDaysUntilAppExpiryWarningThreshold);
+                this.ConfigurationSectionName,
+                ObserverConstants.CertificateObserverDaysUntilAppExpiryWarningThreshold);
 
             this.DaysUntilAppExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilAppExpireWarningClusterThreshold) ? int.Parse(daysUntilAppExpireWarningClusterThreshold) : 14;
 
             var appThumbprintsToObserve = this.GetSettingParameterValue(
-                    ObserverConstants.CertificateObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     ObserverConstants.CertificateObserverAppCertificateThumbprints);
 
             this.AppCertificateThumbprintsToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve) : new List<string>();
 
             var appCommonNamesToObserve = this.GetSettingParameterValue(
-                    ObserverConstants.CertificateObserverConfigurationSectionName,
+                    this.ConfigurationSectionName,
                     ObserverConstants.CertificateObserverAppCertificateCommonNames);
 
             this.AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();
@@ -336,7 +393,7 @@ namespace FabricObserver.Observers
             }
 
             DateTime? expiry = newestCertificate?.NotAfter; // Expiration time in local time (not UTC)
-            var timeUntilExpiry = expiry?.Subtract(DateTime.Now);
+            TimeSpan? timeUntilExpiry = expiry?.Subtract(DateTime.Now);
 
             if (timeUntilExpiry?.TotalMilliseconds < 0)
             {
@@ -359,45 +416,59 @@ namespace FabricObserver.Observers
 
         private void CheckByThumbprint(X509Store store, string thumbprint, int warningThreshold)
         {
-            var certificates = store.Certificates.Find(
+            X509Certificate2Collection certificates = store.Certificates.Find(
                 X509FindType.FindByThumbprint,
                 thumbprint,
-                false);
+                validOnly: false);
+
+            X509Certificate2 certificate;
 
             if (certificates.Count == 0)
             {
-                this.NotFoundWarnings.Add(
-                    $"Could not find requested certificate with thumbprint: {thumbprint} in LocalMachine/My");
-
-                return;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    if (!TryFindCertificate("/var/lib/sfcerts", thumbprint, out certificate) &&
+                        !TryFindCertificate("/var/lib/waagent", thumbprint, out certificate))
+                    {
+                        this.NotFoundWarnings.Add(
+                            $"Could not find requested certificate with thumbprint: {thumbprint} in /var/lib/sfcerts, /var/lib/waagent, and LocalMachine/Root");
+                        return;
+                    }
+                }
+                else
+                {
+                    this.NotFoundWarnings.Add(
+                        $"Could not find requested certificate with thumbprint: {thumbprint} in LocalMachine/My");
+                    return;
+                }
+            }
+            else
+            {
+                certificate = certificates[0];
             }
 
-            // Return first value
-            var enumerator = certificates.GetEnumerator();
-            _ = enumerator.MoveNext();
-
-            var expiry = enumerator?.Current?.NotAfter; // Expiration time in local time (not UTC)
-            var timeUntilExpiry = expiry?.Subtract(DateTime.Now);
+            DateTime expiry = certificate.NotAfter; // Expiration time in local time (not UTC)
+            TimeSpan timeUntilExpiry = expiry.Subtract(DateTime.Now);
             var message = HowToUpdateCnCertsSfLinkHtml;
 
-            if (IsSelfSignedCertificate(enumerator.Current))
+            if (IsSelfSignedCertificate(certificate))
             {
                 message = HowToUpdateSelfSignedCertSfLinkHtml;
             }
 
-            if (timeUntilExpiry?.TotalMilliseconds < 0)
+            if (timeUntilExpiry.TotalMilliseconds < 0)
             {
-                this.ExpiredWarnings.Add($"Certificate Expired on {expiry?.ToShortDateString()}: " +
-                                         $"Thumbprint: {enumerator.Current.Thumbprint} " +
-                                         $"Issuer {enumerator.Current.Issuer}, " +
-                                         $"Subject: {enumerator.Current.Subject}{Environment.NewLine}{message}");
+                this.ExpiredWarnings.Add($"Certificate Expired on {expiry.ToShortDateString()}: " +
+                                         $"Thumbprint: {certificate.Thumbprint} " +
+                                         $"Issuer {certificate.Issuer}, " +
+                                         $"Subject: {certificate.Subject}{Environment.NewLine}{message}");
             }
-            else if (timeUntilExpiry?.TotalDays < warningThreshold)
+            else if (timeUntilExpiry.TotalDays < warningThreshold)
             {
-                this.ExpiringWarnings.Add($"Certificate Expiring on {expiry?.ToShortDateString()}: " +
-                                          $"Thumbprint: {enumerator.Current.Thumbprint} " +
-                                          $"Issuer {enumerator.Current.Issuer}, " +
-                                          $"Subject: {enumerator.Current.Subject}{Environment.NewLine}{message}");
+                this.ExpiringWarnings.Add($"Certificate Expiring on {expiry.ToShortDateString()}: " +
+                                          $"Thumbprint: {certificate.Thumbprint} " +
+                                          $"Issuer {certificate.Issuer}, " +
+                                          $"Subject: {certificate.Subject}{Environment.NewLine}{message}");
             }
         }
     }

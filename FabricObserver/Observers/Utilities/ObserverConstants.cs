@@ -17,6 +17,7 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
         public const string FabricObserverName = "FabricObserver";
+        public const string FabricObserverETWEventName = "FabricObserverDataEvent";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";
@@ -70,16 +71,16 @@ namespace FabricObserver.Observers.Utilities
         // FabricSystemObserver.
         public const string FabricSystemObserverName = "FabricSystemObserver";
         public const string FabricSystemObserverConfigurationSectionName = "FabricSystemObserverConfiguration";
-        public const string FabricSystemObserverErrorCpu = "ErrorCpuThresholdPercent";
-        public const string FabricSystemObserverWarnCpu = "WarnCpuThresholdPercent";
-        public const string FabricSystemObserverErrorMemory = "ErrorMemoryThresholdMb";
-        public const string FabricSystemObserverWarnMemory = "WarnMemoryThresholdMb";
-        public const string FabricSystemObserverErrorDiskIoReads = "ErrorDiskIOReadsThreshold";
-        public const string FabricSystemObserverWarnDiskIoReads = "WarnDiskIOReadsThreshold";
-        public const string FabricSystemObserverErrorDiskIoWrites = "ErrorDiskIOWritesThreshold";
-        public const string FabricSystemObserverWarnDiskIoWrites = "WarnDiskIOWritesThreshold";
-        public const string FabricSystemObserverErrorPercentUnhealthyNodes = "PercentUnhealthyNodesErrorThreshold";
-        public const string FabricSystemObserverWarnPercentUnhealthyNodes = "PercentUnhealthyNodesWarnThreshold";
+        public const string FabricSystemObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
+        public const string FabricSystemObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
+        public const string FabricSystemObserverMemoryErrorLimitMb = "MemoryErrorLimitMb";
+        public const string FabricSystemObserverMemoryWarningLimitMb = "MemoryWarningLimitMb";
+        public const string FabricSystemObserverMemoryUsePercentError = "MemoryErrorLimitPercent";
+        public const string FabricSystemObserverMemoryUsePercentWarning = "MemoryWarningLimitPercent";
+        public const string FabricSystemObserverNetworkErrorActivePorts = "NetworkErrorActivePorts";
+        public const string FabricSystemObserverNetworkWarningActivePorts = "NetworkWarningActivePorts";
+        public const string FabricSystemObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";
+        public const string FabricSystemObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string FabricSystemObserverMonitorWindowsEventLog = "MonitorWindowsEventLog";
 
         // NetworkObserver.
@@ -93,24 +94,25 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
         public const string NodeObserverMemoryErrorLimitMb = "MemoryErrorLimitMb";
         public const string NodeObserverMemoryWarningLimitMb = "MemoryWarningLimitMb";
+        public const string NodeObserverMemoryUsePercentError = "MemoryErrorLimitPercent";
+        public const string NodeObserverMemoryUsePercentWarning = "MemoryWarningLimitPercent";
         public const string NodeObserverNetworkErrorActivePorts = "NetworkErrorActivePorts";
         public const string NodeObserverNetworkWarningActivePorts = "NetworkWarningActivePorts";
         public const string NodeObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";
         public const string NodeObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
-        public const string NodeObserverMemoryUsePercentError = "MemoryErrorLimitPercent";
-        public const string NodeObserverMemoryUsePercentWarning = "MemoryWarningLimitPercent";
 
         // OSObserver.
-        public const string OsObserverName = "OSObserver";
-        public const string OsObserverConfigurationSectionName = "OSObserverConfiguration";
+        public const string OSObserverName = "OSObserver";
+        public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
+        public const string EnableWindowsAutoUpdateCheck = "EnableWindowsAutoUpdateCheck";
 
         // SFConfigurationObserver.
-        public const string SfConfigurationObserverName = "SFConfigurationObserver";
-        public const string SfConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
-        public const string SfConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
-        public const string SfConfigurationObserverRunIntervalParameterName = "RunInterval";
+        public const string SFConfigurationObserverName = "SFConfigurationObserver";
+        public const string SFConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
+        public const string SFConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
+        public const string SFConfigurationObserverRunIntervalParameterName = "RunInterval";
 
         // Telemetry Settings Parameters.
         public const string AiKey = "AppInsightsInstrumentationKey";

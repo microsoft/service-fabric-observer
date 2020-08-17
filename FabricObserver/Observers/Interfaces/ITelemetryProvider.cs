@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers.Interfaces
@@ -67,6 +68,15 @@ namespace FabricObserver.Observers.Interfaces
             CancellationToken cancellationToken,
             string serviceName = null,
             string instanceName = null);
+
+        /// <summary>
+        /// Calls telemetry provider to report Health.
+        /// </summary>
+        /// <param name="telemetryData">MachineTelemetryData instance.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        Task ReportHealthAsync(
+            TelemetryData telemetryData,
+            CancellationToken cancellationToken);
 
         /// <summary>
         /// Calls telemetry provider to report a metric.

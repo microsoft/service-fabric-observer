@@ -4,11 +4,13 @@
     "endpoints": [
       {
         "hostname": "https://myazuresrvice42.westus2.cloudapp.azure.com",
-        "port": 19080
+        "port": 443,
+        "protocol": "http"
       },
       {
-        "hostname": "westusserver001.database.windows.net",
-        "port": 1433
+        "hostname": "somesqlservername.database.windows.net",
+        "port": 1433,
+        "protocol": "tcp"
       }
     ]
   },
@@ -16,8 +18,9 @@
     "targetApp": "fabric:/MyApp1",
     "endpoints": [
       {
-        "hostname": "eastusserver007.database.windows.net",
-        "port": 1433
+        "hostname": "somesqlservername.database.windows.net",
+        "port": 1433,
+        "protocol": "tcp"
       }
     ]
   }
