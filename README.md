@@ -1,6 +1,6 @@
-# FabricObserver 3.0.0-preview-1 - NET Core 3.1
+# FabricObserver 3.0.0
 
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric application that 
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of resources that tend to be important to all Service Fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
 2. Runs on multiple versions of Windows Server and Ubuntu 16.04 and 18.04
 3. Suppports [an easy-to-use extensibility model](/Documentation/Plugins.md) for creating [custom Observers](/SampleObserverPlugin) out of band (so, you don't need to clone the repo to build an Observer).
