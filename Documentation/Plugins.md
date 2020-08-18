@@ -8,7 +8,7 @@ overview of how to get started with building an observer plugin.
 - Install .Net Core 3.1.
 - Navigate to top level directory (where the SLN lives, for example) then,
 
-For now, you can use the related nugets (target OS) available [here](https://github.com/microsoft/service-fabric-observer/releases/tag/33782866). 
+For now, you can use the related nugets (target OS) available [here](https://github.com/microsoft/service-fabric-observer/releases). 
 Download the appropriate nupkg to your local machine and update nuget.config to include the location of the file on disk. Then, install the package into your plugin project.
 
 OR
