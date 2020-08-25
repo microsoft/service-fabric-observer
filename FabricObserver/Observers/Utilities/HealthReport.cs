@@ -33,6 +33,11 @@ namespace FabricObserver.Observers.Utilities
 
         public string ResourceUsageDataProperty { get; set; }
 
+        public string SourceId
+        {
+            get; set;
+        }
+
         public TelemetryData HealthData
         {
             get;

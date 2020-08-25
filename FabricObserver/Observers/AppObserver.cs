@@ -178,27 +178,6 @@ namespace FabricObserver.Observers
                         {
                             this.LogAllAppResourceDataToCsv(id);
                         }
-#if DEBUG
-                        // DEBUG \\
-                        if (id.Contains("CpuStress"))
-                        {
-                            // Emit an Ok Health Report for debug output.
-                            var healthReport = new Utilities.HealthReport
-                            {
-                                AppName = new Uri("fabric:/CpuStress"),
-                                HealthMessage = $"{p.Id} CpuData Count: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Count}\n" +
-                                $"Average: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).AverageDataValue}",
-                                State = HealthState.Ok,
-                                Code = FoErrorWarningCodes.Ok,
-                                NodeName = this.NodeName,
-                                Observer = this.ObserverName,
-                                Property = id,
-                                ReportType = HealthReportType.Application,
-                            };
-
-                            this.HealthReporter.ReportHealthToServiceFabric(healthReport);
-                        }
-#endif
 
                         // CPU
                         this.ProcessResourceDataReportHealth(

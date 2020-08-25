@@ -14,7 +14,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
-using Microsoft.Extensions.PlatformAbstractions;
 
 namespace FabricObserver.Observers
 {

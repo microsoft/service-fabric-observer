@@ -382,6 +382,26 @@ namespace FabricObserver.Observers
             {
                 foreach (IObserver obs in this.observers)
                 {
+                    // If the node goes down, for example, or the app is gracefully closed,
+                    // then clear all existing error or health reports suppled by FO.
+                    if (obs.HasActiveFabricErrorOrWarning && 
+                        obs.ObserverName != ObserverConstants.NetworkObserverName)
+                    {
+                        var healthReport = new Utilities.HealthReport
+                        {
+                            AppName = !string.IsNullOrEmpty(obs.AppName) ? new Uri(obs.AppName) : null,
+                            Code = FoErrorWarningCodes.Ok,
+                            HealthMessage = $"Clearing existing Health Error/Warning, {obs.HealthReportProperty}/{obs.HealthReportSourceId}, as FO is stopping.",
+                            Property = obs.HealthReportProperty,
+                            SourceId = obs.HealthReportSourceId,
+                            State = HealthState.Ok,
+                            NodeName = obs.NodeName,
+                        };
+
+                        var healthReporter = new ObserverHealthReporter(this.Logger);
+                        healthReporter.ReportHealthToServiceFabric(healthReport);
+                    }
+
                     obs?.Dispose();
                 }
 

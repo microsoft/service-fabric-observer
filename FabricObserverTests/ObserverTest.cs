@@ -1186,7 +1186,7 @@ namespace FabricObserverTests
 
             var obs = new NodeObserver
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                MonitorDuration = TimeSpan.FromSeconds(10),
                 DataCapacity = 5,
                 UseCircularBuffer = true,
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.

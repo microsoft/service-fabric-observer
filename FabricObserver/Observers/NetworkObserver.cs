@@ -88,8 +88,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!await this.Initialize().ConfigureAwait(true)
-                || token.IsCancellationRequested)
+            if (!await this.InitializeAsync() || token.IsCancellationRequested)
             {
                 this.stopwatch.Stop();
                 this.stopwatch.Reset();
@@ -98,6 +97,7 @@ namespace FabricObserver.Observers
             }
 
             this.cancellationToken = token;
+            this.stopwatch.Start();
 
             // Run conn tests.
             Retry.Do(
@@ -115,7 +115,7 @@ namespace FabricObserver.Observers
             this.hasRun = true;
         }
 
-        public override async Task ReportAsync(CancellationToken token)
+        public override Task ReportAsync(CancellationToken token)
         {
             var timeToLiveWarning = this.SetHealthReportTimeToLive();
 
@@ -123,17 +123,6 @@ namespace FabricObserver.Observers
             foreach (var config in this.userConfig)
             {
                 token.ThrowIfCancellationRequested();
-
-                var deployedApps = await this.FabricClientInstance.QueryManager
-                    .GetDeployedApplicationListAsync(
-                        this.NodeName,
-                        new Uri(config.TargetApp)).ConfigureAwait(true);
-
-                // We only care about deployed apps.
-                if (deployedApps == null || deployedApps.Count < 1)
-                {
-                    continue;
-                }
 
                 foreach (var conn in this.connectionStatus.Where(cs => cs.TargetApp == config.TargetApp))
                 {
@@ -146,10 +135,31 @@ namespace FabricObserver.Observers
                         this.healthState = HealthState.Warning;
                         var healthMessage = $"Outbound Internet connection failure detected for endpoint {connState.HostName}{Environment.NewLine}";
 
+                        // Send Health Telemetry (perhaps it signals an Alert in AppInsights or LogAnalytics).
+                        // This will also be serialied into the health event (Desf.
+                        var telemetryData = new TelemetryData(this.FabricClientInstance, token)
+                        {
+                            ApplicationName = conn.TargetApp,
+                            Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
+                            HealthState = "Warning",
+                            HealthEventDescription = healthMessage,
+                            ObserverName = this.ObserverName,
+                            Metric = ErrorWarningProperty.InternetConnectionFailure,
+                            NodeName = this.NodeName,
+                        };
+
+                        if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                        {
+                            _ = this.TelemetryClient?.ReportMetricAsync(
+                                    telemetryData,
+                                    this.Token);
+                        }
+
                         var report = new HealthReport
                         {
                             AppName = new Uri(conn.TargetApp),
                             EmitLogEvent = true,
+                            HealthData = telemetryData,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = timeToLiveWarning,
                             State = this.healthState,
@@ -165,25 +175,6 @@ namespace FabricObserver.Observers
 
                         // This means this observer created a Warning or Error SF Health Report
                         this.HasActiveFabricErrorOrWarning = true;
-
-                        // Send Health Telemetry (perhaps it signals an Alert in AppInsights or LogAnalytics).
-                        if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
-                        {
-                            var telemetryData = new TelemetryData(this.FabricClientInstance, token)
-                            {
-                                ApplicationName = conn.TargetApp,
-                                Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
-                                HealthState = "Warning",
-                                HealthEventDescription = healthMessage,
-                                ObserverName = this.ObserverName,
-                                Metric = ErrorWarningProperty.InternetConnectionFailure,
-                                NodeName = this.NodeName,
-                            };
-
-                            _ = this.TelemetryClient?.ReportMetricAsync(
-                                    telemetryData,
-                                    this.Token);
-                        }
 
                         // ETW.
                         if (this.IsEtwEnabled)
@@ -204,7 +195,8 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        if (connState.Health != HealthState.Warning)
+                        if (connState.Health != HealthState.Warning
+                            || connState.Health != HealthState.Error)
                         {
                             continue;
                         }
@@ -275,6 +267,8 @@ namespace FabricObserver.Observers
             _ = this.connectionStatus.RemoveAll(conn => conn.Connected);
             this.connectionStatus.TrimExcess();
             this.connEndpointTestResults.Clear();
+
+            return Task.CompletedTask;
         }
 
         private static string GetNetworkInterfaceInfo(CancellationToken token)
@@ -328,10 +322,8 @@ namespace FabricObserver.Observers
             }
         }
 
-        private async Task<bool> Initialize()
+        private async Task<bool> InitializeAsync()
         {
-            this.stopwatch.Start();
-
             this.WriteToLogWithLevel(
                 this.ObserverName,
                 $"Initializing {this.ObserverName} for network monitoring. | {this.NodeName}",
@@ -401,7 +393,21 @@ namespace FabricObserver.Observers
                         FileAccess.Read,
                         FileShare.Read))
                 {
-                    this.userConfig.AddRange(JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream));
+                    var configs = JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream);
+
+                    foreach (var netConfig in configs)
+                    {
+                       var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
+                                this.NodeName,
+                                new Uri(netConfig.TargetApp)).ConfigureAwait(false);
+
+                        if (deployedApps == null || deployedApps.Count < 1)
+                        {
+                            continue;
+                        }
+
+                        this.userConfig.Add(netConfig);
+                    }
                 }
 
                 if (this.userConfig.Count == 0)
@@ -416,51 +422,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            int configCount = 0;
-
-            for (int i = 0; i < this.userConfig.Count; i++)
-            {
-                this.cancellationToken.ThrowIfCancellationRequested();
-
-                var config = this.userConfig[i];
-
-                var deployedApps = await this.FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
-                    this.NodeName,
-                    new Uri(config.TargetApp)).ConfigureAwait(true);
-
-                if (deployedApps == null || deployedApps.Count < 1)
-                {
-                    this.userConfig.RemoveAt(i);
-
-                    continue;
-                }
-
-                configCount++;
-
-                foreach (var endpoint in config.Endpoints)
-                {
-                    this.cancellationToken.ThrowIfCancellationRequested();
-
-                    if (string.IsNullOrWhiteSpace(endpoint.HostName))
-                    {
-                        this.HealthReporter.ReportFabricObserverServiceHealth(
-                            this.FabricServiceContext.ServiceName.ToString(),
-                            this.ObserverName,
-                            HealthState.Warning,
-                            $"Initialize() | Required endpoint parameter not set. Nothing to test.");
-
-                        continue;
-                    }
-
-                    this.WriteToLogWithLevel(
-                        this.ObserverName,
-                        $"Monitoring outbound connection state to {endpoint.HostName} on Node {this.NodeName} for app {config.TargetApp}",
-                        LogLevel.Information);
-                }
-            }
-
-            // This observer shouldn't run if there are no app-specific endpoint/port pairs provided.
-            return configCount >= 1;
+            return true;
         }
 
         private void InternetConnectionStateIsConnected()
@@ -713,6 +675,37 @@ namespace FabricObserver.Observers
                             TargetApp = targetApp,
                         });
                 }
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (!disposing)
+            {
+                return;
+            }
+
+            var errWarnHealthStates = this.connectionStatus.Where(
+                conn => conn.Health == HealthState.Error || conn.Health == HealthState.Warning);
+
+            foreach (var state in errWarnHealthStates)
+            {
+                // Clear existing Health Warning.
+                var report = new HealthReport
+                {
+                    AppName = new Uri(state.TargetApp),
+                    Code = FoErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
+                    EmitLogEvent = true,
+                    HealthMessage = $"Clearing NetworkObserver's Health Error/Warning for {state.TargetApp}/{state.HostName} connection state since FO is stopping.",
+                    HealthReportTimeToLive = default(TimeSpan),
+                    State = HealthState.Ok,
+                    NodeName = this.NodeName,
+                    Observer = this.ObserverName,
+                    Property = $"EndpointUnreachable({state.HostName})",
+                    ReportType = HealthReportType.Application,
+                };
+
+                this.HealthReporter.ReportHealthToServiceFabric(report);
             }
         }
     }

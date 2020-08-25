@@ -23,5 +23,15 @@
         "protocol": "tcp"
       }
     ]
+  },
+  {
+    "targetApp": "fabric:/FabricObserver",
+    "endpoints": [
+      {
+        "hostname": "www.facebook.com",
+        "port": 443,
+        "protocol": "tcp"
+      }
+    ]
   }
 ]
