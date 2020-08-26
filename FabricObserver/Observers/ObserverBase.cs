@@ -800,7 +800,7 @@ namespace FabricObserver.Observers
                     // so it should be completely constructed (filled with data) regardless
                     // of user telemetry settings.
                     telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
-                    telemetryData.Code = data.ActiveErrorOrWarningCode;
+                    telemetryData.Code = FoErrorWarningCodes.Ok;
                     telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
                     telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
