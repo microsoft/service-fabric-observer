@@ -101,7 +101,14 @@ namespace FabricObserver.Observers
             // Local log.
             this.ObserverLogger.LogInfo(message.ToString());
 
-            // Report to Fabric.
+            /* Report to Fabric */
+
+            // These values will be preserved across observer runs and are useful for
+            // clearing warnings by reporting Ok health state health events with the same property and sourceid values 
+            // as the error/warning health events when FO is safely taken down (uninstalled, safe restart of codepackage or fabric node).
+            this.HealthReportProperty = "ClusterHealth";
+            this.HealthReportSourceId = this.ObserverName;
+
             var healthReporter = new ObserverHealthReporter(this.ObserverLogger);
             var healthReport = new Utilities.HealthReport
             {
@@ -109,6 +116,7 @@ namespace FabricObserver.Observers
                 HealthMessage = this.message.ToString(),
                 NodeName = this.NodeName,
                 Observer = this.ObserverName,
+                Property = this.HealthReportProperty,
                 ReportType = HealthReportType.Node,
                 State = HealthState.Ok,
             };

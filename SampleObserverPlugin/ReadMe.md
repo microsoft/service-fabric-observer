@@ -68,7 +68,7 @@ namespace FabricObserver.Observers
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped(typeof(IObserver), typeof([Name of the class that holds your observer impl. E.g., MyObserver]));
+            services.AddScoped(typeof(ObserverBase), typeof([Name of the class that holds your observer impl. E.g., MyObserver]));
         }
     }
 }

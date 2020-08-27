@@ -78,21 +78,21 @@ namespace FabricObserver.Observers
 
         // Each derived Observer can set this to maintain health status across iterations.
         public bool HasActiveFabricErrorOrWarning { get; set; }
-        
-        public string HealthReportSourceId
-        {
-            get; set;
-        }
 
-        public string HealthReportProperty
+        public List<string> HealthReportSourceIds
         {
             get; set;
-        }
+        } = new List<string>();
 
-        public string AppName
+        public List<string> HealthReportProperties
         {
             get; set;
-        }
+        } = new List<string>();
+
+        public List<string> AppNames
+        {
+            get; set;
+        } = new List<string>();
 
         public TimeSpan RunInterval { get; set; } = TimeSpan.MinValue;
 
@@ -749,27 +749,30 @@ namespace FabricObserver.Observers
                     ResourceUsageDataProperty = data.Property,
                 };
 
-                this.AppName = appName?.OriginalString;
-                this.HealthReportProperty = this.ObserverName switch
-                {
-                    ObserverConstants.AppObserverName => "ApplicationHealth",
-                    ObserverConstants.CertificateObserverName => "SecurityHealth",
-                    ObserverConstants.DiskObserverName => "DiskHealth",
-                    ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
-                    ObserverConstants.NetworkObserverName => "NetworkHealth",
-                    ObserverConstants.OSObserverName => "MachineInformation",
-                    ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                    _ => "FOGenericHealth",
-                };
-                
+                this.AppNames.Add(appName?.OriginalString);
+
                 // From FSO.
                 if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
                 {
-                    this.HealthReportProperty = id;
+                    this.HealthReportProperties.Add(id);
+                }
+                else
+                {
+                    this.HealthReportProperties.Add(this.ObserverName switch
+                    {
+                        ObserverConstants.AppObserverName => "ApplicationHealth",
+                        ObserverConstants.CertificateObserverName => "SecurityHealth",
+                        ObserverConstants.DiskObserverName => "DiskHealth",
+                        ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
+                        ObserverConstants.NetworkObserverName => "NetworkHealth",
+                        ObserverConstants.OSObserverName => "MachineInformation",
+                        ObserverConstants.NodeObserverName => "MachineResourceHealth",
+                        _ => "FOGenericHealth",
+                    });
                 }
 
-                healthReport.Property = this.HealthReportProperty;
-                this.HealthReportSourceId = this.ObserverName;
+                healthReport.Property = this.HealthReportProperties[^1];
+                this.HealthReportSourceIds.Add(this.ObserverName);
 
                 // Set internal health state info on data instance.
                 data.ActiveErrorOrWarning = true;
@@ -778,10 +781,10 @@ namespace FabricObserver.Observers
                 if (!string.IsNullOrEmpty(data.ActiveErrorOrWarningCode))
                 {
                     // FOErrorWarningCode for distinct sourceid.
-                    this.HealthReportSourceId += $"({errorWarningCode})";
+                    this.HealthReportSourceIds[^1] += $"({errorWarningCode})";
                 }
 
-                healthReport.SourceId = this.HealthReportSourceId;
+                healthReport.SourceId = this.HealthReportSourceIds[^1];
 
                 // Emit a Fabric Health Report and optionally a local log write.
                 this.HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -849,44 +852,47 @@ namespace FabricObserver.Observers
                         ResourceUsageDataProperty = data.Property,
                     };
 
-                    this.AppName = appName?.OriginalString;
-                    this.HealthReportProperty = this.ObserverName switch
-                    {
-                        ObserverConstants.AppObserverName => "ApplicationHealth",
-                        ObserverConstants.CertificateObserverName => "SecurityHealth",
-                        ObserverConstants.DiskObserverName => "DiskHealth",
-                        ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
-                        ObserverConstants.NetworkObserverName => "NetworkHealth",
-                        ObserverConstants.OSObserverName => "MachineInformation",
-                        ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                        _ => "FOGenericHealth",
-                    };
-                    
+                    this.AppNames.Add(appName?.OriginalString);
+
                     // From FSO.
                     if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
                     {
-                        this.HealthReportProperty = id;
+                        this.HealthReportProperties.Add(id);
+                    }
+                    else
+                    {
+                        this.HealthReportProperties.Add(this.ObserverName switch
+                        {
+                            ObserverConstants.AppObserverName => "ApplicationHealth",
+                            ObserverConstants.CertificateObserverName => "SecurityHealth",
+                            ObserverConstants.DiskObserverName => "DiskHealth",
+                            ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
+                            ObserverConstants.NetworkObserverName => "NetworkHealth",
+                            ObserverConstants.OSObserverName => "MachineInformation",
+                            ObserverConstants.NodeObserverName => "MachineResourceHealth",
+                            _ => "FOGenericHealth",
+                        });
                     }
 
-                    healthReport.Property = this.HealthReportProperty;
-                    this.HealthReportSourceId = this.ObserverName;
+                    healthReport.Property = this.HealthReportProperties[^1];
+                    this.HealthReportSourceIds.Add(this.ObserverName);
 
                     if (!string.IsNullOrEmpty(data.ActiveErrorOrWarningCode))
                     {
                         // FOErrorWarningCode for distinct sourceid.
-                        this.HealthReportSourceId += $"({healthReport.Code})";
+                        this.HealthReportSourceIds[^1] += $"({data.ActiveErrorOrWarningCode})";
                     }
 
-                    healthReport.SourceId = this.HealthReportSourceId;
-                    
+                    healthReport.SourceId = this.HealthReportSourceIds[^1];
+
                     // Emit an Ok Health Report to clear Fabric Health warning.
                     this.HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                     // Reset health states.
                     data.ActiveErrorOrWarning = false;
                     data.ActiveErrorOrWarningCode = FoErrorWarningCodes.Ok;
-                    this.HealthReportProperty = null;
-                    this.HealthReportSourceId = null;
+                    this.HealthReportProperties.Clear();
+                    this.HealthReportSourceIds.Clear();
                     this.HasActiveFabricErrorOrWarning = false;
                 }
             }

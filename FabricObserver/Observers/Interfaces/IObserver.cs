@@ -12,11 +12,6 @@ namespace FabricObserver.Observers.Interfaces
 {
     public interface IObserver : IDisposable
     {
-        string AppName
-        {
-            get; set;
-        }
-
         string ObserverName { get; }
 
         string NodeName { get; set; }
@@ -30,16 +25,6 @@ namespace FabricObserver.Observers.Interfaces
         bool IsEnabled { get; set; }
 
         bool HasActiveFabricErrorOrWarning { get; set; }
-
-        string HealthReportProperty
-        {
-            get; set;
-        }
-
-        string HealthReportSourceId
-        {
-            get; set;
-        }
 
         bool IsUnhealthy { get; set; }
 

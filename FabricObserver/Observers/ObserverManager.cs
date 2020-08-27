@@ -29,7 +29,7 @@ namespace FabricObserver.Observers
         private static bool etwEnabled;
         private readonly string nodeName;
         private readonly TelemetryEvents telemetryEvents;
-        private List<IObserver> observers;
+        private List<ObserverBase> observers;
         private EventWaitHandle globalShutdownEventHandle;
         private volatile bool shutdownSignaled;
         private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(30);
@@ -37,7 +37,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
         private bool disposedValue;
-        private IEnumerable<IObserver> serviceCollection;
+        private IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgess;
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace FabricObserver.Observers
         /// This is used for unit testing.
         /// </summary>
         /// <param name="observer">Observer instance.</param>
-        public ObserverManager(IObserver observer)
+        public ObserverManager(ObserverBase observer)
         {
             this.cts = new CancellationTokenSource();
             this.token = this.cts.Token;
@@ -55,7 +55,7 @@ namespace FabricObserver.Observers
             // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
 
-            this.observers = new List<IObserver>(new[]
+            this.observers = new List<ObserverBase>(new[]
             {
                 observer,
             });
@@ -95,7 +95,7 @@ namespace FabricObserver.Observers
             this.Logger = new Logger("ObserverManager", logFolderBasePath);
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertieSFromConfigurationParameters();
-            this.serviceCollection = serviceProvider.GetServices<IObserver>();
+            this.serviceCollection = serviceProvider.GetServices<ObserverBase>();
             
             // Populate the Observer list for the sequential run loop.
             this.observers = this.serviceCollection.Where(o => o.IsEnabled).ToList();
@@ -380,26 +380,30 @@ namespace FabricObserver.Observers
 
             if (this.observers?.Count > 0)
             {
-                foreach (IObserver obs in this.observers)
+                foreach (ObserverBase obs in this.observers)
                 {
                     // If the node goes down, for example, or the app is gracefully closed,
                     // then clear all existing error or health reports suppled by FO.
+                    // NetworkObserver takes care of this internally, so ignore here.
                     if (obs.HasActiveFabricErrorOrWarning && 
                         obs.ObserverName != ObserverConstants.NetworkObserverName)
                     {
-                        var healthReport = new Utilities.HealthReport
+                        for (int i = 0; i < obs.HealthReportSourceIds.Count; i++)
                         {
-                            AppName = !string.IsNullOrEmpty(obs.AppName) ? new Uri(obs.AppName) : null,
-                            Code = FoErrorWarningCodes.Ok,
-                            HealthMessage = $"Clearing existing Health Error/Warning, {obs.HealthReportProperty}/{obs.HealthReportSourceId}, as FO is stopping.",
-                            Property = obs.HealthReportProperty,
-                            SourceId = obs.HealthReportSourceId,
-                            State = HealthState.Ok,
-                            NodeName = obs.NodeName,
-                        };
+                            var healthReport = new Utilities.HealthReport
+                            {
+                                AppName = !string.IsNullOrEmpty(obs.AppNames[i]) ? new Uri(obs.AppNames[i]) : null,
+                                Code = FoErrorWarningCodes.Ok,
+                                HealthMessage = $"Clearing existing Health Error/Warning, {obs.HealthReportProperties[i]}/{obs.HealthReportSourceIds[i]}, as FO is stopping.",
+                                Property = obs.HealthReportProperties[i],
+                                SourceId = obs.HealthReportSourceIds[i],
+                                State = HealthState.Ok,
+                                NodeName = obs.NodeName,
+                            };
 
-                        var healthReporter = new ObserverHealthReporter(this.Logger);
-                        healthReporter.ReportHealthToServiceFabric(healthReport);
+                            var healthReporter = new ObserverHealthReporter(this.Logger);
+                            healthReporter.ReportHealthToServiceFabric(healthReport);
+                        }
                     }
 
                     obs?.Dispose();

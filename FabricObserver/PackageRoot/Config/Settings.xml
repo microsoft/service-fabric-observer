@@ -219,10 +219,10 @@
        Example: SampleNewObserverConfiguration where SampleNewObserver is the type name of the observer plugin.
        See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
   <!--<Section Name="SampleNewObserverConfiguration">
-    <Parameter Name="Enabled" Value="true" MustOverride="true" />
-    <Parameter Name="EnableTelemetry" Value="true" MustOverride="true" />
-    <Parameter Name="EnableVerboseLogging" Value="true" MustOverride="true" />
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
-  </Section>-->
+  </Section> -->
 </Settings>
