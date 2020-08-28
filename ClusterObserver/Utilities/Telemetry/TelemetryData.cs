@@ -6,6 +6,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Fabric;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace FabricClusterObserver.Utilities.Telemetry
@@ -58,6 +59,11 @@ namespace FabricClusterObserver.Utilities.Telemetry
         {
             get; set;
         }
+
+        public string OS
+        {
+            get; set;
+        } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
 
         public Guid PartitionId
         {

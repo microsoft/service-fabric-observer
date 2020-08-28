@@ -121,7 +121,7 @@ namespace FabricObserver.Observers.Utilities
                     ObserverConstants.NetworkObserverName => "NetworkHealth",
                     ObserverConstants.OSObserverName => "MachineInformation",
                     ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                    _ => "FOGenericHealth",
+                    _ => $"{healthReport.Observer}_GenericHealth",
                 };
             }
 

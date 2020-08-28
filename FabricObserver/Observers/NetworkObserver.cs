@@ -623,7 +623,7 @@ namespace FabricObserver.Observers
             }
             finally
             {
-                tcpClient?.Dispose();
+                tcpClient?.Close();
             }
 
             return false;
