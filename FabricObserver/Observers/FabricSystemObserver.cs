@@ -458,7 +458,7 @@ namespace FabricObserver.Observers
                 {
                     this.allCpuData.Add(
                         new FabricResourceUsageData<int>(
-                            ErrorWarningProperty.TotalMemoryConsumptionMb,
+                            ErrorWarningProperty.TotalCpuTime,
                             proc,
                             this.DataCapacity,
                             this.UseCircularBuffer));

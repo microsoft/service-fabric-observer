@@ -7,14 +7,16 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
-         For Windows, use win-x64. For Linux, use linux-x64. 
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
+         For Windows, use win-x64. For Linux, use linux-x64.
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
     <!-- For multi-target publish (say, from Azure Pipeline build), you can use multi-target RIDs: 
          linux-x64;win-x64. -->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <FileVersion>1.0.0</FileVersion>
+    <FileVersion>3.0.0.1</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>FabricObserver</Product>
+    <ProductName>Service Fabric Observer</ProductName>
+    <ProductVersion>3.0.1</ProductVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
     <StartupObject>FabricObserver.Program</StartupObject>
@@ -89,8 +91,5 @@
     <Content Include="NLog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="PackageRoot\Data\Plugins\" />
   </ItemGroup>
 </Project>

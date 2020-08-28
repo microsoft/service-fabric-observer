@@ -13,8 +13,6 @@
     <AssemblyTitle>FabricObserverTests</AssemblyTitle>
   </PropertyGroup>
   <ItemGroup>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="MyExpiredCert.p12">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -50,10 +48,7 @@
       <Project>{5e990052-7b55-4af1-bcd9-48de6ea0e547}</Project>
       <Name>ClusterObserver</Name>
     </ProjectReference>
-    <ProjectReference Include="..\FabricObserver\FabricObserver.csproj">
-      <Project>{51ac2a69-b952-4766-8a1e-2c7752bc011a}</Project>
-      <Name>FabricObserver</Name>
-    </ProjectReference>
+    <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.6.1" />
