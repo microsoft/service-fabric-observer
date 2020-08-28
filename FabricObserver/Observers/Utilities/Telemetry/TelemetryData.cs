@@ -5,6 +5,7 @@
 
 using System;
 using System.Fabric;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.ServiceFabric.TelemetryLib;
 
@@ -52,6 +53,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string OS
+        {
+            get; set;
+        } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+
         public string PartitionId
         {
             get; set;
@@ -81,7 +87,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             FabricClient fabricClient,
             CancellationToken cancellationToken)
         {
-            var (clusterId, tenantId, clusterType) =
+            var (clusterId, _, _) =
               ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
 
             this.ClusterId = clusterId;

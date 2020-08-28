@@ -14,7 +14,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
-using Microsoft.Extensions.PlatformAbstractions;
 
 namespace FabricObserver.Observers
 {
@@ -143,7 +142,7 @@ namespace FabricObserver.Observers
                 // Warm up the counters.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    // It is import to check if code is running on Windows,
+                    // It is important to check if code is running on Windows,
                     // since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
                     _ = DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2));
                 }

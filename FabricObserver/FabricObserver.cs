@@ -12,7 +12,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers;
-using FabricObserver.Observers.Interfaces;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Runtime;
@@ -56,14 +55,14 @@ namespace FabricObserver
         /// <param name="services">ServiceCollection collection instance.</param>
         private void ConfigureServices(ServiceCollection services)
         {
-            _ = services.AddScoped(typeof(IObserver), typeof(AppObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(CertificateObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(DiskObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(FabricSystemObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(NetworkObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(NodeObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(OSObserver));
-            _ = services.AddScoped(typeof(IObserver), typeof(SFConfigurationObserver));
+            _ = services.AddScoped(typeof(ObserverBase), typeof(AppObserver));
+            _ = services.AddScoped(typeof(ObserverBase), typeof(CertificateObserver));
+            _ = services.AddScoped(typeof(ObserverBase), typeof(DiskObserver));
+            _ = services.AddScoped(typeof(ObserverBase), typeof(FabricSystemObserver));
+            _ = services.AddScoped(typeof(ObserverBase), typeof(NetworkObserver));
+            _ = services.AddScoped(typeof(ObserverBase), typeof(NodeObserver));
+            _ = services.AddScoped(typeof(ObserverBase), typeof(OSObserver));
+            _ = services.AddScoped(typeof(ObserverBase), typeof(SFConfigurationObserver));
             _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
 
             this.LoadObserverSFromPlugins(services);

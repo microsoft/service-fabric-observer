@@ -79,48 +79,7 @@ namespace FabricObserver.Observers.Utilities
                 timeToLive = healthReport.HealthReportTimeToLive;
             }
 
-            // Set property for health event.
-            string property = healthReport.Property;
-
-            if (string.IsNullOrEmpty(property))
-            {
-                switch (healthReport.Observer)
-                {
-                    case ObserverConstants.AppObserverName:
-                        property = "ApplicationHealth";
-                        break;
-                    case ObserverConstants.CertificateObserverName:
-                        property = "SecurityHealth";
-                        break;
-                    case ObserverConstants.DiskObserverName:
-                        property = "DiskHealth";
-                        break;
-                    case ObserverConstants.FabricSystemObserverName:
-                        property = "FabricSystemServiceHealth";
-                        break;
-                    case ObserverConstants.NetworkObserverName:
-                        property = "NetworkHealth";
-                        break;
-                    case ObserverConstants.OSObserverName:
-                        property = "MachineInformation";
-                        break;
-                    case ObserverConstants.NodeObserverName:
-                        property = "MachineResourceHealth";
-                        break;
-                    default:
-                        property = "FOGenericHealth";
-                        break;
-                }
-            }
-
-            string sourceId = healthReport.Observer;
             TelemetryData healthData = healthReport.HealthData;
-
-            if (!string.IsNullOrEmpty(healthReport.Code))
-            {
-                // Only use FOErrorWarningCode for source
-                sourceId += $"({healthReport.Code})";
-            }
 
             string errWarnPreamble = string.Empty;
 
@@ -133,10 +92,9 @@ namespace FabricObserver.Observers.Utilities
 
                 // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
                 if (healthReport.Observer == ObserverConstants.OSObserverName
-                    && property == "OSConfiguration")
+                    && healthReport.Property == "OSConfiguration")
                 {
                     errWarnPreamble = $"{ObserverConstants.OSObserverName} detected potential problem with OS configuration: ";
-                    property = "OSConfiguration";
                 }
             }
 
@@ -147,7 +105,27 @@ namespace FabricObserver.Observers.Utilities
                 message = JsonConvert.SerializeObject(healthData);
             }
 
-            var healthInformation = new HealthInformation(sourceId, property, healthReport.State)
+            if (string.IsNullOrEmpty(healthReport.SourceId))
+            {
+                healthReport.SourceId = healthReport.Observer;
+            }
+
+            if (string.IsNullOrEmpty(healthReport.Property))
+            {
+                healthReport.Property = healthReport.Observer switch
+                {
+                    ObserverConstants.AppObserverName => "ApplicationHealth",
+                    ObserverConstants.CertificateObserverName => "SecurityHealth",
+                    ObserverConstants.DiskObserverName => "DiskHealth",
+                    ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
+                    ObserverConstants.NetworkObserverName => "NetworkHealth",
+                    ObserverConstants.OSObserverName => "MachineInformation",
+                    ObserverConstants.NodeObserverName => "MachineResourceHealth",
+                    _ => $"{healthReport.Observer}_GenericHealth",
+                };
+            }
+
+            var healthInformation = new HealthInformation(healthReport.SourceId, healthReport.Property, healthReport.State)
             {
                 Description = $"{message}",
                 TimeToLive = timeToLive,
