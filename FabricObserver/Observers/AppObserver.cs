@@ -178,27 +178,6 @@ namespace FabricObserver.Observers
                         {
                             this.LogAllAppResourceDataToCsv(id);
                         }
-#if DEBUG
-                        // DEBUG \\
-                        if (id.Contains("CpuStress"))
-                        {
-                            // Emit an Ok Health Report for debug output.
-                            var healthReport = new Utilities.HealthReport
-                            {
-                                AppName = new Uri("fabric:/CpuStress"),
-                                HealthMessage = $"{p.Id} CpuData Count: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Count}\n" +
-                                $"Average: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).AverageDataValue}",
-                                State = HealthState.Ok,
-                                Code = FoErrorWarningCodes.Ok,
-                                NodeName = this.NodeName,
-                                Observer = this.ObserverName,
-                                Property = id,
-                                ReportType = HealthReportType.Application,
-                            };
-
-                            this.HealthReporter.ReportHealthToServiceFabric(healthReport);
-                        }
-#endif
 
                         // CPU
                         this.ProcessResourceDataReportHealth(
@@ -468,22 +447,6 @@ namespace FabricObserver.Observers
                             }
 
                             this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
-#if DEBUG
-                            // DEBUG INFO
-                            var healthReport = new Utilities.HealthReport
-                            {
-                                AppName = repOrInst.ApplicationName,
-                                HealthMessage = $"ProcessId = {currentProcess.Id}: Cpu%: {cpu} CpuContainerCnt: {this.allAppCpuData.FirstOrDefault(x => x.Id == id).Data.Count}\n",
-                                State = HealthState.Ok,
-                                Code = FoErrorWarningCodes.Ok,
-                                NodeName = this.NodeName,
-                                Observer = this.ObserverName,
-                                Property = id,
-                                ReportType = HealthReportType.Application,
-                            };
-
-                            this.HealthReporter.ReportHealthToServiceFabric(healthReport);
-#endif
                         }
 
                         // Memory (private working set (process)).
@@ -491,8 +454,8 @@ namespace FabricObserver.Observers
                         this.allAppMemDataMb.FirstOrDefault(x => x.Id == id).Data.Add(processMem);
 
                         // Memory (percent in use (total)).
-                        var memInfo = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
-                        long totalMem = memInfo.TotalMemory;
+                        var (TotalMemory, PercentInUse) = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
+                        long totalMem = TotalMemory;
 
                         if (totalMem > -1)
                         {

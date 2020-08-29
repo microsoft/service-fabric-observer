@@ -139,7 +139,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     { "HealthState", telemetryData.HealthState ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OSPlatform", $"{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux")}" },
+                    { "OSPlatform", telemetryData.OS },
                     { "Partition", $"{telemetryData.PartitionId}" },
                     { "Replica", $"{telemetryData.ReplicaId}" },
                     { "Source", telemetryData.Source ?? string.Empty },

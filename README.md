@@ -1,4 +1,4 @@
-# FabricObserver 3.0.0
+# FabricObserver 3.0.1
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of resources that tend to be important to all Service Fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
@@ -52,11 +52,11 @@ For more information about **the design of FabricObserver**, please see the [Des
 
 ## Build and run  
 
-## Note that the current version of code can target either 6.4, 6.5, or 7.0+ SF runtimes and their respective SDK versions. The current Nuget packages.config, however, targets 7.0+, so downgrade your SF nuget packages versions to whatever version of SF is running in your cluster if it's not 7.0+. The latest Release SFPKG is meant for 7.0 clusters.
-
 1. Clone the repo.
-2. If you want to use the optional [FabricObserver API Service](/FabricObserverWeb) and you are using VS 2019, you must install [.NET Core 2.2 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.2). If you are using VS 2017, then install [.NET Core 2.1 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.1), as VS2017 does not support 2.2.
-2. Build (the required Nuget packages will be downloaded and installed automatically by Visual Studio). 
+2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+3. Build.
+
+You can also run the build scripts from a Powershell console. These include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks.  
