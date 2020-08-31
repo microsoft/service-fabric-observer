@@ -12,11 +12,11 @@
     <!-- For multi-target publish (say, from Azure Pipeline build), you can use multi-target RIDs: 
          linux-x64;win-x64. -->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <FileVersion>3.0.0.1</FileVersion>
+    <FileVersion>3.0.0.2</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>FabricObserver</Product>
     <ProductName>Service Fabric Observer</ProductName>
-    <ProductVersion>3.0.1</ProductVersion>
+    <ProductVersion>3.0.2</ProductVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
     <StartupObject>FabricObserver.Program</StartupObject>
@@ -60,8 +60,8 @@
     <PackageReference Include="System.Security.Cryptography.Encoding" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.Primitives" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.6" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.6" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.7" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.7" />
     <PackageReference Include="McMaster.NETCore.Plugins" Version="1.3.0" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="..\Interop\Interop.WUApiLib.dll" />
