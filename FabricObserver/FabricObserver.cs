@@ -90,7 +90,7 @@ namespace FabricObserver
 
             List<PluginLoader> pluginLoaders = new List<PluginLoader>(capacity: pluginDlls.Length);
 
-            Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup) };
+            Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
 
             if (sharedTypes.Length == 0)
             {
