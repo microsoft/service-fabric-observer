@@ -144,7 +144,7 @@
             <Parameter Name="MonitorDuration" Value="[DiskObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[DiskObserverRunInterval]" />
             <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="[DiskSpacePercentUsageErrorThreshold]" />
-            <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="[DiskSpacePercentUsageWarningThreshold" />
+            <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="[DiskSpacePercentUsageWarningThreshold]" />
             <Parameter Name="AverageQueueLengthErrorThreshold" Value="[AverageQueueLengthErrorThreshold]" />
             <Parameter Name="AverageQueueLengthWarningThreshold" Value="[AverageQueueLengthWarningThreshold]" />
           </Section>
