@@ -1,5 +1,4 @@
-﻿using FabricObserver.Observers.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 [assembly: FabricObserver.FabricObserverStartup(typeof(FabricObserver.Observers.SampleNewObserverStartup))]
 namespace FabricObserver.Observers
