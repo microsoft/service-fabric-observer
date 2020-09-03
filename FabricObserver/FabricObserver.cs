@@ -65,14 +65,14 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(ObserverBase), typeof(SFConfigurationObserver));
             _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
 
-            this.LoadObserverSFromPlugins(services);
+            this.LoadObserversFromPlugins(services);
         }
 
         /// <summary>
         /// This function will load observer plugin dlls from PackageRoot/Data/Plugins folder and add them to the ServiceCollection instance.
         /// </summary>
         /// <param name="services"></param>
-        private void LoadObserverSFromPlugins(ServiceCollection services)
+        private void LoadObserversFromPlugins(ServiceCollection services)
         {
             string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
