@@ -158,7 +158,7 @@
     <Parameter Name="MemoryWarningLimitMb" Value ="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="" MustOverride="true" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="NetworkObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />

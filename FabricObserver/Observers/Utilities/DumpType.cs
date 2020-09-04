@@ -3,7 +3,7 @@ namespace FabricObserver.Observers.Utilities
     /// <summary>
     /// Type of dump to generate, mini to full.
     /// </summary>
-    internal enum DumpType
+    public enum DumpType
     {
         /// <summary>
         /// NativeMethods.MINIDUMP_TYPE.MiniDumpWithIndirectlyReferencedMemory |
