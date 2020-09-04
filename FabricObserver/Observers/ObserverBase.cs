@@ -305,7 +305,7 @@ namespace FabricObserver.Observers
         }
 
         // Windows process dmp creator.
-        internal bool DumpServiceProcess(int processId, DumpType dumpType = DumpType.Full)
+        public bool DumpServiceProcess(int processId, DumpType dumpType = DumpType.Full)
         {
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
@@ -398,7 +398,7 @@ namespace FabricObserver.Observers
             return false;
         }
 
-        internal void ProcessResourceDataReportHealth<T>(
+        public void ProcessResourceDataReportHealth<T>(
             FabricResourceUsageData<T> data,
             T thresholdError,
             T thresholdWarning,
@@ -911,7 +911,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        internal TimeSpan SetHealthReportTimeToLive()
+        public TimeSpan SetHealthReportTimeToLive()
         {
             // First run.
             if (this.LastRunDateTime == DateTime.MinValue)

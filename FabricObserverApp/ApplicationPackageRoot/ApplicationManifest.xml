@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.2" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.3" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
@@ -55,7 +55,7 @@
     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
-    <!-- Required-If UseCircularBuffer = True -->
+    <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <!-- Certificate Observer Overrides -->
@@ -110,7 +110,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.0.2" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.0.3" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -165,9 +165,8 @@
             <Parameter Name="CpuWarningLimitPercent" Value="[FabricSystemObserverCpuWarningLimitPercent]" />
             <Parameter Name="MemoryErrorLimitMb" Value="[FabricSystemObserverMemoryErrorLimitMb]" />
             <Parameter Name="MemoryWarningLimitMb" Value="[FabricSystemObserverMemoryWarningLimitMb]" />
-            <Parameter Name="NetworkErrorEphemeralPorts" Value="[FabricSystemObserverMonitorWindowsEventLog]" />
-            <Parameter Name="NetworkWarningEphemeralPorts" Value="[FabricSystemObserverMonitorWindowsEventLog]" />
-            <Parameter Name="ClusterOperationTimeoutSeconds" Value="[FabricSystemObserverMonitorWindowsEventLog]" />
+            <Parameter Name="NetworkErrorEphemeralPorts" Value="[FabricSystemObserverNetworkErrorEphemeralPorts]" />
+            <Parameter Name="NetworkWarningEphemeralPorts" Value="[FabricSystemObserverNetworkWarningEphemeralPorts]" />
           </Section>
           <Section Name="NetworkObserverConfiguration">
             <Parameter Name="Enabled" Value="[NetworkObserverEnabled]" />
