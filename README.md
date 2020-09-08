@@ -59,7 +59,8 @@ For more information about **the design of FabricObserver**, please see the [Des
 You can also run the build scripts from a Powershell console. These include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
-see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks.  
+see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks. <strong>Please keep in mind that if your target servers do not already have
+.NET Core 3.1 installed (if you deploy VM images from Azure gallery, then they will not have .NET Core 3.1 installed), then you must deploy the SelfContained package.</strong>
 
 If you deploy via ARM, then simply add a path to the FO SFPKG you generate (create pkg folder (in VS, right-click FabricObserverApp project, select Package), zip it, rename the file to whatever you want, replace .zip with .sfpkg file extension...) from your build after updating
 the configs to make sense for your applications/services/nodes (store the sfpkg in some blob store you trust): 
