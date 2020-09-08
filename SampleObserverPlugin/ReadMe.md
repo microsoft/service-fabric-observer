@@ -50,7 +50,7 @@ all of the public code in FabricObserver. That is, you will have the same capabi
 that all other observers have. The world is your oyster when it comes to creating your
 custom observer to do whatever the underlying platform affords. 
 
-### Note: make sure you know if .NET Core 3.1 is installed on the target server. If it is not, then you must use the SelfContained package. This is important.
+### Note: make sure you know if .NET Core 3.1 is installed on the target server. If it is not, then you must use the SelfContained package. This is very important.
 
 As you can see in this project, there are two key files:
 
