@@ -14,21 +14,21 @@ namespace FabricObserver.Observers.MachineInfoModel
             ObserverManager.FabricServiceContext.CodePackageActivationContext.
                 GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
 
-        public static string AppObserverDataFileName { get; set; }
+        public static string AppObserverConfigFileName { get; set; }
 
-        public static string NetworkObserverDataFileName { get; set; }
+        public static string NetworkObserverConfigFileName { get; set; }
 
         public static void Initialize(
             ConfigurationSettings configSettings,
             string configurationSectionName,
             string dataFileName)
         {
-            ConfigSettings.configurationSettings = configSettings;
+            configurationSettings = configSettings;
 
             switch (configurationSectionName)
             {
                 case ObserverConstants.AppObserverConfigurationSectionName:
-                    AppObserverDataFileName = new ConfigurationSetting<string>(
+                    AppObserverConfigFileName = new ConfigurationSetting<string>(
                         configSettings,
                         configurationSectionName,
                         dataFileName,
@@ -37,7 +37,7 @@ namespace FabricObserver.Observers.MachineInfoModel
                     break;
 
                 case ObserverConstants.NetworkObserverConfigurationSectionName:
-                    NetworkObserverDataFileName = new ConfigurationSetting<string>(
+                    NetworkObserverConfigFileName = new ConfigurationSetting<string>(
                         configSettings,
                         configurationSectionName,
                         dataFileName,
@@ -57,7 +57,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             {
                 // Fabric Client settings
                 case ObserverConstants.AppObserverConfigurationSectionName:
-                    AppObserverDataFileName = new ConfigurationSetting<string>(
+                    AppObserverConfigFileName = new ConfigurationSetting<string>(
                         configurationSettings,
                         configurationSectionName,
                         dataFileName,
@@ -65,7 +65,7 @@ namespace FabricObserver.Observers.MachineInfoModel
                     break;
 
                 case ObserverConstants.NetworkObserverConfigurationSectionName:
-                    NetworkObserverDataFileName = new ConfigurationSetting<string>(
+                    NetworkObserverConfigFileName = new ConfigurationSetting<string>(
                         configurationSettings,
                         configurationSectionName,
                         dataFileName,

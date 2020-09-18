@@ -28,8 +28,8 @@ namespace FabricObserver.Observers
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (this.RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            if (RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
@@ -38,9 +38,9 @@ namespace FabricObserver.Observers
             int totalNumberOfDeployedSFApps = 0, totalNumberOfDeployedServices = 0, totalNumberOfPartitions = 0, totalNumberOfReplicas = 0;
             int appsInWarningError = 0, servicesInWarningError = 0, partitionsInWarningError = 0, replicasInWarningError = 0;
 
-            var apps = await this.FabricClientInstance.QueryManager.GetApplicationListAsync(
+            var apps = await FabricClientInstance.QueryManager.GetApplicationListAsync(
                 null,
-                this.AsyncClusterOperationTimeoutSeconds,
+                AsyncClusterOperationTimeoutSeconds,
                 token).ConfigureAwait(false);
 
             totalNumberOfDeployedSFApps = apps.Count;
@@ -48,10 +48,10 @@ namespace FabricObserver.Observers
 
             foreach (var app in apps)
             {
-                var services = await this.FabricClientInstance.QueryManager.GetServiceListAsync(
+                var services = await FabricClientInstance.QueryManager.GetServiceListAsync(
                     app.ApplicationName,
                     null,
-                    this.AsyncClusterOperationTimeoutSeconds,
+                    AsyncClusterOperationTimeoutSeconds,
                     token).ConfigureAwait(false);
 
                 totalNumberOfDeployedServices += services.Count;
@@ -59,10 +59,10 @@ namespace FabricObserver.Observers
                 
                 foreach (var service in services)
                 {
-                    var partitions = await this.FabricClientInstance.QueryManager.GetPartitionListAsync(
+                    var partitions = await FabricClientInstance.QueryManager.GetPartitionListAsync(
                         service.ServiceName,
                         null,
-                        this.AsyncClusterOperationTimeoutSeconds,
+                        AsyncClusterOperationTimeoutSeconds,
                         token).ConfigureAwait(false);
 
                     totalNumberOfPartitions += partitions.Count;
@@ -70,10 +70,10 @@ namespace FabricObserver.Observers
 
                     foreach (var partition in partitions)
                     {
-                        var replicas = await this.FabricClientInstance.QueryManager.GetReplicaListAsync(
+                        var replicas = await FabricClientInstance.QueryManager.GetReplicaListAsync(
                             partition.PartitionInformation.Id,
                             null,
-                            this.AsyncClusterOperationTimeoutSeconds,
+                            AsyncClusterOperationTimeoutSeconds,
                             token).ConfigureAwait(false);
 
                         totalNumberOfReplicas += replicas.Count;
@@ -93,18 +93,18 @@ namespace FabricObserver.Observers
 
             // The time it took to run ObserveAsync; for use in computing HealthReport TTL.
             stopwatch.Stop();
-            this.RunDuration = stopwatch.Elapsed;
+            RunDuration = stopwatch.Elapsed;
 
-            this.message.AppendLine($"Time it took to run {base.ObserverName}.ObserveAsync: {this.RunDuration}");
+            this.message.AppendLine($"Time it took to run {base.ObserverName}.ObserveAsync: {RunDuration}");
 
-            await this.ReportAsync(token);
-            this.LastRunDateTime = DateTime.Now;
+            await ReportAsync(token);
+            LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
         {
             // Local log.
-            this.ObserverLogger.LogInfo(message.ToString());
+            ObserverLogger.LogInfo(message.ToString());
 
             /* Report to Fabric */
 
@@ -112,17 +112,17 @@ namespace FabricObserver.Observers
             // by reporting Ok health state health events with the same property and sourceid values 
             // as the error/warning health events when FO is safely taken down (e.g., app is being uninstalled, 
             // safe restart of fabric node it's running on, etc.).
-            this.HealthReportProperties.Add("SomePropertyName");
-            this.HealthReportSourceIds.Add($"{this.ObserverName}_SomethingUniqueToThisReport");
+            HealthReportProperties.Add("SomePropertyName");
+            HealthReportSourceIds.Add($"{ObserverName}_SomethingUniqueToThisReport");
 
-            var healthReporter = new ObserverHealthReporter(this.ObserverLogger);
+            var healthReporter = new ObserverHealthReporter(ObserverLogger);
             var healthReport = new Utilities.HealthReport
             {
                 Code = FoErrorWarningCodes.Ok,
                 HealthMessage = this.message.ToString(),
-                NodeName = this.NodeName,
-                Observer = this.ObserverName,
-                Property = this.HealthReportProperties[^1],
+                NodeName = NodeName,
+                Observer = ObserverName,
+                Property = HealthReportProperties[^1],
                 ReportType = HealthReportType.Node,
                 State = HealthState.Ok,
             };
@@ -130,25 +130,25 @@ namespace FabricObserver.Observers
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
             // Emit Telemetry - This will use whatever telemetry provider you have configured in FabricObserver Settings.xml.
-            var telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
+            var telemetryData = new TelemetryData(FabricClientInstance, Token)
             {
                 Code = FoErrorWarningCodes.Ok,
                 HealthEventDescription = this.message.ToString(),
                 HealthState = "Ok",
-                NodeName = this.NodeName,
-                ObserverName = this.ObserverName,
+                NodeName = NodeName,
+                ObserverName = ObserverName,
                 Source = ObserverConstants.FabricObserverName,
             };
 
-            if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+            if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
             {
-                _ = this.TelemetryClient?.ReportHealthAsync(
+                _ = TelemetryClient?.ReportHealthAsync(
                         telemetryData,
-                        this.Token);
+                        Token);
             }
 
             // ETW.
-            if (this.IsEtwEnabled)
+            if (IsEtwEnabled)
             {
                 Logger.EtwLogger?.Write(
                     ObserverConstants.FabricObserverETWEventName,
@@ -157,8 +157,8 @@ namespace FabricObserver.Observers
                         Code = FoErrorWarningCodes.Ok,
                         HealthEventDescription = this.message.ToString(),
                         HealthState = "Ok",
-                        this.NodeName,
-                        this.ObserverName,
+                        NodeName,
+                        ObserverName,
                         Source = ObserverConstants.FabricObserverName,
                     });
             }

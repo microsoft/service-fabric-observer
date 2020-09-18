@@ -32,17 +32,16 @@ namespace FabricObserver.Observers.Utilities
 
         public bool EnableVerboseLogging { get; set; } = false;
 
-        
         public string LogFolderBasePath { get; set; }
 
         public string FilePath { get; set; }
 
-        internal string FolderName
+        public string FolderName
         {
             get;
         }
 
-        internal string Filename
+        public string Filename
         {
             get;
         }
@@ -67,16 +66,16 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="logFolderBasePath">Base folder path.</param>
         public Logger(string observerName, string logFolderBasePath = null)
         {
-            this.FolderName = observerName;
-            this.Filename = observerName + ".log";
+            FolderName = observerName;
+            Filename = observerName + ".log";
             this.loggerName = observerName;
 
             if (!string.IsNullOrEmpty(logFolderBasePath))
             {
-                this.LogFolderBasePath = logFolderBasePath;
+                LogFolderBasePath = logFolderBasePath;
             }
 
-            this.InitializeLoggers();
+            InitializeLoggers();
         }
 
         public static void ShutDown()
@@ -92,28 +91,27 @@ namespace FabricObserver.Observers.Utilities
         
         public void LogTrace(string format, params object[] parameters)
         {
-            this.OLogger.Trace(format, parameters);
+            OLogger.Trace(format, parameters);
         }
 
-        
         public void LogInfo(string format, params object[] parameters)
         {
-            if (!this.EnableVerboseLogging)
+            if (!EnableVerboseLogging)
             {
                 return;
             }
 
-            this.OLogger.Info(format, parameters);
+            OLogger.Info(format, parameters);
         }
 
         public void LogError(string format, params object[] parameters)
         {
-            this.OLogger.Error(format, parameters);
+            OLogger.Error(format, parameters);
         }
 
         public void LogWarning(string format, params object[] parameters)
         {
-            this.OLogger.Warn(format, parameters);
+            OLogger.Warn(format, parameters);
         }
 
         public bool TryWriteLogFile(string path, string content)
@@ -155,7 +153,7 @@ namespace FabricObserver.Observers.Utilities
 
         public bool TryDeleteInstanceLog()
         {
-            if (string.IsNullOrEmpty(this.FilePath) || !File.Exists(this.FilePath))
+            if (string.IsNullOrEmpty(FilePath) || !File.Exists(FilePath))
             {
                 return false;
             }
@@ -164,7 +162,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 try
                 {
-                    File.Delete(this.FilePath);
+                    File.Delete(FilePath);
                     return true;
                 }
                 catch (IOException)
@@ -180,32 +178,32 @@ namespace FabricObserver.Observers.Utilities
             return false;
         }
 
-        internal void InitializeLoggers()
+        public void InitializeLoggers()
         {
             // default log directory.
             string logFolderBase = string.Empty;
 
             // Log directory supplied in Settings.xml.
-            if (!string.IsNullOrEmpty(this.LogFolderBasePath))
+            if (!string.IsNullOrEmpty(LogFolderBasePath))
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // Add current drive letter if not supplied for Windows path target.
-                    if (!this.LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
                         string windrive = Environment.SystemDirectory.Substring(0, 3);
-                        logFolderBase = windrive + this.LogFolderBasePath;
+                        logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (this.LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
-                        this.LogFolderBasePath = this.LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
+                        LogFolderBasePath = LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
                     }
 
-                    logFolderBase = this.LogFolderBasePath;
+                    logFolderBase = LogFolderBasePath;
                 }
             }
             else
@@ -223,13 +221,13 @@ namespace FabricObserver.Observers.Utilities
 
             string file = Path.Combine(logFolderBase, "fabric_observer.log");
 
-            if (!string.IsNullOrEmpty(this.FolderName) && !string.IsNullOrEmpty(this.Filename))
+            if (!string.IsNullOrEmpty(FolderName) && !string.IsNullOrEmpty(Filename))
             {
-                string folderPath = Path.Combine(logFolderBase, this.FolderName);
-                file = Path.Combine(folderPath, this.Filename);
+                string folderPath = Path.Combine(logFolderBase, FolderName);
+                file = Path.Combine(folderPath, Filename);
             }
 
-            this.FilePath = file;
+            FilePath = file;
 
             var targetName = this.loggerName + "LogFile";
 
@@ -262,7 +260,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
-            this.OLogger = LogManager.GetLogger(this.loggerName);
+            OLogger = LogManager.GetLogger(this.loggerName);
         }
     }
 }

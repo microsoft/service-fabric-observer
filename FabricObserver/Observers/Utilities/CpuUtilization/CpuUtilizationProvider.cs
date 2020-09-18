@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal abstract class CpuUtilizationProvider : IDisposable
+    public abstract class CpuUtilizationProvider : IDisposable
     {
         protected CpuUtilizationProvider()
         {
@@ -19,10 +19,10 @@ namespace FabricObserver.Observers.Utilities
 
         public void Dispose()
         {
-            this.Dispose(disposing: true);
+            Dispose(disposing: true);
         }
 
-        internal static CpuUtilizationProvider Create()
+        public static CpuUtilizationProvider Create()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {

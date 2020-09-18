@@ -3,13 +3,13 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
+using System.Diagnostics.Tracing;
+using System.Fabric;
+using System.Threading.Tasks;
+
 namespace FabricObserverWeb
 {
-    using System;
-    using System.Diagnostics.Tracing;
-    using System.Fabric;
-    using System.Threading.Tasks;
-
     [EventSource(Name = "Service-Fabric-ObserverWebApi")]
     internal sealed class ServiceEventSource : EventSource
     {
@@ -47,10 +47,10 @@ namespace FabricObserverWeb
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 string finalMessage = string.Format(message, args);
-                this.Message(finalMessage);
+                Message(finalMessage);
             }
         }
 
@@ -59,19 +59,19 @@ namespace FabricObserverWeb
         [Event(MessageEventId, Level = EventLevel.Informational, Message = "{0}")]
         public void Message(string message)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
-                this.WriteEvent(MessageEventId, message);
+                WriteEvent(MessageEventId, message);
             }
         }
 
         [NonEvent]
         public void ServiceMessage(ServiceContext serviceContext, string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 string finalMessage = string.Format(message, args);
-                this.ServiceMessage(
+                ServiceMessage(
                     serviceContext.ServiceName.ToString(),
                     serviceContext.ServiceTypeName,
                     GetReplicaOrInstanceId(serviceContext),
@@ -104,7 +104,7 @@ namespace FabricObserverWeb
             string message)
         {
 #if !UNSAFE
-            this.WriteEvent(ServiceMessageEventId, serviceName, serviceTypeName, replicaOrInstanceId, partitionId, applicationName, applicationTypeName, nodeName, message);
+            WriteEvent(ServiceMessageEventId, serviceName, serviceTypeName, replicaOrInstanceId, partitionId, applicationName, applicationTypeName, nodeName, message);
 #else
             const int numArgs = 8;
             fixed (char* pServiceName = serviceName, pServiceTypeName = serviceTypeName, pApplicationName = applicationName, pApplicationTypeName = applicationTypeName, pNodeName = nodeName, pMessage = message)
@@ -129,7 +129,7 @@ namespace FabricObserverWeb
         [Event(ServiceTypeRegisteredEventId, Level = EventLevel.Informational, Message = "Service host process {0} registered service type {1}", Keywords = Keywords.ServiceInitialization)]
         public void ServiceTypeRegistered(int hostProcessId, string serviceType)
         {
-            this.WriteEvent(ServiceTypeRegisteredEventId, hostProcessId, serviceType);
+            WriteEvent(ServiceTypeRegisteredEventId, hostProcessId, serviceType);
         }
 
         private const int ServiceHostInitializationFailedEventId = 4;
@@ -137,7 +137,7 @@ namespace FabricObserverWeb
         [Event(ServiceHostInitializationFailedEventId, Level = EventLevel.Error, Message = "Service host initialization failed", Keywords = Keywords.ServiceInitialization)]
         public void ServiceHostInitializationFailed(string exception)
         {
-            this.WriteEvent(ServiceHostInitializationFailedEventId, exception);
+            WriteEvent(ServiceHostInitializationFailedEventId, exception);
         }
 
         // A pair of events sharing the same name prefix with a "Start"/"Stop" suffix implicitly marks boundaries of an event tracing activity.
@@ -148,7 +148,7 @@ namespace FabricObserverWeb
         [Event(ServiceRequestStartEventId, Level = EventLevel.Informational, Message = "Service request '{0}' started", Keywords = Keywords.Requests)]
         public void ServiceRequestStart(string requestTypeName)
         {
-            this.WriteEvent(ServiceRequestStartEventId, requestTypeName);
+            WriteEvent(ServiceRequestStartEventId, requestTypeName);
         }
 
         private const int ServiceRequestStopEventId = 6;
@@ -156,7 +156,7 @@ namespace FabricObserverWeb
         [Event(ServiceRequestStopEventId, Level = EventLevel.Informational, Message = "Service request '{0}' finished", Keywords = Keywords.Requests)]
         public void ServiceRequestStop(string requestTypeName, string exception = "")
         {
-            this.WriteEvent(ServiceRequestStopEventId, requestTypeName, exception);
+            WriteEvent(ServiceRequestStopEventId, requestTypeName, exception);
         }
 
         private static long GetReplicaOrInstanceId(ServiceContext context)

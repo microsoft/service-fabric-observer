@@ -7,12 +7,12 @@ using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal abstract class MemoryUsageProvider
+    public abstract class MemoryUsageProvider
     {
         private static MemoryUsageProvider instance;
         private static object lockObj = new object();
 
-        internal static MemoryUsageProvider Instance
+        public static MemoryUsageProvider Instance
         {
             get
             {
@@ -38,6 +38,6 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        internal abstract ulong GetCommittedBytes();
+        public abstract ulong GetCommittedBytes();
     }
 }

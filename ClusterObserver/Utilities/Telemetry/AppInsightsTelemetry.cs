@@ -87,7 +87,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             CancellationToken cancellationToken,
             string message = null)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
@@ -112,7 +112,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             TelemetryData telemetryData, 
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled 
+            if (!IsEnabled 
                 || cancellationToken.IsCancellationRequested 
                 || telemetryData == null)
             {
@@ -184,7 +184,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             string serviceName = null,
             string instanceName = null)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
@@ -227,7 +227,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <returns>Task of bool.</returns>
         public Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(false);
             }
@@ -253,7 +253,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         public Task ReportMetricAsync(string name, long value, IDictionary<string, string> properties, CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
@@ -274,7 +274,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         public Task ReportMetricAsync(string role, Guid partition, string name, long value, CancellationToken cancellationToken)
         {
-            return this.ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
+            return ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
 
         /// <summary>
@@ -288,7 +288,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         public async Task ReportMetricAsync(string role, long id, string name, long value, CancellationToken cancellationToken)
         {
-            await this.ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -319,7 +319,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             IDictionary<string, string> properties,
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(false);
             }
@@ -377,7 +377,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            this.Dispose(true);
+            Dispose(true);
 
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);

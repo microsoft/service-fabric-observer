@@ -128,23 +128,23 @@ namespace FabricObserver.Observers
         /// </summary>
         protected ObserverBase()
         {
-            this.ObserverName = this.GetType().Name;
-            this.ConfigurationSectionName = this.ObserverName + "Configuration";
-            this.FabricClientInstance = ObserverManager.FabricClientInstance;
+            ObserverName = GetType().Name;
+            ConfigurationSectionName = ObserverName + "Configuration";
+            FabricClientInstance = ObserverManager.FabricClientInstance;
 
-            if (this.IsTelemetryProviderEnabled)
+            if (IsTelemetryProviderEnabled)
             {
-                this.TelemetryClient = ObserverManager.TelemetryClient;
+                TelemetryClient = ObserverManager.TelemetryClient;
             }
 
-            this.FabricServiceContext = ObserverManager.FabricServiceContext;
-            this.NodeName = this.FabricServiceContext.NodeContext.NodeName;
-            this.NodeType = this.FabricServiceContext.NodeContext.NodeType;
-            this.ConfigurationSectionName = this.ObserverName + "Configuration";
+            FabricServiceContext = ObserverManager.FabricServiceContext;
+            NodeName = FabricServiceContext.NodeContext.NodeName;
+            NodeType = FabricServiceContext.NodeContext.NodeType;
+            ConfigurationSectionName = ObserverName + "Configuration";
             
             // Observer Logger setup.
             string logFolderBasePath;
-            string observerLogPath = this.GetSettingParameterValue(
+            string observerLogPath = GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
                 ObserverConstants.ObserverLogPathParameter);
 
@@ -158,64 +158,64 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            this.ObserverLogger = new Logger(this.ObserverName, logFolderBasePath);
+            ObserverLogger = new Logger(ObserverName, logFolderBasePath);
 
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
-                this.SetDefaultSfDumpPath();
+                SetDefaultSfDumpPath();
             }
 
             // DataLogger setup
             if (bool.TryParse(
-                this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+                GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.EnableLongRunningCsvLogging),
                 out bool enableDataLogging))
             {
                 if (enableDataLogging)
                 {
-                    this.CsvFileLogger = new DataTableFileLogger
+                    CsvFileLogger = new DataTableFileLogger
                     {
                         EnableCsvLogging = enableDataLogging,
                     };
 
-                    string dataLogPath = this.GetSettingParameterValue(
+                    string dataLogPath = GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName,
                         ObserverConstants.DataLogPathParameter);
 
                     if (!string.IsNullOrEmpty(dataLogPath))
                     {
-                        this.CsvFileLogger.DataLogFolderPath = dataLogPath;
+                        CsvFileLogger.DataLogFolderPath = dataLogPath;
                     }
                     else
                     {
-                        this.CsvFileLogger.DataLogFolderPath = Path.Combine(Environment.CurrentDirectory, "observer_data_logs");
+                        CsvFileLogger.DataLogFolderPath = Path.Combine(Environment.CurrentDirectory, "observer_data_logs");
                     }
                 }
             }
             
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
-                this.SetDefaultSfDumpPath();
+                SetDefaultSfDumpPath();
             }
 
             if (!IsTestRun)
             {
-                this.ConfigurationSettings = new Utilities.ConfigSettings(
+                ConfigurationSettings = new Utilities.ConfigSettings(
                     FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings,
-                    this.ConfigurationSectionName);
+                    ConfigurationSectionName);
 
-                this.EnableVerboseLogging = this.ConfigurationSettings.EnableVerboseLogging;
-                this.IsEnabled = this.ConfigurationSettings.IsEnabled;
-                this.IsObserverTelemetryEnabled = this.ConfigurationSettings.IsObserverTelemetryEnabled;
-                this.MonitorDuration = this.ConfigurationSettings.MonitorDuration;
-                this.RunInterval = this.ConfigurationSettings.RunInterval;
-                this.ObserverLogger.EnableVerboseLogging = this.EnableVerboseLogging;
-                this.DataCapacity = this.ConfigurationSettings.DataCapacity;
-                this.UseCircularBuffer = this.ConfigurationSettings.UseCircularBuffer;
+                EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
+                IsEnabled = ConfigurationSettings.IsEnabled;
+                IsObserverTelemetryEnabled = ConfigurationSettings.IsObserverTelemetryEnabled;
+                MonitorDuration = ConfigurationSettings.MonitorDuration;
+                RunInterval = ConfigurationSettings.RunInterval;
+                ObserverLogger.EnableVerboseLogging = EnableVerboseLogging;
+                DataCapacity = ConfigurationSettings.DataCapacity;
+                UseCircularBuffer = ConfigurationSettings.UseCircularBuffer;
             }
 
-            this.HealthReporter = new ObserverHealthReporter(this.ObserverLogger);
+            HealthReporter = new ObserverHealthReporter(ObserverLogger);
         }
 
         public abstract Task ObserveAsync(CancellationToken token);
@@ -230,15 +230,15 @@ namespace FabricObserver.Observers
             switch (level)
             {
                 case LogLevel.Information:
-                    this.ObserverLogger.LogInfo("{0} logged at level {1}: {2}", property, level, description);
+                    ObserverLogger.LogInfo("{0} logged at level {1}: {2}", property, level, description);
                     break;
 
                 case LogLevel.Warning:
-                    this.ObserverLogger.LogWarning("{0} logged at level {1}: {2}", property, level, description);
+                    ObserverLogger.LogWarning("{0} logged at level {1}: {2}", property, level, description);
                     break;
 
                 case LogLevel.Error:
-                    this.ObserverLogger.LogError("{0} logged at level {1}: {2}", property, level, description);
+                    ObserverLogger.LogError("{0} logged at level {1}: {2}", property, level, description);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(level), level, null);
@@ -266,7 +266,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                var serviceConfiguration = this.FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
+                var serviceConfiguration = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
                 if (serviceConfiguration == null)
                 {
@@ -301,7 +301,7 @@ namespace FabricObserver.Observers
 
         public void Dispose()
         {
-            this.Dispose(true);
+            Dispose(true);
         }
 
         // Windows process dmp creator.
@@ -364,9 +364,9 @@ namespace FabricObserver.Observers
                 string driveName = this.dumpsPath.Substring(0, 2);
                 if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
                 {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        this.ObserverName,
+                    HealthReporter.ReportFabricObserverServiceHealth(
+                        FabricServiceContext.ServiceName.OriginalString,
+                        ObserverName,
                         HealthState.Warning,
                         "Not enough disk space available for dump file creation.");
                     return false;
@@ -391,7 +391,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
-                this.ObserverLogger.LogInfo(
+                ObserverLogger.LogInfo(
                     $"Unable to generate dump file {processName} with error{Environment.NewLine}{e}");
             }
 
@@ -445,13 +445,13 @@ namespace FabricObserver.Observers
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
                 // of user telemetry settings.
-                telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
+                telemetryData = new TelemetryData(FabricClientInstance, Token)
                 {
                     ApplicationName = appName?.OriginalString ?? string.Empty,
-                    Code = FoErrorWarningCodes.Ok,
+                    Code = FOErrorWarningCodes.Ok,
                     HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                    NodeName = this.NodeName,
-                    ObserverName = this.ObserverName,
+                    NodeName = NodeName,
+                    ObserverName = ObserverName,
                     Metric = data.Property,
                     Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
@@ -474,24 +474,24 @@ namespace FabricObserver.Observers
 
                     telemetryData.ServiceName = procName;
 
-                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
                     {
-                        _ = this.TelemetryClient?.ReportMetricAsync(
+                        _ = TelemetryClient?.ReportMetricAsync(
                             telemetryData,
-                            this.Token).ConfigureAwait(false);
+                            Token).ConfigureAwait(false);
                     }
 
-                    if (this.IsEtwEnabled)
+                    if (IsEtwEnabled)
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
                                 ApplicationName = appName?.OriginalString ?? string.Empty,
-                                Code = FoErrorWarningCodes.Ok,
+                                Code = FOErrorWarningCodes.Ok,
                                 HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                                this.NodeName,
-                                this.ObserverName,
+                                NodeName,
+                                ObserverName,
                                 Metric = data.Property,
                                 Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                                 PartitionId = replicaOrInstance?.PartitionId.ToString(),
@@ -514,7 +514,7 @@ namespace FabricObserver.Observers
             {
                 string drive = string.Empty;
 
-                if (this.ObserverName == ObserverConstants.DiskObserverName)
+                if (ObserverName == ObserverConstants.DiskObserverName)
                 {
                     drive = $"{data.Id}: ";
                 }
@@ -522,34 +522,34 @@ namespace FabricObserver.Observers
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
                 // of user telemetry settings.
-                telemetryData = new TelemetryData(this.FabricClientInstance, this.Token)
+                telemetryData = new TelemetryData(FabricClientInstance, Token)
                 {
-                    Code = FoErrorWarningCodes.Ok,
+                    Code = FOErrorWarningCodes.Ok,
                     HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                    NodeName = this.NodeName,
-                    ObserverName = this.ObserverName,
+                    NodeName = NodeName,
+                    ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
                     Source = ObserverConstants.FabricObserverName,
                     Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
                 };
 
-                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
                 {
-                    _ = this.TelemetryClient?.ReportMetricAsync(
+                    _ = TelemetryClient?.ReportMetricAsync(
                         telemetryData,
-                        this.Token);
+                        Token);
                 }
 
-                if (this.IsEtwEnabled)
+                if (IsEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
-                            Code = FoErrorWarningCodes.Ok,
+                            Code = FOErrorWarningCodes.Ok,
                             HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                            this.NodeName,
-                            this.ObserverName,
+                            NodeName,
+                            ObserverName,
                             Metric = $"{drive}{data.Property}",
                             Source = ObserverConstants.FabricObserverName,
                             Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
@@ -582,7 +582,7 @@ namespace FabricObserver.Observers
                         {
                             // DumpServiceProcess defaults to a Full dump with
                             // process memory, handles and thread data.
-                            bool success = this.DumpServiceProcess(procId);
+                            bool success = DumpServiceProcess(procId);
 
                             if (success)
                             {
@@ -595,7 +595,7 @@ namespace FabricObserver.Observers
                     // critical to FO. Log as info, not warning.
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
                     {
-                        this.ObserverLogger.LogInfo($"Unable to generate dmp file:{Environment.NewLine}{e}");
+                        ObserverLogger.LogInfo($"Unable to generate dmp file:{Environment.NewLine}{e}");
                     }
                 }
             }
@@ -615,71 +615,71 @@ namespace FabricObserver.Observers
                 {
                     case ErrorWarningProperty.TotalCpuTime when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.AppErrorCpuTime : FoErrorWarningCodes.AppWarningCpuTime;
+                            FOErrorWarningCodes.AppErrorCpuTime : FOErrorWarningCodes.AppWarningCpuTime;
                         break;
 
                     case ErrorWarningProperty.TotalCpuTime:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.NodeErrorCpuTime : FoErrorWarningCodes.NodeWarningCpuTime;
+                            FOErrorWarningCodes.NodeErrorCpuTime : FOErrorWarningCodes.NodeWarningCpuTime;
                         break;
 
                     case ErrorWarningProperty.DiskSpaceUsagePercentage:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.NodeErrorDiskSpacePercentUsed : FoErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
+                            FOErrorWarningCodes.NodeErrorDiskSpacePercentUsed : FOErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
                         break;
 
                     case ErrorWarningProperty.DiskSpaceUsageMb:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.NodeErrorDiskSpaceMb : FoErrorWarningCodes.NodeWarningDiskSpaceMb;
+                            FOErrorWarningCodes.NodeErrorDiskSpaceMb : FOErrorWarningCodes.NodeWarningDiskSpaceMb;
                         break;
 
                     case ErrorWarningProperty.TotalMemoryConsumptionMb when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.AppErrorMemoryCommittedMb : FoErrorWarningCodes.AppWarningMemoryCommittedMb;
+                            FOErrorWarningCodes.AppErrorMemoryCommittedMb : FOErrorWarningCodes.AppWarningMemoryCommittedMb;
                         break;
                     case ErrorWarningProperty.TotalMemoryConsumptionMb:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.NodeErrorMemoryCommittedMb : FoErrorWarningCodes.NodeWarningMemoryCommittedMb;
+                            FOErrorWarningCodes.NodeErrorMemoryCommittedMb : FOErrorWarningCodes.NodeWarningMemoryCommittedMb;
                         break;
 
                     case ErrorWarningProperty.TotalMemoryConsumptionPct when replicaOrInstance != null:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.AppErrorMemoryPercentUsed : FoErrorWarningCodes.AppWarningMemoryPercentUsed;
+                            FOErrorWarningCodes.AppErrorMemoryPercentUsed : FOErrorWarningCodes.AppWarningMemoryPercentUsed;
                         break;
 
                     case ErrorWarningProperty.TotalMemoryConsumptionPct:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.NodeErrorMemoryPercentUsed : FoErrorWarningCodes.NodeWarningMemoryPercentUsed;
+                            FOErrorWarningCodes.NodeErrorMemoryPercentUsed : FOErrorWarningCodes.NodeWarningMemoryPercentUsed;
                         break;
 
                     case ErrorWarningProperty.DiskAverageQueueLength:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.NodeErrorDiskAverageQueueLength : FoErrorWarningCodes.NodeWarningDiskAverageQueueLength;
+                            FOErrorWarningCodes.NodeErrorDiskAverageQueueLength : FOErrorWarningCodes.NodeWarningDiskAverageQueueLength;
                         break;
 
                     case ErrorWarningProperty.TotalActiveFirewallRules:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.ErrorTooManyFirewallRules : FoErrorWarningCodes.WarningTooManyFirewallRules;
+                            FOErrorWarningCodes.ErrorTooManyFirewallRules : FOErrorWarningCodes.WarningTooManyFirewallRules;
                         break;
 
                     case ErrorWarningProperty.TotalActivePorts when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FoErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
+                            FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
                         break;
 
                     case ErrorWarningProperty.TotalActivePorts:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FoErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
+                            FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
                         break;
 
                     case ErrorWarningProperty.TotalEphemeralPorts when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FoErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
+                            FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
                         break;
 
                     case ErrorWarningProperty.TotalEphemeralPorts:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FoErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FoErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
+                            FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
                         break;
                 }
 
@@ -687,9 +687,14 @@ namespace FabricObserver.Observers
 
                 string drive = string.Empty;
 
-                if (this.ObserverName == ObserverConstants.DiskObserverName)
+                if (ObserverName == ObserverConstants.DiskObserverName)
                 {
                     drive = $"{data.Id}: ";
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        drive = $"{data.Id.Remove(1,2)}: ";
+                    }
                 }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
@@ -708,15 +713,15 @@ namespace FabricObserver.Observers
                 telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
                 {
-                    _ = this.TelemetryClient?.ReportHealthAsync(
+                    _ = TelemetryClient?.ReportHealthAsync(
                             telemetryData,
-                            this.Token);
+                            Token);
                 }
 
                 // ETW.
-                if (this.IsEtwEnabled)
+                if (IsEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
                         ObserverConstants.FabricObserverETWEventName,
@@ -727,7 +732,7 @@ namespace FabricObserver.Observers
                             HealthState = Enum.GetName(typeof(HealthState), healthState),
                             HealthEventDescription = healthMessage.ToString(),
                             Metric = $"{drive}{data.Property}",
-                            Node = this.NodeName,
+                            Node = NodeName,
                             ServiceName = serviceName?.OriginalString ?? string.Empty,
                             Source = ObserverConstants.FabricObserverName,
                             Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
@@ -744,21 +749,21 @@ namespace FabricObserver.Observers
                     HealthReportTimeToLive = healthReportTtl,
                     ReportType = healthReportType,
                     State = healthState,
-                    NodeName = this.NodeName,
-                    Observer = this.ObserverName,
+                    NodeName = NodeName,
+                    Observer = ObserverName,
                     ResourceUsageDataProperty = data.Property,
                 };
 
-                this.AppNames.Add(appName?.OriginalString);
+                AppNames.Add(appName?.OriginalString);
 
                 // From FSO.
                 if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
                 {
-                    this.HealthReportProperties.Add(id);
+                    HealthReportProperties.Add(id);
                 }
                 else
                 {
-                    this.HealthReportProperties.Add(this.ObserverName switch
+                    HealthReportProperties.Add(ObserverName switch
                     {
                         ObserverConstants.AppObserverName => "ApplicationHealth",
                         ObserverConstants.CertificateObserverName => "SecurityHealth",
@@ -767,12 +772,12 @@ namespace FabricObserver.Observers
                         ObserverConstants.NetworkObserverName => "NetworkHealth",
                         ObserverConstants.OSObserverName => "MachineInformation",
                         ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                        _ => $"{this.ObserverName}_GenericHealth",
+                        _ => $"{data.Property}",
                     });
                 }
 
-                healthReport.Property = this.HealthReportProperties[^1];
-                this.HealthReportSourceIds.Add(this.ObserverName);
+                healthReport.Property = HealthReportProperties[^1];
+                HealthReportSourceIds.Add(ObserverName);
 
                 // Set internal health state info on data instance.
                 data.ActiveErrorOrWarning = true;
@@ -781,16 +786,21 @@ namespace FabricObserver.Observers
                 if (!string.IsNullOrEmpty(data.ActiveErrorOrWarningCode))
                 {
                     // FOErrorWarningCode for distinct sourceid.
-                    this.HealthReportSourceIds[^1] += $"({errorWarningCode})";
+                    HealthReportSourceIds[^1] += $"({errorWarningCode})";
+                }
+                else
+                {
+                    // Plugins that employ FRUDs and call this function.
+                    HealthReportSourceIds[^1] += $"({data.Id})";
                 }
 
-                healthReport.SourceId = this.HealthReportSourceIds[^1];
+                healthReport.SourceId = HealthReportSourceIds[^1];
 
-                // Emit a Fabric Health Report and optionally a local log write.
-                this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                 // This means this observer created a Warning or Error SF Health Report
-                this.HasActiveFabricErrorOrWarning = true;
+                HasActiveFabricErrorOrWarning = true;
 
                 // Clean up sb.
                 _ = healthMessage.Clear();
@@ -803,7 +813,7 @@ namespace FabricObserver.Observers
                     // so it should be completely constructed (filled with data) regardless
                     // of user telemetry settings.
                     telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
-                    telemetryData.Code = FoErrorWarningCodes.Ok;
+                    telemetryData.Code = FOErrorWarningCodes.Ok;
                     telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
                     telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
@@ -811,15 +821,15 @@ namespace FabricObserver.Observers
                     telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
 
                     // Telemetry
-                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
                     {
-                        _ = this.TelemetryClient?.ReportMetricAsync(
+                        _ = TelemetryClient?.ReportMetricAsync(
                                 telemetryData,
-                                this.Token);
+                                Token);
                     }
 
                     // ETW.
-                    if (this.IsEtwEnabled)
+                    if (IsEtwEnabled)
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
@@ -830,7 +840,7 @@ namespace FabricObserver.Observers
                                 HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                                 HealthEventDescription = $"{data.Property} is now within normal/expected range.",
                                 Metric = data.Property,
-                                Node = this.NodeName,
+                                Node = NodeName,
                                 ServiceName = name ?? string.Empty,
                                 Source = ObserverConstants.FabricObserverName,
                                 Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
@@ -847,21 +857,21 @@ namespace FabricObserver.Observers
                         HealthReportTimeToLive = default(TimeSpan),
                         ReportType = healthReportType,
                         State = HealthState.Ok,
-                        NodeName = this.NodeName,
-                        Observer = this.ObserverName,
+                        NodeName = NodeName,
+                        Observer = ObserverName,
                         ResourceUsageDataProperty = data.Property,
                     };
 
-                    this.AppNames.Add(appName?.OriginalString);
+                    AppNames.Add(appName?.OriginalString);
 
                     // From FSO.
                     if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
                     {
-                        this.HealthReportProperties.Add(id);
+                        HealthReportProperties.Add(id);
                     }
                     else
                     {
-                        this.HealthReportProperties.Add(this.ObserverName switch
+                        HealthReportProperties.Add(ObserverName switch
                         {
                             ObserverConstants.AppObserverName => "ApplicationHealth",
                             ObserverConstants.CertificateObserverName => "SecurityHealth",
@@ -874,26 +884,26 @@ namespace FabricObserver.Observers
                         });
                     }
 
-                    healthReport.Property = this.HealthReportProperties[^1];
-                    this.HealthReportSourceIds.Add(this.ObserverName);
+                    healthReport.Property = HealthReportProperties[^1];
+                    HealthReportSourceIds.Add(ObserverName);
 
                     if (!string.IsNullOrEmpty(data.ActiveErrorOrWarningCode))
                     {
                         // FOErrorWarningCode for distinct sourceid.
-                        this.HealthReportSourceIds[^1] += $"({data.ActiveErrorOrWarningCode})";
+                        HealthReportSourceIds[^1] += $"({data.ActiveErrorOrWarningCode})";
                     }
 
-                    healthReport.SourceId = this.HealthReportSourceIds[^1];
+                    healthReport.SourceId = HealthReportSourceIds[^1];
 
                     // Emit an Ok Health Report to clear Fabric Health warning.
-                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+                    HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                     // Reset health states.
                     data.ActiveErrorOrWarning = false;
-                    data.ActiveErrorOrWarningCode = FoErrorWarningCodes.Ok;
-                    this.HealthReportProperties.Clear();
-                    this.HealthReportSourceIds.Clear();
-                    this.HasActiveFabricErrorOrWarning = false;
+                    data.ActiveErrorOrWarningCode = FOErrorWarningCodes.Ok;
+                    HealthReportProperties.Clear();
+                    HealthReportSourceIds.Clear();
+                    HasActiveFabricErrorOrWarning = false;
                 }
             }
 
@@ -914,18 +924,18 @@ namespace FabricObserver.Observers
         public TimeSpan SetHealthReportTimeToLive()
         {
             // First run.
-            if (this.LastRunDateTime == DateTime.MinValue)
+            if (LastRunDateTime == DateTime.MinValue)
             {
                 return TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds)
                        .Add(TimeSpan.FromMinutes(TtlAddMinutes));
             }
 
-            return DateTime.Now.Subtract(this.LastRunDateTime)
+            return DateTime.Now.Subtract(LastRunDateTime)
                 .Add(TimeSpan.FromSeconds(
-                    this.RunDuration > TimeSpan.MinValue ? this.RunDuration.TotalSeconds : 0))
+                    RunDuration > TimeSpan.MinValue ? RunDuration.TotalSeconds : 0))
                 .Add(TimeSpan.FromSeconds(
                     ObserverManager.ObserverExecutionLoopSleepSeconds))
-                .Add(this.RunInterval > TimeSpan.MinValue ? this.RunInterval : TimeSpan.Zero);
+                .Add(RunInterval > TimeSpan.MinValue ? RunInterval : TimeSpan.Zero);
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.
@@ -941,10 +951,10 @@ namespace FabricObserver.Observers
 
             if (disposing)
             {
-                if (this.FabricClientInstance != null)
+                if (FabricClientInstance != null)
                 {
-                    this.FabricClientInstance.Dispose();
-                    this.FabricClientInstance = null;
+                    FabricClientInstance.Dispose();
+                    FabricClientInstance = null;
                 }
             }
 
@@ -975,9 +985,9 @@ namespace FabricObserver.Observers
             }
             catch (IOException e)
             {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.ToString(),
-                    this.ObserverName,
+                HealthReporter.ReportFabricObserverServiceHealth(
+                    FabricServiceContext.ServiceName.ToString(),
+                    ObserverName,
                     HealthState.Warning,
                     $"Unable to create dumps directory:{Environment.NewLine}{e}");
 

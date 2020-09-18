@@ -1,16 +1,21 @@
-﻿namespace FabricObserverWeb.Controllers
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Fabric;
-    using System.Globalization;
-    using System.IO;
-    using System.Linq;
-    using System.Net;
-    using System.Text;
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Mvc;
+﻿// ------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.Fabric;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FabricObserverWeb.Controllers
+{
     [Route("api/ObserverLog")]
     [Produces("application/json", "application/html")]
     [ApiController]
@@ -58,10 +63,10 @@
         {
             if (format.ToLower() == "html")
             {
-                return this.Content(this.GetHtml(name), "text/html");
+                return Content(GetHtml(name), "text/html");
             }
 
-            JsonResult ret = this.Json(new ObserverLogEntry
+            JsonResult ret = Json(new ObserverLogEntry
             {
                 Date = DateTime.UtcNow.ToString(
                 "MM-dd-yyyy HH:mm:ss.ffff",
@@ -93,7 +98,7 @@
             }
             catch (Exception e)
             {
-                ret = this.Json(e.ToString());
+                ret = Json(e.ToString());
                 return ret;
             }
 
@@ -153,59 +158,59 @@
                         case "appobserver":
                             if (!string.IsNullOrEmpty(appObserverLogText))
                             {
-                                var reportItems = this.GetObserverErrWarnLogEntryListFromLogText(appObserverLogText);
+                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(appObserverLogText);
 
-                                ret = this.Json(reportItems);
+                                ret = Json(reportItems);
                             }
 
                             break;
                         case "diskobserver":
                             if (!string.IsNullOrEmpty(diskObserverLogText))
                             {
-                                var reportItems = this.GetObserverErrWarnLogEntryListFromLogText(diskObserverLogText);
+                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(diskObserverLogText);
 
-                                ret = this.Json(reportItems);
+                                ret = Json(reportItems);
                             }
 
                             break;
                         case "fabricsystemobserver":
                             if (!string.IsNullOrEmpty(fabricSystemObserverLogText))
                             {
-                                var reportItems = this.GetObserverErrWarnLogEntryListFromLogText(fabricSystemObserverLogText);
+                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(fabricSystemObserverLogText);
 
-                                ret = this.Json(reportItems);
+                                ret = Json(reportItems);
                             }
 
                             break;
                         case "networkobserver":
                             if (!string.IsNullOrEmpty(networkObserverLogText))
                             {
-                                var reportItems = this.GetObserverErrWarnLogEntryListFromLogText(networkObserverLogText);
+                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(networkObserverLogText);
 
-                                ret = this.Json(reportItems);
+                                ret = Json(reportItems);
                             }
 
                             break;
                         case "nodeobserver":
                             if (!string.IsNullOrEmpty(nodeObserverLogText))
                             {
-                                var reportItems = this.GetObserverErrWarnLogEntryListFromLogText(nodeObserverLogText);
+                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(nodeObserverLogText);
 
-                                ret = this.Json(reportItems);
+                                ret = Json(reportItems);
                             }
 
                             break;
                         case "osobserver":
                             if (!string.IsNullOrEmpty(osObserverLogText))
                             {
-                                var reportItems = this.GetObserverErrWarnLogEntryListFromLogText(osObserverLogText);
+                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(osObserverLogText);
 
-                                ret = this.Json(reportItems);
+                                ret = Json(reportItems);
                             }
 
                             break;
                         default:
-                            ret = this.Json("Specified Observer, " + name + ", does not exist.");
+                            ret = Json("Specified Observer, " + name + ", does not exist.");
                             break;
                     }
 
@@ -245,7 +250,7 @@
                         addr = "http://" + addr;
                     }
 
-                    string fqdn = "?fqdn=" + this.Request.Host;
+                    string fqdn = "?fqdn=" + Request.Host;
 
                     // If you modify the service to support Internet communication over a
                     // secure channel, then change this code to reflect the correct port.
@@ -264,18 +269,18 @@
                     dataStream.Close();
                     response.Close();
 
-                    return this.Content(ret, format.ToLower() == "html" ? "text/html" : "text/json");
+                    return Content(ret, format.ToLower() == "html" ? "text/html" : "text/json");
                 }
 
-                return this.Content("no node found with that name.");
+                return Content("no node found with that name.");
             }
             catch (ArgumentException ae)
             {
-                return this.Content($"Error processing request: {ae.Message}");
+                return Content($"Error processing request: {ae.Message}");
             }
             catch (IOException ioe)
             {
-                return this.Content($"Error processing request: {ioe.Message}");
+                return Content($"Error processing request: {ioe.Message}");
             }
         }
 
@@ -347,14 +352,14 @@
                         osObserverLogText = System.IO.File.ReadAllText(osObserverLogPath, Encoding.UTF8).Trim();
                     }
 
-                    var host = this.Request.Host.Value;
+                    var host = Request.Host.Value;
 
                     string nodeLinks = string.Empty;
 
                     // Request originating from ObserverWeb node hyperlinks.
-                    if (this.Request.QueryString.HasValue && this.Request.Query.ContainsKey("fqdn"))
+                    if (Request.QueryString.HasValue && Request.Query.ContainsKey("fqdn"))
                     {
-                        host = this.Request.Query["fqdn"];
+                        host = Request.Query["fqdn"];
 
                         // Node links.
                         var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
@@ -362,7 +367,7 @@
 
                         foreach (var node in ordered)
                         {
-                            nodeLinks += "| <a href='" + this.Request.Scheme + "://" + host + "/api/ObserverLog/" + name + "/" + node.NodeName + "/html'>" + node.NodeName + "</a> | ";
+                            nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverLog/" + name + "/" + node.NodeName + "/html'>" + node.NodeName + "</a> | ";
                         }
                     }
 

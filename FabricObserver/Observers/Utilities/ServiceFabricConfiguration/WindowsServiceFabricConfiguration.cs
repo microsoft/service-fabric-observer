@@ -7,13 +7,13 @@ using Microsoft.Win32;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class WindowsServiceFabricConfiguration : ServiceFabricConfiguration
+    public class WindowsServiceFabricConfiguration : ServiceFabricConfiguration
     {
         private const string SurviceFabricWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
 
-        public override string FabricVersion => this.GetString(nameof(this.FabricVersion));
+        public override string FabricVersion => GetString(nameof(FabricVersion));
 
-        public override string FabricRoot => this.GetString(nameof(this.FabricRoot));
+        public override string FabricRoot => GetString(nameof(FabricRoot));
 
         public override string GetString(string name)
         {

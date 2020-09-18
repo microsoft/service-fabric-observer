@@ -43,12 +43,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             CancellationToken token,
             string apiVersion = "2016-04-01")
         {
-            this.WorkspaceId = workspaceId;
-            this.Key = sharedKey;
-            this.LogType = logType;
+            WorkspaceId = workspaceId;
+            Key = sharedKey;
+            LogType = logType;
             this.fabricClient = fabricClient;
             this.token = token;
-            this.ApiVersion = apiVersion;
+            ApiVersion = apiVersion;
             this.logger = new Logger("TelemetryLogger");
         }
 
@@ -82,7 +82,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                 });
 
-            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReportHealthAsync(
@@ -96,7 +96,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
-            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
 
             return;
         }
@@ -112,7 +112,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
-            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReportMetricAsync(
@@ -126,7 +126,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
-            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -151,7 +151,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     value,
                 });
 
-            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
 
             return await Task.FromResult(true).ConfigureAwait(false);
         }
@@ -223,14 +223,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <returns>A completed task or task containing exception info.</returns>
         private Task SendTelemetryAsync(string payload, CancellationToken token)
         {
-            var requestUri = new Uri($"https://{this.WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={this.ApiVersion}");
+            var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
-            string signature = this.GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
+            string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
 
             var request = (HttpWebRequest)WebRequest.Create(requestUri);
             request.ContentType = "application/json";
             request.Method = "POST";
-            request.Headers["Log-Type"] = this.LogType;
+            request.Headers["Log-Type"] = LogType;
             request.Headers["x-ms-date"] = date;
             request.Headers["Authorization"] = signature;
             byte[] content = Encoding.UTF8.GetBytes(payload);
@@ -274,8 +274,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);
 
-            using var encryptor = new HMACSHA256(Convert.FromBase64String(this.Key));
-            return $"SharedKey {this.WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
+            using var encryptor = new HMACSHA256(Convert.FromBase64String(Key));
+            return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
         }
     }
 }

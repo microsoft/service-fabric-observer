@@ -68,8 +68,8 @@ namespace FabricObserver.Observers.Utilities
 
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
-            this.Settings = settings;
-            this.section = settings.Sections[observerConfiguration];
+            Settings = settings;
+            section = settings.Sections[observerConfiguration];
 
             UpdateConfigSettings();
         }
@@ -79,79 +79,79 @@ namespace FabricObserver.Observers.Utilities
         {
             if (settings != null)
             {
-                this.Settings = settings;
+                Settings = settings;
             }
 
             // Observer enabled?
             if (bool.TryParse(
-                this.GetConfigSettingValue(
+                GetConfigSettingValue(
                 ObserverConstants.ObserverEnabledParameter),
                 out bool enabled))
             {
-                this.IsEnabled = enabled;
+                IsEnabled = enabled;
             }
 
             // Observer telemetry enabled?
             if (bool.TryParse(
-                this.GetConfigSettingValue(
+                GetConfigSettingValue(
                 ObserverConstants.ObserverTelemetryEnabledParameter),
                 out bool telemetryEnabled))
             {
-                this.IsObserverTelemetryEnabled = telemetryEnabled;
+                IsObserverTelemetryEnabled = telemetryEnabled;
             }
 
             // Verbose logging?
             if (bool.TryParse(
-                this.GetConfigSettingValue(
+                GetConfigSettingValue(
                 ObserverConstants.EnableVerboseLoggingParameter),
                 out bool enableVerboseLogging))
             {
-                this.EnableVerboseLogging = enableVerboseLogging;
+                EnableVerboseLogging = enableVerboseLogging;
             }
 
             // RunInterval?
             if (TimeSpan.TryParse(
-                this.GetConfigSettingValue(
+                GetConfigSettingValue(
                 ObserverConstants.ObserverRunIntervalParameter),
                 out TimeSpan runInterval))
             {
-                this.RunInterval = runInterval;
+                RunInterval = runInterval;
             }
 
             // Monitor duration.
             if (TimeSpan.TryParse(
-                this.GetConfigSettingValue(
+                GetConfigSettingValue(
                 ObserverConstants.MonitorDurationParameter),
                 out TimeSpan monitorDuration))
             {
-                this.MonitorDuration = monitorDuration;
+                MonitorDuration = monitorDuration;
             }
 
             // Async cluster operation timeout setting..
             if (int.TryParse(
-                this.GetConfigSettingValue(
+                GetConfigSettingValue(
                 ObserverConstants.AsyncClusterOperationTimeoutSeconds),
                 out int asyncOpTimeoutSeconds))
             {
-                this.AsyncTimeout = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
+                AsyncTimeout = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
             }
 
             // Resource usage data collection item capacity.
             if (int.TryParse(
-               this.GetConfigSettingValue(
+               GetConfigSettingValue(
                ObserverConstants.DataCapacityParameter),
                out int dataCapacity))
             {
-                this.DataCapacity = dataCapacity;
+                DataCapacity = dataCapacity;
             }
 
             // Resource usage data collection type.
             if (bool.TryParse(
-                this.GetConfigSettingValue(
+                GetConfigSettingValue(
                 ObserverConstants.UseCircularBufferParameter),
                 out bool useCircularBuffer))
             {
-                this.UseCircularBuffer = useCircularBuffer;
+                UseCircularBuffer = useCircularBuffer;
             }
         }
 
@@ -159,23 +159,23 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                var configSettings = this.Settings;
+                var configSettings = Settings;
 
-                if (configSettings == null || string.IsNullOrEmpty(this.section.Name))
+                if (configSettings == null || string.IsNullOrEmpty(section.Name))
                 {
                     return null;
                 }
                
-                if (this.section == null)
+                if (section == null)
                 {
                     return null;
                 }
 
                 ConfigurationProperty parameter = null;
                 
-                if (this.section.Parameters.Any(p => p.Name == parameterName))
+                if (section.Parameters.Any(p => p.Name == parameterName))
                 {
-                    parameter = this.section.Parameters[parameterName];
+                    parameter = section.Parameters[parameterName];
                 }
 
                 if (parameter == null)

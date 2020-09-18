@@ -42,12 +42,12 @@ namespace FabricClusterObserver.Utilities.Telemetry
             CancellationToken token,
             string apiVersion = "2016-04-01")
         {
-            this.WorkspaceId = workspaceId;
-            this.Key = sharedKey;
-            this.LogType = logType;
+            WorkspaceId = workspaceId;
+            Key = sharedKey;
+            LogType = logType;
             this.fabricClient = fabricClient;
             this.token = token;
-            this.ApiVersion = apiVersion;
+            ApiVersion = apiVersion;
             logger = new Logger("TelemetryLogger");
         }
 

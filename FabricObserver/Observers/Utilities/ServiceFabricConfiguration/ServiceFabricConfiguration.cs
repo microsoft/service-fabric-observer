@@ -13,7 +13,7 @@ namespace FabricObserver.Observers.Utilities
     /// On Windows, the data is read from the registry (HKLM\SOFTWARE\Microsoft\Service Fabric)
     /// On Linux, the config values are stored in single line files in /etc/servicefabric directory.
     /// </summary>
-    internal abstract class ServiceFabricConfiguration
+    public abstract class ServiceFabricConfiguration
     {
         private static ServiceFabricConfiguration instance;
 
@@ -45,31 +45,31 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public string CompatibilityJsonPath => this.ReadStringValue();
+        public string CompatibilityJsonPath => ReadStringValue();
 
-        public bool DisableKernelDrivers => this.ReadInt32() != 0;
+        public bool DisableKernelDrivers => ReadInt32() != 0;
 
-        public bool EnableCircularTraceSession => this.ReadInt32() != 0;
+        public bool EnableCircularTraceSession => ReadInt32() != 0;
 
-        public bool EnableUnsupportedPreviewFeatures => this.ReadInt32() != 0;
+        public bool EnableUnsupportedPreviewFeatures => ReadInt32() != 0;
 
-        public string FabricBinRoot => this.ReadStringValue();
+        public string FabricBinRoot => ReadStringValue();
 
-        public string FabricCodePath => this.ReadStringValue();
+        public string FabricCodePath => ReadStringValue();
 
-        public string FabricDataRoot => this.ReadStringValue();
+        public string FabricDataRoot => ReadStringValue();
 
-        public string FabricDnsServerIPAddress => this.ReadStringValue();
+        public string FabricDnsServerIPAddress => ReadStringValue();
 
-        public string FabricLogRoot => this.ReadStringValue();
+        public string FabricLogRoot => ReadStringValue();
 
-        public bool IsSFVolumeDiskServiceEnabled => this.ReadInt32() != 0;
+        public bool IsSFVolumeDiskServiceEnabled => ReadInt32() != 0;
 
-        public string NodeLastBootUpTime => this.ReadStringValue();
+        public string NodeLastBootUpTime => ReadStringValue();
 
-        public bool SfInstalledMoby => this.ReadInt32() != 0;
+        public bool SfInstalledMoby => ReadInt32() != 0;
 
-        public string UpdaterServicePath => this.ReadStringValue();
+        public string UpdaterServicePath => ReadStringValue();
 
         public abstract string FabricVersion { get; }
 
@@ -79,8 +79,8 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract int GetInt32(string name);
 
-        private string ReadStringValue([CallerMemberName] string propertyName = null) => this.GetString(propertyName);
+        private string ReadStringValue([CallerMemberName] string propertyName = null) => GetString(propertyName);
 
-        private int ReadInt32([CallerMemberName] string propertyName = null) => this.GetInt32(propertyName);
+        private int ReadInt32([CallerMemberName] string propertyName = null) => GetInt32(propertyName);
     }
 }

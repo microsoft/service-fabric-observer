@@ -52,19 +52,18 @@ namespace FabricObserver.Observers
             this.diskAverageQueueLengthData = new List<FabricResourceUsageData<float>>();
             this.stopWatch = new Stopwatch();
         }
-
-        
+ 
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (this.RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            if (RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
 
-            this.SetErrorWarningThresholds();
+            SetErrorWarningThresholds();
 
             DriveInfo[] allDrives = DriveInfo.GetDrives();
 
@@ -105,28 +104,28 @@ namespace FabricObserver.Observers
                 // Disk space %.
                 if (this.diskSpacePercentageUsageData.All(data => data.Id != id))
                 {
-                    this.diskSpacePercentageUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id, this.DataCapacity));
+                    this.diskSpacePercentageUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id, DataCapacity));
                 }
 
                 if (this.diskSpaceUsageData.All(data => data.Id != id))
                 {
-                    this.diskSpaceUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsageMb, id, this.DataCapacity));
+                    this.diskSpaceUsageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsageMb, id, DataCapacity));
                 }
 
                 if (this.diskSpaceAvailableData.All(data => data.Id != id))
                 {
-                    this.diskSpaceAvailableData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMb, id, this.DataCapacity));
+                    this.diskSpaceAvailableData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMb, id, DataCapacity));
                 }
 
                 if (this.diskSpaceTotalData.All(data => data.Id != id))
                 {
-                    this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMb, id, this.DataCapacity));
+                    this.diskSpaceTotalData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMb, id, DataCapacity));
                 }
 
                 // Current disk queue length.
                 if (this.diskAverageQueueLengthData.All(data => data.Id != id))
                 {
-                    this.diskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, this.DataCapacity));
+                    this.diskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, DataCapacity));
                 }
 
                 // Generate data over time (monitorDuration.) for use in ReportAsync health analysis.
@@ -134,9 +133,9 @@ namespace FabricObserver.Observers
 
                 TimeSpan duration = TimeSpan.FromSeconds(10);
 
-                if (this.MonitorDuration > TimeSpan.MinValue)
+                if (MonitorDuration > TimeSpan.MinValue)
                 {
-                    duration = this.MonitorDuration;
+                    duration = MonitorDuration;
                 }
 
                 // Warm up the counters.
@@ -182,35 +181,35 @@ namespace FabricObserver.Observers
                 {
                     _ = this.diskInfo.AppendFormat(
                         "{0}",
-                        this.GetWindowsPerfCounterDetailsText(
+                        GetWindowsPerfCounterDetailsText(
                             this.diskAverageQueueLengthData.FirstOrDefault(
                                 x => x.Id == d.Name.Substring(0, 1))
                                 ?.Data,
                             "Avg. Disk Queue Length"));
                 }
 
-                this.RunDuration = this.stopWatch.Elapsed;
+                RunDuration = this.stopWatch.Elapsed;
                 this.stopWatch.Reset();
             }
 
-            await this.ReportAsync(token).ConfigureAwait(true);
-            this.LastRunDateTime = DateTime.Now;
+            await ReportAsync(token).ConfigureAwait(true);
+            LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
         {
             try
             {
-                var timeToLiveWarning = this.SetHealthReportTimeToLive();
+                var timeToLiveWarning = SetHealthReportTimeToLive();
 
                 // User-supplied Disk Space Usage % thresholds from Settings.xml.
                 foreach (var data in this.diskSpacePercentageUsageData)
                 {
                     token.ThrowIfCancellationRequested();
-                    this.ProcessResourceDataReportHealth(
+                    ProcessResourceDataReportHealth(
                         data,
-                        this.DiskSpacePercentErrorThreshold,
-                        this.DiskSpacePercentWarningThreshold,
+                        DiskSpacePercentErrorThreshold,
+                        DiskSpacePercentWarningThreshold,
                         timeToLiveWarning);
                 }
 
@@ -218,21 +217,21 @@ namespace FabricObserver.Observers
                 foreach (var data in this.diskAverageQueueLengthData)
                 {
                     token.ThrowIfCancellationRequested();
-                    this.ProcessResourceDataReportHealth(
+                    ProcessResourceDataReportHealth(
                         data,
-                        this.AverageQueueLengthErrorThreshold,
-                        this.AverageQueueLengthWarningThreshold,
+                        AverageQueueLengthErrorThreshold,
+                        AverageQueueLengthWarningThreshold,
                         timeToLiveWarning);
                 }
 
                 /* For ETW Only */
-                if (this.IsEtwEnabled)
+                if (IsEtwEnabled)
                 {
                     // Disk Space Usage
                     foreach (var data in this.diskSpaceUsageData)
                     {
                         token.ThrowIfCancellationRequested();
-                        this.ProcessResourceDataReportHealth(
+                        ProcessResourceDataReportHealth(
                             data,
                             0,
                             0,
@@ -243,7 +242,7 @@ namespace FabricObserver.Observers
                     foreach (var data in this.diskSpaceAvailableData)
                     {
                         token.ThrowIfCancellationRequested();
-                        this.ProcessResourceDataReportHealth(
+                        ProcessResourceDataReportHealth(
                             data,
                             0,
                             0,
@@ -254,7 +253,7 @@ namespace FabricObserver.Observers
                     foreach (var data in this.diskSpaceTotalData)
                     {
                         token.ThrowIfCancellationRequested();
-                        this.ProcessResourceDataReportHealth(
+                        ProcessResourceDataReportHealth(
                             data,
                             0,
                             0,
@@ -270,9 +269,9 @@ namespace FabricObserver.Observers
                     return Task.CompletedTask;
                 }
 
-                var diskInfoPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "disks.txt");
+                var diskInfoPath = Path.Combine(ObserverLogger.LogFolderBasePath, "disks.txt");
 
-                _ = this.ObserverLogger.TryWriteLogFile(diskInfoPath, this.diskInfo.ToString());
+                _ = ObserverLogger.TryWriteLogFile(diskInfoPath, this.diskInfo.ToString());
 
                 _ = this.diskInfo.Clear();
 
@@ -282,9 +281,9 @@ namespace FabricObserver.Observers
             {
                 if (!(e is OperationCanceledException))
                 {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
-                            this.FabricServiceContext.ServiceName.OriginalString,
-                            this.ObserverName,
+                    HealthReporter.ReportFabricObserverServiceHealth(
+                            FabricServiceContext.ServiceName.OriginalString,
+                            ObserverName,
                             HealthState.Error,
                             $"Unhandled exception processing Disk information:{Environment.NewLine}{e}");
                 }
@@ -298,35 +297,35 @@ namespace FabricObserver.Observers
             try
             {
                 if (int.TryParse(
-                    this.GetSettingParameterValue(
-                    this.ConfigurationSectionName,
+                    GetSettingParameterValue(
+                    ConfigurationSectionName,
                     ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
-                    this.DiskSpacePercentErrorThreshold = diskUsedError;
+                    DiskSpacePercentErrorThreshold = diskUsedError;
                 }
 
                 if (int.TryParse(
-                    this.GetSettingParameterValue(
-                    this.ConfigurationSectionName,
+                    GetSettingParameterValue(
+                    ConfigurationSectionName,
                     ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
-                    this.DiskSpacePercentWarningThreshold = diskUsedWarning;
+                    DiskSpacePercentWarningThreshold = diskUsedWarning;
                 }
 
                 if (int.TryParse(
-                    this.GetSettingParameterValue(
-                    this.ConfigurationSectionName,
+                    GetSettingParameterValue(
+                    ConfigurationSectionName,
                     ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
                 {
-                    this.AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
+                    AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
                 }
 
                 if (int.TryParse(
-                    this.GetSettingParameterValue(
-                    this.ConfigurationSectionName,
+                    GetSettingParameterValue(
+                    ConfigurationSectionName,
                     ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
-                    this.AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
+                    AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
                 }
             }
             catch (ArgumentNullException)

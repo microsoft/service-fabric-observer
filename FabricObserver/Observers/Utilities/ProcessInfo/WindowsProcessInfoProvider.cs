@@ -10,8 +10,8 @@ namespace FabricObserver.Observers.Utilities
 {
     // Since we only create a single instance of WindowsProcessInfoProvider, it is OK
     // to not dispose memProcessPrivateWorkingSetCounter.
-#pragma warning disable CA1001 // Types that own disposable fields should be disposable
-    internal class WindowsProcessInfoProvider : ProcessInfoProvider
+    #pragma warning disable CA1001 // Types that own disposable fields should be disposable
+    public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
         private readonly PerformanceCounter memProcessPrivateWorkingSetCounter = new PerformanceCounter();
         private readonly object perfCounterLock = new object();
@@ -29,7 +29,7 @@ namespace FabricObserver.Observers.Utilities
             catch (ArgumentException ex)
             {
                 // "Process with an Id of 12314 is not running."
-                this.Logger.LogError(ex.Message);
+                Logger.LogError(ex.Message);
                 return 0;
             }
 
@@ -48,13 +48,13 @@ namespace FabricObserver.Observers.Utilities
                     if (e is ArgumentNullException || e is PlatformNotSupportedException
                         || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
                     {
-                        this.Logger.LogError($"{CategoryName} {CounterName} PerfCounter handled error: " + e);
+                        Logger.LogError($"{CategoryName} {CounterName} PerfCounter handled error: " + e);
 
                         // Don't throw.
                         return 0F;
                     }
 
-                    this.Logger.LogError($"{CategoryName} {CounterName} PerfCounter unhandled error: " + e);
+                    Logger.LogError($"{CategoryName} {CounterName} PerfCounter unhandled error: " + e);
 
                     throw;
                 }

@@ -12,12 +12,12 @@ using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal static class DiskUsage
+    public static class DiskUsage
     {
         private static PerformanceCounter diskAverageQueueLengthCounter =
             new PerformanceCounter(categoryName: "LogicalDisk", counterName: "Avg. Disk Queue Length", readOnly: true);
 
-        internal static bool ShouldCheckDrive(DriveInfo driveInfo)
+        public static bool ShouldCheckDrive(DriveInfo driveInfo)
         {
             if (!driveInfo.IsReady)
             {
@@ -43,23 +43,23 @@ namespace FabricObserver.Observers.Utilities
             return true;
         }
 
-        internal static double GetTotalDiskSpace(string driveName, SizeUnit sizeUnit = SizeUnit.Bytes)
+        public static double GetTotalDiskSpace(string driveName, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             return GetTotalDiskSpace(new DriveInfo(driveName), sizeUnit);
         }
 
-        internal static double GetTotalDiskSpace(DriveInfo driveInfo, SizeUnit sizeUnit = SizeUnit.Bytes)
+        public static double GetTotalDiskSpace(DriveInfo driveInfo, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             long total = driveInfo.TotalSize;
             return Math.Round(ConvertToSizeUnits(total, sizeUnit), 2);
         }
 
-        internal static int GetCurrentDiskSpaceUsedPercent(string driveName)
+        public static int GetCurrentDiskSpaceUsedPercent(string driveName)
         {
             return GetCurrentDiskSpaceUsedPercent(new DriveInfo(driveName));
         }
 
-        internal static int GetCurrentDiskSpaceUsedPercent(DriveInfo driveInfo)
+        public static int GetCurrentDiskSpaceUsedPercent(DriveInfo driveInfo)
         {
             long availableMB = driveInfo.AvailableFreeSpace / 1024 / 1024;
             long totalMB = driveInfo.TotalSize / 1024 / 1024;
@@ -68,7 +68,7 @@ namespace FabricObserver.Observers.Utilities
             return (int)(usedPct * 100);
         }
 
-        internal static List<(string DriveName, double DiskSize, int PercentConsumed)>
+        public static List<(string DriveName, double DiskSize, int PercentConsumed)>
             GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
@@ -81,7 +81,7 @@ namespace FabricObserver.Observers.Utilities
                 select (drive.Name, totalSize, pctUsed)).ToList();
         }
 
-        internal static double GetAvailableDiskSpace(string driveName, SizeUnit sizeUnit = SizeUnit.Bytes)
+        public static double GetAvailableDiskSpace(string driveName, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             var driveInfo = new DriveInfo(driveName);
             long available = driveInfo.AvailableFreeSpace;
@@ -89,7 +89,7 @@ namespace FabricObserver.Observers.Utilities
             return Math.Round(ConvertToSizeUnits(available, sizeUnit), 2);
         }
 
-        internal static double GetUsedDiskSpace(string driveName, SizeUnit sizeUnit = SizeUnit.Bytes)
+        public static double GetUsedDiskSpace(string driveName, SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             var driveInfo = new DriveInfo(driveName);
             long used = driveInfo.TotalSize - driveInfo.AvailableFreeSpace;
@@ -97,7 +97,7 @@ namespace FabricObserver.Observers.Utilities
             return Math.Round(ConvertToSizeUnits(used, sizeUnit), 2);
         }
 
-        internal static float GetAverageDiskQueueLength(string instance)
+        public static float GetAverageDiskQueueLength(string instance)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -130,26 +130,15 @@ namespace FabricObserver.Observers.Utilities
 
         private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)
         {
-            switch (sizeUnit)
+            return sizeUnit switch
             {
-                case SizeUnit.Bytes:
-                    return amount;
-
-                case SizeUnit.Kilobytes:
-                    return amount / 1024;
-
-                case SizeUnit.Megabytes:
-                    return amount / 1024 / 1024;
-
-                case SizeUnit.Gigabytes:
-                    return amount / 1024 / 1024 / 1024;
-
-                case SizeUnit.Terabytes:
-                    return amount / 1024 / 1024 / 1024 / 1024;
-
-                default:
-                    return amount;
-            }
+                SizeUnit.Bytes => amount,
+                SizeUnit.Kilobytes => amount / 1024,
+                SizeUnit.Megabytes => amount / 1024 / 1024,
+                SizeUnit.Gigabytes => amount / 1024 / 1024 / 1024,
+                SizeUnit.Terabytes => amount / 1024 / 1024 / 1024 / 1024,
+                _ => amount,
+            };
         }
     }
 

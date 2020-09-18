@@ -5,7 +5,7 @@
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class LinuxProcessInfoProvider : ProcessInfoProvider
+    public class LinuxProcessInfoProvider : ProcessInfoProvider
     {
         public override float GetProcessPrivateWorkingSetInMB(int processId)
         {

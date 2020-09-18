@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class WindowsCpuUtilizationProvider : CpuUtilizationProvider
+    public class WindowsCpuUtilizationProvider : CpuUtilizationProvider
     {
         private PerformanceCounter performanceCounter = new PerformanceCounter(categoryName: "Processor", counterName: "% Processor Time", instanceName: "_Total", readOnly: true);
 

@@ -3,12 +3,12 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System.Fabric.Description;
+using System.Runtime.InteropServices;
+using System.Security;
+
 namespace FabricObserverWeb
 {
-    using System.Fabric.Description;
-    using System.Runtime.InteropServices;
-    using System.Security;
-
     public static class Utilities
     {
         internal static string GetConfigurationSetting(

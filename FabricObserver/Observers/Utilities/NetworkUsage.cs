@@ -11,9 +11,9 @@ using System.Xml;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal static class NetworkUsage
+    public static class NetworkUsage
     {
-        internal static (int LowPort, int HighPort)
+        public static (int LowPort, int HighPort)
             TupleGetFabricApplicationPortRangeForNodeType(string nodeType, string clusterManifestXml)
         {
             if (string.IsNullOrEmpty(nodeType) || string.IsNullOrEmpty(clusterManifestXml))
@@ -67,7 +67,7 @@ namespace FabricObserver.Observers.Utilities
             return (-1, -1);
         }
 
-        internal static int GetActiveFirewallRulesCount()
+        public static int GetActiveFirewallRulesCount()
         {
             ManagementObjectCollection results = null;
             ManagementObjectSearcher searcher = null;

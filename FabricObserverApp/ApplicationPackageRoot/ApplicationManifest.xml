@@ -1,23 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.3" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.4" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
          (See ObserverBase.cs) -->
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
-    <!-- Observer Enablement - NOTE: By default, observers are enabled. If you leave DefaultValue as empty string, 
-         then it's the same thing as setting it to "true". -->
-    <Parameter Name="AppObserverEnabled" DefaultValue="" />
-    <Parameter Name="CertificateObserverEnabled" DefaultValue="" />
-    <Parameter Name="DiskObserverEnabled" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="" />
-    <Parameter Name="NodeObserverEnabled" DefaultValue="" />
-    <Parameter Name="OSObserverEnabled" DefaultValue="" />
+    <!-- Observer Enablement - NOTE: By default, all observers are enabled (in source code). If you leave DefaultValue as empty string, 
+         then it's the same thing as setting it to true. You can of course set these to true if you want. Probably
+         easier to read and understand. -->
+    <Parameter Name="AppObserverEnabled" DefaultValue="true" />
+    <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
+    <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
+    <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
     <!--<Parameter Name="SampleNewObserverEnabled" DefaultValue="true" /> -->
-    <!-- Observer Telemetry Enablement -->
+    <!-- Telemetry -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="true" />
@@ -27,8 +28,8 @@
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
     <!--<Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="true" /> -->
-    <!-- Observer Verbose Logging Enablement -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
+    <!-- Verbose Logging -->
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableVerboseLogging" DefaultValue="false" />
@@ -37,12 +38,12 @@
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!--<Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" /> -->
-    <!-- Observer Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:10" />
     <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:10" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:30" />
-    <!-- Observer Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
+    <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
     <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
@@ -57,8 +58,8 @@
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <!-- Certificate Observer Overrides -->
+    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
@@ -110,7 +111,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.0.3" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.0.4" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -219,9 +220,6 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <Policies>
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -234,9 +232,4 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <Principals>
-    <Users>
-      <User Name="SystemUser" AccountType="LocalSystem" />
-    </Users>
-  </Principals>
 </ApplicationManifest>

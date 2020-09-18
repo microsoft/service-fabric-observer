@@ -83,7 +83,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             CancellationToken cancellationToken,
             string message = null)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
@@ -120,7 +120,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string serviceName = null,
             string instanceName = null)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
@@ -164,7 +164,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             TelemetryData telemetryData,
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled
+            if (!IsEnabled
                 || cancellationToken.IsCancellationRequested
                 || telemetryData == null)
             {
@@ -229,7 +229,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string source,
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return false;
             }
@@ -341,7 +341,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             IDictionary<string, string> properties,
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
@@ -367,7 +367,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             long value,
             CancellationToken cancellationToken)
         {
-            return this.ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
+            return ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
 
         /// <summary>
@@ -386,7 +386,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             long value,
             CancellationToken cancellationToken)
         {
-            await this.ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -417,7 +417,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             IDictionary<string, string> properties,
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(false);
             }
@@ -451,7 +451,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            this.Dispose(true);
+            Dispose(true);
         }
 
         private bool disposedValue; // To detect redundant calls

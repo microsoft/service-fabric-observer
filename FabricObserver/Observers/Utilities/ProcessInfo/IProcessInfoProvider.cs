@@ -5,7 +5,7 @@
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal interface IProcessInfoProvider
+    public interface IProcessInfoProvider
     {
         float GetProcessPrivateWorkingSetInMB(int processId);
     }

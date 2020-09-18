@@ -121,7 +121,7 @@ namespace FabricObserver.Observers.Utilities
                     ObserverConstants.NetworkObserverName => "NetworkHealth",
                     ObserverConstants.OSObserverName => "MachineInformation",
                     ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                    _ => $"{healthReport.Observer}_GenericHealth",
+                    _ => $"{healthReport.Observer}_HealthProperty",
                 };
             }
 
@@ -161,6 +161,7 @@ namespace FabricObserver.Observers.Utilities
                 var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
                 this.fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
             }
+
         }
     }
 

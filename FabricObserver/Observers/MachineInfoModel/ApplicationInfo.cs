@@ -41,22 +41,22 @@ namespace FabricObserver.Observers.MachineInfoModel
 
         public bool DumpProcessOnError { get; set; }
 
-        public override string ToString() => $"ApplicationName: {this.TargetApp ?? string.Empty}\n" +
-                                             $"ApplicationTypeName: {this.TargetAppType ?? string.Empty}\n" +
-                                             $"ServiceExcludeList: {this.ServiceExcludeList ?? string.Empty}\n" +
-                                             $"ServiceIncludeList: {this.ServiceIncludeList ?? string.Empty}\n" +
-                                             $"MemoryWarningLimitMB: {this.MemoryWarningLimitMb}\n" +
-                                             $"MemoryErrorLimitMB: {this.MemoryErrorLimitMb}\n" +
-                                             $"MemoryWarningLimitPercent: {this.MemoryWarningLimitPercent}\n" +
-                                             $"MemoryErrorLimitPercent: {this.MemoryErrorLimitPercent}\n" +
-                                             $"CpuWarningLimitPercent: {this.CpuWarningLimitPercent}\n" +
-                                             $"CpuErrorLimitPercent: {this.CpuErrorLimitPercent}\n" +
-                                             $"NetworkErrorActivePorts: {this.NetworkErrorActivePorts}\n" +
-                                             $"NetworkWarningActivePorts: {this.NetworkWarningActivePorts}\n" +
-                                             $"NetworkErrorEphemeralPorts: {this.NetworkErrorEphemeralPorts}\n" +
-                                             $"NetworkWarningEphemeralPorts: {this.NetworkWarningEphemeralPorts}\n" +
-                                             $"NetworkErrorFirewallRules: {this.NetworkErrorFirewallRules}\n" +
-                                             $"NetworkWarningFirewallRules: {this.NetworkWarningFirewallRules}\n" +
-                                             $"DumpProcessOnError: {this.DumpProcessOnError}\n";
+        public override string ToString() => $"ApplicationName: {TargetApp ?? string.Empty}\n" +
+                                             $"ApplicationTypeName: {TargetAppType ?? string.Empty}\n" +
+                                             $"ServiceExcludeList: {ServiceExcludeList ?? string.Empty}\n" +
+                                             $"ServiceIncludeList: {ServiceIncludeList ?? string.Empty}\n" +
+                                             $"MemoryWarningLimitMB: {MemoryWarningLimitMb}\n" +
+                                             $"MemoryErrorLimitMB: {MemoryErrorLimitMb}\n" +
+                                             $"MemoryWarningLimitPercent: {MemoryWarningLimitPercent}\n" +
+                                             $"MemoryErrorLimitPercent: {MemoryErrorLimitPercent}\n" +
+                                             $"CpuWarningLimitPercent: {CpuWarningLimitPercent}\n" +
+                                             $"CpuErrorLimitPercent: {CpuErrorLimitPercent}\n" +
+                                             $"NetworkErrorActivePorts: {NetworkErrorActivePorts}\n" +
+                                             $"NetworkWarningActivePorts: {NetworkWarningActivePorts}\n" +
+                                             $"NetworkErrorEphemeralPorts: {NetworkErrorEphemeralPorts}\n" +
+                                             $"NetworkWarningEphemeralPorts: {NetworkWarningEphemeralPorts}\n" +
+                                             $"NetworkErrorFirewallRules: {NetworkErrorFirewallRules}\n" +
+                                             $"NetworkWarningFirewallRules: {NetworkWarningFirewallRules}\n" +
+                                             $"DumpProcessOnError: {DumpProcessOnError}\n";
     }
 }

@@ -62,8 +62,8 @@ namespace FabricObserver.Observers
             // This observer is only useful if you enable the web api for producing
             // an html page with a bunch of information that's easy to read in one go.
             if (!ObserverManager.ObserverWebAppDeployed
-                || (this.RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval))
+                || (RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
             }
@@ -79,7 +79,7 @@ namespace FabricObserver.Observers
                 this.SFCodePath = config.FabricCodePath;
                 this.SFDataRoot = config.FabricDataRoot;
                 this.SFLogRoot = config.FabricLogRoot;
-                this.SFRootDir = config.FabricRoot;
+                SFRootDir = config.FabricRoot;
                 this.SFEnableCircularTraceSession = config.EnableCircularTraceSession;
                 this.SFVolumeDiskServiceEnabled = config.IsSFVolumeDiskServiceEnabled;
                 this.unsupportedPreviewFeaturesEnabled = config.EnableUnsupportedPreviewFeatures;
@@ -87,17 +87,17 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is ArgumentException || e is IOException)
             {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
+                HealthReporter.ReportFabricObserverServiceHealth(
+                    FabricServiceContext.ServiceName.OriginalString,
+                    ObserverName,
                     HealthState.Warning,
-                    $"{this.NodeName} | Handled Exception, but failed to read registry value:\n{e}");
+                    $"{NodeName} | Handled Exception, but failed to read registry value:\n{e}");
             }
             catch (Exception e)
             {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
+                HealthReporter.ReportFabricObserverServiceHealth(
+                    FabricServiceContext.ServiceName.OriginalString,
+                    ObserverName,
                     HealthState.Warning,
                     $"this.NodeName | Unhandled Exception trying to read registry value:\n{e}");
 
@@ -106,9 +106,9 @@ namespace FabricObserver.Observers
 
             token.ThrowIfCancellationRequested();
 
-            await this.ReportAsync(token).ConfigureAwait(true);
+            await ReportAsync(token).ConfigureAwait(true);
 
-            this.LastRunDateTime = DateTime.Now;
+            LastRunDateTime = DateTime.Now;
         }
     
         public override async Task ReportAsync(CancellationToken token)
@@ -164,19 +164,19 @@ namespace FabricObserver.Observers
                 _ = sb.AppendLine("Enable Circular trace session: " + this.SFEnableCircularTraceSession);
             }
 
-            _ = sb.Append(await this.GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
+            _ = sb.Append(await GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
             _ = sb.AppendLine();
 
             token.ThrowIfCancellationRequested();
 
-            var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SFInfraInfo.txt");
+            var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "SFInfraInfo.txt");
 
             // This file is used by the web application (ObserverWebApi).
-            if (!this.ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
+            if (!ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
             {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
+                HealthReporter.ReportFabricObserverServiceHealth(
+                    FabricServiceContext.ServiceName.OriginalString,
+                    ObserverName,
                     HealthState.Warning,
                     "Unable to create SFInfraInfo.txt file.");
             }
@@ -200,8 +200,8 @@ namespace FabricObserver.Observers
             {
                 try
                 {
-                    appList = await this.FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
-                    clusterManifestXml = await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(true);
+                    appList = await FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
+                    clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
                 }
                 catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
@@ -249,11 +249,11 @@ namespace FabricObserver.Observers
 
                 // Node Information.
                 _ = sb.AppendLine("\nNode Info:\n");
-                _ = sb.AppendLine($"Node Name: {this.NodeName}");
-                _ = sb.AppendLine($"Node Id: {this.FabricServiceContext.NodeContext.NodeId}");
-                _ = sb.AppendLine($"Node Instance Id: {this.FabricServiceContext.NodeContext.NodeInstanceId}");
-                _ = sb.AppendLine($"Node Type: {this.FabricServiceContext.NodeContext.NodeType}");
-                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(this.FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                _ = sb.AppendLine($"Node Name: {NodeName}");
+                _ = sb.AppendLine($"Node Id: {FabricServiceContext.NodeContext.NodeId}");
+                _ = sb.AppendLine($"Node Instance Id: {FabricServiceContext.NodeContext.NodeInstanceId}");
+                _ = sb.AppendLine($"Node Type: {FabricServiceContext.NodeContext.NodeType}");
+                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
 
                 if (lowPort > -1)
                 {
@@ -308,8 +308,8 @@ namespace FabricObserver.Observers
 
                         // Service(s).
                         _ = sb.AppendLine("\n\tServices:");
-                        var serviceList = await this.FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
-                        var replicaList = await this.FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(this.NodeName, app.ApplicationName).ConfigureAwait(true);
+                        var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
+                        var replicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName).ConfigureAwait(true);
 
                         foreach (var service in serviceList)
                         {
@@ -317,7 +317,7 @@ namespace FabricObserver.Observers
                             var type = service.ServiceTypeName;
                             var serviceManifestVersion = service.ServiceManifestVersion;
                             var serviceName = service.ServiceName;
-                            var serviceDescription = await this.FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
+                            var serviceDescription = await FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
                             var processModel = serviceDescription.ServicePackageActivationMode.ToString();
 
                             foreach (var rep in replicaList)
@@ -356,15 +356,15 @@ namespace FabricObserver.Observers
                                 _ = sb.AppendLine();
 
                                 // ETW.
-                                if (this.IsEtwEnabled)
+                                if (IsEtwEnabled)
                                 {
                                     Logger.EtwLogger?.Write(
                                         ObserverConstants.FabricObserverETWEventName,
                                         new
                                         {
                                             Level = 0, // Info
-                                            Node = this.NodeName,
-                                            Observer = this.ObserverName,
+                                            Node = NodeName,
+                                            Observer = ObserverName,
                                             AppName = appName,
                                             AppType = appType,
                                             AppVersion = appVersion,

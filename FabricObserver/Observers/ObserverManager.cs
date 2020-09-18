@@ -393,7 +393,7 @@ namespace FabricObserver.Observers
                             var healthReport = new Utilities.HealthReport
                             {
                                 AppName = !string.IsNullOrEmpty(obs.AppNames[i]) ? new Uri(obs.AppNames[i]) : null,
-                                Code = FoErrorWarningCodes.Ok,
+                                Code = FOErrorWarningCodes.Ok,
                                 HealthMessage = $"Clearing existing Health Error/Warning, {obs.HealthReportProperties[i]}/{obs.HealthReportSourceIds[i]}, as FO is stopping.",
                                 Property = obs.HealthReportProperties[i],
                                 SourceId = obs.HealthReportSourceIds[i],
@@ -505,7 +505,7 @@ namespace FabricObserver.Observers
                 var healthReport = new Utilities.HealthReport
                 {
                     AppName = new Uri(FabricServiceContext.CodePackageActivationContext.ApplicationName),
-                    Code = FoErrorWarningCodes.Ok,
+                    Code = FOErrorWarningCodes.Ok,
                     ReportType = HealthReportType.Application,
                     HealthMessage = $"Error updating observer with new configuration:{Environment.NewLine}{err}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,

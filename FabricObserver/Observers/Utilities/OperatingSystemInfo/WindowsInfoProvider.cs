@@ -6,6 +6,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Fabric;
 using System.IO;
 using System.Management;
 using System.Text.RegularExpressions;
@@ -14,9 +15,9 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class WindowsInfoProvider : OperatingSystemInfoProvider
+    public class WindowsInfoProvider : OperatingSystemInfoProvider
     {
-        internal override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        public override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
@@ -73,7 +74,7 @@ namespace FabricObserver.Observers.Utilities
             return (-1L, -1);
         }
 
-        internal override int GetActiveEphemeralPortCount(int processId = -1)
+        public override int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null)
         {
             try
             {
@@ -97,7 +98,7 @@ namespace FabricObserver.Observers.Utilities
                 _ = p.Start();
                 var stdOutput = p.StandardOutput;
 
-                (int lowPortRange, int highPortRange) = this.TupleGetDynamicPortRange();
+                (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
 
                 string portRow;
 
@@ -149,7 +150,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        internal override (int LowPort, int HighPort) TupleGetDynamicPortRange()
+        public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
             using var p = new Process();
             string protoParam = "tcp";
@@ -201,7 +202,7 @@ namespace FabricObserver.Observers.Utilities
             return (-1, -1);
         }
 
-        internal override int GetActivePortCount(int processId = -1)
+        public override int GetActivePortCount(int processId = -1, ServiceContext context = null)
         {
             const string Protocol = "tcp";
 
@@ -254,7 +255,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        internal override Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
+        public override Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
         {
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;

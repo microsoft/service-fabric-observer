@@ -39,16 +39,16 @@ namespace FabricObserverTests
             string serviceManifestName,
             string serviceManifestVersion)
         {
-            this.ApplicationName = applicationName;
-            this.ApplicationTypeName = applicationTypeName;
-            this.CodePackageName = codePackageName;
-            this.CodePackageVersion = codePackageVersion;
-            this.ContextId = context;
-            this.LogDirectory = logDirectory;
-            this.TempDirectory = tempDirectory;
-            this.WorkDirectory = workDirectory;
-            this.ServiceManifestName = serviceManifestName;
-            this.ServiceManifestVersion = serviceManifestVersion;
+            ApplicationName = applicationName;
+            ApplicationTypeName = applicationTypeName;
+            CodePackageName = codePackageName;
+            CodePackageVersion = codePackageVersion;
+            ContextId = context;
+            LogDirectory = logDirectory;
+            TempDirectory = tempDirectory;
+            WorkDirectory = workDirectory;
+            ServiceManifestName = serviceManifestName;
+            ServiceManifestVersion = serviceManifestVersion;
         }
 
         private string ServiceManifestName { get; set; }
@@ -92,7 +92,7 @@ namespace FabricObserverTests
 
         public IList<string> GetCodePackageNames()
         {
-            return new List<string>() { this.CodePackageName };
+            return new List<string>() { CodePackageName };
         }
 
         public CodePackage GetCodePackageObject(string packageName)
@@ -137,12 +137,12 @@ namespace FabricObserverTests
 
         public string GetServiceManifestName()
         {
-            return this.ServiceManifestName;
+            return ServiceManifestName;
         }
 
         public string GetServiceManifestVersion()
         {
-            return this.ServiceManifestVersion;
+            return ServiceManifestVersion;
         }
 
         public KeyedCollection<string, ServiceTypeDescription> GetServiceTypes()
@@ -182,7 +182,7 @@ namespace FabricObserverTests
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            this.Dispose(true);
+            Dispose(true);
         }
 
         public void ReportApplicationHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)

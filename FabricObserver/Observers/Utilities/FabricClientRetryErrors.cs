@@ -143,14 +143,14 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public FabricClientRetryErrors()
         {
-            this.RetryableExceptions = new List<Type>();
-            this.RetryableFabricErrorCodes = new List<FabricErrorCode>();
-            this.RetrySuccessExceptions = new List<Type>();
-            this.RetrySuccesSFabricErrorCodes = new List<FabricErrorCode>();
+            RetryableExceptions = new List<Type>();
+            RetryableFabricErrorCodes = new List<FabricErrorCode>();
+            RetrySuccessExceptions = new List<Type>();
+            RetrySuccesSFabricErrorCodes = new List<FabricErrorCode>();
 
-            this.InternalRetrySuccesSFabricErrorCodes = new List<uint>();
+            InternalRetrySuccesSFabricErrorCodes = new List<uint>();
 
-            this.PopulateDefaultValues();
+            PopulateDefaultValues();
         }
 
         /// <summary>
@@ -180,12 +180,12 @@ namespace FabricObserver.Observers.Utilities
 
         private void PopulateDefaultValues()
         {
-            this.RetryableExceptions.Add(typeof(TimeoutException));
-            this.RetryableExceptions.Add(typeof(OperationCanceledException));
-            this.RetryableExceptions.Add(typeof(FabricNotReadableException));
-            this.RetryableFabricErrorCodes.Add(FabricErrorCode.OperationTimedOut);
-            this.RetryableFabricErrorCodes.Add(FabricErrorCode.CommunicationError);
-            this.RetryableFabricErrorCodes.Add(FabricErrorCode.ServiceTooBusy);
+            RetryableExceptions.Add(typeof(TimeoutException));
+            RetryableExceptions.Add(typeof(OperationCanceledException));
+            RetryableExceptions.Add(typeof(FabricNotReadableException));
+            RetryableFabricErrorCodes.Add(FabricErrorCode.OperationTimedOut);
+            RetryableFabricErrorCodes.Add(FabricErrorCode.CommunicationError);
+            RetryableFabricErrorCodes.Add(FabricErrorCode.ServiceTooBusy);
         }
     }
 }

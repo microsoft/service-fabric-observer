@@ -63,26 +63,26 @@ namespace FabricObserver.Observers
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (this.RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            if (RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
 
             this.stopwatch.Start();
 
-            this.Initialize();
+            Initialize();
 
-            this.Token = token;
+            Token = token;
 
-            await this.GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
+            await GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
 
             this.stopwatch.Stop();
-            this.RunDuration = this.stopwatch.Elapsed;
+            RunDuration = this.stopwatch.Elapsed;
             this.stopwatch.Reset();
 
-            await this.ReportAsync(token).ConfigureAwait(true);
-            this.LastRunDateTime = DateTime.Now;
+            await ReportAsync(token).ConfigureAwait(true);
+            LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -91,56 +91,56 @@ namespace FabricObserver.Observers
             {
                 token.ThrowIfCancellationRequested();
 
-                if (this.CsvFileLogger != null && this.CsvFileLogger.EnableCsvLogging)
+                if (CsvFileLogger != null && CsvFileLogger.EnableCsvLogging)
                 {
-                    var fileName = "CpuMemFirewallsPorts" + this.NodeName;
+                    var fileName = "CpuMemFirewallsPorts" + NodeName;
 
                     // Log (csv) system-wide CPU/Mem data.
-                    this.CsvFileLogger.LogData(
+                    CsvFileLogger.LogData(
                         fileName,
-                        this.NodeName,
+                        NodeName,
                         "CPU Time",
                         "Average",
-                        Math.Round(this.AllCpuTimeData.AverageDataValue));
+                        Math.Round(AllCpuTimeData.AverageDataValue));
 
-                    this.CsvFileLogger.LogData(
+                    CsvFileLogger.LogData(
                         fileName,
-                        this.NodeName,
+                        NodeName,
                         "CPU Time",
                         "Peak",
-                        Math.Round(this.AllCpuTimeData.MaxDataValue));
+                        Math.Round(AllCpuTimeData.MaxDataValue));
 
-                    this.CsvFileLogger.LogData(
+                    CsvFileLogger.LogData(
                         fileName,
-                        this.NodeName,
+                        NodeName,
                         "Committed Memory (MB)",
                         "Average",
                         Math.Round(this.allMemDataCommittedBytes.AverageDataValue));
 
-                    this.CsvFileLogger.LogData(
+                    CsvFileLogger.LogData(
                         fileName,
-                        this.NodeName,
+                        NodeName,
                         "Committed Memory (MB)",
                         "Peak",
                         Math.Round(this.allMemDataCommittedBytes.MaxDataValue));
 
-                    this.CsvFileLogger.LogData(
+                    CsvFileLogger.LogData(
                         fileName,
-                        this.NodeName,
+                        NodeName,
                         "All Active Ports",
                         "Total",
                         this.activePortsData.Data[0]);
 
-                    this.CsvFileLogger.LogData(
+                    CsvFileLogger.LogData(
                         fileName,
-                        this.NodeName,
+                        NodeName,
                         "Ephemeral Active Ports",
                         "Total",
                         this.ephemeralPortsData.Data[0]);
 
-                    this.CsvFileLogger.LogData(
+                    CsvFileLogger.LogData(
                         fileName,
-                        this.NodeName,
+                        NodeName,
                         "Firewall Rules",
                         "Total",
                         this.firewallData.Data[0]);
@@ -150,55 +150,55 @@ namespace FabricObserver.Observers
 
                 // Report on the global health state (system-wide (node) metrics).
                 // User-configurable in NodeObserver.config.json
-                var timeToLiveWarning = this.SetHealthReportTimeToLive();
+                var timeToLiveWarning = SetHealthReportTimeToLive();
 
                 // CPU
-                if (this.AllCpuTimeData.AverageDataValue > 0)
+                if (AllCpuTimeData.AverageDataValue > 0)
                 {
-                    this.ProcessResourceDataReportHealth(
-                        this.AllCpuTimeData,
-                        this.CpuErrorUsageThresholdPct,
-                        this.CpuWarningUsageThresholdPct,
+                    ProcessResourceDataReportHealth(
+                        AllCpuTimeData,
+                        CpuErrorUsageThresholdPct,
+                        CpuWarningUsageThresholdPct,
                         timeToLiveWarning);
                 }
 
                 // Memory
                 if (this.allMemDataCommittedBytes.AverageDataValue > 0)
                 {
-                    this.ProcessResourceDataReportHealth(
+                    ProcessResourceDataReportHealth(
                         this.allMemDataCommittedBytes,
-                        this.MemErrorUsageThresholdMb,
-                        this.MemWarningUsageThresholdMb,
+                        MemErrorUsageThresholdMb,
+                        MemWarningUsageThresholdMb,
                         timeToLiveWarning);
                 }
 
                 if (this.allMemDataPercentUsed.AverageDataValue > 0)
                 {
-                    this.ProcessResourceDataReportHealth(
+                    ProcessResourceDataReportHealth(
                         this.allMemDataPercentUsed,
-                        this.MemoryErrorLimitPercent,
-                        this.MemoryWarningLimitPercent,
+                        MemoryErrorLimitPercent,
+                        MemoryWarningLimitPercent,
                         timeToLiveWarning);
                 }
 
                 // Firewall rules
-                this.ProcessResourceDataReportHealth(
+                ProcessResourceDataReportHealth(
                     this.firewallData,
-                    this.FirewallRulesErrorThreshold,
-                    this.FirewallRulesWarningThreshold,
+                    FirewallRulesErrorThreshold,
+                    FirewallRulesWarningThreshold,
                     timeToLiveWarning);
 
                 // Ports
-                this.ProcessResourceDataReportHealth(
+                ProcessResourceDataReportHealth(
                     this.activePortsData,
-                    this.ActivePortsErrorThreshold,
-                    this.ActivePortsWarningThreshold,
+                    ActivePortsErrorThreshold,
+                    ActivePortsWarningThreshold,
                     timeToLiveWarning);
 
-                this.ProcessResourceDataReportHealth(
+                ProcessResourceDataReportHealth(
                     this.ephemeralPortsData,
-                    this.EphemeralPortsErrorThreshold,
-                    this.EphemeralPortsWarningThreshold,
+                    EphemeralPortsErrorThreshold,
+                    EphemeralPortsWarningThreshold,
                     timeToLiveWarning);
 
                 return Task.FromResult(1);
@@ -210,9 +210,9 @@ namespace FabricObserver.Observers
                     return Task.FromResult(1);
                 }
 
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
+                HealthReporter.ReportFabricObserverServiceHealth(
+                    FabricServiceContext.ServiceName.OriginalString,
+                    ObserverName,
                     HealthState.Warning,
                     e.ToString());
 
@@ -224,27 +224,27 @@ namespace FabricObserver.Observers
         {
             if (!IsTestRun)
             {
-                this.SetThresholdSFromConfiguration();
+                SetThresholdSFromConfiguration();
             }
 
-            this.InitializeDataContainers();
+            InitializeDataContainers();
         }
 
         private void InitializeDataContainers()
         {
-            if (this.AllCpuTimeData == null)
+            if (AllCpuTimeData == null)
             {
-                this.AllCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", this.DataCapacity, this.UseCircularBuffer);
+                AllCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
             }
 
             if (this.allMemDataCommittedBytes == null)
             {
-                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", this.DataCapacity, this.UseCircularBuffer);
+                this.allMemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", DataCapacity, UseCircularBuffer);
             }
 
             if (this.allMemDataPercentUsed == null)
             {
-                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", this.DataCapacity, this.UseCircularBuffer);
+                this.allMemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataCapacity, UseCircularBuffer);
             }
 
             if (this.firewallData == null)
@@ -267,118 +267,118 @@ namespace FabricObserver.Observers
         {
             /* Error thresholds */
 
-            this.Token.ThrowIfCancellationRequested();
+            Token.ThrowIfCancellationRequested();
 
-            var cpuError = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var cpuError = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverCpuErrorLimitPct);
 
             if (!string.IsNullOrEmpty(cpuError) && int.TryParse(cpuError, out int cpuErrorUsageThresholdPct))
             {
-                this.CpuErrorUsageThresholdPct = cpuErrorUsageThresholdPct;
+                CpuErrorUsageThresholdPct = cpuErrorUsageThresholdPct;
             }
 
-            var memError = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var memError = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverMemoryErrorLimitMb);
 
             if (!string.IsNullOrEmpty(memError) && int.TryParse(memError, out int memErrorUsageThresholdMb))
             {
-                this.MemErrorUsageThresholdMb = memErrorUsageThresholdMb;
+                MemErrorUsageThresholdMb = memErrorUsageThresholdMb;
             }
 
-            var portsErr = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var portsErr = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkErrorActivePorts);
 
             if (!string.IsNullOrEmpty(portsErr) && !int.TryParse(portsErr, out int activePortsErrorThreshold))
             {
-                this.ActivePortsErrorThreshold = activePortsErrorThreshold;
+                ActivePortsErrorThreshold = activePortsErrorThreshold;
             }
 
-            var ephemeralPortsErr = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var ephemeralPortsErr = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkErrorEphemeralPorts);
 
             if (!string.IsNullOrEmpty(portsErr) && int.TryParse(ephemeralPortsErr, out int ephemeralPortsErrorThreshold))
             {
-                this.EphemeralPortsErrorThreshold = ephemeralPortsErrorThreshold;
+                EphemeralPortsErrorThreshold = ephemeralPortsErrorThreshold;
             }
 
-            var errFirewallRules = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var errFirewallRules = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkErrorFirewallRules);
 
             if (!string.IsNullOrEmpty(errFirewallRules) && int.TryParse(errFirewallRules, out int firewallRulesErrorThreshold))
             {
-                this.FirewallRulesErrorThreshold = firewallRulesErrorThreshold;
+                FirewallRulesErrorThreshold = firewallRulesErrorThreshold;
             }
 
-            var errMemPercentUsed = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var errMemPercentUsed = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverMemoryUsePercentError);
 
             if (!string.IsNullOrEmpty(errMemPercentUsed) && int.TryParse(errMemPercentUsed, out int memoryPercentUsedErrorThreshold))
             {
-                this.MemoryErrorLimitPercent = memoryPercentUsedErrorThreshold;
+                MemoryErrorLimitPercent = memoryPercentUsedErrorThreshold;
             }
 
             /* Warning thresholds */
 
-            this.Token.ThrowIfCancellationRequested();
+            Token.ThrowIfCancellationRequested();
 
-            var cpuWarn = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var cpuWarn = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverCpuWarningLimitPct);
 
             if (!string.IsNullOrEmpty(cpuWarn) && int.TryParse(cpuWarn, out int cpuWarningUsageThresholdPct))
             {
-                this.CpuWarningUsageThresholdPct = cpuWarningUsageThresholdPct;
+                CpuWarningUsageThresholdPct = cpuWarningUsageThresholdPct;
             }
 
-            var memWarn = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var memWarn = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverMemoryWarningLimitMb);
 
             if (!string.IsNullOrEmpty(memWarn) && int.TryParse(memWarn, out int memWarningUsageThresholdMb))
             {
-                this.MemWarningUsageThresholdMb = memWarningUsageThresholdMb;
+                MemWarningUsageThresholdMb = memWarningUsageThresholdMb;
             }
 
-            var portsWarn = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var portsWarn = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkWarningActivePorts);
 
             if (!string.IsNullOrEmpty(portsWarn) && int.TryParse(portsWarn, out int activePortsWarningThreshold))
             {
-                this.ActivePortsWarningThreshold = activePortsWarningThreshold;
+                ActivePortsWarningThreshold = activePortsWarningThreshold;
             }
 
-            var ephemeralPortsWarn = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var ephemeralPortsWarn = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkWarningEphemeralPorts);
 
             if (!string.IsNullOrEmpty(ephemeralPortsWarn) && int.TryParse(ephemeralPortsWarn, out int ephemeralPortsWarningThreshold))
             {
-                this.EphemeralPortsWarningThreshold = ephemeralPortsWarningThreshold;
+                EphemeralPortsWarningThreshold = ephemeralPortsWarningThreshold;
             }
 
-            var warnFirewallRules = this.GetSettingParameterValue(
-                this.ConfigurationSectionName,
+            var warnFirewallRules = GetSettingParameterValue(
+                ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkWarningFirewallRules);
 
             if (!string.IsNullOrEmpty(warnFirewallRules) && int.TryParse(warnFirewallRules, out int firewallRulesWarningThreshold))
             {
-                this.FirewallRulesWarningThreshold = firewallRulesWarningThreshold;
+                FirewallRulesWarningThreshold = firewallRulesWarningThreshold;
             }
 
-            var warnMemPercentUsed = this.GetSettingParameterValue(
-              this.ConfigurationSectionName,
+            var warnMemPercentUsed = GetSettingParameterValue(
+              ConfigurationSectionName,
               ObserverConstants.NodeObserverMemoryUsePercentWarning);
 
             if (!string.IsNullOrEmpty(warnMemPercentUsed) && int.TryParse(warnMemPercentUsed, out int memoryPercentUsedWarningThreshold))
             {
-                this.MemoryWarningLimitPercent = memoryPercentUsedWarningThreshold;
+                MemoryWarningLimitPercent = memoryPercentUsedWarningThreshold;
             }
         }
 
@@ -409,9 +409,9 @@ namespace FabricObserver.Observers
                 // TODO: Look into making this a long running background task with signaling.
                 TimeSpan duration = TimeSpan.FromSeconds(30);
 
-                if (this.MonitorDuration > TimeSpan.MinValue)
+                if (MonitorDuration > TimeSpan.MinValue)
                 {
-                    duration = this.MonitorDuration;
+                    duration = MonitorDuration;
                 }
 
                 cpuUtilizationProvider = CpuUtilizationProvider.Create();
@@ -424,19 +424,19 @@ namespace FabricObserver.Observers
                     token.ThrowIfCancellationRequested();
                     await Task.Delay(500);
 
-                    if (this.CpuWarningUsageThresholdPct > 0
-                        && this.CpuWarningUsageThresholdPct <= 100)
+                    if (CpuWarningUsageThresholdPct > 0
+                        && CpuWarningUsageThresholdPct <= 100)
                     {
-                        this.AllCpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
+                        AllCpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
                     }
 
-                    if (this.MemWarningUsageThresholdMb > 0)
+                    if (MemWarningUsageThresholdMb > 0)
                     {
                         float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
                         this.allMemDataCommittedBytes.Data.Add(committedMegaBytes);
                     }
 
-                    if (this.MemoryWarningLimitPercent > 0)
+                    if (MemoryWarningLimitPercent > 0)
                     {
                         this.allMemDataPercentUsed.Data.Add(
                             OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
@@ -448,9 +448,9 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                        this.FabricServiceContext.ServiceName.OriginalString,
-                        this.ObserverName,
+                HealthReporter.ReportFabricObserverServiceHealth(
+                        FabricServiceContext.ServiceName.OriginalString,
+                        ObserverName,
                         HealthState.Warning,
                         $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 

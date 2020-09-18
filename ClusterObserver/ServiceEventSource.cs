@@ -43,7 +43,7 @@ namespace FabricClusterObserver
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (!this.IsEnabled())
+            if (!IsEnabled())
             {
                 return;
             }
@@ -56,7 +56,7 @@ namespace FabricClusterObserver
         [Event(MessageEventId, Level = EventLevel.Informational, Message = "{0}")]
         public void Message(string message)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 WriteEvent(MessageEventId, message);
             }
@@ -65,7 +65,7 @@ namespace FabricClusterObserver
         [NonEvent]
         public void ServiceMessage(StatelessServiceContext serviceContext, string message, params object[] args)
         {
-            if (!this.IsEnabled())
+            if (!IsEnabled())
             {
                 return;
             }

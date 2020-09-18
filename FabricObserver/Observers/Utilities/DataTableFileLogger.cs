@@ -38,26 +38,26 @@ namespace FabricObserver.Observers.Utilities
             }
 
             // log directory supplied in config. Set in ObserverManager.
-            if (!string.IsNullOrEmpty(this.DataLogFolderPath))
+            if (!string.IsNullOrEmpty(DataLogFolderPath))
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // Add current drive letter if not supplied for Windows path target.
-                    if (!this.DataLogFolderPath.Substring(0, 3).Contains(":\\"))
+                    if (!DataLogFolderPath.Substring(0, 3).Contains(":\\"))
                     {
                         string windrive = Environment.SystemDirectory.Substring(0, 3);
-                        logPath = windrive + this.DataLogFolderPath;
+                        logPath = windrive + DataLogFolderPath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (this.DataLogFolderPath.Substring(0, 3).Contains(":\\"))
+                    if (DataLogFolderPath.Substring(0, 3).Contains(":\\"))
                     {
-                        this.DataLogFolderPath = this.DataLogFolderPath.Remove(0, 3);
+                        DataLogFolderPath = DataLogFolderPath.Remove(0, 3);
                     }
 
-                    logPath = this.DataLogFolderPath;
+                    logPath = DataLogFolderPath;
                 }
             }
 
@@ -99,7 +99,7 @@ namespace FabricObserver.Observers.Utilities
         {
             // If you provided an IObserverTelemetry impl, then this will, for example,
             // send traces up to App Insights (Azure). See the App.config for settings example.
-            if (!this.EnableCsvLogging)
+            if (!EnableCsvLogging)
             {
                 if (!ObserverManager.TelemetryEnabled)
                 {
@@ -117,7 +117,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             // Else, reconfigure logger to write to file on disk.
-            this.ConfigureLogger(fileName);
+            ConfigureLogger(fileName);
 
             Logger.Info(
                 "{target}{metric}{stat}{value}",
@@ -127,12 +127,12 @@ namespace FabricObserver.Observers.Utilities
                 value);
         }
 
-        internal static void ShutDown()
+        public static void ShutDown()
         {
             LogManager.Shutdown();
         }
 
-        internal static void Flush()
+        public static void Flush()
         {
             LogManager.Flush();
         }
