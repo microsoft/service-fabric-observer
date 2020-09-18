@@ -31,6 +31,7 @@
     <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="ApplicationPackageRoot\ApplicationManifest_linux.xml" />
     <Content Include="packages.config" />
     <Content Include="PublishProfiles\Cloud.xml" />
   </ItemGroup>
