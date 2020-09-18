@@ -54,7 +54,14 @@ For more information about **the design of FabricObserver**, please see the [Des
 
 1. Clone the repo.
 2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
-3. Build.
+3. Build. 
+
+Note: There is no need to run FO as system on Windows or root on Linux. 
+
+For Linux deployments, we have ensured that FO will work as expected as normal user. In order for us to do this, we had to implement a setup script that sets Capabilities on a proxy binary which can run netstat -tnap elevated. 
+If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section). You 
+will also need to do the same with ApplicationManifest.xml (see FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.linux.xml for required changes). If you use our build scripts, they will take care of these modifications automatically for linux build output.
+Just run Build-FabricObserver.ps1
 
 You can also run the build scripts from a Powershell console. These include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
