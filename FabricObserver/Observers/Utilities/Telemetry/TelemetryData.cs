@@ -90,7 +90,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             var (clusterId, _, _) =
               ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
 
-            this.ClusterId = clusterId;
+            ClusterId = clusterId;
         }
     }
 }

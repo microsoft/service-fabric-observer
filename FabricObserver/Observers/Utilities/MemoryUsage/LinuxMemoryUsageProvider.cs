@@ -7,13 +7,13 @@ using System.Collections.Generic;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class LinuxMemoryUsageProvider : MemoryUsageProvider
+    public class LinuxMemoryUsageProvider : MemoryUsageProvider
     {
         public LinuxMemoryUsageProvider()
         {
         }
 
-        internal override ulong GetCommittedBytes()
+        public override ulong GetCommittedBytes()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
 

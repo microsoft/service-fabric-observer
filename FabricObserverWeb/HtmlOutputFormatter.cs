@@ -15,7 +15,7 @@ namespace FabricObserverWeb
         /// </summary>
         public HtmlOutputFormatter()
         {
-            this.SupportedMediaTypes.Add("text/html");
+            SupportedMediaTypes.Add("text/html");
         }
     }
 }

@@ -1,13 +1,5 @@
 ﻿[
   {
-    "targetApp": "fabric:/BadApp",
-    "cpuWarningLimitPercent": 30,
-    "memoryWarningLimitPercent": 30,
-    "memoryErrorLimitPercent": 80,
-    "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40
-  },
-  {
     "targetApp": "fabric:/ClusterObserver",
     "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
@@ -15,23 +7,16 @@
     "networkWarningEphemeralPorts": 40
   },
   {
+    "targetApp": "fabric:/FabricObserver",
+    "cpuWarningLimitPercent": 30,
+    "memoryWarningLimitPercent": 30,
+    "networkWarningActivePorts": 20,
+    "networkWarningEphemeralPorts": 20
+  },
+  {
     "targetAppType": "CpuStressType",
     "cpuWarningLimitPercent": 20,
     "memoryWarningLimitMb": 150
-  },
-  {
-    "targetApp": "fabric:/FabricObserver",
-    "cpuWarningLimitPercent": 20,
-    "memoryWarningLimitPercent": 20,
-    "networkWarningActivePorts": 20,
-    "networkWarningEphemeralPorts": 15
-  },
-  {
-    "targetApp": "fabric:/FabricObserverWebApi",
-    "cpuWarningLimitPercent": 30,
-    "memoryWarningLimitPercent": 30,
-    "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40
   },
   {
     "targetAppType": "PatchOrchestrationApplicationType",
@@ -39,5 +24,12 @@
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40
+  },
+  {
+    "targetApp": "fabric:/MyApp42",
+    "cpuWarningLimitPercent": 60,
+    "memoryWarningLimitPercent": 50,
+    "networkWarningActivePorts": 600,
+    "networkWarningEphemeralPorts": 300
   }
 ]

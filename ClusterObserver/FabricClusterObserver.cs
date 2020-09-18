@@ -15,7 +15,9 @@ namespace FabricClusterObserver
 
         public FabricClusterObserver(StatelessServiceContext context)
             : base(context)
-        { }
+        { 
+        
+        }
 
         /// <summary>
         /// This is the main entry point for your service instance.
@@ -23,7 +25,7 @@ namespace FabricClusterObserver
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            this.observerManager = new ObserverManager(this.Context, cancellationToken);
+            this.observerManager = new ObserverManager(Context, cancellationToken);
 
             await Task.Factory.StartNew(() => this.observerManager.StartObservers()).ConfigureAwait(true);
         }

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace FabricObserver.Observers.Utilities
 {
     // Data from the /proc/status file
-    internal struct ParsedStatus
+    public struct ParsedStatus
     {
         internal int Pid;
         internal ulong VmHWM;
@@ -29,7 +29,7 @@ namespace FabricObserver.Observers.Utilities
     /// <summary>
     /// This class contains method to read data from files under /proc directory on Linux.
     /// </summary>
-    internal static class LinuxProcFS
+    public static class LinuxProcFS
     {
         internal const string RootPath = "/proc/";
         private const string StatuSFileName = "/status";
@@ -37,7 +37,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Reads data from the /proc/meminfo file.
         /// </summary>
-        internal static Dictionary<string, ulong> ReadMemInfo()
+        public static Dictionary<string, ulong> ReadMemInfo()
         {
             // Currently /proc/meminfo contains 51 rows on Ubuntu 18.
             Dictionary<string, ulong> result = new Dictionary<string, ulong>(capacity: 64);
@@ -65,7 +65,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <returns>An Uptime/IdleTime tuple. The first value represents the total number of seconds the system has been up.
         /// The second value is the sum of how much time each core has spent idle, in seconds.</returns>
-        internal static async Task<(float Uptime, float IdleTime)> ReadUptimeAsync()
+        public static async Task<(float Uptime, float IdleTime)> ReadUptimeAsync()
         {
             // Doc: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/deployment_guide/s2-proc-uptime
             // Source code: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/fs/proc/uptime.c
@@ -82,7 +82,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Parses /proc/{pid}/status file.
         /// </summary>
-        internal static bool TryParseStatuSFile(int pid, out ParsedStatus result)
+        public static bool TryParseStatuSFile(int pid, out ParsedStatus result)
         {
             string statuSFilePath = RootPath + pid.ToString() + StatuSFileName;
 
@@ -92,7 +92,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Parses /proc/{pid}/status file.
         /// </summary>
-        internal static bool TryParseStatuSFile(string statuSFilePath, out ParsedStatus result)
+        public static bool TryParseStatuSFile(string statuSFilePath, out ParsedStatus result)
         {
             result = default(ParsedStatus);
 

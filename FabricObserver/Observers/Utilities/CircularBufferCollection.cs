@@ -71,13 +71,13 @@ namespace FabricObserver.Observers.Utilities
                 var buffer1 = new T[value];
                 var count = 0;
 
-                while (this.Count > 0 && count < value)
+                while (Count > 0 && count < value)
                 {
-                    buffer1[count++] = this.Dequeue();
+                    buffer1[count++] = Dequeue();
                 }
 
                 this.buffer = buffer1;
-                this.Count = count;
+                Count = count;
                 this.head = count - 1;
                 this.tail = 0;
             }
@@ -92,22 +92,22 @@ namespace FabricObserver.Observers.Utilities
         {
             get
             {
-                if (index < 0 || index >= this.Count)
+                if (index < 0 || index >= Count)
                 {
                     throw new ArgumentOutOfRangeException(nameof(index));
                 }
 
-                return this.buffer[(this.tail + index) % this.Capacity];
+                return this.buffer[(this.tail + index) % Capacity];
             }
 
             set
             {
-                if (index < 0 || index >= this.Count)
+                if (index < 0 || index >= Count)
                 {
                     throw new ArgumentOutOfRangeException(nameof(index));
                 }
 
-                this.buffer[(this.tail + index) % this.Capacity] = value;
+                this.buffer[(this.tail + index) % Capacity] = value;
             }
         }
 
@@ -118,13 +118,13 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Boolean representing success or failure of operation.</returns>
         public bool Remove(T item)
         {
-            if (!this.Contains(item))
+            if (!Contains(item))
             {
                 return false;
             }
 
-            this.RemoveAt(this.IndexOf(item));
-            this.Dequeue();
+            RemoveAt(IndexOf(item));
+            Dequeue();
 
             return true;
         }
@@ -136,17 +136,17 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Item that was enqueued.</returns>
         public T Enqueue(T item)
         {
-            this.head = (this.head + 1) % this.Capacity;
+            this.head = (this.head + 1) % Capacity;
             var overwritten = this.buffer[this.head];
             this.buffer[this.head] = item;
 
-            if (this.Count == this.Capacity)
+            if (Count == Capacity)
             {
-                this.tail = (this.tail + 1) % this.Capacity;
+                this.tail = (this.tail + 1) % Capacity;
             }
             else
             {
-                ++this.Count;
+                ++Count;
             }
 
             return overwritten;
@@ -158,15 +158,15 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Item that was dequeued.</returns>
         public T Dequeue()
         {
-            if (this.Count == 0)
+            if (Count == 0)
             {
                 throw new InvalidOperationException("queue exhausted");
             }
 
             var dequeued = this.buffer[this.tail];
             this.buffer[this.tail] = default(T);
-            this.tail = (this.tail + 1) % this.Capacity;
-            --this.Count;
+            this.tail = (this.tail + 1) % Capacity;
+            --Count;
 
             return dequeued;
         }
@@ -177,7 +177,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="item">Item to be added.</param>
         public void Add(T item)
         {
-            this.Enqueue(item);
+            Enqueue(item);
         }
 
         /// <summary>
@@ -186,10 +186,10 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public void Clear()
         {
-            this.head = this.Capacity - 1;
+            this.head = Capacity - 1;
             this.tail = 0;
-            this.Count = 0;
-            this.buffer = new List<T>(new T[this.Capacity]);
+            Count = 0;
+            this.buffer = new List<T>(new T[Capacity]);
         }
 
         /// <summary>
@@ -219,7 +219,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Index of item if found. Else, -1 if not found.</returns>
         public int IndexOf(T item)
         {
-            for (var i = 0; i < this.Count; ++i)
+            for (var i = 0; i < Count; ++i)
             {
                 if (Equals(item, this[i]))
                 {
@@ -237,29 +237,29 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="item">Element to insert into list.</param>
         public void Insert(int index, T item)
         {
-            if (index < 0 || index > this.Count)
+            if (index < 0 || index > Count)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(index),
                     $"invalid index supplied: {index}");
             }
 
-            if (this.Count == index)
+            if (Count == index)
             {
-                this.Enqueue(item);
+                Enqueue(item);
             }
             else
             {
-                var last = this[this.Count - 1];
+                var last = this[Count - 1];
 
-                for (var i = index; i < this.Count - 2; ++i)
+                for (var i = index; i < Count - 2; ++i)
                 {
                     this[i + 1] = this[i];
                 }
 
                 this[index] = item;
 
-                this.Enqueue(last);
+                Enqueue(last);
             }
         }
 
@@ -269,7 +269,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="index">Index of the element in the List to remove.</param>
         public void RemoveAt(int index)
         {
-            if (index < 0 || index >= this.Count)
+            if (index < 0 || index >= Count)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(index),
@@ -281,7 +281,7 @@ namespace FabricObserver.Observers.Utilities
                 this[i] = this[i - 1];
             }
 
-            this.Dequeue();
+            Dequeue();
         }
 
         /// <summary>
@@ -290,12 +290,12 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Enumerator.</returns>
         public IEnumerator<T> GetEnumerator()
         {
-            if (this.Count == 0 || this.Capacity == 0)
+            if (Count == 0 || Capacity == 0)
             {
                 yield break;
             }
 
-            for (var i = 0; i < this.Count; ++i)
+            for (var i = 0; i < Count; ++i)
             {
                 yield return this[i];
             }
@@ -307,7 +307,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Enumerator.</returns>
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return this.GetEnumerator();
+            return GetEnumerator();
         }
     }
 }

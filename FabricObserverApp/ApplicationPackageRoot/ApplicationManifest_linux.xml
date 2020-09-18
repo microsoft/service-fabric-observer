@@ -220,6 +220,9 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
+    <Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+    </Policies>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -232,4 +235,9 @@
       </StatelessService>
     </Service>
   </DefaultServices>
+  <Principals>
+    <Users>
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
+  </Principals>
 </ApplicationManifest>

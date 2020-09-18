@@ -3,18 +3,18 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
+using System.Fabric;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+
 namespace FabricObserverWeb
 {
-    using System;
-    using System.Fabric;
-    using System.IO;
-    using System.Linq;
-    using System.Net;
-    using System.Runtime.InteropServices;
-    using System.Text;
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Mvc;
-
     [Route("api/ObserverManager")]
     [Produces("text/html")]
     [ApiController]
@@ -145,16 +145,16 @@ namespace FabricObserverWeb
 
                     var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
                     var ordered = nodeList.OrderBy(node => node.NodeName);
-                    var host = this.Request.Host.Value;
+                    var host = Request.Host.Value;
 
                     // Request originating from ObserverWeb node hyperlinks.
-                    if (this.Request.QueryString.HasValue && this.Request.Query.ContainsKey("fqdn"))
+                    if (Request.QueryString.HasValue && Request.Query.ContainsKey("fqdn"))
                     {
-                        host = this.Request.Query["fqdn"];
+                        host = Request.Query["fqdn"];
 
                         foreach (var node in ordered)
                         {
-                            nodeLinks += "| <a href='" + this.Request.Scheme + "://" + host + "/api/ObserverManager/" + node.NodeName + "'>" + node.NodeName + "</a> | ";
+                            nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverManager/" + node.NodeName + "'>" + node.NodeName + "</a> | ";
                         }
                     }
 
@@ -234,7 +234,7 @@ namespace FabricObserverWeb
                         addr = "http://" + addr;
                     }
 
-                    string fqdn = "?fqdn=" + this.Request.Host;
+                    string fqdn = "?fqdn=" + Request.Host;
                     var req = WebRequest.Create(addr + ":5000/api/ObserverManager" + fqdn);
                     req.Credentials = CredentialCache.DefaultCredentials;
                     var response = (HttpWebResponse)req.GetResponse();

@@ -12,7 +12,7 @@ namespace FabricObserver
     {
         public FabricObserverStartupAttribute(Type startupType)
         {
-            this.StartupType = startupType;
+            StartupType = startupType;
         }
 
         public Type StartupType

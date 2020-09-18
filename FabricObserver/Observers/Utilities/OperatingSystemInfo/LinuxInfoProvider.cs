@@ -6,15 +6,18 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Fabric;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class LinuxInfoProvider : OperatingSystemInfoProvider
+    public class LinuxInfoProvider : OperatingSystemInfoProvider
     {
-        internal override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        private static readonly Logger Logger = new Logger("LinuxOSProvider");
+
+        public override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
 
@@ -26,36 +29,36 @@ namespace FabricObserver.Observers.Utilities
             return (totalMemory / 1048576, (int)(((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100));
         }
 
-        internal override int GetActivePortCount(int processId = -1)
+        public override int GetActivePortCount(int processId = -1, ServiceContext context = null)
         {
-            int count = GetPortCount(processId, predicate: (line) => true);
+            int count = GetPortCount(processId, predicate: (line) => true, context);
             return count;
         }
 
-        internal override int GetActiveEphemeralPortCount(int processId = -1)
+        public override int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null)
         {
-            (int lowPort, int highPort) = this.TupleGetDynamicPortRange();
+            (int lowPort, int highPort) = TupleGetDynamicPortRange();
 
             int count = GetPortCount(processId, (line) =>
                         {
                             int port = GetPortFromNetstatOutput(line);
                             return port >= lowPort && port <= highPort;
-                        });
+                        }, context);
 
             return count;
         }
 
-        internal override (int LowPort, int HighPort) TupleGetDynamicPortRange()
+        public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
             string text = File.ReadAllText("/proc/sys/net/ipv4/ip_local_port_range");
             int tabIndex = text.IndexOf('\t');
             return (LowPort: int.Parse(text.AsSpan(0, tabIndex)), HighPort: int.Parse(text.AsSpan(tabIndex + 1)));
         }
 
-        internal override async Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
+        public override async Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
         {
             OSInfo osInfo = default(OSInfo);
-            (int exitCode, List<string> outputLines) = await this.ExecuteProcessAsync("lsb_release", "-d");
+            (int exitCode, List<string> outputLines) = await ExecuteProcessAsync("lsb_release", "-d");
 
             if (exitCode == 0 && outputLines.Count == 1)
             {
@@ -102,20 +105,42 @@ namespace FabricObserver.Observers.Utilities
             return osInfo;
         }
 
-        private static int GetPortCount(int processId, Predicate<string> predicate)
+        public static int GetPortCount(int processId, Predicate<string> predicate, ServiceContext context = null)
         {
             string processIdStr = processId == -1 ? string.Empty : " " + processId.ToString() + "/";
 
+            /*
+            ** -t - tcp
+            ** -p - display PID/Program name for sockets
+            ** -n - don't resolve names
+            ** -a - display all sockets (default: connected)
+            */
+            string arg = "-tna";
+            string bin = "netstat";
+
+            if (processId > -1)
+            {
+                if (context == null)
+                {
+                    return -1;
+                }
+
+                // We need the full path to the currently deployed FO CodePackage, which is were our 
+                // proxy binary lives, which is used for elevated netstat call.
+                string path = context.CodePackageActivationContext.GetCodePackageObject("Code").Path;
+                arg = string.Empty;
+
+                // This is a proxy binary that uses Capabilites to run netstat -tpna with elevated privilege.
+                // FO runs as sfappsuser (SF default, Linux normal user), which can't run netstat -tpna. 
+                // During deployment, a setup script is run (as root user)
+                // that adds capabilities to elevated_netstat program, which will *only* run (execv) "netstat -tpna".
+                bin = $"{path}/elevated_netstat";
+            }
+
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                /*
-                ** -t - tcp
-                ** -p - display PID/Program name for sockets
-                ** -n - don't resolve names
-                ** -a - display all sockets (default: connected)
-                */
-                Arguments = processId == -1 ? "-tna" : "-tpna",
-                FileName = "netstat",
+                Arguments = arg,
+                FileName = bin,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 RedirectStandardInput = false,
@@ -124,44 +149,41 @@ namespace FabricObserver.Observers.Utilities
             };
 
             int count = 0;
+            string line;
+            using Process process = Process.Start(startInfo);
 
-            using (Process process = Process.Start(startInfo))
+            while ((line = process.StandardOutput.ReadLine()) != null)
             {
-                string line;
-
-                while ((line = process.StandardOutput.ReadLine()) != null)
+                if (!line.StartsWith("tcp ", StringComparison.Ordinal))
                 {
-                    if (!line.StartsWith("tcp ", StringComparison.Ordinal))
-                    {
-                        // skip headers
-                        continue;
-                    }
-
-                    if (processId != -1 && !line.Contains(processIdStr, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    if (!predicate(line))
-                    {
-                        continue;
-                    }
-
-                    ++count;
+                    // skip headers
+                    continue;
                 }
 
-                process.WaitForExit();
-
-                if (process.ExitCode != 0)
+                if (processId != -1 && !line.Contains(processIdStr, StringComparison.Ordinal))
                 {
-                    return -1;
+                    continue;
                 }
+
+                if (!predicate(line))
+                {
+                    continue;
+                }
+
+                ++count;
+            }
+
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                return -1;
             }
 
             return count;
         }
 
-        private static int GetPortFromNetstatOutput(string line)
+        public static int GetPortFromNetstatOutput(string line)
         {
             /*
             ** Example:
@@ -183,7 +205,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        private async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
+        public async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
             {

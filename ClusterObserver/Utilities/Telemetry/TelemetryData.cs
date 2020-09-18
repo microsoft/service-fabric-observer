@@ -103,7 +103,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
             var (clusterId, _) =
               ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
 
-            this.ClusterId = clusterId;
+            ClusterId = clusterId;
         }
     }
 }

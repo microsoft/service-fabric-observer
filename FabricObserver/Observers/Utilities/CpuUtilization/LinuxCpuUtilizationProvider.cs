@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class LinuxCpuUtilizationProvider : CpuUtilizationProvider
+    public class LinuxCpuUtilizationProvider : CpuUtilizationProvider
     {
         private float uptimeInSeconds;
         private float idleTimeInSeconds;

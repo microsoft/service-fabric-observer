@@ -24,7 +24,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="data">List of numeric values of type T.</param>
         /// <returns>Standard deviation of input type T as type T.
         /// Consumption: See impl of StandardDeviation member of FabricResourceUsageData class.</returns>
-        internal static T StandardDeviation<T>(IList<T> data)
+        public static T StandardDeviation<T>(IList<T> data)
         {
             var squaredMeanDifferences = new List<T>();
             T meanOfSquaredDifferences;
@@ -108,7 +108,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="windowWidth">Number of elements inside a window.</param>
         /// <param name="windowType">Minimum or Maximum sliding window sort.</param>
         /// <returns>List of sliding window sorted elements of numeric type T.</returns>
-        internal static IList<T> SlidingWindow<T>(
+        public static IList<T> SlidingWindow<T>(
             IList<T> data,
             int windowWidth,
             WindowType windowType)

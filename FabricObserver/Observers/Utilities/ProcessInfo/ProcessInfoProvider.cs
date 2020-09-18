@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal abstract class ProcessInfoProvider : IProcessInfoProvider
+    public abstract class ProcessInfoProvider : IProcessInfoProvider
     {
         private static IProcessInfoProvider instance;
         private static object lockObj = new object();
@@ -16,7 +16,7 @@ namespace FabricObserver.Observers.Utilities
         {
         }
 
-        internal static IProcessInfoProvider Instance
+        public static IProcessInfoProvider Instance
         {
             get
             {

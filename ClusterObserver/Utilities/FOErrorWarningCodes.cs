@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Linq;
 
 namespace FabricClusterObserver.Utilities
 {
@@ -97,23 +98,24 @@ namespace FabricClusterObserver.Utilities
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
         };
 
-        public static string GetErrorWarningNameFromFOCode(string id, HealthScope scope)
+        public static string GetErrorWarningNameFromFOCode(string id)
         {
             if (string.IsNullOrEmpty(id))
             {
-                return string.Empty;
+                return null;
             }
 
-            IDictionary<string, string> dict = AppErrorCodesDictionary;
-
-            if (scope == HealthScope.Node)
+            if (AppErrorCodesDictionary.Any(k => k.Key == id))
             {
-                dict = NodeErrorCodesDictionary;
+                return AppErrorCodesDictionary.First(k => k.Key == id).Value;
             }
 
-            return dict.TryGetValue(
-                id,
-                out string err) != false ? err : string.Empty;
+            if (NodeErrorCodesDictionary.Any(k => k.Key == id))
+            {
+                return NodeErrorCodesDictionary.First(k => k.Key == id).Value;
+            }
+
+            return null;
         }
     }
 }

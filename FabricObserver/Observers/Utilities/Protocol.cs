@@ -5,7 +5,7 @@
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal enum Protocol
+    public enum Protocol
     {
         None,
         Tcp,

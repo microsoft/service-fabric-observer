@@ -5,7 +5,7 @@
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal struct OSInfo
+    public struct OSInfo
     {
         // General Info
         public string Name;

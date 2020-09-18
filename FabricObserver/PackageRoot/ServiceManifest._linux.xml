@@ -12,6 +12,12 @@
 
   <!-- Code package is your service executable. -->
   <CodePackage Name="Code" Version="3.0.4">
+    <SetupEntryPoint>
+      <ExeHost>
+        <Program>netstat_cap.sh</Program>
+        <WorkingFolder>CodePackage</WorkingFolder>
+      </ExeHost>
+    </SetupEntryPoint>
     <EntryPoint>
       <ExeHost>
         <Program>FabricObserver</Program>

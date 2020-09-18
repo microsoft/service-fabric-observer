@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Fabric;
 using System.IO;
 using System.Linq;
@@ -32,6 +33,7 @@ namespace FabricObserver
         public FabricObserver(StatelessServiceContext context)
             : base(context)
         {
+            
         }
 
         /// <summary>
@@ -42,7 +44,7 @@ namespace FabricObserver
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
             ServiceCollection services = new ServiceCollection();
-            this.ConfigureServices(services);
+            ConfigureServices(services);
 
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
             this.observerManager = new ObserverManager(serviceProvider, cancellationToken);
@@ -63,9 +65,9 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(ObserverBase), typeof(NodeObserver));
             _ = services.AddScoped(typeof(ObserverBase), typeof(OSObserver));
             _ = services.AddScoped(typeof(ObserverBase), typeof(SFConfigurationObserver));
-            _ = services.AddSingleton(typeof(StatelessServiceContext), this.Context);
+            _ = services.AddSingleton(typeof(StatelessServiceContext), Context);
 
-            this.LoadObserversFromPlugins(services);
+            LoadObserversFromPlugins(services);
         }
 
         /// <summary>
@@ -74,7 +76,7 @@ namespace FabricObserver
         /// <param name="services"></param>
         private void LoadObserversFromPlugins(ServiceCollection services)
         {
-            string pluginsDir = Path.Combine(this.Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
+            string pluginsDir = Path.Combine(Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
             if (!Directory.Exists(pluginsDir))
             {
@@ -87,15 +89,15 @@ namespace FabricObserver
             {
                 return;
             }
-
+           
+            /*if (IsRunningAsSystem())
+            {
+                return;
+            }*/
+           
             List<PluginLoader> pluginLoaders = new List<PluginLoader>(capacity: pluginDlls.Length);
 
             Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
-
-            if (sharedTypes.Length == 0)
-            {
-                return;
-            }
 
             foreach (string pluginDll in pluginDlls)
             {
@@ -127,6 +129,30 @@ namespace FabricObserver
                     }
                 }
             }
+        }
+
+        private bool IsRunningAsSystem()
+        {
+            Process systemProc = null;
+
+            try
+            {
+                var fabricSystemProc = Process.GetProcessesByName("FabricHost");
+                systemProc = fabricSystemProc.Length > 0 ? fabricSystemProc[0] : null;
+                var mem = systemProc?.WorkingSet64;
+               
+                return true;
+            }
+            catch
+            {
+             
+            }
+            finally
+            {
+                systemProc?.Dispose();
+            }
+
+            return false;
         }
     }
 }

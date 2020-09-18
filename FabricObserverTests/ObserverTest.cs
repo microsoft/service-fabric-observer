@@ -69,7 +69,7 @@ namespace FabricObserverTests
         /// </summary>
         public ObserverTest()
         {
-            this.isSFRuntimePresentOnTestMachine = this.IsLocalSFRuntimePresent();
+            this.isSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
 
             // You must set ObserverBase's static IsTestRun to true to run these unit tests.
             FabricObserver.Observers.ObserverBase.IsTestRun = true;
@@ -1076,7 +1076,7 @@ namespace FabricObserverTests
             {
                 var healthReport = new FabricObserver.Observers.Utilities.HealthReport
                 {
-                    Code = FoErrorWarningCodes.Ok,
+                    Code = FOErrorWarningCodes.Ok,
                     HealthMessage = $"Clearing existing Health Error/Warning, {obs.HealthReportProperties[i]}/{obs.HealthReportSourceIds[i]}, as FO is stopping.",
                     Property = obs.HealthReportProperties[i],
                     SourceId = obs.HealthReportSourceIds[i],
@@ -1234,7 +1234,7 @@ namespace FabricObserverTests
             {
                 var healthReport = new FabricObserver.Observers.Utilities.HealthReport
                 {
-                    Code = FoErrorWarningCodes.Ok,
+                    Code = FOErrorWarningCodes.Ok,
                     HealthMessage = $"Clearing existing Health Error/Warning, {obs.HealthReportProperties[i]}/{obs.HealthReportSourceIds[i]}, as FO is stopping.",
                     Property = obs.HealthReportProperties[i],
                     SourceId = obs.HealthReportSourceIds[i],
@@ -1399,7 +1399,7 @@ namespace FabricObserverTests
                 var healthReport = new FabricObserver.Observers.Utilities.HealthReport
                 {
                     AppName = !string.IsNullOrEmpty(obs.AppNames[i]) ? new Uri(obs.AppNames[i]) : null,
-                    Code = FoErrorWarningCodes.Ok,
+                    Code = FOErrorWarningCodes.Ok,
                     HealthMessage = $"Clearing existing Health Error/Warning, {obs.HealthReportProperties[i]}/{obs.HealthReportSourceIds[i]}, as FO is stopping.",
                     Property = obs.HealthReportProperties[i],
                     SourceId = obs.HealthReportSourceIds[i],

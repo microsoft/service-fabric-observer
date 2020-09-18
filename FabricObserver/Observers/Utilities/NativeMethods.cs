@@ -11,7 +11,7 @@ using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 namespace FabricObserver.Observers.Utilities
 {
     [SuppressUnmanagedCodeSecurity]
-    internal static class NativeMethods
+    public static class NativeMethods
     {
         // Process dump support.
         [DllImport(
@@ -59,7 +59,7 @@ namespace FabricObserver.Observers.Utilities
             MiniDumpValidTypeFlags = 0x001fffff,
         }
 
-        internal enum NT_STATUS
+        public enum NT_STATUS
         {
             STATUS_SUCCESS = 0x00000000,
             STATUS_BUFFER_OVERFLOW = unchecked((int)0x80000005L),
@@ -67,7 +67,7 @@ namespace FabricObserver.Observers.Utilities
             STATUS_NO_MEMORY = unchecked((int)0xC0000017L),
         }
 
-        internal enum SYSTEM_INFORMATION_CLASS
+        public enum SYSTEM_INFORMATION_CLASS
         {
             SystemBasicInformation = 0,
             SystemPerformanceInformation = 2,
@@ -82,14 +82,14 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool GetSystemTimes(
+        public static extern bool GetSystemTimes(
                     out FILETIME lpIdleTime,
                     out FILETIME lpKernelTime,
                     out FILETIME lpUserTime);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetProcessTimes(
+        public static extern bool GetProcessTimes(
             IntPtr hProcess,
             out FILETIME lpCreationTime,
             out FILETIME lpExitTime,
@@ -97,10 +97,10 @@ namespace FabricObserver.Observers.Utilities
             out FILETIME lpUserTime);
 
         [DllImport("kernel32.dll")]
-        internal static extern uint GetTickCount();
+        public static extern uint GetTickCount();
 
         [StructLayout(LayoutKind.Explicit, Size = 8)]
-        internal struct LARGE_INTEGER
+        public struct LARGE_INTEGER
         {
             [FieldOffset(0)]
             public ulong QuadPart;
@@ -111,7 +111,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [DllImport("ntdll.dll")]
-        internal static extern NT_STATUS NtQuerySystemInformation(
+        public static extern NT_STATUS NtQuerySystemInformation(
             [In] SYSTEM_INFORMATION_CLASS SystemInformationClass,
             [In] IntPtr SystemInformation,
             [In] int SystemInformationLength,
@@ -119,7 +119,7 @@ namespace FabricObserver.Observers.Utilities
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetVolumePathName(
+        public static extern bool GetVolumePathName(
             string lpszVolumeName,
             char[] lpszVolumePathNames,
             uint cchBufferLength);

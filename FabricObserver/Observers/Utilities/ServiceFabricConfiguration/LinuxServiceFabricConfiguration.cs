@@ -8,13 +8,13 @@ using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class LinuxServiceFabricConfiguration : ServiceFabricConfiguration
+    public class LinuxServiceFabricConfiguration : ServiceFabricConfiguration
     {
         public override string FabricVersion
         {
             get
             {
-                string clusterVersionPath = Path.Combine(this.FabricCodePath, "ClusterVersion");
+                string clusterVersionPath = Path.Combine(FabricCodePath, "ClusterVersion");
                 string fabricVersion = null;
 
                 if (File.Exists(clusterVersionPath))
@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public override string FabricRoot => Path.GetDirectoryName(this.FabricBinRoot);
+        public override string FabricRoot => Path.GetDirectoryName(FabricBinRoot);
 
         public override int GetInt32(string name) => int.Parse(Read(name, defaultValue: "0"));
 

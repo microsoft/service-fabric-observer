@@ -37,16 +37,16 @@ namespace FabricClusterObserver.Utilities
         /// <param name="logFolderBasePath">Base folder path.</param>
         public Logger(string observerName, string logFolderBasePath = null)
         {
-            this.FolderName = observerName;
-            this.Filename = observerName + ".log";
+            FolderName = observerName;
+            Filename = observerName + ".log";
             this.loggerName = observerName;
 
             if (!string.IsNullOrEmpty(logFolderBasePath))
             {
-                this.LogFolderBasePath = logFolderBasePath;
+                LogFolderBasePath = logFolderBasePath;
             }
 
-            this.InitializeLoggers();
+            InitializeLoggers();
         }
 
         internal void InitializeLoggers()
@@ -66,20 +66,20 @@ namespace FabricClusterObserver.Utilities
             }
 
             // log directory supplied in config. Set in ObserverManager.
-            if (!string.IsNullOrEmpty(this.LogFolderBasePath))
+            if (!string.IsNullOrEmpty(LogFolderBasePath))
             {
-                logFolderBase = this.LogFolderBasePath;
+                logFolderBase = LogFolderBasePath;
             }
 
             string file = Path.Combine(logFolderBase, "cluster_observer.log");
 
-            if (!string.IsNullOrEmpty(this.FolderName) && !string.IsNullOrEmpty(this.Filename))
+            if (!string.IsNullOrEmpty(FolderName) && !string.IsNullOrEmpty(Filename))
             {
-                string folderPath = Path.Combine(logFolderBase, this.FolderName);
-                file = Path.Combine(folderPath, this.Filename);
+                string folderPath = Path.Combine(logFolderBase, FolderName);
+                file = Path.Combine(folderPath, Filename);
             }
 
-            this.FilePath = file;
+            FilePath = file;
 
             var targetName = this.loggerName + "LogFile";
 
@@ -110,32 +110,32 @@ namespace FabricClusterObserver.Utilities
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
-            this.OLogger = LogManager.GetLogger(this.loggerName);
+            OLogger = LogManager.GetLogger(this.loggerName);
         }
 
         public void LogTrace(string observer, string format, params object[] parameters)
         {
-            this.OLogger.Trace(observer + "|" + format, parameters);
+            OLogger.Trace(observer + "|" + format, parameters);
         }
 
         public void LogInfo(string format, params object[] parameters)
         {
-            if (!this.EnableVerboseLogging)
+            if (!EnableVerboseLogging)
             {
                 return;
             }
 
-            this.OLogger.Info(format, parameters);
+            OLogger.Info(format, parameters);
         }
 
         public void LogError(string format, params object[] parameters)
         {
-            this.OLogger.Error(format, parameters);
+            OLogger.Error(format, parameters);
         }
 
         public void LogWarning(string format, params object[] parameters)
         {
-            this.OLogger.Warn(format, parameters);
+            OLogger.Warn(format, parameters);
         }
 
         public static void ShutDown()

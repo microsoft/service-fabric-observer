@@ -9,7 +9,7 @@ using System.Diagnostics;
 namespace FabricObserver.Observers.Utilities
 {
     // .NET Standard Process-based impl (cross-platform)
-    internal class CpuUsage
+    public class CpuUsage
     {
         private DateTime prevTime = DateTime.MinValue;
         private DateTime currentTimeTime = DateTime.MinValue;

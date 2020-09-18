@@ -51,8 +51,8 @@ namespace FabricObserver.Observers
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (this.RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(this.LastRunDateTime) < this.RunInterval)
+            if (RunInterval > TimeSpan.MinValue
+                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
@@ -62,27 +62,27 @@ namespace FabricObserver.Observers
             {
                 var nodes = FabricClientInstance.QueryManager.GetNodeListAsync(
                                 null,
-                                this.AsyncClusterOperationTimeoutSeconds,
+                                AsyncClusterOperationTimeoutSeconds,
                                 Token).GetAwaiter().GetResult();
 
                 if (nodes.Count > 1 && bool.TryParse(
-                                        this.GetSettingParameterValue(
-                                            this.ConfigurationSectionName,
+                                        GetSettingParameterValue(
+                                            ConfigurationSectionName,
                                             ObserverConstants.EnableWindowsAutoUpdateCheck,
                                             "true"),
                                          out bool enableWindowsAUCheck))
                 {
                     if (enableWindowsAUCheck)
                     {
-                        await this.CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
+                        await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
                     }
                 }
             }
 
-            await this.GetComputerInfoAsync(token).ConfigureAwait(false);
+            await GetComputerInfoAsync(token).ConfigureAwait(false);
 
-            await this.ReportAsync(token).ConfigureAwait(false);
-            this.LastRunDateTime = DateTime.Now;
+            await ReportAsync(token).ConfigureAwait(false);
+            LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -97,60 +97,60 @@ namespace FabricObserver.Observers
                     string healthMessage = $"OS reporting unhealthy: {this.osStatus}";
                     var healthReport = new HealthReport
                     {
-                        Observer = this.ObserverName,
-                        NodeName = this.NodeName,
+                        Observer = ObserverName,
+                        NodeName = NodeName,
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
-                        HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = SetHealthReportTimeToLive(),
                     };
 
-                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+                    HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                     // This means this observer created a Warning or Error SF Health Report
-                    this.HasActiveFabricErrorOrWarning = true;
+                    HasActiveFabricErrorOrWarning = true;
 
                     // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
                     {
-                        _ = this.TelemetryClient?.ReportHealthAsync(
+                        _ = TelemetryClient?.ReportHealthAsync(
                             HealthScope.Application,
                             FabricRuntime.GetActivationContext().ApplicationName,
                             HealthState.Error,
-                            $"{this.NodeName} - OS reporting unhealthy: {this.osStatus}",
-                            this.ObserverName,
-                            this.Token);
+                            $"{NodeName} - OS reporting unhealthy: {this.osStatus}",
+                            ObserverName,
+                            Token);
                     }
                 }
-                else if (this.HasActiveFabricErrorOrWarning && string.Equals(this.osStatus, "OK", StringComparison.OrdinalIgnoreCase))
+                else if (HasActiveFabricErrorOrWarning && string.Equals(this.osStatus, "OK", StringComparison.OrdinalIgnoreCase))
                 {
                     // Clear Error or Warning with an OK Health Report.
                     string healthMessage = $"OS reporting healthy: {this.osStatus}";
 
                     var healthReport = new HealthReport
                     {
-                        Observer = this.ObserverName,
-                        NodeName = this.NodeName,
+                        Observer = ObserverName,
+                        NodeName = NodeName,
                         HealthMessage = healthMessage,
                         State = HealthState.Ok,
                         HealthReportTimeToLive = default(TimeSpan),
                     };
 
-                    this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+                    HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                     // Reset internal health state.
-                    this.HasActiveFabricErrorOrWarning = false;
+                    HasActiveFabricErrorOrWarning = false;
                 }
 
                 if (ObserverManager.ObserverWebAppDeployed)
                 {
-                    var logPath = Path.Combine(this.ObserverLogger.LogFolderBasePath, "SysInfo.txt");
+                    var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "SysInfo.txt");
 
                     // This file is used by the web application (log reader.).
-                    if (!this.ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{this.osReport}"))
+                    if (!ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{this.osReport}"))
                     {
-                        this.HealthReporter.ReportFabricObserverServiceHealth(
-                            this.FabricServiceContext.ServiceName.OriginalString,
-                            this.ObserverName,
+                        HealthReporter.ReportFabricObserverServiceHealth(
+                            FabricServiceContext.ServiceName.OriginalString,
+                            ObserverName,
                             HealthState.Warning,
                             "Unable to create SysInfo.txt file.");
                     }
@@ -158,14 +158,14 @@ namespace FabricObserver.Observers
 
                 var report = new HealthReport
                 {
-                    Observer = this.ObserverName,
+                    Observer = ObserverName,
                     HealthMessage = this.osReport,
                     State = HealthState.Ok,
-                    NodeName = this.NodeName,
-                    HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
+                    NodeName = NodeName,
+                    HealthReportTimeToLive = SetHealthReportTimeToLive(),
                 };
 
-                this.HealthReporter.ReportHealthToServiceFabric(report);
+                HealthReporter.ReportHealthToServiceFabric(report);
 
                 // Windows Update automatic download enabled?
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.isWindowsUpdateAutoDownloadEnabled)
@@ -181,37 +181,37 @@ namespace FabricObserver.Observers
 
                     report = new HealthReport
                     {
-                        Observer = this.ObserverName,
+                        Observer = ObserverName,
                         Property = "OSConfiguration",
                         HealthMessage = auServiceEnabledMessage,
                         State = HealthState.Warning,
-                        NodeName = this.NodeName,
-                        HealthReportTimeToLive = this.SetHealthReportTimeToLive(),
+                        NodeName = NodeName,
+                        HealthReportTimeToLive = SetHealthReportTimeToLive(),
                     };
 
-                    this.HealthReporter.ReportHealthToServiceFabric(report);
+                    HealthReporter.ReportHealthToServiceFabric(report);
 
-                    if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                        var telemetryData = new TelemetryData(this.FabricClientInstance, token)
+                        var telemetryData = new TelemetryData(FabricClientInstance, token)
                         {
                             HealthEventDescription = auServiceEnabledMessage,
                             HealthState = "Warning",
                             Metric = "WUAutoDownloadEnabled",
                             Value = this.isWindowsUpdateAutoDownloadEnabled,
-                            NodeName = this.NodeName,
-                            ObserverName = this.ObserverName,
+                            NodeName = NodeName,
+                            ObserverName = ObserverName,
                             Source = ObserverConstants.FabricObserverName,
                         };
 
-                        _ = this.TelemetryClient?.ReportMetricAsync(
+                        _ = TelemetryClient?.ReportMetricAsync(
                             telemetryData,
-                            this.Token);
+                            Token);
                     }
 
                     // ETW.
-                    if (this.IsEtwEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (IsEtwEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
@@ -219,10 +219,10 @@ namespace FabricObserver.Observers
                             {
                                 HealthState = "Warning",
                                 HealthEventDescription = auServiceEnabledMessage,
-                                this.ObserverName,
+                                ObserverName,
                                 Metric = "WUAutoDownloadEnabled",
                                 Value = this.isWindowsUpdateAutoDownloadEnabled,
-                                this.NodeName,
+                                NodeName,
                             });
                     }
                 }
@@ -238,9 +238,9 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
+                HealthReporter.ReportFabricObserverServiceHealth(
+                    FabricServiceContext.ServiceName.OriginalString,
+                    ObserverName,
                     HealthState.Error,
                     $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
 
@@ -266,7 +266,7 @@ namespace FabricObserver.Observers
                 }
 
                 var resultsOrdered = results.Cast<ManagementObject>()
-                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"]?.ToString()));
+                                            .OrderByDescending(obj => obj["InstalledOn"]);
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";
@@ -320,7 +320,7 @@ namespace FabricObserver.Observers
                 e is SecurityException ||
                 e is Win32Exception)
             {
-                this.ObserverLogger.LogWarning(
+                ObserverLogger.LogWarning(
                     $"{AuStateUnknownMessage}{Environment.NewLine}{e}");
 
                 this.auStateUnknown = true;
@@ -349,12 +349,12 @@ namespace FabricObserver.Observers
                 string fabricAppPortRange = string.Empty;
 
                 string clusterManifestXml = IsTestRun ? File.ReadAllText(
-                    this.TestManifestPath) : await this.FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                        this.AsyncClusterOperationTimeoutSeconds, this.Token).ConfigureAwait(false);
+                    TestManifestPath) : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
+                        AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
 
                 (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(
-                    this.FabricServiceContext.NodeContext.NodeType,
+                    FabricServiceContext.NodeContext.NodeType,
                     clusterManifestXml);
 
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
@@ -484,7 +484,7 @@ namespace FabricObserver.Observers
                 string hotFixes = string.Empty;
 
                 // ETW.
-                if (this.IsEtwEnabled)
+                if (IsEtwEnabled)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
@@ -496,8 +496,8 @@ namespace FabricObserver.Observers
                         new
                         {
                             HealthState = "Ok",
-                            Node = this.NodeName,
-                            Observer = this.ObserverName,
+                            Node = NodeName,
+                            Observer = ObserverName,
                             OS = osInfo.Name,
                             OSVersion = osInfo.Version,
                             OSInstallDate = osInfo.InstallDate,
@@ -521,19 +521,19 @@ namespace FabricObserver.Observers
                 }
 
                 // Telemetry
-                if (this.IsTelemetryProviderEnabled && this.IsObserverTelemetryEnabled)
+                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
                 {
                     if (string.IsNullOrEmpty(hotFixes) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         hotFixes = GetWindowsHotFixes(token, generateUrl: false).Replace("\r\n", ", ").TrimEnd(',');
                     }
 
-                    this.TelemetryClient?.ReportMetricAsync(
+                    TelemetryClient?.ReportMetricAsync(
                         new MachineTelemetryData
                         {
                             HealthState = "Ok",
-                            Node = this.NodeName,
-                            Observer = this.ObserverName,
+                            Node = NodeName,
+                            Observer = ObserverName,
                             OS = osInfo.Name,
                             OSVersion = osInfo.Version,
                             OSInstallDate = osInfo.InstallDate,
@@ -552,14 +552,14 @@ namespace FabricObserver.Observers
                             WindowsDynamicPortRange = osEphemeralPortRange,
                             FabricAppPortRange = fabricAppPortRange,
                             HotFixes = hotFixes,
-                        }, this.Token);
+                        }, Token);
                 }
             }
             catch (Exception e)
             {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    this.FabricServiceContext.ServiceName.OriginalString,
-                    this.ObserverName,
+                HealthReporter.ReportFabricObserverServiceHealth(
+                    FabricServiceContext.ServiceName.OriginalString,
+                    ObserverName,
                     HealthState.Error,
                     $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 

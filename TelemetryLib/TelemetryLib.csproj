@@ -11,6 +11,7 @@
     <FileVersion>1.0.0.5</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>TelemetryLib</Product>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <Import Project="Properties\common.props" />
   <Import Project="Properties\EnableStylecop.props" />

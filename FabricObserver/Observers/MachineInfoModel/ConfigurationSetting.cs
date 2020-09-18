@@ -30,7 +30,7 @@ namespace FabricObserver.Observers.MachineInfoModel
                 defaultValue,
                 true)
         {
-            this.ConfigurationSettings = configurationSettings;
+            ConfigurationSettings = configurationSettings;
         }
 
         /// <summary>
@@ -46,11 +46,11 @@ namespace FabricObserver.Observers.MachineInfoModel
             T defaultValue,
             bool enableTracing)
         {
-            this.SettingName = settingName;
-            this.DefaultValue = defaultValue;
-            this.ValueSpecified = false;
-            this.DisableTracing = !enableTracing;
-            this.ConfigurationSectionName = configurationSectionName;
+            SettingName = settingName;
+            DefaultValue = defaultValue;
+            ValueSpecified = false;
+            DisableTracing = !enableTracing;
+            ConfigurationSectionName = configurationSectionName;
         }
 
         /// <summary>
@@ -68,23 +68,23 @@ namespace FabricObserver.Observers.MachineInfoModel
         {
             get
             {
-                if (this.ValueSpecified)
+                if (ValueSpecified)
                 {
-                    return this.Value1;
+                    return Value1;
                 }
 
-                this.Value1 = this.DefaultValue;
-                var appConfigValue = this.GetConfigurationSetting(this.SettingName);
+                Value1 = DefaultValue;
+                var appConfigValue = GetConfigurationSetting(SettingName);
 
                 if (appConfigValue != null)
                 {
-                    this.Value1 = !this.TryParse(appConfigValue, out T val) ? this.DefaultValue : val;
+                    Value1 = !TryParse(appConfigValue, out T val) ? DefaultValue : val;
                 }
 
-                this.ValueSpecified = true;
+                ValueSpecified = true;
 
                 // This is ALWAYS the ACS value of the setting (never overwritten)
-                return this.Value1;
+                return Value1;
             }
         }
 
@@ -158,7 +158,7 @@ namespace FabricObserver.Observers.MachineInfoModel
 
                 if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
-                    return this.Parse(value, type.GetGenericArguments()[0]);
+                    return Parse(value, type.GetGenericArguments()[0]);
                 }
 
                 if (type.IsArray && type.GetElementType() == typeof(byte))
@@ -189,7 +189,7 @@ namespace FabricObserver.Observers.MachineInfoModel
         /// <returns> True if succeeds. </returns>
         public bool TryParse<TU>(string valueString, out TU value)
         {
-            var result = this.Parse(valueString, typeof(TU));
+            var result = Parse(valueString, typeof(TU));
             if (result == null)
             {
                 value = default(TU);
@@ -200,7 +200,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             return true;
         }
 
-        internal static char[] SecureStringToCharArray(SecureString secureString)
+        public static char[] SecureStringToCharArray(SecureString secureString)
         {
             if (secureString == null)
             {
@@ -221,7 +221,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             return charArray;
         }
 
-        internal static SecureString StringToSecureString(string value)
+        public static SecureString StringToSecureString(string value)
         {
             if (value == null)
             {
@@ -243,34 +243,34 @@ namespace FabricObserver.Observers.MachineInfoModel
         /// </summary>
         /// <param name="parameterName">Return settings for the parameter name.</param>
         /// <returns>string.</returns>
-        protected string GetConfigurationSetting(string parameterName)
+        public string GetConfigurationSetting(string parameterName)
         {
-            if (string.IsNullOrEmpty(parameterName) || this.ConfigurationSettings == null)
+            if (string.IsNullOrEmpty(parameterName) || ConfigurationSettings == null)
             {
                 return null;
             }
 
-            if (!this.ConfigurationSettings.Sections.Contains(this.ConfigurationSectionName)
-                || this.ConfigurationSettings.Sections[this.ConfigurationSectionName] == null)
+            if (!ConfigurationSettings.Sections.Contains(ConfigurationSectionName)
+                || ConfigurationSettings.Sections[ConfigurationSectionName] == null)
             {
                 return null;
             }
 
-            if (!this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters.Contains(parameterName))
+            if (!ConfigurationSettings.Sections[ConfigurationSectionName].Parameters.Contains(parameterName))
             {
                 return null;
             }
 
-            string parameterValue = this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].Value;
+            string parameterValue = ConfigurationSettings.Sections[ConfigurationSectionName].Parameters[parameterName].Value;
 
-            if (!this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName]
+            if (!ConfigurationSettings.Sections[ConfigurationSectionName].Parameters[parameterName]
                 .IsEncrypted || string.IsNullOrEmpty(parameterValue))
             {
                 return parameterValue;
             }
 
             var paramValueAsCharArray = SecureStringToCharArray(
-                this.ConfigurationSettings.Sections[this.ConfigurationSectionName].Parameters[parameterName].DecryptValue());
+                ConfigurationSettings.Sections[ConfigurationSectionName].Parameters[parameterName].DecryptValue());
 
             return new string(paramValueAsCharArray);
         }

@@ -60,27 +60,27 @@ namespace FabricObserver.Observers.Utilities
                     healthReporter.ReportHealthToServiceFabric(healthReport);
                 }
 
-                this.Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 30);
+                Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 30);
             }
             else
             {
-                this.Data = new List<T>();
+                Data = new List<T>();
             }
 
-            this.Property = property;
-            this.Id = id;
-            this.Units = string.Empty;
+            Property = property;
+            Id = id;
+            Units = string.Empty;
 
             if (property.Contains("MB"))
             {
-                this.Units = "MB";
+                Units = "MB";
             }
 
             if (property.ToLower().Contains("%") ||
                 property.ToLower().Contains("cpu") ||
                 property.ToLower().Contains("percent"))
             {
-                this.Units = "%";
+                Units = "%";
             }
         }
 
@@ -116,7 +116,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the largest numeric value in the Data collection.
         /// </summary>
-        public T MaxDataValue => this.Data?.Count > 0 ? this.Data.Max() : default(T);
+        public T MaxDataValue => Data?.Count > 0 ? Data.Max() : default(T);
 
         /// <summary>
         /// Gets the average value in the Data collection.
@@ -127,7 +127,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 T average = default(T);
 
-                switch (this.Data)
+                switch (Data)
                 {
                     case IList<long> v when v.Count > 0:
                         average = (T)Convert.ChangeType(Math.Round(v.Average(), 1), typeof(T));
@@ -164,7 +164,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (value)
                 {
-                    this.LifetimeWarningCount++;
+                    LifetimeWarningCount++;
                 }
             }
         }
@@ -190,26 +190,26 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Returns true or false depending upon computed health state based on supplied threshold value.</returns>
         public bool IsUnhealthy<TU>(TU threshold)
         {
-            if (this.Data.Count < 1 || Convert.ToDouble(threshold) < 1)
+            if (Data.Count < 1 || Convert.ToDouble(threshold) < 1)
             {
                 return false;
             }
 
-            return Convert.ToDouble(this.AverageDataValue) >= Convert.ToDouble(threshold);
+            return Convert.ToDouble(AverageDataValue) >= Convert.ToDouble(threshold);
         }
 
         /// <summary>
         /// Gets the standard deviation of the data held in the Data collection.
         /// </summary>
         public T StandardDeviation =>
-            this.Data?.Count > 0 ? Statistics.StandardDeviation(this.Data) : default;
+            Data?.Count > 0 ? Statistics.StandardDeviation(Data) : default;
 
         /// <summary>
         /// Gets SlidingWindow Max: A sorted list of sliding window maximums.
         /// </summary>
         public IList<T> SlidingWindowMax =>
-            this.Data?.Count > 0 ? Statistics.SlidingWindow(
-                this.Data,
+            Data?.Count > 0 ? Statistics.SlidingWindow(
+                Data,
                 3,
                 WindowType.Max) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
 
@@ -217,8 +217,8 @@ namespace FabricObserver.Observers.Utilities
         ///  Gets SlidingWindow Min: A sorted list of sliding window minimums.
         /// </summary>
         public IList<T> SlidingWindowMin =>
-            this.Data?.Count > 0 ? Statistics.SlidingWindow(
-                this.Data,
+            Data?.Count > 0 ? Statistics.SlidingWindow(
+                Data,
                 3,
                 WindowType.Min) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
     }

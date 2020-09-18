@@ -8,7 +8,7 @@ namespace FabricObserver.Observers.Utilities
     /// <summary>
     /// Service filter types.
     /// </summary>
-    internal enum ServiceFilterType
+    public enum ServiceFilterType
     {
         /// <summary>
         /// Exclude services

@@ -3,13 +3,14 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System.Fabric;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal abstract class OperatingSystemInfoProvider
+    public abstract class OperatingSystemInfoProvider
     {
         private static OperatingSystemInfoProvider instance;
         private static object lockObj = new object();
@@ -18,7 +19,7 @@ namespace FabricObserver.Observers.Utilities
         {
         }
 
-        internal static OperatingSystemInfoProvider Instance
+        public static OperatingSystemInfoProvider Instance
         {
             get
             {
@@ -44,14 +45,14 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        internal abstract (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse();
+        public abstract (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse();
 
-        internal abstract int GetActivePortCount(int processId = -1);
+        public abstract int GetActivePortCount(int processId = -1, ServiceContext context = null);
 
-        internal abstract int GetActiveEphemeralPortCount(int processId = -1);
+        public abstract int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null);
 
-        internal abstract (int LowPort, int HighPort) TupleGetDynamicPortRange();
+        public abstract (int LowPort, int HighPort) TupleGetDynamicPortRange();
 
-        internal abstract Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken);
+        public abstract Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken);
     }
 }
