@@ -118,7 +118,7 @@ namespace FabricObserver.Observers
             var healthReporter = new ObserverHealthReporter(ObserverLogger);
             var healthReport = new Utilities.HealthReport
             {
-                Code = FoErrorWarningCodes.Ok,
+                Code = FOErrorWarningCodes.Ok,
                 HealthMessage = this.message.ToString(),
                 NodeName = NodeName,
                 Observer = ObserverName,
@@ -132,7 +132,7 @@ namespace FabricObserver.Observers
             // Emit Telemetry - This will use whatever telemetry provider you have configured in FabricObserver Settings.xml.
             var telemetryData = new TelemetryData(FabricClientInstance, Token)
             {
-                Code = FoErrorWarningCodes.Ok,
+                Code = FOErrorWarningCodes.Ok,
                 HealthEventDescription = this.message.ToString(),
                 HealthState = "Ok",
                 NodeName = NodeName,
@@ -154,7 +154,7 @@ namespace FabricObserver.Observers
                     ObserverConstants.FabricObserverETWEventName,
                     new
                     {
-                        Code = FoErrorWarningCodes.Ok,
+                        Code = FOErrorWarningCodes.Ok,
                         HealthEventDescription = this.message.ToString(),
                         HealthState = "Ok",
                         NodeName,
