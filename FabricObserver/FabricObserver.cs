@@ -90,11 +90,6 @@ namespace FabricObserver
                 return;
             }
            
-            /*if (IsRunningAsSystem())
-            {
-                return;
-            }*/
-           
             List<PluginLoader> pluginLoaders = new List<PluginLoader>(capacity: pluginDlls.Length);
 
             Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
@@ -129,30 +124,6 @@ namespace FabricObserver
                     }
                 }
             }
-        }
-
-        private bool IsRunningAsSystem()
-        {
-            Process systemProc = null;
-
-            try
-            {
-                var fabricSystemProc = Process.GetProcessesByName("FabricHost");
-                systemProc = fabricSystemProc.Length > 0 ? fabricSystemProc[0] : null;
-                var mem = systemProc?.WorkingSet64;
-               
-                return true;
-            }
-            catch
-            {
-             
-            }
-            finally
-            {
-                systemProc?.Dispose();
-            }
-
-            return false;
         }
     }
 }
