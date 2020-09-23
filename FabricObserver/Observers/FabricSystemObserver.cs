@@ -605,7 +605,7 @@ namespace FabricObserver.Observers
 
                     // Warm up the counters.
                     CpuUsage cpuUsage = new CpuUsage();
-                    _ = cpuUsage.GetCpuUsageProcess(process);
+                    _ = cpuUsage.GetCpuUsagePercentageProcess(process);
                     _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
 
                     timer.Start();
@@ -617,7 +617,7 @@ namespace FabricObserver.Observers
                         try
                         {
                             // CPU Time for service process.
-                            int cpu = (int)cpuUsage.GetCpuUsageProcess(process);
+                            int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process);
                             this.allCpuData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(cpu);
 
                             // Private Working Set for service process.

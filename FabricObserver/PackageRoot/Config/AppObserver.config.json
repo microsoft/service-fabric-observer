@@ -15,7 +15,7 @@
   },
   {
     "targetAppType": "CpuStressType",
-    "cpuWarningLimitPercent": 20,
+    "cpuWarningLimitPercent": 20.75,
     "memoryWarningLimitMb": 150
   },
   {

@@ -16,7 +16,12 @@ namespace FabricObserver.Observers.Utilities
         private TimeSpan prevTotalProcessorTime;
         private TimeSpan currentTotalProcessorTime;
 
-        public int GetCpuUsageProcess(Process p)
+        /// <summary>
+        /// This function computes the total percentage of all cpus that the supplied process is currently using.
+        /// </summary>
+        /// <param name="p">Target Process object</param>
+        /// <returns>CPU percentage in use as double value</returns>
+        public double GetCpuUsagePercentageProcess(Process p)
         {
             if (p == null || p.HasExited)
             {
@@ -32,15 +37,15 @@ namespace FabricObserver.Observers.Utilities
             {
                 this.currentTimeTime = DateTime.Now;
                 this.currentTotalProcessorTime = p.TotalProcessorTime;
-                var currentUsage = (this.currentTotalProcessorTime.TotalMilliseconds - this.prevTotalProcessorTime.TotalMilliseconds) / this.currentTimeTime.Subtract(this.prevTime).TotalMilliseconds;
-                var cpuUsage = currentUsage / Environment.ProcessorCount;
+                double currentUsage = (this.currentTotalProcessorTime.TotalMilliseconds - this.prevTotalProcessorTime.TotalMilliseconds) / this.currentTimeTime.Subtract(this.prevTime).TotalMilliseconds;
+                double cpuUsage = currentUsage / Environment.ProcessorCount;
                 this.prevTime = this.currentTimeTime;
                 this.prevTotalProcessorTime = this.currentTotalProcessorTime;
 
-                return (int)(cpuUsage * 100);
+                return cpuUsage * 100.0;
             }
 
-            return 0;
+            return 0.0;
         }
     }
 }
