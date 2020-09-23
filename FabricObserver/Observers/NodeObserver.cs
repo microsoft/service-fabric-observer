@@ -27,11 +27,11 @@ namespace FabricObserver.Observers
         // public because unit test.
         public FabricResourceUsageData<float> AllCpuTimeData { get; set; }
 
-        public int CpuErrorUsageThresholdPct { get; set; }
+        public float CpuErrorUsageThresholdPct { get; set; }
 
         public int MemErrorUsageThresholdMb { get; set; }
 
-        public int CpuWarningUsageThresholdPct { get; set; }
+        public float CpuWarningUsageThresholdPct { get; set; }
 
         public int MemWarningUsageThresholdMb { get; set; }
 
