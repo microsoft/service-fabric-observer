@@ -70,7 +70,7 @@ namespace FabricObserver.Observers
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped(typeof(ObserverBase), typeof([Name of the class that holds your observer impl. E.g., MyObserver]));
+            _ = services.AddScoped(typeof(ObserverBase), typeof([Name of the class that holds your observer impl. E.g., MyObserver]));
         }
     }
 }
@@ -117,5 +117,5 @@ You can deploy using the contents of your build out directory - just remove the 
 $path = "[sourcedir]\MyObserverPlugin\bin\debug\netcoreapp3.1"
 Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV3 -TimeoutSec 1800
 Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV3
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.0.2
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.0.5
 ```
