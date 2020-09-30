@@ -333,6 +333,5 @@ ASALocalRun/
 .mfractor/
 
 Cloud*.xml 
-/review_stuff_2020.txt
 /FabricObserver/observer_logs
 /FabricObserver/PackageRoot/Data/Plugins/SampleNewObserver.dll

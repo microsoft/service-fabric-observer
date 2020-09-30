@@ -15,8 +15,6 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxInfoProvider : OperatingSystemInfoProvider
     {
-        private static readonly Logger Logger = new Logger("LinuxOSProvider");
-
         public override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();

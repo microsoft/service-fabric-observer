@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.4" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.6" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
@@ -17,8 +17,8 @@
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <!--<Parameter Name="SampleNewObserverEnabled" DefaultValue="true" /> -->
     <!-- Telemetry -->
+    <!-- <Parameter Name="SampleNewObserverEnabled" DefaultValue="true" /> -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="true" />
@@ -27,8 +27,8 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!--<Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="true" /> -->
     <!-- Verbose Logging -->
+    <!-- <Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="true" /> -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
@@ -37,8 +37,8 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!--<Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" /> -->
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
+    <!-- <Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" /> -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:10" />
     <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:10" />
@@ -52,8 +52,8 @@
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!--<Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <!-- AppObserver -->
+    <!-- <Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
@@ -111,7 +111,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.0.4" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.0.6" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

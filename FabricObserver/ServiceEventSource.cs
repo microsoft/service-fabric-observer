@@ -39,13 +39,11 @@ namespace FabricObserver
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (!IsEnabled())
+            if (this.IsEnabled())
             {
-                return;
+                string finalMessage = string.Format(message, args);
+                this.Message(finalMessage);
             }
-
-            string finalMessage = string.Format(message, args);
-            Message(finalMessage);
         }
 
         private const int MessageEventId = 1;
@@ -53,32 +51,28 @@ namespace FabricObserver
         [Event(MessageEventId, Level = EventLevel.Informational, Message = "{0}")]
         public void Message(string message)
         {
-            if (!IsEnabled())
+            if (this.IsEnabled())
             {
-                return;
+                this.WriteEvent(MessageEventId, message);
             }
-
-            WriteEvent(MessageEventId, message);
         }
 
         [NonEvent]
         public void ServiceMessage(StatelessServiceContext serviceContext, string message, params object[] args)
         {
-            if (!IsEnabled())
+            if (this.IsEnabled())
             {
-                return;
+                string finalMessage = string.Format(message, args);
+                this.ServiceMessage(
+                    serviceContext.ServiceName.ToString(),
+                    serviceContext.ServiceTypeName,
+                    serviceContext.InstanceId,
+                    serviceContext.PartitionId,
+                    serviceContext.CodePackageActivationContext.ApplicationName,
+                    serviceContext.CodePackageActivationContext.ApplicationTypeName,
+                    serviceContext.NodeContext.NodeName,
+                    finalMessage);
             }
-
-            string finalMessage = string.Format(message, args);
-            ServiceMessage(
-                serviceContext.ServiceName.ToString(),
-                serviceContext.ServiceTypeName,
-                serviceContext.InstanceId,
-                serviceContext.PartitionId,
-                serviceContext.CodePackageActivationContext.ApplicationName,
-                serviceContext.CodePackageActivationContext.ApplicationTypeName,
-                serviceContext.NodeContext.NodeName,
-                finalMessage);
         }
 
         // For very high-frequency events it might be advantageous to raise events using WriteEventCore API.
@@ -102,7 +96,7 @@ namespace FabricObserver
             string message)
         {
 #if !UNSAFE
-            WriteEvent(ServiceMessageEventId, serviceName, serviceTypeName, replicaOrInstanceId, partitionId, applicationName, applicationTypeName, nodeName, message);
+            this.WriteEvent(ServiceMessageEventId, serviceName, serviceTypeName, replicaOrInstanceId, partitionId, applicationName, applicationTypeName, nodeName, message);
 #else
             const int numArgs = 8;
             fixed (char* pServiceName = serviceName, pServiceTypeName = serviceTypeName, pApplicationName = applicationName, pApplicationTypeName = applicationTypeName, pNodeName = nodeName, pMessage = message)
@@ -127,7 +121,7 @@ namespace FabricObserver
         [Event(ServiceTypeRegisteredEventId, Level = EventLevel.Informational, Message = "Service host process {0} registered service type {1}", Keywords = Keywords.ServiceInitialization)]
         public void ServiceTypeRegistered(int hostProcessId, string serviceType)
         {
-            WriteEvent(ServiceTypeRegisteredEventId, hostProcessId, serviceType);
+            this.WriteEvent(ServiceTypeRegisteredEventId, hostProcessId, serviceType);
         }
 
         private const int ServiceHostInitializationFailedEventId = 4;
@@ -135,7 +129,7 @@ namespace FabricObserver
         [Event(ServiceHostInitializationFailedEventId, Level = EventLevel.Error, Message = "Service host initialization failed", Keywords = Keywords.ServiceInitialization)]
         public void ServiceHostInitializationFailed(string exception)
         {
-            WriteEvent(ServiceHostInitializationFailedEventId, exception);
+            this.WriteEvent(ServiceHostInitializationFailedEventId, exception);
         }
 
         // A pair of events sharing the same name prefix with a "Start"/"Stop" suffix implicitly marks boundaries of an event tracing activity.
@@ -146,7 +140,7 @@ namespace FabricObserver
         [Event(ServiceRequestStartEventId, Level = EventLevel.Informational, Message = "Service request '{0}' started", Keywords = Keywords.Requests)]
         public void ServiceRequestStart(string requestTypeName)
         {
-            WriteEvent(ServiceRequestStartEventId, requestTypeName);
+            this.WriteEvent(ServiceRequestStartEventId, requestTypeName);
         }
 
         private const int ServiceRequestStopEventId = 6;
@@ -154,7 +148,7 @@ namespace FabricObserver
         [Event(ServiceRequestStopEventId, Level = EventLevel.Informational, Message = "Service request '{0}' finished", Keywords = Keywords.Requests)]
         public void ServiceRequestStop(string requestTypeName, string exception = "")
         {
-            WriteEvent(ServiceRequestStopEventId, requestTypeName, exception);
+            this.WriteEvent(ServiceRequestStopEventId, requestTypeName, exception);
         }
 
         private const int VerboseMessageEventId = 7;
@@ -162,19 +156,17 @@ namespace FabricObserver
         [Event(VerboseMessageEventId, Level = EventLevel.Verbose, Message = "{0}")]
         public void VerboseMessage(string message)
         {
-            if (!IsEnabled())
+            if (this.IsEnabled())
             {
-                return;
+                this.WriteEvent(VerboseMessageEventId, message);
             }
-
-            WriteEvent(VerboseMessageEventId, message);
         }
 
         [NonEvent]
         public void VerboseMessage(string message, params object[] args)
         {
             string finalMessage = string.Format(message, args);
-            VerboseMessage(finalMessage);
+            this.VerboseMessage(finalMessage);
         }
 
         private const int FabricObserverTelemetryEventId = 8;
@@ -190,17 +182,15 @@ namespace FabricObserver
             string foConfigInfo,
             string foHealthInfo)
         {
-            if (!IsEnabled())
+            if (this.IsEnabled())
             {
-                return;
+                this.WriteEvent(
+                    FabricObserverTelemetryEventId,
+                    clusterId,
+                    applicationVersion,
+                    foConfigInfo,
+                    foHealthInfo);
             }
-
-            WriteEvent(
-                FabricObserverTelemetryEventId,
-                clusterId,
-                applicationVersion,
-                foConfigInfo,
-                foHealthInfo);
         }
 
 #if UNSAFE

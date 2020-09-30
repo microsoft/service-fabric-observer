@@ -4,8 +4,9 @@
 // ------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using FabricObserver.Observers;
 
-[assembly: FabricObserver.FabricObserverStartup(typeof(FabricObserver.Observers.SampleNewObserverStartup))]
+[assembly: FabricObserver.FabricObserverStartup(typeof(SampleNewObserverStartup))]
 namespace FabricObserver.Observers
 {
     public class SampleNewObserverStartup : IFabricObserverStartup

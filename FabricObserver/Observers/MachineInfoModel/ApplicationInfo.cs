@@ -19,13 +19,13 @@ namespace FabricObserver.Observers.MachineInfoModel
 
         public long MemoryErrorLimitMb { get; set; }
 
-        public int MemoryWarningLimitPercent { get; set; }
+        public double MemoryWarningLimitPercent { get; set; }
 
-        public int MemoryErrorLimitPercent { get; set; }
+        public double MemoryErrorLimitPercent { get; set; }
 
-        public int CpuErrorLimitPercent { get; set; }
+        public double CpuErrorLimitPercent { get; set; }
 
-        public int CpuWarningLimitPercent { get; set; }
+        public double CpuWarningLimitPercent { get; set; }
 
         public int NetworkErrorActivePorts { get; set; }
 
