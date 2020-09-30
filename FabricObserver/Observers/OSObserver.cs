@@ -33,6 +33,7 @@ namespace FabricObserver.Observers
         private string osStatus;
         private bool auStateUnknown;
         private bool isWindowsUpdateAutoDownloadEnabled;
+        private bool isWUADSettingEnabled;
 
         public string TestManifestPath
         {
@@ -68,11 +69,10 @@ namespace FabricObserver.Observers
                 if (nodes.Count > 1 && bool.TryParse(
                                         GetSettingParameterValue(
                                             ConfigurationSectionName,
-                                            ObserverConstants.EnableWindowsAutoUpdateCheck,
-                                            "true"),
-                                         out bool enableWindowsAUCheck))
+                                            ObserverConstants.EnableWindowsAutoUpdateCheck),
+                                         out isWUADSettingEnabled))
                 {
-                    if (enableWindowsAUCheck)
+                    if (isWUADSettingEnabled)
                     {
                         await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
                     }
@@ -168,7 +168,8 @@ namespace FabricObserver.Observers
                 HealthReporter.ReportHealthToServiceFabric(report);
 
                 // Windows Update automatic download enabled?
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.isWindowsUpdateAutoDownloadEnabled)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    && this.isWindowsUpdateAutoDownloadEnabled)
                 {
                     string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
@@ -191,7 +192,9 @@ namespace FabricObserver.Observers
 
                     HealthReporter.ReportHealthToServiceFabric(report);
 
-                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (IsTelemetryProviderEnabled
+                        && IsObserverTelemetryEnabled
+                        && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
                         var telemetryData = new TelemetryData(FabricClientInstance, token)
@@ -232,6 +235,7 @@ namespace FabricObserver.Observers
                     // reset au globals for fresh detection during next observer run.
                     this.isWindowsUpdateAutoDownloadEnabled = false;
                     this.auStateUnknown = false;
+                    this.isWUADSettingEnabled = false;
                 }
 
                 return Task.CompletedTask;
@@ -242,7 +246,7 @@ namespace FabricObserver.Observers
                     FabricServiceContext.ServiceName.OriginalString,
                     ObserverName,
                     HealthState.Error,
-                    $"Unhandled exception processing OS information: {e.Message}: \n {e.StackTrace}");
+                    $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
                 throw;
             }
@@ -373,19 +377,24 @@ namespace FabricObserver.Observers
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    // WU AutoUpdate
-                    string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
-
-                    if (this.auStateUnknown)
+                    // WU AutoUpdate - Download enabled.
+                    // If the config setting EnableWindowsAutoUpdateCheck is set to false, then don't add this info to sb.
+                    if (this.isWUADSettingEnabled)
                     {
-                        auMessage += "Unknown";
-                    }
-                    else
-                    {
-                        auMessage += this.isWindowsUpdateAutoDownloadEnabled;
+                        string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
+
+                        if (this.auStateUnknown)
+                        {
+                            auMessage += "Unknown";
+                        }
+                        else
+                        {
+                            auMessage += this.isWindowsUpdateAutoDownloadEnabled;
+                        }
+                        _ = sb.AppendLine(auMessage);
                     }
 
-                    _ = sb.AppendLine(auMessage);
+                    // Not supported for Linux.
                     _ = sb.AppendLine($"OSLanguage: {osInfo.Language}");
                     _ = sb.AppendLine($"OSHealthStatus*: {osInfo.Status}");
                 }

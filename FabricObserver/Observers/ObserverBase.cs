@@ -462,7 +462,7 @@ namespace FabricObserver.Observers
 
                 try
                 {
-                    if (replicaOrInstance != null)
+                    if (replicaOrInstance != null && replicaOrInstance.HostProcessId > 0)
                     {
                         procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId).ProcessName;
                     }
@@ -517,6 +517,11 @@ namespace FabricObserver.Observers
                 if (ObserverName == ObserverConstants.DiskObserverName)
                 {
                     drive = $"{data.Id}: ";
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        drive = $"{data.Id.Remove(1, 2)}: ";
+                    }
                 }
 
                 // The health event description will be a serialized instance of telemetryData,
