@@ -8,7 +8,7 @@
 // 1. Install libcap library: sudo apt-get install -y libcap-dev
 // 2. Compile : gcc elevated_netstat.c -lcap -o elevated_netstat
 // ***NOTE: The following is already taken care of by FO Setup and the related FO utility function that runs this binary. 
-// 3. Assign PTRACE and DAC_READ_SEARCH capabilities to elevated_netstat : "sudo setcap CAP_DAC_READ_SEARCH,CAP_SYS_PTRACE+ ./elevated_netstat"
+// 3. Assign PTRACE and DAC_READ_SEARCH capabilities to elevated_netstat : "sudo setcap CAP_DAC_READ_SEARCH,CAP_SYS_PTRACE+p ./elevated_netstat"
 // 4. Run elevated_netstat as a regular user : ./elevated_netstat 
 //
 

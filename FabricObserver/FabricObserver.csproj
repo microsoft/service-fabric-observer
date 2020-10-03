@@ -95,6 +95,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <None Update="elevated_docker_stats">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="elevated_netstat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
