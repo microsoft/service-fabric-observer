@@ -28,6 +28,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string ContainerId
+        {
+            get; set;
+        }
+
         public string HealthEventDescription
         {
             get; set;
