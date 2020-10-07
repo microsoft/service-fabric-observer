@@ -19,6 +19,11 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public string ContainerId
+        {
+            get; set;
+        }
+
         public long HostProcessId
         {
             get; set;
@@ -35,6 +40,11 @@ namespace FabricObserver.Observers.MachineInfoModel
         }
 
         public Uri ServiceName
+        {
+            get; set;
+        }
+
+        public string ServicePackageActivationId
         {
             get; set;
         }

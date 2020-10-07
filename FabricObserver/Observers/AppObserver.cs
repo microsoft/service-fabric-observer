@@ -487,7 +487,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        if (!(e is OperationCanceledException))
+                        if (!(e is OperationCanceledException || e is TaskCanceledException))
                         {
                             WriteToLogWithLevel(
                                 ObserverName,
