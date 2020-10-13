@@ -71,23 +71,26 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public bool IsEnabled { get; set; } = true;
+        public bool IsEnabled 
+        { 
+            get; set; 
+        } = true;
 
         public bool IsObserverTelemetryEnabled
         {
             get; set;
         }
 
-        public bool IsUnhealthy 
-        { 
-            get; set; 
+        public bool IsUnhealthy
+        {
+            get; set;
         } = false;
 
         // This static property is *only* used - and set to true - for local development unit test runs. 
         // Do not set this to true otherwise.
-        public static bool IsTestRun 
-        { 
-            get; set; 
+        public static bool IsTestRun
+        {
+            get; set;
         } = false;
 
         public Utilities.ConfigSettings ConfigurationSettings
@@ -133,34 +136,34 @@ namespace FabricObserver.Observers
             get; set;
         } = new List<string>();
 
-        public TimeSpan RunInterval 
-        { 
-            get; set; 
+        public TimeSpan RunInterval
+        {
+            get; set;
         } = TimeSpan.MinValue;
 
-        public TimeSpan AsyncClusterOperationTimeoutSeconds 
-        { 
-            get; set; 
+        public TimeSpan AsyncClusterOperationTimeoutSeconds
+        {
+            get; set;
         } = TimeSpan.FromSeconds(60);
 
-        public int DataCapacity 
-        { 
-            get; set; 
+        public int DataCapacity
+        {
+            get; set;
         } = 30;
 
-        public bool UseCircularBuffer 
-        { 
-            get; set; 
+        public bool UseCircularBuffer
+        {
+            get; set;
         } = false;
 
-        public TimeSpan MonitorDuration 
-        { 
-            get; set; 
+        public TimeSpan MonitorDuration
+        {
+            get; set;
         } = TimeSpan.MinValue;
 
-        protected bool IsTelemetryProviderEnabled 
-        { 
-            get; set; 
+        protected bool IsTelemetryProviderEnabled
+        {
+            get; set;
         } = ObserverManager.TelemetryEnabled;
 
         protected ITelemetryProvider TelemetryClient
@@ -168,9 +171,9 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        protected bool IsEtwEnabled 
-        { 
-            get; set; 
+        protected bool IsEtwEnabled
+        {
+            get; set;
         } = ObserverManager.EtwEnabled;
 
         protected FabricClient FabricClientInstance
@@ -513,7 +516,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     ObserverName = ObserverName,
                     Metric = data.Property,
-                    Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                    Value = Math.Round(data.AverageDataValue, 1),
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
                     ServiceName = serviceName?.OriginalString ?? string.Empty,
@@ -553,7 +556,7 @@ namespace FabricObserver.Observers
                                 NodeName,
                                 ObserverName,
                                 Metric = data.Property,
-                                Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                                Value = Math.Round(data.AverageDataValue, 1),
                                 PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                 ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
                                 ServiceName = procName,
@@ -595,7 +598,7 @@ namespace FabricObserver.Observers
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
                     Source = ObserverConstants.FabricObserverName,
-                    Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                    Value = Math.Round(data.AverageDataValue, 1),
                 };
 
                 if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
@@ -617,7 +620,7 @@ namespace FabricObserver.Observers
                             ObserverName,
                             Metric = $"{drive}{data.Property}",
                             Source = ObserverConstants.FabricObserverName,
-                            Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                            Value = Math.Round(data.AverageDataValue, 1),
                         });
                 }
             }
@@ -763,7 +766,7 @@ namespace FabricObserver.Observers
                 }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.AppendLine($" - {data.Property}: {Math.Round(Convert.ToDouble(data.AverageDataValue))}{data.Units}");
+                _ = healthMessage.AppendLine($" - {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
@@ -779,7 +782,7 @@ namespace FabricObserver.Observers
                 telemetryData.Metric = $"{drive}{data.Property}";
                 telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
                 telemetryData.Source = ObserverConstants.FabricObserverName;
-                telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
+                telemetryData.Value = Math.Round(data.AverageDataValue, 1);
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
@@ -805,7 +808,7 @@ namespace FabricObserver.Observers
                             Node = NodeName,
                             ServiceName = serviceName?.OriginalString ?? string.Empty,
                             Source = ObserverConstants.FabricObserverName,
-                            Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                            Value = Math.Round(data.AverageDataValue, 1),
                         });
                 }
 
@@ -897,7 +900,7 @@ namespace FabricObserver.Observers
                     telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
                     telemetryData.Source = ObserverConstants.FabricObserverName;
-                    telemetryData.Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1);
+                    telemetryData.Value = Math.Round(data.AverageDataValue, 1);
 
                     // Telemetry
                     if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
@@ -923,7 +926,7 @@ namespace FabricObserver.Observers
                                 Node = NodeName,
                                 ServiceName = name ?? string.Empty,
                                 Source = ObserverConstants.FabricObserverName,
-                                Value = Math.Round(Convert.ToDouble(data.AverageDataValue), 1),
+                                Value = Math.Round(data.AverageDataValue, 1),
                             });
                     }
 

@@ -56,7 +56,10 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
 
-        public static Dictionary<string, string> AppErrorCodesDictionary { get; private set; } = new Dictionary<string, string>
+        public static Dictionary<string, string> AppErrorCodesDictionary
+        {
+            get; private set;
+        } = new Dictionary<string, string>
         {
             { Ok, "Ok" },
             { AppErrorCpuTime, "AppErrorCpuTime" },
@@ -73,7 +76,10 @@ namespace FabricObserver.Observers.Utilities
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
         };
 
-        public static Dictionary<string, string> NodeErrorCodesDictionary { get; private set; } = new Dictionary<string, string>
+        public static Dictionary<string, string> NodeErrorCodesDictionary
+        {
+            get; private set;
+        } = new Dictionary<string, string>
         {
             { Ok, "Ok" },
             { NodeErrorCpuTime, "NodeErrorCpuTime" },

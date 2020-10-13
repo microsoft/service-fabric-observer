@@ -156,27 +156,42 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets list of exceptions that are retry-able.
         /// </summary>
-        public IList<Type> RetryableExceptions { get; private set; }
+        public IList<Type> RetryableExceptions
+        {
+            get; private set;
+        }
 
         /// <summary>
         /// Gets list of Fabric error codes that are retry-able.
         /// </summary>
-        public IList<FabricErrorCode> RetryableFabricErrorCodes { get; private set; }
+        public IList<FabricErrorCode> RetryableFabricErrorCodes
+        {
+            get; private set;
+        }
 
         /// <summary>
         /// Gets list of success exceptions that are retry-able.
         /// </summary>
-        public IList<Type> RetrySuccessExceptions { get; private set; }
+        public IList<Type> RetrySuccessExceptions
+        {
+            get; private set;
+        }
 
         /// <summary>
         /// Gets list of success error codes that are retry-able.
         /// </summary>
-        public IList<FabricErrorCode> RetrySuccesSFabricErrorCodes { get; private set; }
+        public IList<FabricErrorCode> RetrySuccesSFabricErrorCodes
+        {
+            get; private set;
+        }
 
         /// <summary>
         /// Gets list of internal success error codes that are retry-able.
         /// </summary>
-        internal IList<uint> InternalRetrySuccesSFabricErrorCodes { get; private set; }
+        internal IList<uint> InternalRetrySuccesSFabricErrorCodes
+        {
+            get; private set;
+        }
 
         private void PopulateDefaultValues()
         {

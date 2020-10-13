@@ -33,7 +33,7 @@ namespace FabricObserver.Observers
         private readonly List<FabricResourceUsageData<int>> allAppTotalActivePortsData;
         private readonly List<FabricResourceUsageData<int>> allAppEphemeralPortsData;
         private readonly Stopwatch stopwatch;
-        
+
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration.
         private List<ApplicationInfo> userTargetList;
 
@@ -46,7 +46,10 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public string ConfigPackagePath { get; set; }
+        public string ConfigPackagePath
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
@@ -91,9 +94,9 @@ namespace FabricObserver.Observers
 
                 return;
             }
-            
+
             await MonitorDeployedAppsAsync(token).ConfigureAwait(false);
-            
+
             // The time it took to get to ReportAsync.
             // For use in computing actual HealthReport TTL.
             this.stopwatch.Stop();
@@ -109,7 +112,7 @@ namespace FabricObserver.Observers
             try
             {
                 token.ThrowIfCancellationRequested();
-                
+
                 if (this.deployedTargetList.Count == 0)
                 {
                     return Task.CompletedTask;
@@ -310,7 +313,7 @@ namespace FabricObserver.Observers
             {
                 this.userTargetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
             }
-            
+
             // Are any of the config-supplied apps deployed?.
             if (this.userTargetList.Count == 0)
             {
@@ -702,7 +705,7 @@ namespace FabricObserver.Observers
                 appName,
                 ErrorWarningProperty.TotalMemoryConsumptionMb,
                 "Average",
-                Math.Round((double)this.allAppMemDataMb
+                Math.Round(this.allAppMemDataMb
                     .FirstOrDefault(x => x.Id == appName).AverageDataValue));
 
             CsvFileLogger.LogData(

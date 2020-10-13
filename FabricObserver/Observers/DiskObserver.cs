@@ -32,13 +32,25 @@ namespace FabricObserver.Observers
         private readonly Stopwatch stopWatch;
         private StringBuilder diskInfo = new StringBuilder();
 
-        public int DiskSpacePercentErrorThreshold { get; set; }
+        public int DiskSpacePercentErrorThreshold
+        {
+            get; set;
+        }
 
-        public int DiskSpacePercentWarningThreshold { get; set; }
+        public int DiskSpacePercentWarningThreshold
+        {
+            get; set;
+        }
 
-        public int AverageQueueLengthWarningThreshold { get; set; }
+        public int AverageQueueLengthWarningThreshold
+        {
+            get; set;
+        }
 
-        public int AverageQueueLengthErrorThreshold { get; set; }
+        public int AverageQueueLengthErrorThreshold
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DiskObserver"/> class.
@@ -52,7 +64,7 @@ namespace FabricObserver.Observers
             this.diskAverageQueueLengthData = new List<FabricResourceUsageData<float>>();
             this.stopWatch = new Stopwatch();
         }
- 
+
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.

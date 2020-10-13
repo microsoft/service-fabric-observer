@@ -21,7 +21,10 @@ namespace FabricClusterObserver.Interfaces
         /// <summary>
         /// Gets or sets the telemetry API key.
         /// </summary>
-        string Key { get; set; }
+        string Key
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Calls telemetry provider to track availability.
@@ -54,7 +57,7 @@ namespace FabricClusterObserver.Interfaces
         /// <param name="token">CancellationToken instance.</param>
         /// <returns>a Task.</returns>
         Task ReportHealthAsync(TelemetryData telemtryData, CancellationToken token);
-        
+
         ///<summary>
         /// Calls telemetry provider to report health.
         /// </summary>

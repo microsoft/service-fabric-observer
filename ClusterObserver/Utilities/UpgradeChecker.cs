@@ -60,8 +60,8 @@ namespace FabricClusterObserver.Utilities
                 else
                 {
                     appList = await fabricClient.QueryManager.GetApplicationListAsync(
-                        appName, 
-                        TimeSpan.FromMinutes(1), 
+                        appName,
+                        TimeSpan.FromMinutes(1),
                         token).ConfigureAwait(true);
                 }
 
@@ -69,8 +69,8 @@ namespace FabricClusterObserver.Utilities
                 {
                     var upgradeProgress =
                         await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(
-                            application.ApplicationName, 
-                            TimeSpan.FromMinutes(1), 
+                            application.ApplicationName,
+                            TimeSpan.FromMinutes(1),
                             token).ConfigureAwait(true);
 
                     if (upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress)
@@ -94,7 +94,7 @@ namespace FabricClusterObserver.Utilities
                         }
                     }
                 }
-               
+
                 // If no UD's are being upgraded then currentUpgradeDomainInProgress
                 // remains -1, otherwise it will be added only once
                 if (!upgradeDomainsInProgress.Any())
@@ -111,7 +111,7 @@ namespace FabricClusterObserver.Utilities
             {
                 Logger.LogError(e.ToString());
 
-                return new List<int>{ int.MaxValue };
+                return new List<int> { int.MaxValue };
             }
         }
 
@@ -122,14 +122,14 @@ namespace FabricClusterObserver.Utilities
         /// <param name="token"></param>
         /// <returns>UD in progress</returns>
         public static async Task<int> GetUdsWhereFabricUpgradeInProgressAsync(
-            FabricClient fabricClient, 
+            FabricClient fabricClient,
             CancellationToken token)
         {
             try
             {
                 var fabricUpgradeProgress =
                     await fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                        TimeSpan.FromSeconds(ObserverManager.AsyncClusterOperationTimeoutSeconds), 
+                        TimeSpan.FromSeconds(ObserverManager.AsyncClusterOperationTimeoutSeconds),
                         token).ConfigureAwait(true);
 
                 int currentUpgradeDomainInProgress = -1;
@@ -141,7 +141,7 @@ namespace FabricClusterObserver.Utilities
                     if (int.TryParse(fabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
                     {
                         Logger.LogInfo("ServiceFabric Upgrade is in progress in {0} domain", currentUpgradeDomainInProgress);
-                        
+
                         return currentUpgradeDomainInProgress;
                     }
 
@@ -152,7 +152,7 @@ namespace FabricClusterObserver.Utilities
 
                 // Will return -1 if there are no upgrades are in progress for service fabric.
                 Logger.LogInfo($"No Service Fabric Upgrade is in progress in domain {currentUpgradeDomainInProgress}.");
-                
+
                 return currentUpgradeDomainInProgress;
             }
             catch (Exception e)

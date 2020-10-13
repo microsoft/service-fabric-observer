@@ -11,7 +11,7 @@ namespace FabricObserver.Observers.Utilities
         {
             if (LinuxProcFS.TryParseStatuSFile(processId, out ParsedStatus status))
             {
-               return (status.VmRSS - status.RsSFile) / 1048576f;
+                return (status.VmRSS - status.RsSFile) / 1048576f;
             }
             else
             {

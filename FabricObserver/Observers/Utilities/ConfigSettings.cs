@@ -17,7 +17,7 @@ namespace FabricObserver.Observers.Utilities
         {
             get; set;
         }
-        
+
         public TimeSpan RunInterval
         {
             get; set;
@@ -165,14 +165,14 @@ namespace FabricObserver.Observers.Utilities
                 {
                     return null;
                 }
-               
+
                 if (section == null)
                 {
                     return null;
                 }
 
                 ConfigurationProperty parameter = null;
-                
+
                 if (section.Parameters.Any(p => p.Name == parameterName))
                 {
                     parameter = section.Parameters[parameterName];

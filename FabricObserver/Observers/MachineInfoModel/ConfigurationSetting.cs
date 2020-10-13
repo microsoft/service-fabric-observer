@@ -88,17 +88,35 @@ namespace FabricObserver.Observers.MachineInfoModel
             }
         }
 
-        protected string ConfigurationSectionName { get; }
+        protected string ConfigurationSectionName
+        {
+            get;
+        }
 
-        protected ConfigurationSettings ConfigurationSettings { get; }
+        protected ConfigurationSettings ConfigurationSettings
+        {
+            get;
+        }
 
-        protected T DefaultValue { get; }
+        protected T DefaultValue
+        {
+            get;
+        }
 
-        protected string SettingName { get; }
+        protected string SettingName
+        {
+            get;
+        }
 
-        protected T Value1 { get; set; }
+        protected T Value1
+        {
+            get; set;
+        }
 
-        protected bool ValueSpecified { get; set; }
+        protected bool ValueSpecified
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Try to parse the string and return an object of the given type.

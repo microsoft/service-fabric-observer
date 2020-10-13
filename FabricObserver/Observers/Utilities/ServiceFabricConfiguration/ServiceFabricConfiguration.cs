@@ -71,9 +71,15 @@ namespace FabricObserver.Observers.Utilities
 
         public string UpdaterServicePath => ReadStringValue();
 
-        public abstract string FabricVersion { get; }
+        public abstract string FabricVersion
+        {
+            get;
+        }
 
-        public abstract string FabricRoot { get; }
+        public abstract string FabricRoot
+        {
+            get;
+        }
 
         public abstract string GetString(string name);
 

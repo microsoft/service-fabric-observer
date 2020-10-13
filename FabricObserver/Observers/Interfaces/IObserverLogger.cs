@@ -7,9 +7,15 @@ namespace FabricObserver.Observers.Interfaces
 {
     public interface IObserverLogger<TLogger>
     {
-        bool EnableVerboseLogging { get; set; }
+        bool EnableVerboseLogging
+        {
+            get; set;
+        }
 
-        string LogFolderBasePath { get; set; }
+        string LogFolderBasePath
+        {
+            get; set;
+        }
 
         void LogInfo(string format, params object[] parameters);
 

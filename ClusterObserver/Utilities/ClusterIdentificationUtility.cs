@@ -35,7 +35,7 @@ namespace FabricClusterObserver.Utilities
             if (!string.IsNullOrEmpty(clusterManifest))
             {
                 // Safe XML pattern - *Do not use LoadXml*.
-                clusterManifestXdoc = new XmlDocument {XmlResolver = null};
+                clusterManifestXdoc = new XmlDocument { XmlResolver = null };
 
                 using var sreader = new StringReader(clusterManifest);
                 using var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });

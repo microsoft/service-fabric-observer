@@ -15,8 +15,8 @@ namespace FabricClusterObserver
 
         public FabricClusterObserver(StatelessServiceContext context)
             : base(context)
-        { 
-        
+        {
+
         }
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace FabricClusterObserver
             await Task.Factory.StartNew(() => this.observerManager.StartObservers()).ConfigureAwait(true);
         }
 
-        
+
         protected override Task OnCloseAsync(CancellationToken cancellationToken)
         {
             if (this.observerManager != null)

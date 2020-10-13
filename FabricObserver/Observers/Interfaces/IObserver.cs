@@ -12,21 +12,45 @@ namespace FabricObserver.Observers.Interfaces
 {
     public interface IObserver : IDisposable
     {
-        string ObserverName { get; }
+        string ObserverName
+        {
+            get;
+        }
 
-        string NodeName { get; set; }
+        string NodeName
+        {
+            get; set;
+        }
 
-        Logger ObserverLogger { get; set; }
+        Logger ObserverLogger
+        {
+            get; set;
+        }
 
-        DateTime LastRunDateTime { get; set; }
+        DateTime LastRunDateTime
+        {
+            get; set;
+        }
 
-        TimeSpan RunInterval { get; set; }
+        TimeSpan RunInterval
+        {
+            get; set;
+        }
 
-        bool IsEnabled { get; set; }
+        bool IsEnabled
+        {
+            get; set;
+        }
 
-        bool HasActiveFabricErrorOrWarning { get; set; }
+        bool HasActiveFabricErrorOrWarning
+        {
+            get; set;
+        }
 
-        bool IsUnhealthy { get; set; }
+        bool IsUnhealthy
+        {
+            get; set;
+        }
 
         ConfigSettings ConfigurationSettings
         {

@@ -21,7 +21,10 @@ namespace FabricObserver.Observers.Interfaces
         /// <summary>
         /// Gets or sets the telemetry API key.
         /// </summary>
-        string Key { get; set; }
+        string Key
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Calls telemetry provider to track the availability.

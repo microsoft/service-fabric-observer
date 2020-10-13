@@ -21,7 +21,10 @@ namespace FabricObserver.Observers.Utilities
         private const int Retries = 5;
 
         // Text file logger for observers - info/warn/error.
-        private ILogger OLogger { get; set; }
+        private ILogger OLogger
+        {
+            get; set;
+        }
 
         private readonly string loggerName;
 
@@ -30,11 +33,20 @@ namespace FabricObserver.Observers.Utilities
             get; private set;
         }
 
-        public bool EnableVerboseLogging { get; set; } = false;
+        public bool EnableVerboseLogging
+        {
+            get; set;
+        } = false;
 
-        public string LogFolderBasePath { get; set; }
+        public string LogFolderBasePath
+        {
+            get; set;
+        }
 
-        public string FilePath { get; set; }
+        public string FilePath
+        {
+            get; set;
+        }
 
         public string FolderName
         {
@@ -88,7 +100,6 @@ namespace FabricObserver.Observers.Utilities
             LogManager.Flush();
         }
 
-        
         public void LogTrace(string format, params object[] parameters)
         {
             OLogger.Trace(format, parameters);
@@ -181,11 +192,13 @@ namespace FabricObserver.Observers.Utilities
         public void InitializeLoggers()
         {
             // default log directory.
-            string logFolderBase = string.Empty;
+            string logFolderBase;
 
             // Log directory supplied in Settings.xml.
             if (!string.IsNullOrEmpty(LogFolderBasePath))
             {
+                logFolderBase = LogFolderBasePath;
+
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // Add current drive letter if not supplied for Windows path target.
@@ -200,10 +213,8 @@ namespace FabricObserver.Observers.Utilities
                     // Remove supplied drive letter if Linux is the runtime target.
                     if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
-                        LogFolderBasePath = LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
+                        logFolderBase = LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
                     }
-
-                    logFolderBase = LogFolderBasePath;
                 }
             }
             else
@@ -219,6 +230,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
+            this.LogFolderBasePath = logFolderBase;
             string file = Path.Combine(logFolderBase, "fabric_observer.log");
 
             if (!string.IsNullOrEmpty(FolderName) && !string.IsNullOrEmpty(Filename))

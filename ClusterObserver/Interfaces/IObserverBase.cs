@@ -11,14 +11,26 @@ namespace FabricClusterObserver.Interfaces
 {
     public interface IObserverBase<out TServiceContext> : IObserver
     {
-        string ObserverName { get; set; }
+        string ObserverName
+        {
+            get; set;
+        }
 
-        string NodeName { get; set; }
+        string NodeName
+        {
+            get; set;
+        }
 
         // StatefulServiceContext or StatelessServiceContext.
-        TServiceContext FabricServiceContext { get; }
+        TServiceContext FabricServiceContext
+        {
+            get;
+        }
 
-        Logger ObserverLogger { get; set; }
+        Logger ObserverLogger
+        {
+            get; set;
+        }
 
         void WriteToLogWithLevel(string observerName, string description, LogLevel level);
 

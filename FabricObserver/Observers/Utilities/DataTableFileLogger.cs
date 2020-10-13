@@ -16,11 +16,20 @@ namespace FabricObserver.Observers.Utilities
     // CSV file logger for long-running monitoring data (memory/cpu/disk/network usage data).
     public class DataTableFileLogger : IDataTableFileLogger<ILogger>
     {
-        public bool EnableCsvLogging { get; set; } = false;
+        public bool EnableCsvLogging 
+        { 
+            get; set; 
+        } = false;
 
-        public string DataLogFolderPath { get; set; } = null;
+        public string DataLogFolderPath 
+        { 
+            get; set; 
+        } = null;
 
-        private static ILogger Logger { get; set; }
+        private static ILogger Logger
+        {
+            get; set;
+        }
 
         public void ConfigureLogger(string filename)
         {

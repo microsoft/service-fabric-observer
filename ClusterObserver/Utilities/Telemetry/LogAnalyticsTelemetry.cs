@@ -26,13 +26,25 @@ namespace FabricClusterObserver.Utilities.Telemetry
         private readonly CancellationToken token;
         private readonly Logger logger;
 
-        public string WorkspaceId { get; set; }
+        public string WorkspaceId
+        {
+            get; set;
+        }
 
-        public string Key { get; set; }
+        public string Key
+        {
+            get; set;
+        }
 
-        public string ApiVersion { get; set; }
+        public string ApiVersion
+        {
+            get; set;
+        }
 
-        public string LogType { get; set; }
+        public string LogType
+        {
+            get; set;
+        }
 
         public LogAnalyticsTelemetry(
             string workspaceId,

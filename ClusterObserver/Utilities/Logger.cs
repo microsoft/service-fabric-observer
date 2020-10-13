@@ -16,19 +16,37 @@ namespace FabricClusterObserver.Utilities
     public sealed class Logger
     {
         // Text file logger for observers - info/warn/error.
-        private ILogger OLogger { get; set; }
+        private ILogger OLogger
+        {
+            get; set;
+        }
 
         private readonly string loggerName;
 
-        internal string FolderName { get; }
+        internal string FolderName
+        {
+            get;
+        }
 
-        internal string Filename { get; }
+        internal string Filename
+        {
+            get;
+        }
 
-        public bool EnableVerboseLogging { get; set; } = false;
+        public bool EnableVerboseLogging 
+        { 
+            get; set; 
+        } = false;
 
-        public string LogFolderBasePath { get; set; }
+        public string LogFolderBasePath
+        {
+            get; set;
+        }
 
-        public string FilePath { get; set; }
+        public string FilePath
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.

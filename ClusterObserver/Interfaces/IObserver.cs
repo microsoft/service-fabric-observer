@@ -11,15 +11,30 @@ namespace FabricClusterObserver.Interfaces
 {
     public interface IObserver : IDisposable
     {
-        DateTime LastRunDateTime { get; set; }
+        DateTime LastRunDateTime
+        {
+            get; set;
+        }
 
-        TimeSpan RunInterval { get; set; }
+        TimeSpan RunInterval
+        {
+            get; set;
+        }
 
-        bool IsEnabled { get; set; }
+        bool IsEnabled
+        {
+            get; set;
+        }
 
-        bool HasActiveFabricErrorOrWarning { get; set; }
+        bool HasActiveFabricErrorOrWarning
+        {
+            get; set;
+        }
 
-        bool IsUnhealthy { get; set; }
+        bool IsUnhealthy
+        {
+            get; set;
+        }
 
         /// <summary>
         /// The function where observers observe.

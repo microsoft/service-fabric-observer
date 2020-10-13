@@ -24,7 +24,10 @@ namespace FabricClusterObserver.Observers
         private TimeSpan maxTimeNodeStatusNotOk;
         private readonly bool etwEnabled;
 
-        private EventSource EtwLogger { get; set; }
+        private EventSource EtwLogger
+        {
+            get; set;
+        }
 
         private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
         private readonly Uri fabricSystemAppUri = new Uri("fabric:/System");
@@ -37,7 +40,7 @@ namespace FabricClusterObserver.Observers
         public ClusterObserver()
             : base(ObserverConstants.ClusterObserverName)
         {
-            if (ObserverManager.EtwEnabled 
+            if (ObserverManager.EtwEnabled
                 && !string.IsNullOrEmpty(ObserverManager.EtwProviderName))
             {
                 EtwLogger = new EventSource(ObserverManager.EtwProviderName);
@@ -51,7 +54,9 @@ namespace FabricClusterObserver.Observers
         /// Dictionary that holds node name (key) and tuple of node status, first detected time, last detected time.
         /// </summary>
         private Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)> NodeStatusDictionary
-        { get; } =
+        {
+            get;
+        } =
                 new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -427,7 +432,7 @@ namespace FabricClusterObserver.Observers
                                             telemetryDescription += $"{nodeHealthEvent.HealthInformation.Description}{Environment.NewLine}";
                                         }
 
-                                        var targetNodeList = 
+                                        var targetNodeList =
                                             await FabricClientInstance.QueryManager.GetNodeListAsync(
                                                 node.NodeName,
                                                 AsyncClusterOperationTimeoutSeconds,
@@ -610,12 +615,12 @@ namespace FabricClusterObserver.Observers
 
                     // Nodes stuck in Disabled/Disabling/Down?
                     if (NodeStatusDictionary.Any(
-                             dict => dict.Key == node.NodeName 
+                             dict => dict.Key == node.NodeName
                                 && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
                                 >= this.maxTimeNodeStatusNotOk))
                     {
                         var kvp = NodeStatusDictionary.FirstOrDefault(
-                                       dict => dict.Key == node.NodeName 
+                                       dict => dict.Key == node.NodeName
                                         && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
                                         >= this.maxTimeNodeStatusNotOk);
 
@@ -683,7 +688,7 @@ namespace FabricClusterObserver.Observers
             {
                 return null;
             }
-            
+
             if (scope == HealthScope.Application && !FoErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(foHealthData.Code))
             {
                 return null;

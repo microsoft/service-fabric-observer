@@ -33,9 +33,11 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             this.eventSource = eventSource;
             this.serviceContext = context;
             var appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
-            appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey;
             appInsightsTelemetryConf.TelemetryChannel.EndpointAddress = TelemetryConstants.TelemetryEndpoint;
-            this.telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
+            this.telemetryClient = new TelemetryClient(appInsightsTelemetryConf)
+            {
+                InstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey,
+            };
 
             var clusterInfoTuple = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
             this.clusterId = clusterInfoTuple.Item1;

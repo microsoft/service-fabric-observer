@@ -47,7 +47,7 @@ namespace FabricObserver.Observers
         {
 
         }
-        
+
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -291,7 +291,8 @@ namespace FabricObserver.Observers
                 e is FormatException ||
                 e is InvalidCastException ||
                 e is ManagementException ||
-                e is NullReferenceException)
+                e is NullReferenceException ||
+                e is OperationCanceledException)
             {
             }
             finally
@@ -566,13 +567,16 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                    FabricServiceContext.ServiceName.OriginalString,
-                    ObserverName,
-                    HealthState.Error,
-                    $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
+                if (!(e is OperationCanceledException || e is TaskCanceledException))
+                {
+                    HealthReporter.ReportFabricObserverServiceHealth(
+                        FabricServiceContext.ServiceName.OriginalString,
+                        ObserverName,
+                        HealthState.Error,
+                        $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
-                throw;
+                    throw;
+                }
             }
         }
     }

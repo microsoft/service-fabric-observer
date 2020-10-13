@@ -25,31 +25,70 @@ namespace FabricObserver.Observers
         private FabricResourceUsageData<int> allMemDataPercentUsed;
 
         // public because unit test.
-        public FabricResourceUsageData<float> AllCpuTimeData { get; set; }
+        public FabricResourceUsageData<float> AllCpuTimeData
+        {
+            get; set;
+        }
 
-        public float CpuErrorUsageThresholdPct { get; set; }
+        public float CpuErrorUsageThresholdPct
+        {
+            get; set;
+        }
 
-        public int MemErrorUsageThresholdMb { get; set; }
+        public int MemErrorUsageThresholdMb
+        {
+            get; set;
+        }
 
-        public float CpuWarningUsageThresholdPct { get; set; }
+        public float CpuWarningUsageThresholdPct
+        {
+            get; set;
+        }
 
-        public int MemWarningUsageThresholdMb { get; set; }
+        public int MemWarningUsageThresholdMb
+        {
+            get; set;
+        }
 
-        public int ActivePortsErrorThreshold { get; set; }
+        public int ActivePortsErrorThreshold
+        {
+            get; set;
+        }
 
-        public int EphemeralPortsErrorThreshold { get; set; }
+        public int EphemeralPortsErrorThreshold
+        {
+            get; set;
+        }
 
-        public int FirewallRulesErrorThreshold { get; set; }
+        public int FirewallRulesErrorThreshold
+        {
+            get; set;
+        }
 
-        public int ActivePortsWarningThreshold { get; set; }
+        public int ActivePortsWarningThreshold
+        {
+            get; set;
+        }
 
-        public int EphemeralPortsWarningThreshold { get; set; }
+        public int EphemeralPortsWarningThreshold
+        {
+            get; set;
+        }
 
-        public int FirewallRulesWarningThreshold { get; set; }
+        public int FirewallRulesWarningThreshold
+        {
+            get; set;
+        }
 
-        public int MemoryErrorLimitPercent { get; set; }
+        public int MemoryErrorLimitPercent
+        {
+            get; set;
+        }
 
-        public int MemoryWarningLimitPercent { get; set; }
+        public int MemoryWarningLimitPercent
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NodeObserver"/> class.

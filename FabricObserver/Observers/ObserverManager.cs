@@ -75,7 +75,7 @@ namespace FabricObserver.Observers
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
             this.nodeName = FabricServiceContext?.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-            
+
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetConfigSettingValue(
@@ -96,7 +96,7 @@ namespace FabricObserver.Observers
             this.HealthReporter = new ObserverHealthReporter(this.Logger);
             this.SetPropertieSFromConfigurationParameters();
             this.serviceCollection = serviceProvider.GetServices<ObserverBase>();
-            
+
             // Populate the Observer list for the sequential run loop.
             this.observers = this.serviceCollection.Where(o => o.IsEnabled).ToList();
 
@@ -114,7 +114,8 @@ namespace FabricObserver.Observers
 
             string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
             string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
-            string filepath = Path.Combine(logFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.txt");
+            string filepath = Path.Combine(this.Logger.LogFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
+
 #if !DEBUG
             // If this has already been sent for this activated version (code/config) of nodetype x
             if (File.Exists(filepath))
@@ -128,14 +129,15 @@ namespace FabricObserver.Observers
                 ServiceEventSource.Current,
                 this.token);
 
+            string foInternalTelemetryData = this.GetFabricObserverInternalConfiguration();
             if (this.telemetryEvents.FabricObserverRuntimeNodeEvent(
                 codePkgVersion,
-                this.GetFabricObserverInternalConfiguration(),
+                foInternalTelemetryData,
                 "HealthState.Initialized"))
             {
                 // Log a file to prevent re-sending this in case of process restart(s).
                 // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates.).
-                this.Logger.TryWriteLogFile(filepath, "_");
+                _ = this.Logger.TryWriteLogFile(filepath, foInternalTelemetryData);
             }
         }
 
@@ -522,7 +524,7 @@ namespace FabricObserver.Observers
             await Task.Delay(
                 TimeSpan.FromSeconds(1),
                 this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token : this.token).ConfigureAwait(false);
-            
+
             try
             {
                 foreach (var observer in this.serviceCollection)
@@ -689,12 +691,12 @@ namespace FabricObserver.Observers
         private void SignalAbortToRunningObserver()
         {
             this.Logger.LogInfo("Signalling task cancellation to currently running Observer.");
-            
+
             if (this.linkedSFRuntimeObserverTokenSource != null)
             {
                 this.linkedSFRuntimeObserverTokenSource.Cancel();
             }
-            else 
+            else
             {
                 this.cts?.Cancel();
             }
@@ -717,7 +719,7 @@ namespace FabricObserver.Observers
                 {
                     // Shutdown/cancellation signaled, so stop.
                     bool taskCancelled = this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token.IsCancellationRequested : this.token.IsCancellationRequested;
-                    
+
                     if (taskCancelled || this.shutdownSignaled)
                     {
                         return false;

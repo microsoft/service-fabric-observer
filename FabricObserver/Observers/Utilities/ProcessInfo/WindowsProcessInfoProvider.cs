@@ -10,7 +10,7 @@ namespace FabricObserver.Observers.Utilities
 {
     // Since we only create a single instance of WindowsProcessInfoProvider, it is OK
     // to not dispose memProcessPrivateWorkingSetCounter.
-    #pragma warning disable CA1001 // Types that own disposable fields should be disposable
+#pragma warning disable CA1001 // Types that own disposable fields should be disposable
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
         private readonly PerformanceCounter memProcessPrivateWorkingSetCounter = new PerformanceCounter();

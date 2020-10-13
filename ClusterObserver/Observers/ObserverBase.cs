@@ -20,30 +20,54 @@ namespace FabricClusterObserver.Observers
     {
         protected bool IsTelemetryEnabled { get; set; } = ObserverManager.TelemetryEnabled;
 
-        protected ITelemetryProvider ObserverTelemetryClient { get; set; }
+        protected ITelemetryProvider ObserverTelemetryClient
+        {
+            get; set;
+        }
 
-        protected FabricClient FabricClientInstance { get; set; }
+        protected FabricClient FabricClientInstance
+        {
+            get; set;
+        }
 
-        
-        public string ObserverName { get; set; }
 
-        
-        public string NodeName { get; set; }
+        public string ObserverName
+        {
+            get; set;
+        }
 
-        public string NodeType { get; private set; }
 
-        
-        public StatelessServiceContext FabricServiceContext { get; }
+        public string NodeName
+        {
+            get; set;
+        }
 
-        
-        public DateTime LastRunDateTime { get; set; }
+        public string NodeType
+        {
+            get; private set;
+        }
 
-        public CancellationToken Token { get; set; }
 
-        
+        public StatelessServiceContext FabricServiceContext
+        {
+            get;
+        }
+
+
+        public DateTime LastRunDateTime
+        {
+            get; set;
+        }
+
+        public CancellationToken Token
+        {
+            get; set;
+        }
+
+
         public bool IsEnabled { get; set; } = true;
 
-        
+
         public bool IsUnhealthy { get; set; } = false;
 
         // Only set for unit test runs.
@@ -51,26 +75,32 @@ namespace FabricClusterObserver.Observers
 
         // Loggers.
 
-        
-        public Logger ObserverLogger { get; set; }
+
+        public Logger ObserverLogger
+        {
+            get; set;
+        }
 
         // Each derived Observer can set this to maintain health status across iterations.
         // This information is used by ObserverManager.
 
-        
+
         public bool HasActiveFabricErrorOrWarning { get; set; } = false;
 
-        
+
         public TimeSpan RunInterval { get; set; } = TimeSpan.MinValue;
 
         public TimeSpan AsyncClusterOperationTimeoutSeconds { get; set; } = TimeSpan.FromSeconds(60);
 
-        public List<string> Settings { get; }
+        public List<string> Settings
+        {
+            get;
+        }
 
-        
+
         public abstract Task ObserveAsync(CancellationToken token);
 
-        
+
         public abstract Task ReportAsync(CancellationToken token);
 
         /// <summary>
@@ -91,7 +121,7 @@ namespace FabricClusterObserver.Observers
             NodeName = FabricServiceContext.NodeContext.NodeName;
             NodeType = FabricServiceContext.NodeContext.NodeType;
             AsyncClusterOperationTimeoutSeconds = TimeSpan.FromSeconds(ObserverManager.AsyncClusterOperationTimeoutSeconds);
-            
+
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetSettingParameterValue(
@@ -141,7 +171,7 @@ namespace FabricClusterObserver.Observers
             }
         }
 
-        
+
         public void WriteToLogWithLevel(string property, string description, LogLevel level)
         {
             switch (level)
@@ -180,7 +210,7 @@ namespace FabricClusterObserver.Observers
             try
             {
                 var serviceConfiguration = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
-                
+
                 if (serviceConfiguration == null)
                 {
                     return null;
@@ -219,10 +249,10 @@ namespace FabricClusterObserver.Observers
             {
             }
             catch (KeyNotFoundException)
-            { 
+            {
             }
             catch (NullReferenceException)
-            { 
+            {
             }
 
             return null;
@@ -299,7 +329,7 @@ namespace FabricClusterObserver.Observers
                 }
                 else
                 {
-                   
+
                     throw;
                 }
             }
@@ -328,7 +358,7 @@ namespace FabricClusterObserver.Observers
             }
         }
 
-        
+
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.

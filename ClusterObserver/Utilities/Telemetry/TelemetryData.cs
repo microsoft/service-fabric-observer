@@ -28,12 +28,20 @@ namespace FabricClusterObserver.Utilities.Telemetry
             get; set;
         }
 
+        public string ContainerId
+        {
+            get; set;
+        }
+
         public string HealthEventDescription
         {
             get; set;
         }
 
-        public string HealthScope { get; set; } = "Cluster";
+        public string HealthScope
+        {
+            get; set;
+        } = "Cluster";
 
         public string HealthState
         {
@@ -84,7 +92,10 @@ namespace FabricClusterObserver.Utilities.Telemetry
             get; set;
         }
 
-        public string Source { get; set; } = "ClusterObserver";
+        public string Source
+        {
+            get; set;
+        } = "ClusterObserver";
 
         public object Value
         {
