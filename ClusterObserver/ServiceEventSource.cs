@@ -19,7 +19,8 @@ namespace FabricClusterObserver
 
         // Instance constructor is private to enforce singleton semantics
         private ServiceEventSource()
-        { }
+        {
+        }
 
         #region Keywords
         // Event keywords can be used to categorize events. 

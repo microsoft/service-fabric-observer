@@ -41,8 +41,8 @@ namespace FabricObserver.Observers.Utilities
                 return true;
             }
             catch (Exception e) when (
-                e is JsonSerializationException 
-                || e is JsonReaderException 
+                e is JsonSerializationException
+                || e is JsonReaderException
                 || e is JsonWriterException)
             {
                 return false;

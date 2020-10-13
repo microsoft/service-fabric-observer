@@ -37,7 +37,10 @@ namespace FabricObserver.Observers
         private string SFLogRoot;
 
         // Values.
-        public string SFRootDir { get; private set; }
+        public string SFRootDir
+        {
+            get; private set;
+        }
 
         // Values.
         private string SFNodeLastBootTime;
@@ -110,7 +113,7 @@ namespace FabricObserver.Observers
 
             LastRunDateTime = DateTime.Now;
         }
-    
+
         public override async Task ReportAsync(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();

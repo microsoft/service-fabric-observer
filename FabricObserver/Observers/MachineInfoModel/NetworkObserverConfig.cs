@@ -9,8 +9,14 @@ namespace FabricObserver.Observers.MachineInfoModel
 {
     public class NetworkObserverConfig
     {
-        public string TargetApp { get; set; }
+        public string TargetApp
+        {
+            get; set;
+        }
 
-        public List<Endpoint> Endpoints { get; set; }
+        public List<Endpoint> Endpoints
+        {
+            get; set;
+        }
     }
 }

@@ -7,39 +7,90 @@ namespace FabricObserver.Observers.MachineInfoModel
 {
     public class ApplicationInfo
     {
-        public string TargetApp { get; set; }
+        public string TargetApp
+        {
+            get; set;
+        }
 
-        public string TargetAppType { get; set; }
+        public string TargetAppType
+        {
+            get; set;
+        }
 
-        public string ServiceExcludeList { get; set; }
+        public string ServiceExcludeList
+        {
+            get; set;
+        }
 
-        public string ServiceIncludeList { get; set; }
+        public string ServiceIncludeList
+        {
+            get; set;
+        }
 
-        public long MemoryWarningLimitMb { get; set; }
+        public long MemoryWarningLimitMb
+        {
+            get; set;
+        }
 
-        public long MemoryErrorLimitMb { get; set; }
+        public long MemoryErrorLimitMb
+        {
+            get; set;
+        }
 
-        public double MemoryWarningLimitPercent { get; set; }
+        public double MemoryWarningLimitPercent
+        {
+            get; set;
+        }
 
-        public double MemoryErrorLimitPercent { get; set; }
+        public double MemoryErrorLimitPercent
+        {
+            get; set;
+        }
 
-        public double CpuErrorLimitPercent { get; set; }
+        public double CpuErrorLimitPercent
+        {
+            get; set;
+        }
 
-        public double CpuWarningLimitPercent { get; set; }
+        public double CpuWarningLimitPercent
+        {
+            get; set;
+        }
 
-        public int NetworkErrorActivePorts { get; set; }
+        public int NetworkErrorActivePorts
+        {
+            get; set;
+        }
 
-        public int NetworkWarningActivePorts { get; set; }
+        public int NetworkWarningActivePorts
+        {
+            get; set;
+        }
 
-        public int NetworkErrorEphemeralPorts { get; set; }
+        public int NetworkErrorEphemeralPorts
+        {
+            get; set;
+        }
 
-        public int NetworkWarningEphemeralPorts { get; set; }
+        public int NetworkWarningEphemeralPorts
+        {
+            get; set;
+        }
 
-        public int NetworkErrorFirewallRules { get; set; }
+        public int NetworkErrorFirewallRules
+        {
+            get; set;
+        }
 
-        public int NetworkWarningFirewallRules { get; set; }
+        public int NetworkWarningFirewallRules
+        {
+            get; set;
+        }
 
-        public bool DumpProcessOnError { get; set; }
+        public bool DumpProcessOnError
+        {
+            get; set;
+        }
 
         public override string ToString() => $"ApplicationName: {TargetApp ?? string.Empty}\n" +
                                              $"ApplicationTypeName: {TargetAppType ?? string.Empty}\n" +

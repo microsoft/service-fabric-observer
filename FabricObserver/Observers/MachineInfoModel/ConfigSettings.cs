@@ -14,9 +14,15 @@ namespace FabricObserver.Observers.MachineInfoModel
             ObserverManager.FabricServiceContext.CodePackageActivationContext.
                 GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
 
-        public static string AppObserverConfigFileName { get; set; }
+        public static string AppObserverConfigFileName
+        {
+            get; set;
+        }
 
-        public static string NetworkObserverConfigFileName { get; set; }
+        public static string NetworkObserverConfigFileName
+        {
+            get; set;
+        }
 
         public static void Initialize(
             ConfigurationSettings configSettings,

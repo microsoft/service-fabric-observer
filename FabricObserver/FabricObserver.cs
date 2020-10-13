@@ -32,7 +32,7 @@ namespace FabricObserver
         public FabricObserver(StatelessServiceContext context)
             : base(context)
         {
-            
+
         }
 
         /// <summary>
@@ -88,7 +88,7 @@ namespace FabricObserver
             {
                 return;
             }
-           
+
             List<PluginLoader> pluginLoaders = new List<PluginLoader>(capacity: pluginDlls.Length);
 
             Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };

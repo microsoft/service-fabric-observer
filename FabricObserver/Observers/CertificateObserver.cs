@@ -27,25 +27,52 @@ namespace FabricObserver.Observers
         {
         }
 
-        public int DaysUntilClusterExpireWarningThreshold { get; set; }
+        public int DaysUntilClusterExpireWarningThreshold
+        {
+            get; set;
+        }
 
-        public int DaysUntilAppExpireWarningThreshold { get; set; }
+        public int DaysUntilAppExpireWarningThreshold
+        {
+            get; set;
+        }
 
-        public List<string> AppCertificateThumbprintsToObserve { get; set; }
+        public List<string> AppCertificateThumbprintsToObserve
+        {
+            get; set;
+        }
 
-        public List<string> AppCertificateCommonNamesToObserve { get; set; }
+        public List<string> AppCertificateCommonNamesToObserve
+        {
+            get; set;
+        }
 
-        public List<string> NotFoundWarnings { get; set; }
+        public List<string> NotFoundWarnings
+        {
+            get; set;
+        }
 
-        public List<string> ExpiredWarnings { get; set; }
+        public List<string> ExpiredWarnings
+        {
+            get; set;
+        }
 
-        public List<string> ExpiringWarnings { get; set; }
+        public List<string> ExpiringWarnings
+        {
+            get; set;
+        }
 
-        public SecurityConfiguration SecurityConfiguration { get; set; }
+        public SecurityConfiguration SecurityConfiguration
+        {
+            get; set;
+        }
 
-        public TimeSpan HealthReportTimeToLive { get; set; } = TimeSpan.FromDays(1);
+        public TimeSpan HealthReportTimeToLive 
+        { 
+            get; set; 
+        } = TimeSpan.FromDays(1);
 
-        
+
         public override async Task ObserveAsync(CancellationToken token)
         {
             // Only run once per specified time in Settings.xml. (default is already set to 1 day for CertificateObserver)
@@ -117,7 +144,7 @@ namespace FabricObserver.Observers
         {
             if (token.IsCancellationRequested)
             {
-                 return Task.CompletedTask;
+                return Task.CompletedTask;
             }
 
             // Someone calling without observing first, must be run after a new run of ObserveAsync

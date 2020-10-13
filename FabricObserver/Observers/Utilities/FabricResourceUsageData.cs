@@ -87,31 +87,45 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the name of the machine resource property this instance represents.
         /// </summary>
-        public string Property { get; }
+        public string Property
+        {
+            get;
+        }
 
         /// <summary>
         /// Gets the unique Id of this instance.
         /// </summary>
-        public string Id { get; }
+        public string Id
+        {
+            get;
+        }
 
         /// <summary>
         /// Gets the unit of measure for the data (%, MB/GB, etc).
         /// </summary>
-        public string Units { get; }
+        public string Units
+        {
+            get;
+        }
 
         /// <summary>
         /// Gets IList type that holds the resource monitoring
         /// numeric data.
         /// </summary>
-        public IList<T> Data { get; }
+        public IList<T> Data
+        {
+            get;
+        }
 
         private bool isInWarningState;
-        private string foErrorCode;
 
         /// <summary>
         /// Gets count of warnings per observer instance across iterations for the lifetime of the Observer.
         /// </summary>
-        public int LifetimeWarningCount { get; private set; }
+        public int LifetimeWarningCount
+        {
+            get; private set;
+        }
 
         /// <summary>
         /// Gets the largest numeric value in the Data collection.
@@ -121,28 +135,28 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the average value in the Data collection.
         /// </summary>
-        public T AverageDataValue
+        public double AverageDataValue
         {
             get
             {
-                T average = default(T);
+                double average = 0.0;
 
                 switch (Data)
                 {
                     case IList<long> v when v.Count > 0:
-                        average = (T)Convert.ChangeType(Math.Round(v.Average(), 1), typeof(T));
+                        average = Math.Round(v.Average(), 1);
                         break;
 
                     case IList<int> x when x.Count > 0:
-                        average = (T)Convert.ChangeType(Math.Round(x.Average(), 1), typeof(T));
+                        average = Math.Round(x.Average(), 1);
                         break;
 
                     case IList<float> y when y.Count > 0:
-                        average = (T)Convert.ChangeType(Math.Round(y.Average(), 1), typeof(T));
+                        average = Math.Round(y.Average(), 1);
                         break;
 
                     case IList<double> z when z.Count > 0:
-                        average = (T)Convert.ChangeType(Math.Round(z.Average(), 1), typeof(T));
+                        average = Math.Round(z.Average(), 1);
                         break;
                 }
 
@@ -172,14 +186,9 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets or sets the active error or warning code (FOErorrWarningCode).
         /// </summary>
-        public string ActiveErrorOrWarningCode
-        {
-            get => this.foErrorCode;
-
-            set
-            {
-                this.foErrorCode = value;
-            }
+        public string ActiveErrorOrWarningCode 
+        { 
+            get; set; 
         }
 
         /// <summary>
@@ -195,7 +204,7 @@ namespace FabricObserver.Observers.Utilities
                 return false;
             }
 
-            return Convert.ToDouble(AverageDataValue) >= Convert.ToDouble(threshold);
+            return AverageDataValue >= Convert.ToDouble(threshold);
         }
 
         /// <summary>

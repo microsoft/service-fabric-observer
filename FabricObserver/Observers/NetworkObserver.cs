@@ -397,9 +397,9 @@ namespace FabricObserver.Observers
 
                     foreach (var netConfig in configs)
                     {
-                       var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
-                                NodeName,
-                                new Uri(netConfig.TargetApp)).ConfigureAwait(false);
+                        var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
+                                 NodeName,
+                                 new Uri(netConfig.TargetApp)).ConfigureAwait(false);
 
                         if (deployedApps == null || deployedApps.Count < 1)
                         {

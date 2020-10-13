@@ -42,12 +42,18 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the number of elements in the collection.
         /// </summary>
-        public int Count { get; private set; }
+        public int Count
+        {
+            get; private set;
+        }
 
         /// <summary>
         /// Gets a value indicating whether or not the collection is readonly.
         /// </summary>
-        public bool IsReadOnly { get; } = false;
+        public bool IsReadOnly 
+        { 
+            get; 
+        } = false;
 
         /// <summary>
         /// Gets or sets the capacity of the collection.

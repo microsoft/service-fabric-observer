@@ -11,27 +11,57 @@ namespace FabricObserver.Observers.Utilities
 {
     public class HealthReport
     {
-        public Uri AppName { get; set; }
+        public Uri AppName
+        {
+            get; set;
+        }
 
-        public string Code { get; set; }
+        public string Code
+        {
+            get; set;
+        }
 
-        public TimeSpan HealthReportTimeToLive { get; set; }
+        public TimeSpan HealthReportTimeToLive
+        {
+            get; set;
+        }
 
-        public string HealthMessage { get; set; }
+        public string HealthMessage
+        {
+            get; set;
+        }
 
         public bool EmitLogEvent { get; set; } = true;
 
-        public HealthReportType ReportType { get; set; }
+        public HealthReportType ReportType
+        {
+            get; set;
+        }
 
-        public HealthState State { get; set; }
+        public HealthState State
+        {
+            get; set;
+        }
 
-        public string NodeName { get; set; }
+        public string NodeName
+        {
+            get; set;
+        }
 
-        public string Observer { get; set; }
+        public string Observer
+        {
+            get; set;
+        }
 
-        public string Property { get; set; }
+        public string Property
+        {
+            get; set;
+        }
 
-        public string ResourceUsageDataProperty { get; set; }
+        public string ResourceUsageDataProperty
+        {
+            get; set;
+        }
 
         public string SourceId
         {
@@ -40,8 +70,7 @@ namespace FabricObserver.Observers.Utilities
 
         public TelemetryData HealthData
         {
-            get;
-            set;
+            get; set;
         }
     }
 }

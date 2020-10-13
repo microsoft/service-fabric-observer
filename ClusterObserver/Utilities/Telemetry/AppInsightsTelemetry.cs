@@ -59,8 +59,14 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// </summary>
         public string Key
         {
-            get { return this.telemetryClient?.InstrumentationKey; }
-            set { this.telemetryClient.InstrumentationKey = value; }
+            get
+            {
+                return this.telemetryClient?.InstrumentationKey;
+            }
+            set
+            {
+                this.telemetryClient.InstrumentationKey = value;
+            }
         }
 
         /// <summary>
@@ -109,11 +115,11 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>a Task.</returns>
         public Task ReportHealthAsync(
-            TelemetryData telemetryData, 
+            TelemetryData telemetryData,
             CancellationToken cancellationToken)
         {
-            if (!IsEnabled 
-                || cancellationToken.IsCancellationRequested 
+            if (!IsEnabled
+                || cancellationToken.IsCancellationRequested
                 || telemetryData == null)
             {
                 return Task.FromResult(1);
@@ -155,7 +161,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
                 this.logger.LogWarning(
                     $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
                     $"{Environment.NewLine}{e}");
-                
+
                 throw;
             }
 
@@ -206,7 +212,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
                 var tt = new TraceTelemetry($"Service Fabric Health Report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
-         
+
                 this.telemetryClient.TrackTrace(tt);
             }
             catch (Exception e)
@@ -373,7 +379,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
 
         // This code added to correctly implement the disposable pattern.
 
-        
+
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.

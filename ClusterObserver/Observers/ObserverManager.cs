@@ -35,21 +35,42 @@ namespace FabricClusterObserver.Observers
         private bool hasDisposed;
         private static bool etwEnabled;
 
-        public string ApplicationName { get; set; }
+        public string ApplicationName
+        {
+            get; set;
+        }
 
-        public bool IsObserverRunning { get; set; }
+        public bool IsObserverRunning
+        {
+            get; set;
+        }
 
         public static int ObserverExecutionLoopSleepSeconds { get; private set; } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
-        public static int AsyncClusterOperationTimeoutSeconds { get; private set; }
+        public static int AsyncClusterOperationTimeoutSeconds
+        {
+            get; private set;
+        }
 
-        public static FabricClient FabricClientInstance { get; set; }
+        public static FabricClient FabricClientInstance
+        {
+            get; set;
+        }
 
-        public static StatelessServiceContext FabricServiceContext { get; set; }
+        public static StatelessServiceContext FabricServiceContext
+        {
+            get; set;
+        }
 
-        public static ITelemetryProvider TelemetryClient { get; set; }
+        public static ITelemetryProvider TelemetryClient
+        {
+            get; set;
+        }
 
-        public static bool TelemetryEnabled { get; set; }
+        public static bool TelemetryEnabled
+        {
+            get; set;
+        }
 
         public static bool EtwEnabled
         {
@@ -73,8 +94,10 @@ namespace FabricClusterObserver.Observers
             }
         }
 
-        private Logger Logger { get; }
-
+        private Logger Logger
+        {
+            get;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
@@ -287,50 +310,50 @@ namespace FabricClusterObserver.Observers
 
                 switch (telemetryProvider)
                 {
-                     case TelemetryProviderType.AzureLogAnalytics:
+                    case TelemetryProviderType.AzureLogAnalytics:
+                    {
+                        var logAnalyticsLogType =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter) ?? "Application";
+
+                        var logAnalyticsSharedKey =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
+
+                        var logAnalyticsWorkspaceId =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+
+                        if (string.IsNullOrEmpty(logAnalyticsSharedKey)
+                            || string.IsNullOrEmpty(logAnalyticsWorkspaceId))
                         {
-                            var logAnalyticsLogType =
-                                GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter) ?? "Application";
+                            TelemetryEnabled = false;
 
-                            var logAnalyticsSharedKey =
-                                GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
-
-                            var logAnalyticsWorkspaceId =
-                                GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
-
-                            if (string.IsNullOrEmpty(logAnalyticsSharedKey)
-                                || string.IsNullOrEmpty(logAnalyticsWorkspaceId))
-                            {
-                                TelemetryEnabled = false;
-
-                                return;
-                            }
-
-                            TelemetryClient = new LogAnalyticsTelemetry(
-                                logAnalyticsWorkspaceId,
-                                logAnalyticsSharedKey,
-                                logAnalyticsLogType,
-                                FabricClientInstance,
-                                token);
-
-                            break;
+                            return;
                         }
+
+                        TelemetryClient = new LogAnalyticsTelemetry(
+                            logAnalyticsWorkspaceId,
+                            logAnalyticsSharedKey,
+                            logAnalyticsLogType,
+                            FabricClientInstance,
+                            token);
+
+                        break;
+                    }
 
                     case TelemetryProviderType.AzureApplicationInsights:
+                    {
+                        string aiKey = GetConfigSettingValue(ObserverConstants.AiKey);
+
+                        if (string.IsNullOrEmpty(aiKey))
                         {
-                            string aiKey = GetConfigSettingValue(ObserverConstants.AiKey);
+                            TelemetryEnabled = false;
 
-                            if (string.IsNullOrEmpty(aiKey))
-                            {
-                                TelemetryEnabled = false;
-
-                                return;
-                            }
-
-                            TelemetryClient = new AppInsightsTelemetry(aiKey);
-
-                            break;
+                            return;
                         }
+
+                        TelemetryClient = new AppInsightsTelemetry(aiKey);
+
+                        break;
+                    }
                 }
             }
         }
