@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Fabric;
-using System.Fabric.Health;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -15,7 +13,6 @@ using FabricClusterObserver.Observers;
 using FabricObserver.Observers;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ClusterObserverManager = FabricClusterObserver.Observers.ObserverManager;
 using ObserverManager = FabricObserver.Observers.ObserverManager;
@@ -429,7 +426,7 @@ namespace FabricObserverTests
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
         [TestMethod]
         [SuppressMessage("Code Quality", "IDE0067:Dispose objects before losing scope", Justification = "Noise.")]
-        public void Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
+        public async Task Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
         {
             ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
@@ -472,7 +469,7 @@ namespace FabricObserverTests
 
             Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
-            obsMgr.StopObservers();
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
@@ -514,7 +511,7 @@ namespace FabricObserverTests
 
             Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
-            obsMgr.StopObservers();
+            obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
@@ -547,7 +544,7 @@ namespace FabricObserverTests
 
             Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
-            obsMgr.StopObservers();
+            obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
@@ -579,7 +576,7 @@ namespace FabricObserverTests
 
             Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
-            obsMgr.StopObservers();
+            obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
@@ -611,7 +608,7 @@ namespace FabricObserverTests
 
             Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
-            obsMgr.StopObservers();
+            obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
             obs.Dispose();
         }
@@ -642,7 +639,7 @@ namespace FabricObserverTests
 
             Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
-            obsMgr.StopObservers();
+            obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
@@ -674,7 +671,7 @@ namespace FabricObserverTests
 
             Wait(() => obsMgr.IsObserverRunning, 10);
             Assert.IsTrue(obsMgr.IsObserverRunning);
-            obsMgr.StopObservers();
+            obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
 
             obs.Dispose();
@@ -846,7 +843,7 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            obsMgr.StopObservers();
+            await obsMgr.StopObserversAsync();
 
             // Required blocking for health warning clear.
             await Task.Delay(1000).ConfigureAwait(false);
@@ -1086,7 +1083,7 @@ namespace FabricObserverTests
             // Output file is not empty.
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
-            obsMgr.StopObservers();
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             await Task.Delay(1000).ConfigureAwait(false);
             obs.Dispose();
             obsMgr.Dispose();
@@ -1228,7 +1225,7 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            obsMgr.StopObservers();
+            await obsMgr.StopObserversAsync();
             await Task.Delay(1000).ConfigureAwait(false);
             obs.Dispose();
             obsMgr.Dispose();
@@ -1376,7 +1373,7 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            obsMgr.StopObservers();
+            await obsMgr.StopObserversAsync();
             await Task.Delay(1000).ConfigureAwait(false);
             obs.Dispose();
             obsMgr.Dispose();

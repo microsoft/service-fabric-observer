@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.Build.CentralPackageVersions" InitialTargets="ReplaceAppInsightsKey;">
+﻿<Project Sdk="Microsoft.NET.Sdk" InitialTargets="ReplaceAppInsightsKey;">
   <PropertyGroup>
     <ProjectGuid>{7BC6991F-C840-413E-B1CD-4025947CF5FA}</ProjectGuid>
     <OutputType>Library</OutputType>

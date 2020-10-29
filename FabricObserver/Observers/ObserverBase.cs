@@ -683,41 +683,41 @@ namespace FabricObserver.Observers
                 {
                     case ErrorWarningProperty.TotalCpuTime when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.AppErrorCpuTime : FOErrorWarningCodes.AppWarningCpuTime;
+                            FOErrorWarningCodes.AppErrorCpuPercent : FOErrorWarningCodes.AppWarningCpuPercent;
                         break;
 
                     case ErrorWarningProperty.TotalCpuTime:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorCpuTime : FOErrorWarningCodes.NodeWarningCpuTime;
+                            FOErrorWarningCodes.NodeErrorCpuPercent : FOErrorWarningCodes.NodeWarningCpuPercent;
                         break;
 
                     case ErrorWarningProperty.DiskSpaceUsagePercentage:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorDiskSpacePercentUsed : FOErrorWarningCodes.NodeWarningDiskSpacePercentUsed;
+                            FOErrorWarningCodes.NodeErrorDiskSpacePercent : FOErrorWarningCodes.NodeWarningDiskSpacePercent;
                         break;
 
                     case ErrorWarningProperty.DiskSpaceUsageMb:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorDiskSpaceMb : FOErrorWarningCodes.NodeWarningDiskSpaceMb;
+                            FOErrorWarningCodes.NodeErrorDiskSpaceMB : FOErrorWarningCodes.NodeWarningDiskSpaceMB;
                         break;
 
                     case ErrorWarningProperty.TotalMemoryConsumptionMb when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.AppErrorMemoryCommittedMb : FOErrorWarningCodes.AppWarningMemoryCommittedMb;
+                            FOErrorWarningCodes.AppErrorMemoryMB : FOErrorWarningCodes.AppWarningMemoryMB;
                         break;
                     case ErrorWarningProperty.TotalMemoryConsumptionMb:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorMemoryCommittedMb : FOErrorWarningCodes.NodeWarningMemoryCommittedMb;
+                            FOErrorWarningCodes.NodeErrorMemoryMB : FOErrorWarningCodes.NodeWarningMemoryMB;
                         break;
 
                     case ErrorWarningProperty.TotalMemoryConsumptionPct when replicaOrInstance != null:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.AppErrorMemoryPercentUsed : FOErrorWarningCodes.AppWarningMemoryPercentUsed;
+                            FOErrorWarningCodes.AppErrorMemoryPercent : FOErrorWarningCodes.AppWarningMemoryPercent;
                         break;
 
                     case ErrorWarningProperty.TotalMemoryConsumptionPct:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorMemoryPercentUsed : FOErrorWarningCodes.NodeWarningMemoryPercentUsed;
+                            FOErrorWarningCodes.NodeErrorMemoryPercent : FOErrorWarningCodes.NodeWarningMemoryPercent;
                         break;
 
                     case ErrorWarningProperty.DiskAverageQueueLength:
@@ -945,7 +945,10 @@ namespace FabricObserver.Observers
                         ResourceUsageDataProperty = data.Property,
                     };
 
-                    AppNames.Add(appName?.OriginalString);
+                    if (!AppNames.Any(a => a == appName?.OriginalString))
+                    {
+                        AppNames.Add(appName?.OriginalString);
+                    }
 
                     // From FSO.
                     if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
@@ -954,26 +957,27 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        HealthReportProperties.Add(ObserverName switch
+                        if (HealthReportProperties.Count == 0)
                         {
-                            ObserverConstants.AppObserverName => "ApplicationHealth",
-                            ObserverConstants.CertificateObserverName => "SecurityHealth",
-                            ObserverConstants.DiskObserverName => "DiskHealth",
-                            ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
-                            ObserverConstants.NetworkObserverName => "NetworkHealth",
-                            ObserverConstants.OSObserverName => "MachineInformation",
-                            ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                            _ => "FOGenericHealth",
-                        });
+                            HealthReportProperties.Add(ObserverName switch
+                            {
+                                ObserverConstants.AppObserverName => "ApplicationHealth",
+                                ObserverConstants.CertificateObserverName => "SecurityHealth",
+                                ObserverConstants.DiskObserverName => "DiskHealth",
+                                ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
+                                ObserverConstants.NetworkObserverName => "NetworkHealth",
+                                ObserverConstants.OSObserverName => "MachineInformation",
+                                ObserverConstants.NodeObserverName => "MachineResourceHealth",
+                                _ => $"{data.Property}",
+                            });
+                        }
                     }
 
                     healthReport.Property = HealthReportProperties[^1];
-                    HealthReportSourceIds.Add(ObserverName);
 
-                    if (!string.IsNullOrEmpty(data.ActiveErrorOrWarningCode))
+                    if (HealthReportSourceIds.Count == 0)
                     {
-                        // FOErrorWarningCode for distinct sourceid.
-                        HealthReportSourceIds[^1] += $"({data.ActiveErrorOrWarningCode})";
+                        HealthReportSourceIds.Add($"{ObserverName}({data.ActiveErrorOrWarningCode})");
                     }
 
                     healthReport.SourceId = HealthReportSourceIds[^1];

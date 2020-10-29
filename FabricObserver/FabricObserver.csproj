@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.Build.CentralPackageVersions">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{51AC2A69-B952-4766-8A1E-2C7752BC011A}</ProjectGuid>
     <OutputType>Exe</OutputType>
@@ -8,15 +8,15 @@
     <PlatformTarget>x64</PlatformTarget>
     <!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
          For Windows, use win-x64. For Linux, use linux-x64.
-    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
-    <!-- For multi-target publish (say, from Azure Pipeline build), you can use multi-target RIDs: 
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
+    <!-- For multi-target publish (say, from Azure Pipeline build or for when you build FO using supplied scripts), you can use multi-target RIDs: 
          linux-x64;win-x64. -->
-    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <FileVersion>3.0.0.4</FileVersion>
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers> 
+    <FileVersion>3.0.0.9</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>FabricObserver</Product>
     <ProductName>Service Fabric Observer</ProductName>
-    <ProductVersion>3.0.4</ProductVersion>
+    <ProductVersion>3.0.9</ProductVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
     <StartupObject>FabricObserver.Program</StartupObject>
@@ -84,15 +84,12 @@
     <None Include="stylecop.json" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj">
-      <Project>{7bc6991f-c840-413e-b1cd-4025947cf5fa}</Project>
-      <Name>TelemetryLib</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="NLog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="elevated_docker_stats">

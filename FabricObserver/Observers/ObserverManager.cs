@@ -240,7 +240,7 @@ namespace FabricObserver.Observers
                     {
                         _ = this.globalShutdownEventHandle.Set();
                         this.Logger.LogWarning("Shutdown signaled. Stopping.");
-                        this.ShutDown();
+                        await ShutDownAsync().ConfigureAwait(false);
 
                         break;
                     }
@@ -298,7 +298,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        public void StopObservers(bool shutdownSignaled = true)
+        public async Task StopObserversAsync(bool shutdownSignaled = true)
         {
             try
             {
@@ -323,7 +323,10 @@ namespace FabricObserver.Observers
                         {
                             foreach (var app in obs.AppNames)
                             {
-                                var appHealth = FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(app)).GetAwaiter().GetResult();
+                                var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
+                                                        new Uri(app),
+                                                        TimeSpan.FromSeconds(90),
+                                                        token).ConfigureAwait(false);
                                 int? unhealthyEventsCount = appHealth.HealthEvents?.Count(
                                     s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
@@ -342,13 +345,16 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(this.Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    Thread.Sleep(1500);
+                                    await Task.Delay(1500, token).ConfigureAwait(false);
                                 }
                             }
                         }
                         else
                         {
-                            var nodeHealth = FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).GetAwaiter().GetResult();
+                            var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(
+                                                    obs.NodeName,
+                                                    TimeSpan.FromSeconds(90),
+                                                    token).ConfigureAwait(false);
                             int? unhealthyEventsCount = nodeHealth.HealthEvents?.Count(
                                      s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
@@ -363,7 +369,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(this.Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    Thread.Sleep(1500);
+                                    await Task.Delay(1500, token).ConfigureAwait(false);
                                 }
                             }
                         }
@@ -442,9 +448,9 @@ namespace FabricObserver.Observers
             return null;
         }
 
-        private void ShutDown()
+        private async Task ShutDownAsync()
         {
-            this.StopObservers();
+            await this.StopObserversAsync().ConfigureAwait(false);
 
             if (this.cts != null)
             {
@@ -519,7 +525,7 @@ namespace FabricObserver.Observers
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
             this.isConfigurationUpdateInProgess = true;
-            this.StopObservers(false);
+            await StopObserversAsync(false).ConfigureAwait(false);
 
             await Task.Delay(
                 TimeSpan.FromSeconds(1),

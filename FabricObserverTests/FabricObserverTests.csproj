@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk;Microsoft.Build.CentralPackageVersions">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <ProjectGuid>{48C88BEB-9960-4183-861B-DF25C193E4C9}</ProjectGuid>
