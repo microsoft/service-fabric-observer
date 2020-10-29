@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.Build.CentralPackageVersions">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}</ProjectGuid>
     <OutputType>Exe</OutputType>

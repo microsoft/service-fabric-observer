@@ -15,32 +15,32 @@ namespace FabricObserver.Observers.Utilities
         public const string Ok = "FO000";
 
         // CPU
-        public const string AppErrorCpuTime = "FO001";
-        public const string AppWarningCpuTime = "FO002";
-        public const string NodeErrorCpuTime = "FO003";
-        public const string NodeWarningCpuTime = "FO004";
+        public const string AppErrorCpuPercent = "FO001";
+        public const string AppWarningCpuPercent = "FO002";
+        public const string NodeErrorCpuPercent = "FO003";
+        public const string NodeWarningCpuPercent = "FO004";
 
         // Certificate
         public const string ErrorCertificateExpiration = "FO005";
         public const string WarningCertificateExpiration = "FO006";
 
         // Disk
-        public const string NodeErrorDiskSpacePercentUsed = "FO007";
-        public const string NodeErrorDiskSpaceMb = "FO008";
-        public const string NodeWarningDiskSpacePercentUsed = "FO009";
-        public const string NodeWarningDiskSpaceMb = "FO010";
+        public const string NodeErrorDiskSpacePercent = "FO007";
+        public const string NodeErrorDiskSpaceMB = "FO008";
+        public const string NodeWarningDiskSpacePercent = "FO009";
+        public const string NodeWarningDiskSpaceMB = "FO010";
         public const string NodeErrorDiskAverageQueueLength = "FO011";
         public const string NodeWarningDiskAverageQueueLength = "FO012";
 
         // Memory
-        public const string AppErrorMemoryPercentUsed = "FO013";
-        public const string AppWarningMemoryPercentUsed = "FO014";
-        public const string AppErrorMemoryCommittedMb = "FO015";
-        public const string AppWarningMemoryCommittedMb = "FO016";
-        public const string NodeErrorMemoryPercentUsed = "FO017";
-        public const string NodeWarningMemoryPercentUsed = "FO018";
-        public const string NodeErrorMemoryCommittedMb = "FO019";
-        public const string NodeWarningMemoryCommittedMb = "FO020";
+        public const string AppErrorMemoryPercent = "FO013";
+        public const string AppWarningMemoryPercent = "FO014";
+        public const string AppErrorMemoryMB = "FO015";
+        public const string AppWarningMemoryMB = "FO016"; 
+        public const string NodeErrorMemoryPercent = "FO017";
+        public const string NodeWarningMemoryPercent = "FO018";
+        public const string NodeErrorMemoryMB = "FO019";
+        public const string NodeWarningMemoryMB = "FO020";
 
         // Networking
         public const string AppErrorNetworkEndpointUnreachable = "FO021";
@@ -58,16 +58,16 @@ namespace FabricObserver.Observers.Utilities
 
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
-            get; private set;
+            get;
         } = new Dictionary<string, string>
         {
             { Ok, "Ok" },
-            { AppErrorCpuTime, "AppErrorCpuTime" },
-            { AppWarningCpuTime, "AppWarningCpuTime" },
-            { AppErrorMemoryPercentUsed, "AppErrorMemoryPercentUsed" },
-            { AppWarningMemoryPercentUsed, "AppWarningMemoryPercentUsed" },
-            { AppErrorMemoryCommittedMb, "AppErrorMemoryCommittedMB" },
-            { AppWarningMemoryCommittedMb, "AppWarningMemoryCommittedMB" },
+            { AppErrorCpuPercent, "AppErrorCpuPercent" },
+            { AppWarningCpuPercent, "AppWarningCpuPercent" },
+            { AppErrorMemoryPercent, "AppErrorMemoryPercent" },
+            { AppWarningMemoryPercent, "AppWarningMemoryPercent" },
+            { AppErrorMemoryMB, "AppErrorMemoryMB" },
+            { AppWarningMemoryMB, "AppWarningMemoryMB" },
             { AppErrorNetworkEndpointUnreachable, "AppErrorNetworkEndpointUnreachable" },
             { AppWarningNetworkEndpointUnreachable, "AppWarningNetworkEndpointUnreachable" },
             { AppErrorTooManyActiveTcpPorts, "AppErrorTooManyActiveTcpPorts" },
@@ -78,24 +78,24 @@ namespace FabricObserver.Observers.Utilities
 
         public static Dictionary<string, string> NodeErrorCodesDictionary
         {
-            get; private set;
+            get;
         } = new Dictionary<string, string>
         {
             { Ok, "Ok" },
-            { NodeErrorCpuTime, "NodeErrorCpuTime" },
-            { NodeWarningCpuTime, "NodeWarningCpuTime" },
+            { NodeErrorCpuPercent, "NodeErrorCpuPercent" },
+            { NodeWarningCpuPercent, "NodeWarningCpuPercent" },
             { ErrorCertificateExpiration, "ErrorCertificateExpiration" },
             { WarningCertificateExpiration, "WarningCertificateExpiration" },
-            { NodeErrorDiskSpacePercentUsed, "NodeErrorDiskSpacePercentUsed" },
-            { NodeErrorDiskSpaceMb, "NodeErrorDiskSpaceMB" },
-            { NodeWarningDiskSpacePercentUsed, "NodeWarningDiskSpacePercentUsed" },
-            { NodeWarningDiskSpaceMb, "NodeWarningDiskSpaceMB" },
+            { NodeErrorDiskSpacePercent, "NodeErrorDiskSpacePercent" },
+            { NodeErrorDiskSpaceMB, "NodeErrorDiskSpaceMB" },
+            { NodeWarningDiskSpacePercent, "NodeWarningDiskSpacePercent" },
+            { NodeWarningDiskSpaceMB, "NodeWarningDiskSpaceMB" },
             { NodeErrorDiskAverageQueueLength, "NodeErrorDiskAverageQueueLength" },
             { NodeWarningDiskAverageQueueLength, "NodeWarningDiskAverageQueueLength" },
-            { NodeErrorMemoryPercentUsed, "NodeErrorMemoryPercentUsed" },
-            { NodeWarningMemoryPercentUsed, "NodeWarningMemoryPercentUsed" },
-            { NodeErrorMemoryCommittedMb, "NodeErrorMemoryCommittedMB" },
-            { NodeWarningMemoryCommittedMb, "NodeWarningMemoryCommittedMB" },
+            { NodeErrorMemoryPercent, "NodeErrorMemoryPercent" },
+            { NodeWarningMemoryPercent, "NodeWarningMemoryPercent" },
+            { NodeErrorMemoryMB, "NodeErrorMemoryMB" },
+            { NodeWarningMemoryMB, "NodeWarningMemoryMB" },
             { NodeErrorTooManyActiveTcpPorts, "NodeErrorTooManyActiveTcpPorts" },
             { NodeWarningTooManyActiveTcpPorts, "NodeWarningTooManyActiveTcpPorts" },
             { ErrorTooManyFirewallRules, "NodeErrorTooManyFirewallRules" },
