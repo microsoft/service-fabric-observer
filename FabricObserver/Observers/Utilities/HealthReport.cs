@@ -72,5 +72,25 @@ namespace FabricObserver.Observers.Utilities
         {
             get; set;
         }
+
+        public Uri ServiceName
+        {
+            get; set;
+        }
+
+        public Guid PartitionId
+        {
+            get; set;
+        }
+
+        public long ReplicaId
+        {
+            get; set;
+        }
+
+        public long InstanceId
+        {
+            get; set;
+        }
     }
 }
