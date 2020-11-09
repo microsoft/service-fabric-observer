@@ -162,15 +162,15 @@ namespace FabricObserver.Observers.Utilities
                 this.fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
             }
             else if (healthReport.ReportType == HealthReportType.StatefulService
-                && healthReport.PartitionId != Guid.Empty && healthReport.ReplicaId > 0)
+                && healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0)
             {
-                var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(healthReport.PartitionId, healthReport.ReplicaId, healthInformation);
+                var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
                 this.fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
             }
             else if (healthReport.ReportType == HealthReportType.StatelessService
-                  && healthReport.PartitionId != Guid.Empty && healthReport.InstanceId > 0)
+                  && healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0)
             {
-                var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(healthReport.PartitionId, healthReport.InstanceId, healthInformation);
+                var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
                 this.fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
             }
             else if (healthReport.ReportType == HealthReportType.Partition && healthReport.PartitionId != Guid.Empty)

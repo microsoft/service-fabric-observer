@@ -83,12 +83,7 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
-        public long ReplicaId
-        {
-            get; set;
-        }
-
-        public long InstanceId
+        public long ReplicaOrInstanceId
         {
             get; set;
         }
