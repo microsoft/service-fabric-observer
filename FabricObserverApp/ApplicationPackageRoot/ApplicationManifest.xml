@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.9" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.0.10" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
@@ -111,7 +111,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.0.9" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.0.10" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

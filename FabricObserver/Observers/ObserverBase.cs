@@ -461,6 +461,17 @@ namespace FabricObserver.Observers
             return false;
         }
 
+        /// <summary>
+        /// This function processes numeric data held in FRUD instances and generates Application or Node level Health Reports depending on supplied thresholds. 
+        /// </summary>
+        /// <typeparam name="T">This represents the numeric type of data this function will operate on.</typeparam>
+        /// <param name="data">FabricResourceUsageData instance.</param>
+        /// <param name="thresholdError">Error threshold (numeric)</param>
+        /// <param name="thresholdWarning">Warning threshold (numeric)</param>
+        /// <param name="healthReportTtl">Health report Time to Live (TimeSpan)</param>
+        /// <param name="healthReportType">HealthReport type. Note, only Application and Node health report types are supported.</param>
+        /// <param name="replicaOrInstance">Replica or Instance information contained in a type.</param>
+        /// <param name="dumpOnError">Wheter or not to dump process if Error threshold has been reached.</param>
         public void ProcessResourceDataReportHealth<T>(
             FabricResourceUsageData<T> data,
             T thresholdError,
@@ -474,6 +485,12 @@ namespace FabricObserver.Observers
             if (data == null)
             {
                 throw new ArgumentException("Supply all required parameters with non-null value.");
+            }
+
+            if (healthReportType != HealthReportType.Application && healthReportType != HealthReportType.Node)
+            {
+                this.ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Unsupported HealthReport type -> {Enum.GetName(typeof(HealthReportType), healthReportType)}");
+                return;
             }
 
             var thresholdName = "Minimum";
