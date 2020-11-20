@@ -327,6 +327,7 @@ namespace FabricObserver.Observers
                                                         new Uri(app),
                                                         TimeSpan.FromSeconds(90),
                                                         token).ConfigureAwait(false);
+
                                 int? unhealthyEventsCount = appHealth.HealthEvents?.Count(
                                     s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
@@ -335,9 +336,13 @@ namespace FabricObserver.Observers
                                     continue;
                                 }
 
-                                foreach (var evt in appHealth.HealthEvents.Where(
-                                    s => s.HealthInformation.SourceId.Contains(obs.ObserverName)))
+                                foreach (var evt in appHealth.HealthEvents)
                                 {
+                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName))
+                                    {
+                                        continue;
+                                    }
+
                                     healthReport.AppName = new Uri(app);
                                     healthReport.Property = evt.HealthInformation.Property;
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
@@ -345,7 +350,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(this.Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(1500, token).ConfigureAwait(false);
+                                    await Task.Delay(2000, token).ConfigureAwait(false);
                                 }
                             }
                         }
@@ -355,25 +360,34 @@ namespace FabricObserver.Observers
                                                     obs.NodeName,
                                                     TimeSpan.FromSeconds(90),
                                                     token).ConfigureAwait(false);
+
                             int? unhealthyEventsCount = nodeHealth.HealthEvents?.Count(
                                      s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
+                            healthReport.ReportType = HealthReportType.Node;
+
                             if (unhealthyEventsCount != null && unhealthyEventsCount > 0)
                             {
-                                foreach (var evt in nodeHealth.HealthEvents.Where(
-                                    s => s.HealthInformation.SourceId.Contains(obs.ObserverName)))
+                                foreach (var evt in nodeHealth.HealthEvents)
                                 {
+                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName))
+                                    {
+                                        continue;
+                                    }
+
                                     healthReport.Property = evt.HealthInformation.Property;
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
 
                                     var healthReporter = new ObserverHealthReporter(this.Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(1500, token).ConfigureAwait(false);
+                                    await Task.Delay(2000, token).ConfigureAwait(false);
                                 }
                             }
                         }
                     }
+
+                    obs.HasActiveFabricErrorOrWarning = false;
                 }
 
                 this.shutdownSignaled = shutdownSignaled;
