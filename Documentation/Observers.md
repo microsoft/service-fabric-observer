@@ -33,7 +33,7 @@ You can quickly get started by reading [this](/Documentation/Using.md).
   
 ## AppObserver  
 Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application services (processes). This
-observer will alert (SF Health event) when user-supplied thresholds are reached.
+observer will alert (SF Health event) when user-supplied thresholds are reached. Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring.
 
 ### Input
 JSON config file supplied by user, stored in
