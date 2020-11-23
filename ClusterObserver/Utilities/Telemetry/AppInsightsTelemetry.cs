@@ -148,13 +148,11 @@ namespace FabricClusterObserver.Utilities.Telemetry
                     { "OSPlatform", telemetryData.OS },
                     { "Partition", $"{telemetryData.PartitionId}" },
                     { "Replica", $"{telemetryData.ReplicaId}" },
-                    { "Source", telemetryData.Source ?? string.Empty },
+                    { "Source", telemetryData.Source ?? ObserverConstants.ClusterObserverName },
                     { "Value", value ?? string.Empty },
                 };
 
-                this.telemetryClient.TrackEvent(
-                    $"{telemetryData.ObserverName ?? "ClusterObserver"}DataEvent",
-                    properties);
+                this.telemetryClient.TrackEvent(ObserverConstants.ClusterObserverETWEventName, properties);
             }
             catch (Exception e)
             {
