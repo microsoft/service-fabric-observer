@@ -48,8 +48,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 this.logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + " | {0}", description);
             }
-
-            if (healthState == HealthState.Warning)
+            else if (healthState == HealthState.Warning)
             {
                 this.logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + " | {0}", description);
             }
