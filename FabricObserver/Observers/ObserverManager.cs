@@ -299,37 +299,33 @@ namespace FabricObserver.Observers
         }
 
         public async Task StopObserversAsync(bool shutdownSignaled = true)
-        {
-            try
+        {   
+            foreach (var obs in this.observers)
             {
-                foreach (var obs in this.observers)
+                // If the node goes down, for example, or the app is gracefully closed,
+                // then clear all existing error or health reports suppled by FO.
+                // NetworkObserver takes care of this internally, so ignore here.
+                if (obs.HasActiveFabricErrorOrWarning &&
+                    obs.ObserverName != ObserverConstants.NetworkObserverName)
                 {
-                    // If the node goes down, for example, or the app is gracefully closed,
-                    // then clear all existing error or health reports suppled by FO.
-                    // NetworkObserver takes care of this internally, so ignore here.
-                    if (obs.HasActiveFabricErrorOrWarning &&
-                        obs.ObserverName != ObserverConstants.NetworkObserverName)
+                    Utilities.HealthReport healthReport = new Utilities.HealthReport
                     {
-                        Utilities.HealthReport healthReport = new Utilities.HealthReport
-                        {
-                            Code = FOErrorWarningCodes.Ok,
-                            HealthMessage = $"Clearing existing Health Error/Warning as FO is stopping or updating.",
-                            State = HealthState.Ok,
-                            ReportType = HealthReportType.Application,
-                            NodeName = obs.NodeName,
-                        };
+                        Code = FOErrorWarningCodes.Ok,
+                        HealthMessage = $"Clearing existing Health Error/Warning as FO is stopping or updating.",
+                        State = HealthState.Ok,
+                        ReportType = HealthReportType.Application,
+                        NodeName = obs.NodeName,
+                    };
 
-                        if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrEmpty(a) && a.Contains("fabric:/")))
+                    if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrEmpty(a) && a.Contains("fabric:/")))
+                    {
+                        foreach (var app in obs.AppNames)
                         {
-                            foreach (var app in obs.AppNames)
+                            try
                             {
-                                var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
-                                                        new Uri(app),
-                                                        TimeSpan.FromSeconds(90),
-                                                        token).ConfigureAwait(false);
+                                var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(app)).ConfigureAwait(false);
 
-                                int? unhealthyEventsCount = appHealth.HealthEvents?.Count(
-                                    s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+                                int? unhealthyEventsCount = appHealth.HealthEvents?.Count(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                                 if (unhealthyEventsCount == null || unhealthyEventsCount == 0)
                                 {
@@ -353,16 +349,18 @@ namespace FabricObserver.Observers
                                     await Task.Delay(2000, token).ConfigureAwait(false);
                                 }
                             }
+                            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+                            {
+                            }
                         }
-                        else
+                    }
+                    else
+                    {
+                        try
                         {
-                            var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(
-                                                    obs.NodeName,
-                                                    TimeSpan.FromSeconds(90),
-                                                    token).ConfigureAwait(false);
+                            var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
 
-                            int? unhealthyEventsCount = nodeHealth.HealthEvents?.Count(
-                                     s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+                            int? unhealthyEventsCount = nodeHealth.HealthEvents?.Count(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                             healthReport.ReportType = HealthReportType.Node;
 
@@ -385,6 +383,9 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
+                        catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+                        {
+                        }
                     }
 
                     obs.HasActiveFabricErrorOrWarning = false;
@@ -393,15 +394,6 @@ namespace FabricObserver.Observers
                 this.shutdownSignaled = shutdownSignaled;
                 this.SignalAbortToRunningObserver();
                 this.IsObserverRunning = false;
-            }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
-            {
-            }
-            catch (Exception e)
-            {
-                this.Logger.LogWarning($"Unhandled Exception thrown during ObserverManager.StopObservers():{Environment.NewLine}{e}");
-
-                throw;
             }
         }
 
@@ -838,9 +830,19 @@ namespace FabricObserver.Observers
                     _ = exceptionBuilder.AppendLine($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ex.InnerException}");
                     allExecuted = false;
                 }
-                catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException)
+                catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
                 {
                     _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    allExecuted = false;
+                }
+                catch (Exception e)
+                {
+                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                            ObserverConstants.ObserverManagerName,
+                            this.ApplicationName,
+                            HealthState.Error,
+                            $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+
                     allExecuted = false;
                 }
 
@@ -853,11 +855,14 @@ namespace FabricObserver.Observers
             }
             else
             {
-                this.HealthReporter.ReportFabricObserverServiceHealth(
-                    ObserverConstants.ObserverManagerName,
-                    this.ApplicationName,
-                    HealthState.Error,
-                    exceptionBuilder.ToString());
+                if (this.Logger.EnableVerboseLogging)
+                {
+                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                        ObserverConstants.ObserverManagerName,
+                        this.ApplicationName,
+                        HealthState.Warning,
+                        exceptionBuilder.ToString());
+                }
 
                 _ = exceptionBuilder.Clear();
             }

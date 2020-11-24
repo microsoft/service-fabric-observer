@@ -27,9 +27,9 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!--<Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="true" /> -->
+    <!--<Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableVerboseLogging" DefaultValue="false" />
@@ -77,7 +77,7 @@
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="85" />
     <Parameter Name="FabricSystemObserverMemoryErrorLimitMb" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="2048" />
+    <Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="4096" />
     <Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="1000" />
     <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
