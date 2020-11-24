@@ -821,19 +821,26 @@ namespace FabricObserver.Observers
                 {
                     this.IsObserverRunning = false;
 
-                    if (ex.InnerException is OperationCanceledException ||
+                    if (ex.InnerException is FabricException ||
+                        ex.InnerException is OperationCanceledException ||
                         ex.InnerException is TaskCanceledException)
                     {
                         if (this.isConfigurationUpdateInProgess)
                         {
                             this.IsObserverRunning = false;
+
                             return true;
                         }
 
                         continue;
                     }
 
-                    _ = exceptionBuilder.AppendLine($"Exception from {observer.ObserverName}:\r\n{ex.InnerException}");
+                    _ = exceptionBuilder.AppendLine($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ex.InnerException}");
+                    allExecuted = false;
+                }
+                catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                     allExecuted = false;
                 }
 
