@@ -565,18 +565,23 @@ namespace FabricObserver.Observers
                         }, Token);
                 }
             }
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is InvalidComObjectException)
+            {
+                HealthReporter.ReportFabricObserverServiceHealth(
+                      FabricServiceContext.ServiceName.OriginalString,
+                      ObserverName,
+                      HealthState.Warning,
+                      $"Handled Exception processing OS information:{Environment.NewLine}{e}");
+            }
             catch (Exception e)
             {
-                if (!(e is OperationCanceledException || e is TaskCanceledException))
-                {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                        FabricServiceContext.ServiceName.OriginalString,
-                        ObserverName,
-                        HealthState.Error,
-                        $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
+                HealthReporter.ReportFabricObserverServiceHealth(
+                       FabricServiceContext.ServiceName.OriginalString,
+                       ObserverName,
+                       HealthState.Error,
+                       $"Unhandled Exception processing OS information:{Environment.NewLine}{e}");
 
-                    throw;
-                }
+                throw;
             }
         }
     }
