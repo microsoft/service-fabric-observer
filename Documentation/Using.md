@@ -326,11 +326,11 @@ Connect to your Service Fabric cluster using Connect-ServiceFabricCluster comman
 Create a variable that contains all the settings you want update:
 
 ```Powershell
-$appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMemoryWarningLimitMb" = "2048"; }
+$appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMemoryWarningLimitMb" = "4096"; }
 ```
 
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.0.0 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.0.11 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
