@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
@@ -93,7 +94,8 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="NodeObserver"/> class.
         /// </summary>
-        public NodeObserver()
+        public NodeObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
             this.stopwatch = new Stopwatch();
         }

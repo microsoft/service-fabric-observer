@@ -110,11 +110,6 @@ namespace FabricObserver.Observers.Utilities
             // send traces up to App Insights (Azure). See the App.config for settings example.
             if (!EnableCsvLogging)
             {
-                if (!ObserverManager.TelemetryEnabled)
-                {
-                    return;
-                }
-
                 if (Logger == null)
                 {
                     Logger = LogManager.GetCurrentClassLogger();

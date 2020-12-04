@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Globalization;
 using System.IO;
@@ -46,7 +47,8 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
         /// </summary>
-        public FabricSystemObserver()
+        public FabricSystemObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
             // Linux
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))

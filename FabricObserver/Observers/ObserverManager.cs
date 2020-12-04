@@ -45,12 +45,12 @@ namespace FabricObserver.Observers
         /// This is used for unit testing.
         /// </summary>
         /// <param name="observer">Observer instance.</param>
-        public ObserverManager(ObserverBase observer)
+        public ObserverManager(ObserverBase observer, FabricClient fabricClient)
         {
             this.cts = new CancellationTokenSource();
             this.token = this.cts.Token;
             this.Logger = new Logger("ObserverManagerSingleObserverRun");
-            this.HealthReporter = new ObserverHealthReporter(this.Logger);
+            this.HealthReporter = new ObserverHealthReporter(this.Logger, fabricClient);
 
             // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
@@ -64,14 +64,14 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// </summary>
-        /// <param name="context">service context.</param>
-        /// <param name="token">cancellation token.</param>
-        public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
+        /// <param name="serviceProvider">IServiceProvider for retrieving service instance.</param>
+        /// <param name="token">Cancellation token.</param>
+        public ObserverManager(IServiceProvider serviceProvider, FabricClient fabricClient, CancellationToken token)
         {
             this.token = token;
             this.cts = new CancellationTokenSource();
             this.linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, this.token);
-            FabricClientInstance = new FabricClient();
+            FabricClientInstance = fabricClient;
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
             this.nodeName = FabricServiceContext?.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
@@ -93,7 +93,7 @@ namespace FabricObserver.Observers
 
             // this logs error/warning/info messages for ObserverManager.
             this.Logger = new Logger("ObserverManager", logFolderBasePath);
-            this.HealthReporter = new ObserverHealthReporter(this.Logger);
+            this.HealthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
             this.SetPropertieSFromConfigurationParameters();
             this.serviceCollection = serviceProvider.GetServices<ObserverBase>();
 
@@ -343,7 +343,7 @@ namespace FabricObserver.Observers
                                     healthReport.Property = evt.HealthInformation.Property;
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                    var healthReporter = new ObserverHealthReporter(this.Logger);
+                                    var healthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
                                     await Task.Delay(2000, token).ConfigureAwait(false);
@@ -376,7 +376,7 @@ namespace FabricObserver.Observers
                                     healthReport.Property = evt.HealthInformation.Property;
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                    var healthReporter = new ObserverHealthReporter(this.Logger);
+                                    var healthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
                                     await Task.Delay(2000, token).ConfigureAwait(false);

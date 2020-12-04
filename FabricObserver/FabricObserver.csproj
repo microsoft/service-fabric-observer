@@ -27,9 +27,21 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Extensibility\Samples\**" />
-    <EmbeddedResource Remove="Extensibility\Samples\**" />
-    <None Remove="Extensibility\Samples\**" />
+    <Compile Remove="Extensibility\**" />
+    <Compile Remove="Observers\Interfaces\**" />
+    <Compile Remove="Observers\MachineInfoModel\**" />
+    <Compile Remove="Observers\Utilities\**" />
+    <EmbeddedResource Remove="Extensibility\**" />
+    <EmbeddedResource Remove="Observers\Interfaces\**" />
+    <EmbeddedResource Remove="Observers\MachineInfoModel\**" />
+    <EmbeddedResource Remove="Observers\Utilities\**" />
+    <None Remove="Extensibility\**" />
+    <None Remove="Observers\Interfaces\**" />
+    <None Remove="Observers\MachineInfoModel\**" />
+    <None Remove="Observers\Utilities\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Observers\ObserverBase.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="NLog.config" />
@@ -89,7 +101,12 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
+    <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj">
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj">
+      <Private>true</Private>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Update="elevated_docker_stats">

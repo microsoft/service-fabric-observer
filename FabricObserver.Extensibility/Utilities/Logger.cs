@@ -60,14 +60,9 @@ namespace FabricObserver.Observers.Utilities
 
         static Logger()
         {
-            if (!ObserverManager.EtwEnabled || string.IsNullOrEmpty(ObserverManager.EtwProviderName))
-            {
-                return;
-            }
-
             if (EtwLogger == null)
             {
-                EtwLogger = new EventSource(ObserverManager.EtwProviderName);
+                EtwLogger = new EventSource(ObserverConstants.FabricObserverETWEventName);
             }
         }
 

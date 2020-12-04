@@ -51,7 +51,7 @@ namespace FabricObserver.Observers
             get;
         }
 
-        public ServiceContext FabricServiceContext
+        public StatelessServiceContext FabricServiceContext
         {
             get;
         }
@@ -164,7 +164,7 @@ namespace FabricObserver.Observers
         protected bool IsTelemetryProviderEnabled
         {
             get; set;
-        } = ObserverManager.TelemetryEnabled;
+        }
 
         protected ITelemetryProvider TelemetryClient
         {
@@ -173,8 +173,10 @@ namespace FabricObserver.Observers
 
         protected bool IsEtwEnabled
         {
-            get; set;
-        } = ObserverManager.EtwEnabled;
+            get => bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
+
+            set => etwEnabled = value;
+        }
 
         protected FabricClient FabricClientInstance
         {
@@ -189,21 +191,16 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverBase"/> class.
         /// </summary>
-        protected ObserverBase()
+        protected ObserverBase(FabricClient fabricClient, StatelessServiceContext statelessServiceContext)
         {
             ObserverName = GetType().Name;
             ConfigurationSectionName = ObserverName + "Configuration";
-            FabricClientInstance = ObserverManager.FabricClientInstance;
-
-            if (IsTelemetryProviderEnabled)
-            {
-                TelemetryClient = ObserverManager.TelemetryClient;
-            }
-
-            FabricServiceContext = ObserverManager.FabricServiceContext;
+            FabricClientInstance = fabricClient;
+            FabricServiceContext = statelessServiceContext;
             NodeName = FabricServiceContext.NodeContext.NodeName;
             NodeType = FabricServiceContext.NodeContext.NodeType;
             ConfigurationSectionName = ObserverName + "Configuration";
+            SetConfiguration();
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -278,7 +275,7 @@ namespace FabricObserver.Observers
                 UseCircularBuffer = ConfigurationSettings.UseCircularBuffer;
             }
 
-            HealthReporter = new ObserverHealthReporter(ObserverLogger);
+            HealthReporter = new ObserverHealthReporter(ObserverLogger, fabricClient);
         }
 
         public abstract Task ObserveAsync(CancellationToken token);
@@ -858,21 +855,37 @@ namespace FabricObserver.Observers
                 {
                     if (HealthReportProperties.Count == 0)
                     {
-                        HealthReportProperties.Add(ObserverName switch
+                        switch(ObserverName)
                         {
-                            ObserverConstants.AppObserverName => "ApplicationHealth",
-                            ObserverConstants.CertificateObserverName => "SecurityHealth",
-                            ObserverConstants.DiskObserverName => "DiskHealth",
-                            ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
-                            ObserverConstants.NetworkObserverName => "NetworkHealth",
-                            ObserverConstants.OSObserverName => "MachineInformation",
-                            ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                            _ => $"{data.Property}",
-                        });
+                            case ObserverConstants.AppObserverName:
+                                HealthReportProperties.Add("ApplicationHealth");
+                                break;
+                            case ObserverConstants.CertificateObserverName:
+                                HealthReportProperties.Add("SecurityHealth");
+                                break;
+                            case ObserverConstants.DiskObserverName:
+                                HealthReportProperties.Add("DiskHealth");
+                                break;
+                            case ObserverConstants.FabricSystemObserverName:
+                                HealthReportProperties.Add("FabricSystemServiceHealth");
+                                break;
+                            case ObserverConstants.NetworkObserverName:
+                                HealthReportProperties.Add("NetworkHealth");
+                                break;
+                            case ObserverConstants.OSObserverName:
+                                HealthReportProperties.Add("MachineInformation");
+                                break;
+                            case ObserverConstants.NodeObserverName:
+                                HealthReportProperties.Add("MachineResourceHealth");
+                                break;
+                            default:
+                                HealthReportProperties.Add($"{data.Property}");
+                                break;
+                        }
                     }
                 }
 
-                healthReport.Property = HealthReportProperties[^1];
+                healthReport.Property = HealthReportProperties[HealthReportProperties.Count - 1];
 
                 if (HealthReportSourceIds.Count == 0)
                 {
@@ -884,12 +897,12 @@ namespace FabricObserver.Observers
                 data.ActiveErrorOrWarningCode = errorWarningCode;
 
                 // FOErrorWarningCode for distinct sourceid.
-                if (!HealthReportSourceIds[^1].Contains($"({errorWarningCode})"))
+                if (!HealthReportSourceIds[HealthReportSourceIds.Count - 1].Contains($"({errorWarningCode})"))
                 {
-                    HealthReportSourceIds[^1] += $"({errorWarningCode})";
+                    HealthReportSourceIds[HealthReportSourceIds.Count - 1] += $"({errorWarningCode})";
                 }
 
-                healthReport.SourceId = HealthReportSourceIds[^1];
+                healthReport.SourceId = HealthReportSourceIds[HealthReportSourceIds.Count - 1];
 
                 // Generate a Service Fabric Health Report.
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -976,28 +989,44 @@ namespace FabricObserver.Observers
                     {
                         if (HealthReportProperties.Count == 0)
                         {
-                            HealthReportProperties.Add(ObserverName switch
+                            switch (ObserverName)
                             {
-                                ObserverConstants.AppObserverName => "ApplicationHealth",
-                                ObserverConstants.CertificateObserverName => "SecurityHealth",
-                                ObserverConstants.DiskObserverName => "DiskHealth",
-                                ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
-                                ObserverConstants.NetworkObserverName => "NetworkHealth",
-                                ObserverConstants.OSObserverName => "MachineInformation",
-                                ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                                _ => $"{data.Property}",
-                            });
+                                case ObserverConstants.AppObserverName:
+                                    HealthReportProperties.Add("ApplicationHealth");
+                                    break;
+                                case ObserverConstants.CertificateObserverName:
+                                    HealthReportProperties.Add("SecurityHealth");
+                                    break;
+                                case ObserverConstants.DiskObserverName:
+                                    HealthReportProperties.Add("DiskHealth");
+                                    break;
+                                case ObserverConstants.FabricSystemObserverName:
+                                    HealthReportProperties.Add("FabricSystemServiceHealth");
+                                    break;
+                                case ObserverConstants.NetworkObserverName:
+                                    HealthReportProperties.Add("NetworkHealth");
+                                    break;
+                                case ObserverConstants.OSObserverName:
+                                    HealthReportProperties.Add("MachineInformation");
+                                    break;
+                                case ObserverConstants.NodeObserverName:
+                                    HealthReportProperties.Add("MachineResourceHealth");
+                                    break;
+                                default:
+                                    HealthReportProperties.Add($"{data.Property}");
+                                    break;
+                            }
                         }
                     }
 
-                    healthReport.Property = HealthReportProperties[^1];
+                    healthReport.Property = HealthReportProperties[HealthReportProperties.Count - 1];
 
                     if (HealthReportSourceIds.Count == 0)
                     {
                         HealthReportSourceIds.Add($"{ObserverName}({data.ActiveErrorOrWarningCode})");
                     }
 
-                    healthReport.SourceId = HealthReportSourceIds[^1];
+                    healthReport.SourceId = HealthReportSourceIds[HealthReportSourceIds.Count - 1];
 
                     // Emit an Ok Health Report to clear Fabric Health warning.
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -1027,24 +1056,27 @@ namespace FabricObserver.Observers
 
         public TimeSpan SetHealthReportTimeToLive()
         {
+            int obsSleepTime = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
+
             // First run.
             if (LastRunDateTime == DateTime.MinValue)
             {
-                return TimeSpan.FromSeconds(ObserverManager.ObserverExecutionLoopSleepSeconds)
+                _ = int.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.ObserverLoopSleepTimeSeconds), out obsSleepTime);
+
+                return TimeSpan.FromSeconds(obsSleepTime)
                        .Add(TimeSpan.FromMinutes(TtlAddMinutes));
             }
 
             return DateTime.Now.Subtract(LastRunDateTime)
-                .Add(TimeSpan.FromSeconds(
-                    RunDuration > TimeSpan.MinValue ? RunDuration.TotalSeconds : 0))
-                .Add(TimeSpan.FromSeconds(
-                    ObserverManager.ObserverExecutionLoopSleepSeconds))
+                .Add(TimeSpan.FromSeconds(RunDuration > TimeSpan.MinValue ? RunDuration.TotalSeconds : 0))
+                .Add(TimeSpan.FromSeconds(obsSleepTime))
                 .Add(RunInterval > TimeSpan.MinValue ? RunInterval : TimeSpan.Zero);
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.
         // If an Observer needs to dispose, then override this non-impl.
         private bool disposedValue;
+        private bool etwEnabled;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -1096,6 +1128,88 @@ namespace FabricObserver.Observers
                     $"Unable to create dumps directory:{Environment.NewLine}{e}");
 
                 this.dumpsPath = null;
+            }
+        }
+
+        private void SetConfiguration()
+        {
+            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
+            if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
+            {
+                IsTelemetryProviderEnabled = telemEnabled;
+            }
+
+            if (IsTelemetryProviderEnabled)
+            {
+                string telemetryProviderType = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryProviderType);
+
+                if (string.IsNullOrEmpty(telemetryProviderType))
+                {
+                    IsTelemetryProviderEnabled = false;
+
+                    return;
+                }
+
+                if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
+                {
+                    IsTelemetryProviderEnabled = false;
+
+                    return;
+                }
+
+                switch (telemetryProvider)
+                {
+                    case TelemetryProviderType.AzureLogAnalytics:
+                        {
+                            var logAnalyticsLogType =
+                                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsLogTypeParameter);
+
+                            var logAnalyticsSharedKey =
+                                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsSharedKeyParameter);
+
+                            var logAnalyticsWorkspaceId =
+                                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+
+                            if (string.IsNullOrEmpty(logAnalyticsWorkspaceId)
+                                || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                            {
+                                IsTelemetryProviderEnabled = false;
+
+                                return;
+                            }
+
+                            TelemetryClient = new LogAnalyticsTelemetry(
+                                logAnalyticsWorkspaceId,
+                                logAnalyticsSharedKey,
+                                logAnalyticsLogType,
+                                FabricClientInstance,
+                                new CancellationToken());
+
+                            break;
+                        }
+
+                    case TelemetryProviderType.AzureApplicationInsights:
+                        {
+                            string aiKey = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.AiKey);
+
+                            if (string.IsNullOrEmpty(aiKey))
+                            {
+                                IsTelemetryProviderEnabled = false;
+
+                                return;
+                            }
+
+                            TelemetryClient = new AppInsightsTelemetry(aiKey);
+
+                            break;
+                        }
+
+                    default:
+
+                        IsTelemetryProviderEnabled = false;
+
+                        break;
+                }
             }
         }
     }

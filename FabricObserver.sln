@@ -44,6 +44,8 @@ Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "FabricObserverWebApi", "Fab
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleObserverPlugin", "SampleObserverPlugin\SampleObserverPlugin.csproj", "{4549560C-4604-42C3-B055-BDBD80B5B291}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabricObserver.Extensibility", "FabricObserver.Extensibility\FabricObserver.Extensibility.csproj", "{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -132,6 +134,14 @@ Global
 		{4549560C-4604-42C3-B055-BDBD80B5B291}.Debug|x64.ActiveCfg = Debug|x64
 		{4549560C-4604-42C3-B055-BDBD80B5B291}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4549560C-4604-42C3-B055-BDBD80B5B291}.Release|x64.ActiveCfg = Release|x64
+		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Debug|x64.Build.0 = Debug|Any CPU
+		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Release|x64.ActiveCfg = Release|Any CPU
+		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

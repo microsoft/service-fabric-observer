@@ -112,25 +112,25 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public double AvailablePhysicalMemoryGB
         {
             get;
-            internal set;
+            set;
         }
 
         public string DriveInfo
         {
             get;
-            internal set;
+            set;
         }
 
         public double AvailableVirtualMemoryGB
         {
             get;
-            internal set;
+            set;
         }
 
         public bool WindowsUpdateAutoDownloadEnabled
         {
             get;
-            internal set;
+            set;
         }
     }
 }
