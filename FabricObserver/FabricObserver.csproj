@@ -27,26 +27,6 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Extensibility\**" />
-    <Compile Remove="Observers\Interfaces\**" />
-    <Compile Remove="Observers\MachineInfoModel\**" />
-    <Compile Remove="Observers\Utilities\**" />
-    <EmbeddedResource Remove="Extensibility\**" />
-    <EmbeddedResource Remove="Observers\Interfaces\**" />
-    <EmbeddedResource Remove="Observers\MachineInfoModel\**" />
-    <EmbeddedResource Remove="Observers\Utilities\**" />
-    <None Remove="Extensibility\**" />
-    <None Remove="Observers\Interfaces\**" />
-    <None Remove="Observers\MachineInfoModel\**" />
-    <None Remove="Observers\Utilities\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Remove="Observers\ObserverBase.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="NLog.config" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.DependencyCollector" Version="2.15.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.15.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" Version="2.15.0" />

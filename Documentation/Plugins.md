@@ -1,7 +1,7 @@
-## How to implement an observer plugin using our extensibility model*
+## How to implement an observer plugin using our extensibility model
 
 Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme. This document is a simple 
-overview of how to get started with building an observer plugin.
+overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver).
 
 #### Steps 
 
@@ -20,7 +20,7 @@ You can build them yourself by simply running these scripts, in this order:
 - ./Build-NugetPackages.ps1
 
 
-Create a new .NET Core 3.1 library project, install the nupkg you need for your target OS (Linux (Ubuntu) or Windows):  
+Create a new .NET Standard 2.0 library project, install the nupkg you need for your target OS (Linux (Ubuntu) or Windows):  
 
 	Framework-dependent = Requires that .NET Core 3.1 is already installed on target machine.
 

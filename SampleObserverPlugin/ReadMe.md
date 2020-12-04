@@ -25,9 +25,10 @@ using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
-    public class MyObserver : ObserverBase
+    public class SampleNewObserver : ObserverBase
     {
-        public SampleNewObserver()
+        public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context)
+          : base(fabricClient, context)
         {
             //... Your impl.
         }
@@ -60,25 +61,26 @@ As you can see in this project, there are two key files:
 For 2., it's designed to be a trivial - and required - impl:
 
 ``` C#
-using FabricObserver.Observers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using FabricObserver.Observers;
+using System.Fabric;
 
-[assembly: FabricObserver.FabricObserverStartup(typeof(FabricObserver.Observers.[Name of this class, e.g., MyObserverStartup]))]
+[assembly: FabricObserver.FabricObserverStartup(typeof(SampleNewObserverStartup))]
 namespace FabricObserver.Observers
 {
-    public class MyObserverStartup : IFabricObserverStartup
+    public class SampleNewObserverStartup : IFabricObserverStartup
     {
-        public void ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services, FabricClient fabricClient, StatelessServiceContext context)
         {
-            _ = services.AddScoped(typeof(ObserverBase), typeof([Name of the class that holds your observer impl. E.g., MyObserver]));
+            services.AddScoped(typeof(ObserverBase), s => new SampleNewObserver(fabricClient, context));
         }
     }
 }
 ```
 
-When you build your plugin as a .NET Core 3.1 library, copy the dll file into the Data/Plugins folder inside your build output directory. E.g., YourObserverPlugin\bin\Debug\netcoreapp3.1. In fact, this directory will contain what is effectively an sfpkg file and folder structure:  
+When you build your plugin as a .NET Standard 2.0, copy the dll file into the Data/Plugins folder inside your build output directory. E.g., YourObserverPlugin\bin\release\netstandard2.0\win-x64. In fact, this directory will contain what is effectively a decompressed sfpkg file:  
 ```
-[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\DEBUG\NETCOREAPP3.1  
+[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NETSTANDARD2.0\WIN-X64  
 │   ApplicationManifest.xml  
 |   SampleNewObserver.dll  
 |   SampleNewObserver.pdb  
@@ -95,7 +97,7 @@ file.
 
 You can deploy using the contents of your build out directory - just remove the pdb, json, dll files from the top level directory, so it looks like this:
 ```
-[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\DEBUG\NETCOREAPP3.1  
+[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NETSTANDARD2.0\WIN-X64
 │   ApplicationManifest.xml  
 │  
 └───FabricObserverPkg  
@@ -112,10 +114,10 @@ You can deploy using the contents of your build out directory - just remove the 
 * Set a $path variable to your deployment content
 * Copy bits to server
 * Register application type
-* Create new instance of FO, which contains your observer!
+* Create new instance of FO, which will contain your observer plugin
 ```Powershell
-$path = "[sourcedir]\MyObserverPlugin\bin\debug\netcoreapp3.1"
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV39 -TimeoutSec 1800
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV3
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.0.9
+$path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os platform, e.g., win-x64 or linux-x64]"
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV31 -TimeoutSec 1800
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV31
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.0
 ```
