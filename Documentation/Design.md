@@ -178,10 +178,10 @@ namespace FabricObserver.Observers
         }
     }
  }
-```
- ```
+``` 
 
-**Data Design**
+
+**Data Design**  
 
 Each observer is tasked with recording one or more metrics that are
 relevant to local Machine or application service health. Each metric will be stored in an
