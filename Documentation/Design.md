@@ -24,7 +24,9 @@ by calling ObserverManager's StopObservers() function.
 
 This is the abstract base class for all Observers. It provides several concrete method and property implementations 
 that are widely used by deriving types, not the least of which is ProcessResourceDataReportHealth(), which is called from all
-observers' ReportAsync function.
+built-in observers that generate numeric data as part of their resource usage observations. Any public member of ObserverBase is available
+to any plugin implementation. Please see [Plugins readme](/Documentation/Plugins.md) for detailed information about building FabricObserver plugins,
+which are implemented as .NET Standard 2.0 libraries and consume FabricObserver's API surface (just as built-in observers do), which is housed in a NET Standard 2.0 library, FabricObserver.Extensibility.dll.
 
 ***Design*** 
 
@@ -96,7 +98,12 @@ derived by all Observer types)
 
     public abstract class ObserverBase : IObserver
     {
-	    // Impl...
+        ...
+        protected ObserverBase(FabricClient fabricClient, StatelessServiceContext statelessServiceContext)
+        {
+            ...
+        }
+        ...
     }
 ```
 
@@ -154,8 +161,7 @@ namespace FabricObserver.Observers
 {
     public class SampleNewObserver : ObserverBase
     {
-        // FabricObserver will inject the FabricClient and StatelessServiceContext instances at runtime.        
-        public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context)
+        public SomeObserver(FabricClient fabricClient, StatelessServiceContext context)
           : base(fabricClient, context)
         {
             //... Your impl.
