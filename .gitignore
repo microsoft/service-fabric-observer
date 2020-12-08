@@ -332,6 +332,6 @@ ASALocalRun/
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
 
-Cloud*.xml 
+**/PublishProfiles/Cloud.xml
 /FabricObserver/observer_logs
 /FabricObserver/PackageRoot/Data/Plugins/SampleNewObserver.dll
