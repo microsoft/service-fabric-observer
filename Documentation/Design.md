@@ -34,21 +34,45 @@ derived by all Observer types)
     
     public interface IObserver : IDisposable
     {
-        string ObserverName { get; }
+        string ObserverName
+        {
+            get;
+        }
 
-        string NodeName { get; set; }
+        string NodeName
+        {
+            get; set;
+        }
 
-        Logger ObserverLogger { get; set; }
+        Logger ObserverLogger
+        {
+            get; set;
+        }
 
-        DateTime LastRunDateTime { get; set; }
+        DateTime LastRunDateTime
+        {
+            get; set;
+        }
 
-        TimeSpan RunInterval { get; set; }
+        TimeSpan RunInterval
+        {
+            get; set;
+        }
 
-        bool IsEnabled { get; set; }
+        bool IsEnabled
+        {
+            get; set;
+        }
 
-        bool HasActiveFabricErrorOrWarning { get; set; }
+        bool HasActiveFabricErrorOrWarning
+        {
+            get; set;
+        }
 
-        bool IsUnhealthy { get; set; }
+        bool IsUnhealthy
+        {
+            get; set;
+        }
 
         ConfigSettings ConfigurationSettings
         {
@@ -70,7 +94,7 @@ derived by all Observer types)
         Task ReportAsync(CancellationToken token);
     }
 
-    public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
+    public abstract class ObserverBase : IObserver
     {
 	    // Impl...
     }
@@ -119,32 +143,36 @@ optionally providing an integer value that represents some timeout or computed r
 
 
 Let's look at the simple design of an Observer:
-```c#
-using System;
-using System.Fabric;
-using System.Fabric.Health;
-using System.IO;
-using System.Threading.Tasks;
-using System.Threading;
-using FabricObserver.Utilities;
+``` C#
 
-namespace FabricObserver
+using System.Threading;
+using System.Threading.Tasks;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
+
+namespace FabricObserver.Observers
 {
-	pubic class SomeObserver : ObserverBase
-	{
-		 public SomeObserver() { }
-		
-		 public override async Task ObserveAsync(CancellationToken token)
-	 	 {
-			 // Observe then call ReportAsync.
-		 }
-		
-		 public override async Task ReportAsync(CancellationToken token)
-		 {
-			 // Prepare observational data to send to ObserverBase's ProcessResourceDataReportHealth function.
-		 }
-	 }	
+    public class SampleNewObserver : ObserverBase
+    {
+        // FabricObserver will inject the FabricClient and StatelessServiceContext instances at runtime.        
+        public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context)
+          : base(fabricClient, context)
+        {
+            //... Your impl.
+        }
+
+        public override async Task ObserveAsync(CancellationToken token)
+        {
+            //... Your impl.
+        }
+
+        public override async Task ReportAsync(CancellationToken token)
+        {
+            //... Your impl.
+        }
+    }
  }
+```
  ```
 
 **Data Design**
