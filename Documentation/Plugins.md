@@ -1,6 +1,9 @@
-## How to implement an observer plugin using our extensibility model
+## How to implement an observer plugin using FO's extensibility model
 
-Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme. This document is a simple 
+
+**NOTE: FabricObserver version 3.1.0 introduces a refactored plugin implementation that will break existing plugins. The changes required by plugin authors are trivial, however. Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme with examples of the new format.**
+
+This document is a simple 
 overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver).
 
 #### Steps 
