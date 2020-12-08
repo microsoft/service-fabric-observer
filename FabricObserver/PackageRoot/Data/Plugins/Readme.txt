@@ -1,4 +1,6 @@
-Your Observer plugins must live here.
+Your Observer plugins must live here. 
+
+You must build your plugin as a .NET Standard 2.0 library.
 
 How to implement an observer plugin with our extensibility model. Note that the observer API surface lives in its own library (.NET Standard 2.0), FabricObserver.Extensibility.dll. FO also uses this library for its internal observer impls.
 
