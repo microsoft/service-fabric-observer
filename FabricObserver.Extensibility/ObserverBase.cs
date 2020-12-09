@@ -364,9 +364,14 @@ namespace FabricObserver.Observers
             Dispose(true);
         }
 
-        // Windows process dmp creator.
-        public bool DumpServiceProcess(int processId, DumpType dumpType = DumpType.Full)
+        // **Windows** process dmp creator.
+        public bool DumpServiceProcessWindows(int processId, DumpType dumpType = DumpType.Full)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return false;
+            }
+
             if (string.IsNullOrEmpty(this.dumpsPath))
             {
                 return false;
@@ -407,43 +412,45 @@ namespace FabricObserver.Observers
             try
             {
                 // This is to ensure friendly-name of resulting dmp file.
-                processName = Process.GetProcessById(processId).ProcessName;
-
-                if (string.IsNullOrEmpty(processName))
+                using (Process process = Process.GetProcessById(processId))
                 {
-                    return false;
-                }
+                    processName = process.ProcessName;
 
-                IntPtr processHandle = Process.GetProcessById(processId).Handle;
-
-                processName += "_" + DateTime.Now.ToString("ddMMyyyyHHmmss") + ".dmp";
-
-                // Check disk space availability before writing dump file.
-
-                // This will not work on Linux
-                string driveName = this.dumpsPath.Substring(0, 2);
-                if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
-                {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                        FabricServiceContext.ServiceName.OriginalString,
-                        ObserverName,
-                        HealthState.Warning,
-                        "Not enough disk space available for dump file creation.");
-                    return false;
-                }
-
-                using (var file = File.Create(Path.Combine(this.dumpsPath, processName)))
-                {
-                    if (!NativeMethods.MiniDumpWriteDump(
-                        processHandle,
-                        (uint)processId,
-                        file.SafeFileHandle,
-                        miniDumpType,
-                        IntPtr.Zero,
-                        IntPtr.Zero,
-                        IntPtr.Zero))
+                    if (string.IsNullOrEmpty(processName))
                     {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
+                        return false;
+                    }
+
+                    processName += "_" + DateTime.Now.ToString("ddMMyyyyHHmmss") + ".dmp";
+                    IntPtr processHandle = process.Handle;
+
+                    // Check disk space availability before writing dump file.
+                    string driveName = this.dumpsPath.Substring(0, 2);
+                    
+                    if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
+                    {
+                        HealthReporter.ReportFabricObserverServiceHealth(
+                            FabricServiceContext.ServiceName.OriginalString,
+                            ObserverName,
+                            HealthState.Warning,
+                            "Not enough disk space available for dump file creation.");
+
+                        return false;
+                    }
+
+                    using (FileStream file = File.Create(Path.Combine(this.dumpsPath, processName)))
+                    {
+                        if (!NativeMethods.MiniDumpWriteDump(
+                            processHandle,
+                            (uint)processId,
+                            file.SafeFileHandle,
+                            miniDumpType,
+                            IntPtr.Zero,
+                            IntPtr.Zero,
+                            IntPtr.Zero))
+                        {
+                            throw new Win32Exception(Marshal.GetLastWin32Error());
+                        }
                     }
                 }
 
@@ -452,7 +459,7 @@ namespace FabricObserver.Observers
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
                 ObserverLogger.LogInfo(
-                    $"Unable to generate dump file {processName} with error{Environment.NewLine}{e}");
+                    $"Failure generating Windows process dump file {processName} with error{Environment.NewLine}{e}");
             }
 
             return false;
@@ -541,7 +548,10 @@ namespace FabricObserver.Observers
                 {
                     if (replicaOrInstance != null && replicaOrInstance.HostProcessId > 0)
                     {
-                        procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId).ProcessName;
+                        using (Process process = Process.GetProcessById((int)replicaOrInstance.HostProcessId))
+                        {
+                            procName = process.ProcessName;
+                        }
                     }
                     else
                     {
@@ -647,9 +657,9 @@ namespace FabricObserver.Observers
                 warningOrError = true;
                 healthState = HealthState.Error;
 
-                // This is primarily useful for AppObserver, but makes sense to be
+                // **Windows-only**. This is primarily useful for AppObserver, but makes sense to be
                 // part of the base class for future use, like for FSO.
-                if (replicaOrInstance != null && dumpOnError)
+                if (replicaOrInstance != null && dumpOnError && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     try
                     {
@@ -664,7 +674,7 @@ namespace FabricObserver.Observers
                         {
                             // DumpServiceProcess defaults to a Full dump with
                             // process memory, handles and thread data.
-                            bool success = DumpServiceProcess(procId);
+                            bool success = DumpServiceProcessWindows(procId);
 
                             if (success)
                             {

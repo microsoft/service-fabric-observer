@@ -15,7 +15,6 @@ using FabricObserver.Observers;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Runtime;
-using FabricObserver.Observers.Utilities;
 
 namespace FabricObserver
 {
