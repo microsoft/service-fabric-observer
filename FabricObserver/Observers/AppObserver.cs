@@ -148,17 +148,17 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        Process p;
-
+                        string processName;
                         try
                         {
-                            p = Process.GetProcessById((int)repOrInst.HostProcessId);
-
+                            using Process p = Process.GetProcessById((int)repOrInst.HostProcessId);
                             // If the process is no longer running, then don't report on it.
                             if (p.HasExited)
                             {
                                 continue;
                             }
+
+                            processName = p.ProcessName;
                         }
                         catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                         {
@@ -167,7 +167,7 @@ namespace FabricObserver.Observers
 
                         string appNameOrType = GetAppNameOrType(repOrInst);
 
-                        var id = $"{appNameOrType}:{p.ProcessName}";
+                        var id = $"{appNameOrType}:{processName}";
 
                         // Log (csv) CPU/Mem/DiskIO per app.
                         if (CsvFileLogger != null && CsvFileLogger.EnableCsvLogging)

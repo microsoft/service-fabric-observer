@@ -71,9 +71,9 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public bool IsEnabled 
-        { 
-            get; set; 
+        public bool IsEnabled
+        {
+            get; set;
         } = true;
 
         public bool IsObserverTelemetryEnabled
@@ -86,7 +86,7 @@ namespace FabricObserver.Observers
             get; set;
         } = false;
 
-        // This static property is *only* used - and set to true - for local development unit test runs. 
+        // This static property is *only* used - and set to true - for local development unit test runs.
         // Do not set this to true otherwise.
         public static bool IsTestRun
         {
@@ -410,14 +410,14 @@ namespace FabricObserver.Observers
             try
             {
                 // This is to ensure friendly-name of resulting dmp file.
-                processName = Process.GetProcessById(processId).ProcessName;
-
+                using Process process = Process.GetProcessById(processId);
+                processName = process.ProcessName;
                 if (string.IsNullOrEmpty(processName))
                 {
                     return false;
                 }
 
-                IntPtr processHandle = Process.GetProcessById(processId).Handle;
+                IntPtr processHandle = process.Handle;
 
                 processName += "_" + DateTime.Now.ToString("ddMMyyyyHHmmss") + ".dmp";
 
@@ -462,7 +462,7 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// This function processes numeric data held in FRUD instances and generates Application or Node level Health Reports depending on supplied thresholds. 
+        /// This function processes numeric data held in FRUD instances and generates Application or Node level Health Reports depending on supplied thresholds.
         /// </summary>
         /// <typeparam name="T">This represents the numeric type of data this function will operate on.</typeparam>
         /// <param name="data">FabricResourceUsageData instance.</param>
@@ -543,8 +543,9 @@ namespace FabricObserver.Observers
                 try
                 {
                     if (replicaOrInstance != null && replicaOrInstance.HostProcessId > 0)
+                    using (Process process = Process.GetProcessById((int)replicaOrInstance.HostProcessId))
                     {
-                        procName = Process.GetProcessById((int)replicaOrInstance.HostProcessId).ProcessName;
+                        procName = process.ProcessName;
                     }
                     else
                     {

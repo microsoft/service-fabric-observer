@@ -21,7 +21,7 @@ namespace FabricObserver.Observers.Utilities
             const string CategoryName = "Process";
             const string CounterName = "Working Set - Private";
 
-            Process process;
+            Process process = null;
             try
             {
                 process = Process.GetProcessById(processId);
@@ -30,6 +30,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 // "Process with an Id of 12314 is not running."
                 Logger.LogError(ex.Message);
+                process?.Dispose();
                 return 0;
             }
 
@@ -57,6 +58,11 @@ namespace FabricObserver.Observers.Utilities
                     Logger.LogError($"{CategoryName} {CounterName} PerfCounter unhandled error: " + e);
 
                     throw;
+                }
+                finally
+                {
+                    process?.Dispose();
+                    process = null;
                 }
             }
         }
