@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Linq;
 using System.Text;
@@ -19,7 +20,8 @@ namespace FabricObserver.Observers
     {
         private readonly StringBuilder message;
 
-        public SampleNewObserver()
+        public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
             this.message = new StringBuilder();
         }
@@ -115,14 +117,14 @@ namespace FabricObserver.Observers
             HealthReportProperties.Add("SomePropertyName");
             HealthReportSourceIds.Add($"{ObserverName}_SomethingUniqueToThisReport");
 
-            var healthReporter = new ObserverHealthReporter(ObserverLogger);
+            var healthReporter = new ObserverHealthReporter(ObserverLogger, FabricClientInstance);
             var healthReport = new Utilities.HealthReport
             {
                 Code = FOErrorWarningCodes.Ok,
                 HealthMessage = this.message.ToString(),
                 NodeName = NodeName,
                 Observer = ObserverName,
-                Property = HealthReportProperties[^1],
+                Property = HealthReportProperties[HealthReportProperties.Count - 1],
                 ReportType = HealthReportType.Node,
                 State = HealthState.Ok,
             };

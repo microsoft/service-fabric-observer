@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -23,7 +24,8 @@ namespace FabricObserver.Observers
         private const string HowToUpdateSelfSignedCertSfLinkHtml =
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
 
-        public CertificateObserver()
+        public CertificateObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base (fabricClient, context)
         {
         }
 

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -55,7 +56,8 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="DiskObserver"/> class.
         /// </summary>
-        public DiskObserver()
+        public DiskObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
             this.diskSpacePercentageUsageData = new List<FabricResourceUsageData<double>>();
             this.diskSpaceUsageData = new List<FabricResourceUsageData<double>>();

@@ -5,15 +5,16 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using FabricObserver.Observers;
+using System.Fabric;
 
 [assembly: FabricObserver.FabricObserverStartup(typeof(SampleNewObserverStartup))]
 namespace FabricObserver.Observers
 {
     public class SampleNewObserverStartup : IFabricObserverStartup
     {
-        public void ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services, FabricClient fabricClient, StatelessServiceContext context)
         {
-            services.AddScoped(typeof(ObserverBase), typeof(SampleNewObserver));
+            services.AddScoped(typeof(ObserverBase), s => new SampleNewObserver(fabricClient, context));
         }
     }
 }

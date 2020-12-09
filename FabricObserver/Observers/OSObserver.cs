@@ -43,7 +43,8 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="OSObserver"/> class.
         /// </summary>
-        public OSObserver()
+        public OSObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
 
         }

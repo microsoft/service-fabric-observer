@@ -54,7 +54,8 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="SFConfigurationObserver"/> class.
         /// </summary>
-        public SFConfigurationObserver()
+        public SFConfigurationObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
         }
 

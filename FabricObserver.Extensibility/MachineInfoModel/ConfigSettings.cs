@@ -3,28 +3,34 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System.Fabric;
 using System.Fabric.Description;
 using FabricObserver.Observers.Utilities;
 
 namespace FabricObserver.Observers.MachineInfoModel
 {
-    public static class ConfigSettings
+    public class ConfigSettings
     {
-        public static string ConfigPackagePath =>
-            ObserverManager.FabricServiceContext.CodePackageActivationContext.
+        public string ConfigPackagePath =>
+            this.serviceContext.CodePackageActivationContext.
                 GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
 
-        public static string AppObserverConfigFileName
+        public string AppObserverConfigFileName
         {
             get; set;
         }
 
-        public static string NetworkObserverConfigFileName
+        public string NetworkObserverConfigFileName
         {
             get; set;
         }
 
-        public static void Initialize(
+        public ConfigSettings(StatelessServiceContext context)
+        {
+            this.serviceContext = context;
+        }
+
+        public void Initialize(
             ConfigurationSettings configSettings,
             string configurationSectionName,
             string dataFileName)
@@ -52,7 +58,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             }
         }
 
-        internal static void UpdateCommonConfigurationSettings(
+        internal void UpdateCommonConfigurationSettings(
             ConfigurationSettings newConfigurationSettings,
             string configurationSectionName,
             string dataFileName)
@@ -81,6 +87,8 @@ namespace FabricObserver.Observers.MachineInfoModel
             }
         }
 
-        private static ConfigurationSettings configurationSettings;
+        private ConfigurationSettings configurationSettings;
+        private StatelessServiceContext serviceContext;
     }
 }
+

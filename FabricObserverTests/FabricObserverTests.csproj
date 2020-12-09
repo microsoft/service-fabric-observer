@@ -11,6 +11,7 @@
     <Copyright>Copyright ©  2020</Copyright>
     <Product>FabricObserverTests</Product>
     <AssemblyTitle>FabricObserverTests</AssemblyTitle>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <None Include="MyExpiredCert.p12">

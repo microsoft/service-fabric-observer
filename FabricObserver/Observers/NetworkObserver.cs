@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -68,13 +69,16 @@ namespace FabricObserver.Observers
         private Stopwatch stopwatch;
         private CancellationToken cancellationToken;
         private int tcpConnTestRetried;
+        private MachineInfoModel.ConfigSettings configSettings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetworkObserver"/> class.
         /// </summary>
-        public NetworkObserver()
+        public NetworkObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
-            this.dataPackagePath = MachineInfoModel.ConfigSettings.ConfigPackagePath;
+            configSettings = new MachineInfoModel.ConfigSettings(FabricServiceContext);
+            this.dataPackagePath = configSettings.ConfigPackagePath;
             this.stopwatch = new Stopwatch();
         }
 
@@ -359,13 +363,13 @@ namespace FabricObserver.Observers
                 FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                     ObserverConstants.ObserverConfigurationPackageName)?.Settings;
 
-            MachineInfoModel.ConfigSettings.Initialize(
+            this.configSettings.Initialize(
                 settings,
                 ConfigurationSectionName,
                 "NetworkObserverDataFileName");
 
             var networkObserverConfigFileName =
-                Path.Combine(this.dataPackagePath, MachineInfoModel.ConfigSettings.NetworkObserverConfigFileName);
+                Path.Combine(this.dataPackagePath, this.configSettings.NetworkObserverConfigFileName);
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {

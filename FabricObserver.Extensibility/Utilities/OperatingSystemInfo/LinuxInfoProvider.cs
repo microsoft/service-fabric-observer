@@ -50,7 +50,7 @@ namespace FabricObserver.Observers.Utilities
         {
             string text = File.ReadAllText("/proc/sys/net/ipv4/ip_local_port_range");
             int tabIndex = text.IndexOf('\t');
-            return (LowPort: int.Parse(text.AsSpan(0, tabIndex)), HighPort: int.Parse(text.AsSpan(tabIndex + 1)));
+            return (LowPort: int.Parse(text.Substring(0, tabIndex)), HighPort: int.Parse(text.Substring(tabIndex + 1)));
         }
 
         public override async Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
@@ -64,10 +64,10 @@ namespace FabricObserver.Observers.Utilities
                 ** Example:
                 ** Description:\tUbuntu 18.04.2 LTS
                 */
-                osInfo.Name = outputLines[0].Split(':', count: 2)[1].Trim();
+                osInfo.Name = outputLines[0].Split(new char[] { ':' }, 2)[1].Trim();
             }
 
-            osInfo.Version = await File.ReadAllTextAsync("/proc/version");
+            osInfo.Version = File.ReadAllText("/proc/version");
 
             osInfo.Language = string.Empty;
             osInfo.Status = "OK";
@@ -148,34 +148,35 @@ namespace FabricObserver.Observers.Utilities
 
             int count = 0;
             string line;
-            using Process process = Process.Start(startInfo);
-
-            while ((line = process.StandardOutput.ReadLine()) != null)
+            using (Process process = Process.Start(startInfo))
             {
-                if (!line.StartsWith("tcp ", StringComparison.Ordinal))
+                while ((line = process.StandardOutput.ReadLine()) != null)
                 {
-                    // skip headers
-                    continue;
+                    if (!line.StartsWith("tcp ", StringComparison.Ordinal | StringComparison.OrdinalIgnoreCase))
+                    {
+                        // skip headers
+                        continue;
+                    }
+
+                    if (processId != -1 && !line.Contains(processIdStr))
+                    {
+                        continue;
+                    }
+
+                    if (!predicate(line))
+                    {
+                        continue;
+                    }
+
+                    ++count;
                 }
 
-                if (processId != -1 && !line.Contains(processIdStr, StringComparison.Ordinal))
+                process.WaitForExit();
+
+                if (process.ExitCode != 0)
                 {
-                    continue;
+                    return -1;
                 }
-
-                if (!predicate(line))
-                {
-                    continue;
-                }
-
-                ++count;
-            }
-
-            process.WaitForExit();
-
-            if (process.ExitCode != 0)
-            {
-                return -1;
             }
 
             return count;
@@ -196,7 +197,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (spaceIndex >= 0)
                 {
-                    return int.Parse(line.AsSpan(colonIndex + 1, spaceIndex - colonIndex - 1));
+                    return int.Parse(line.Substring(colonIndex + 1, spaceIndex - colonIndex - 1));
                 }
             }
 
@@ -218,17 +219,19 @@ namespace FabricObserver.Observers.Utilities
 
             List<string> output = new List<string>();
 
-            using Process process = Process.Start(startInfo);
-            string line;
-
-            while ((line = await process.StandardOutput.ReadLineAsync()) != null)
+            using (Process process = Process.Start(startInfo))
             {
-                output.Add(line);
+                string line;
+
+                while ((line = await process.StandardOutput.ReadLineAsync()) != null)
+                {
+                    output.Add(line);
+                }
+
+                process.WaitForExit();
+
+                return (process.ExitCode, output);
             }
-
-            process.WaitForExit();
-
-            return (process.ExitCode, output);
         }
     }
 }

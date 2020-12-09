@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Fabric;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -61,7 +60,7 @@ namespace FabricObserverTests
 
         private readonly bool isSFRuntimePresentOnTestMachine;
         private readonly CancellationToken token = new CancellationToken { };
-
+        private readonly FabricClient fabricClient = new FabricClient();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverTest"/> class.
@@ -132,19 +131,18 @@ namespace FabricObserverTests
         public void AppObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new AppObserver();
+            var obs = new AppObserver(this.fabricClient, this.context);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.AppObserverName);
 
-            obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            obs.Dispose(); 
         }
 
         [TestMethod]
@@ -155,7 +153,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new CertificateObserver();
+            var obs = new CertificateObserver(this.fabricClient, this.context);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             
@@ -163,7 +161,6 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.CertificateObserverName);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
         }
 
         [TestMethod]
@@ -179,7 +176,6 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == FabricClusterObserver.Utilities.ObserverConstants.ClusterObserverName);
 
             obs.Dispose();
-            ClusterObserverManager.FabricClientInstance.Dispose();
         }
 
         [TestMethod]
@@ -191,7 +187,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new DiskObserver();
+            var obs = new DiskObserver(this.fabricClient, this.context);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             
@@ -199,7 +195,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.DiskObserverName);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         [TestMethod]
@@ -210,7 +206,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new FabricSystemObserver();
+            var obs = new FabricSystemObserver(this.fabricClient, this.context);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             
@@ -218,7 +214,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.FabricSystemObserverName);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         [TestMethod]
@@ -231,18 +227,12 @@ namespace FabricObserverTests
             ObserverManager.ObserverWebAppDeployed = true;
             FabricObserver.Observers.ObserverBase.IsTestRun = true;
 
-            var obs = new NetworkObserver
-            {
-                
-            };
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            
+            var obs = new NetworkObserver(this.fabricClient, this.context);
+            Assert.IsTrue(obs.ObserverLogger != null); 
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.NetworkObserverName);
 
-            obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            obs.Dispose(); 
         }
 
         [TestMethod]
@@ -253,7 +243,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new NodeObserver();
+            var obs = new NodeObserver(this.fabricClient, this.context);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             
@@ -261,7 +251,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.NodeObserverName);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         [TestMethod]
@@ -272,7 +262,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new OSObserver();
+            var obs = new OSObserver(this.fabricClient, this.context);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             
@@ -280,7 +270,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         [TestMethod]
@@ -292,7 +282,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new SFConfigurationObserver();
+            var obs = new SFConfigurationObserver(this.fabricClient, this.context);
 
             // These are set in derived ObserverBase.
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -301,7 +291,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.SFConfigurationObserverName);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -322,7 +312,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new AppObserver
+            var obs = new AppObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(5),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
@@ -349,7 +339,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -370,7 +360,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new AppObserver
+            var obs = new AppObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(5),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
@@ -398,7 +388,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -430,12 +420,10 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ClusterObserverManager.FabricClientInstance.Dispose();
         }
 
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
         [TestMethod]
-        [SuppressMessage("Code Quality", "IDE0067:Dispose objects before losing scope", Justification = "Noise.")]
         public async Task Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
         {
             ObserverManager.FabricServiceContext = this.context;
@@ -443,7 +431,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new CertificateObserver();
+            var obs = new CertificateObserver(this.fabricClient, this.context);
 
             var commonNamesToObserve = new List<string>
             {
@@ -467,7 +455,7 @@ namespace FabricObserverTests
             };
             obs.HasActiveFabricErrorOrWarning = true;
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -477,7 +465,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 10);
+            Wait(() => obsMgr.IsObserverRunning, 1);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -499,7 +487,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new AppObserver
+            var obs = new AppObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(15),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
@@ -514,7 +502,7 @@ namespace FabricObserverTests
                 ReplicaOrInstanceId = default(long),
             });
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -541,13 +529,13 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new DiskObserver
+            var obs = new DiskObserver(this.fabricClient, this.context)
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
             };
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -573,13 +561,13 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new FabricSystemObserver
+            var obs = new FabricSystemObserver(this.fabricClient, this.context)
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
             };
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -605,13 +593,13 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new NetworkObserver
+            var obs = new NetworkObserver(this.fabricClient, this.context)
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
             };
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -636,13 +624,13 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new NodeObserver
+            var obs = new NodeObserver(this.fabricClient, this.context)
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
             };
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -668,13 +656,13 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
 
-            var obs = new OSObserver
+            var obs = new OSObserver(this.fabricClient, this.context)
             {
                 IsEnabled = true,
                 NodeName = "_Test_0",
             };
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -715,7 +703,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new NodeObserver
+            var obs = new NodeObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 UseCircularBuffer = true,
@@ -737,7 +725,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         [TestMethod]
@@ -763,7 +751,7 @@ namespace FabricObserverTests
                 ObserverManager.TelemetryEnabled = false;
                 ObserverManager.EtwEnabled = false;
 
-                obs = new CertificateObserver { };
+                obs = new CertificateObserver(this.fabricClient, this.context);
 
                 var commonNamesToObserve = new List<string>
                 {
@@ -820,9 +808,9 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new CertificateObserver();
+            var obs = new CertificateObserver(this.fabricClient, this.context);
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -883,7 +871,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new NodeObserver
+            var obs = new NodeObserver(this.fabricClient, this.context)
             {
                 DataCapacity = 2,
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -905,7 +893,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -926,7 +914,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new NodeObserver
+            var obs = new NodeObserver(this.fabricClient, this.context)
             {
                 DataCapacity = 2,
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -944,7 +932,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -966,7 +954,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new OSObserver()
+            var obs = new OSObserver(this.fabricClient, this.context)
             {
                 TestManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
             };
@@ -993,7 +981,7 @@ namespace FabricObserverTests
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -1015,7 +1003,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new DiskObserver
+            var obs = new DiskObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
             };
@@ -1042,7 +1030,7 @@ namespace FabricObserverTests
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -1064,14 +1052,14 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new DiskObserver
+            var obs = new DiskObserver(this.fabricClient, this.context)
             {
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
                 MonitorDuration = TimeSpan.FromSeconds(5),
             };
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -1122,10 +1110,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new NetworkObserver
-            {
-
-            };
+            var obs = new NetworkObserver(this.fabricClient, this.context);
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
@@ -1141,7 +1126,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -1163,10 +1148,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new NetworkObserver
-            {
-
-            };
+            var obs = new NetworkObserver(this.fabricClient, this.context);
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
@@ -1194,7 +1176,7 @@ namespace FabricObserverTests
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -1215,7 +1197,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new NodeObserver
+            var obs = new NodeObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(10),
                 DataCapacity = 5,
@@ -1223,7 +1205,7 @@ namespace FabricObserverTests
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
             };
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 
             };
@@ -1266,10 +1248,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new SFConfigurationObserver
-            {
-
-            };
+            var obs = new SFConfigurationObserver(this.fabricClient, this.context);
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
@@ -1293,7 +1272,7 @@ namespace FabricObserverTests
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -1320,7 +1299,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new FabricSystemObserver
+            var obs = new FabricSystemObserver(this.fabricClient, this.context)
             {
                 DataCapacity = 5,
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1340,7 +1319,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -1367,13 +1346,13 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new FabricSystemObserver
+            var obs = new FabricSystemObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 MemWarnUsageThresholdMb = 5, // This will definitely cause Warning alerts.
             };
 
-            var obsMgr = new ObserverManager(obs)
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
             };
@@ -1420,7 +1399,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new FabricSystemObserver
+            var obs = new FabricSystemObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarnUsageThresholdPct = -42,
@@ -1438,7 +1417,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /// <summary>
@@ -1465,7 +1444,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            var obs = new FabricSystemObserver
+            var obs = new FabricSystemObserver(this.fabricClient, this.context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarnUsageThresholdPct = 420,
@@ -1483,7 +1462,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            ObserverManager.FabricClientInstance.Dispose();
+            
         }
 
         /***** End Tests that require a currently running SF Cluster. *****/

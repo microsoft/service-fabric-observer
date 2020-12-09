@@ -27,14 +27,6 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Extensibility\Samples\**" />
-    <EmbeddedResource Remove="Extensibility\Samples\**" />
-    <None Remove="Extensibility\Samples\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="NLog.config" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.DependencyCollector" Version="2.15.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.15.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" Version="2.15.0" />
@@ -89,7 +81,12 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
+    <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj">
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj">
+      <Private>true</Private>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Update="elevated_docker_stats">
