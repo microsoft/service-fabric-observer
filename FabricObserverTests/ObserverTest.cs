@@ -60,7 +60,7 @@ namespace FabricObserverTests
 
         private readonly bool isSFRuntimePresentOnTestMachine;
         private readonly CancellationToken token = new CancellationToken { };
-        private readonly FabricClient fabricClient = new FabricClient();
+        private readonly FabricClient fabricClient = new FabricClient(FabricClientRole.User);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverTest"/> class.
@@ -149,7 +149,7 @@ namespace FabricObserverTests
         public void CertificateObserver_Constructor_test()
         {
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -167,7 +167,7 @@ namespace FabricObserverTests
         public void ClusterObserver_Constructor_Test()
         {
             ClusterObserverManager.FabricServiceContext = this.context;
-            ClusterObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ClusterObserverManager.FabricClientInstance = this.fabricClient;
             ClusterObserverManager.TelemetryEnabled = false;
 
             var obs = new ClusterObserver();
@@ -182,7 +182,7 @@ namespace FabricObserverTests
         public void DiskObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -202,7 +202,7 @@ namespace FabricObserverTests
         public void FabricSystemObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -221,7 +221,7 @@ namespace FabricObserverTests
         public void NetworkObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -239,7 +239,7 @@ namespace FabricObserverTests
         public void NodeObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -258,7 +258,7 @@ namespace FabricObserverTests
         public void OSObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -277,7 +277,7 @@ namespace FabricObserverTests
         public void SFConfigurationObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -308,7 +308,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -356,7 +356,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -400,7 +400,7 @@ namespace FabricObserverTests
         {
             var startDateTime = DateTime.Now;
             ClusterObserverManager.FabricServiceContext = this.context;
-            ClusterObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ClusterObserverManager.FabricClientInstance = this.fabricClient;
             ClusterObserverManager.TelemetryEnabled = false;
 
             var obs = new ClusterObserver
@@ -429,7 +429,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
 
             var obs = new CertificateObserver(this.fabricClient, this.context);
 
@@ -485,7 +485,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
 
             var obs = new AppObserver(this.fabricClient, this.context)
             {
@@ -527,7 +527,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
 
             var obs = new DiskObserver(this.fabricClient, this.context)
             {
@@ -559,7 +559,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
 
             var obs = new FabricSystemObserver(this.fabricClient, this.context)
             {
@@ -591,7 +591,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
 
             var obs = new NetworkObserver(this.fabricClient, this.context)
             {
@@ -622,7 +622,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
 
             var obs = new NodeObserver(this.fabricClient, this.context)
             {
@@ -654,7 +654,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = this.context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
 
             var obs = new OSObserver(this.fabricClient, this.context)
             {
@@ -699,7 +699,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -747,7 +747,7 @@ namespace FabricObserverTests
             {
                 var startDateTime = DateTime.Now;
                 ObserverManager.FabricServiceContext = this.context;
-                ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+                ObserverManager.FabricClientInstance = this.fabricClient;
                 ObserverManager.TelemetryEnabled = false;
                 ObserverManager.EtwEnabled = false;
 
@@ -804,7 +804,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -867,7 +867,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -910,7 +910,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -949,7 +949,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -998,7 +998,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -1047,7 +1047,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -1106,7 +1106,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -1143,7 +1143,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -1193,7 +1193,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -1243,7 +1243,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -1289,7 +1289,7 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
             if (nodeList?.Count > 1)
             {
@@ -1327,7 +1327,7 @@ namespace FabricObserverTests
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
             if (!this.isSFRuntimePresentOnTestMachine)
             {
@@ -1336,8 +1336,9 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            
             if (nodeList?.Count > 1)
             {
                 return;
@@ -1350,6 +1351,115 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 MemWarnUsageThresholdMb = 5, // This will definitely cause Warning alerts.
+            };
+
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Experiment with err/warn detection/reporting behavior.
+            // observer detected errors or warnings for supplied threshold(s).
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync();
+            await Task.Delay(1000).ConfigureAwait(false);
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
+        {
+            if (!this.isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = this.fabricClient;
+            var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new FabricSystemObserver(this.fabricClient, this.context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                ActiveTcpPortCountWarning = 5, // This will definitely cause Warning.
+            };
+
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Experiment with err/warn detection/reporting behavior.
+            // observer detected errors or warnings for supplied threshold(s).
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync();
+            await Task.Delay(1000).ConfigureAwait(false);
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
+        {
+            if (!this.isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.FabricClientInstance = this.fabricClient;
+            var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new FabricSystemObserver(this.fabricClient, this.context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                ActiveEphemeralPortCountWarning = 1, // This will definitely cause Warning.
             };
 
             var obsMgr = new ObserverManager(obs, this.fabricClient)
@@ -1389,8 +1499,9 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            
             if (nodeList?.Count > 1)
             {
                 return;
@@ -1434,8 +1545,9 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = new FabricClient(FabricClientRole.User);
+            ObserverManager.FabricClientInstance = this.fabricClient;
             var nodeList = await ObserverManager.FabricClientInstance.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            
             if (nodeList?.Count > 1)
             {
                 return;

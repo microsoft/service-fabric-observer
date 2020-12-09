@@ -271,7 +271,8 @@ namespace FabricObserver.Observers
                 }
 
                 var resultsOrdered = results.Cast<ManagementObject>()
-                                            .OrderByDescending(obj => obj["InstalledOn"]);
+                                            .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
+                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString()));
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";
@@ -293,7 +294,8 @@ namespace FabricObserver.Observers
                 e is InvalidCastException ||
                 e is ManagementException ||
                 e is NullReferenceException ||
-                e is OperationCanceledException)
+                e is OperationCanceledException ||
+                e is TaskCanceledException)
             {
             }
             finally

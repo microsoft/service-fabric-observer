@@ -25,7 +25,7 @@ namespace FabricObserver.Observers.Utilities
         // Network
         public const string InternetConnectionFailure = "Outbound Internet Connection Failure";
         public const string TotalActiveFirewallRules = "Total Active Firewall Rules";
-        public const string TotalActivePorts = "Total Active Ports";
-        public const string TotalEphemeralPorts = "Total Ephemeral Active Ports";
+        public const string TotalActivePorts = "Total Active TCP Ports";
+        public const string TotalEphemeralPorts = "Total Ephemeral Active TCP Ports";
     }
 }

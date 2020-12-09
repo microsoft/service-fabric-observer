@@ -448,7 +448,7 @@ namespace FabricObserver.Observers
                 // as part of the work they perform under normal traffic flow, then it doesn't make sense to warn or
                 // error on these conditions.
                 // TODO: Look into making this a long running background task with signaling.
-                TimeSpan duration = TimeSpan.FromSeconds(30);
+                TimeSpan duration = TimeSpan.FromSeconds(15);
 
                 if (MonitorDuration > TimeSpan.MinValue)
                 {
@@ -463,7 +463,6 @@ namespace FabricObserver.Observers
                 while (this.stopwatch.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
-                    await Task.Delay(500);
 
                     if (CpuWarningUsageThresholdPct > 0
                         && CpuWarningUsageThresholdPct <= 100)
@@ -482,6 +481,8 @@ namespace FabricObserver.Observers
                         this.allMemDataPercentUsed.Data.Add(
                             OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                     }
+
+                    await Task.Delay(250).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)

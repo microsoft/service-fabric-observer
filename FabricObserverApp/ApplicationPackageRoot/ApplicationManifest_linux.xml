@@ -39,10 +39,10 @@
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!--<Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" /> -->
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:10" />
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:05" />
-    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:10" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:30" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
@@ -73,7 +73,7 @@
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="true" />
     <!-- Required-If UseCircularBuffer = True -->
-    <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="15" />
+    <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="5" />
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="85" />
     <Parameter Name="FabricSystemObserverMemoryErrorLimitMb" DefaultValue="" />
@@ -81,7 +81,7 @@
     <Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="1000" />
     <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="500" />
+    <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="800" />
     <!-- Whether to monitor Windows Event Log. -->
     <Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
     <!-- NodeObserver Warning/Error Thresholds -->
