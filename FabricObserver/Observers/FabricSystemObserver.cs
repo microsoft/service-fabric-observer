@@ -340,18 +340,18 @@ namespace FabricObserver.Observers
 
         private void ClearDataContainers()
         {
-            this.allActiveTcpPortData.Clear();
+            this.allActiveTcpPortData?.Clear();
             this.allActiveTcpPortData = null;
-            this.allCpuData.Clear();
+            this.allCpuData?.Clear();
             this.allCpuData = null;
-            this.allEphemeralTcpPortData.Clear();
+            this.allEphemeralTcpPortData?.Clear();
             this.allEphemeralTcpPortData = null;
-            this.allMemData.Clear();
+            this.allMemData?.Clear();
             this.allMemData = null;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                this.evtRecordList.Clear();
+                this.evtRecordList?.Clear();
                 this.evtRecordList = null;
             }
         }
@@ -839,6 +839,7 @@ namespace FabricObserver.Observers
                     CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
                 }
 
+                // This function will clear Data items in list (will call Clear() on the supplied FabricResourceUsageData instance's Data field..)
                 ProcessResourceDataReportHealth(
                     dataItem,
                     thresholdError,

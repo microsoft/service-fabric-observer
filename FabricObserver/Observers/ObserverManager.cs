@@ -346,7 +346,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(2000, token).ConfigureAwait(false);
+                                    await Task.Delay(500, token).ConfigureAwait(false);
                                 }
                             }
                             catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
@@ -379,7 +379,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(2000, token).ConfigureAwait(false);
+                                    await Task.Delay(500, token).ConfigureAwait(false);
                                 }
                             }
                         }
@@ -390,11 +390,11 @@ namespace FabricObserver.Observers
 
                     obs.HasActiveFabricErrorOrWarning = false;
                 }
-
-                this.shutdownSignaled = shutdownSignaled;
-                this.SignalAbortToRunningObserver();
-                this.IsObserverRunning = false;
             }
+
+            this.shutdownSignaled = shutdownSignaled;
+            this.SignalAbortToRunningObserver();
+            this.IsObserverRunning = false;
         }
 
         public void Dispose()
@@ -697,7 +697,7 @@ namespace FabricObserver.Observers
 
         /// <summary>
         /// This function will signal cancellation on the token passed to an observer's ObserveAsync. 
-        /// This will eventually cause the observer to stop processing as this will throw an OperationCancelledExeption 
+        /// This will eventually cause the observer to stop processing as this will throw an OperationCancelledException 
         /// in one of the observer's executing code paths.
         /// </summary>
         private void SignalAbortToRunningObserver()
@@ -832,6 +832,13 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
                 {
+                    if (this.isConfigurationUpdateInProgess)
+                    {
+                        this.IsObserverRunning = false;
+
+                        return true;
+                    }
+
                     _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                     allExecuted = false;
                 }

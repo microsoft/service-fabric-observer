@@ -291,7 +291,6 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.SFConfigurationObserverName);
 
             obs.Dispose();
-            
         }
 
         /// <summary>
@@ -433,28 +432,6 @@ namespace FabricObserverTests
 
             var obs = new CertificateObserver(this.fabricClient, this.context);
 
-            var commonNamesToObserve = new List<string>
-            {
-                "MyValidCert", // Common name of valid cert
-            };
-
-            var thumbprintsToObserve = new List<string>
-            {
-                "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
-            };
-
-            obs.DaysUntilAppExpireWarningThreshold = 14;
-            obs.DaysUntilClusterExpireWarningThreshold = 14;
-            obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
-            obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
-            obs.SecurityConfiguration = new SecurityConfiguration
-            {
-                SecurityType = SecurityType.None,
-                ClusterCertThumbprintOrCommonName = string.Empty,
-                ClusterCertSecondaryThumbprint = string.Empty,
-            };
-            obs.HasActiveFabricErrorOrWarning = true;
-
             var obsMgr = new ObserverManager(obs, this.fabricClient)
             {
                 ApplicationName = "fabric:/TestApp0",
@@ -465,7 +442,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 1);
+            Wait(() => obsMgr.IsObserverRunning, 15);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -1086,7 +1063,6 @@ namespace FabricObserverTests
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             await obsMgr.StopObserversAsync();
-            await Task.Delay(1000).ConfigureAwait(false);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
             obs.Dispose();
             obsMgr.Dispose();
@@ -1223,7 +1199,6 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
             await obsMgr.StopObserversAsync();
-            await Task.Delay(1000).ConfigureAwait(false);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
             obs.Dispose();
             obsMgr.Dispose();
@@ -1272,7 +1247,6 @@ namespace FabricObserverTests
             Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
 
             obs.Dispose();
-            
         }
 
         /// <summary>
@@ -1319,7 +1293,6 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            
         }
 
         /// <summary>
@@ -1369,8 +1342,7 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync();
-            await Task.Delay(1000).ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
             obs.Dispose();
             obsMgr.Dispose();
@@ -1424,8 +1396,7 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync();
-            await Task.Delay(1000).ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
             obs.Dispose();
             obsMgr.Dispose();
