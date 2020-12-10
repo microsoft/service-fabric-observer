@@ -797,10 +797,12 @@ namespace FabricObserver.Observers
                 // of user telemetry settings.
                 telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
                 telemetryData.Code = errorWarningCode;
+
                 if (replicaOrInstance != null && !string.IsNullOrEmpty(replicaOrInstance.ContainerId))
                 {
                     telemetryData.ContainerId = replicaOrInstance.ContainerId;
                 }
+
                 telemetryData.HealthState = Enum.GetName(typeof(HealthState), healthState);
                 telemetryData.HealthEventDescription = healthMessage.ToString();
                 telemetryData.Metric = $"{drive}{data.Property}";
@@ -895,27 +897,21 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                healthReport.Property = HealthReportProperties[HealthReportProperties.Count - 1];
+                healthReport.Property = HealthReportProperties.Last();
 
                 if (HealthReportSourceIds.Count == 0)
                 {
-                    HealthReportSourceIds.Add(ObserverName);
+                    HealthReportSourceIds.Add($"{ObserverName}({errorWarningCode})");
                 }
+
+                healthReport.SourceId = HealthReportSourceIds.Last();
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                 // Set internal health state info on data instance.
                 data.ActiveErrorOrWarning = true;
                 data.ActiveErrorOrWarningCode = errorWarningCode;
-
-                // FOErrorWarningCode for distinct sourceid.
-                if (!HealthReportSourceIds[HealthReportSourceIds.Count - 1].Contains($"({errorWarningCode})"))
-                {
-                    HealthReportSourceIds[HealthReportSourceIds.Count - 1] += $"({errorWarningCode})";
-                }
-
-                healthReport.SourceId = HealthReportSourceIds[HealthReportSourceIds.Count - 1];
-
-                // Generate a Service Fabric Health Report.
-                HealthReporter.ReportHealthToServiceFabric(healthReport);
 
                 // This means this observer created a Warning or Error SF Health Report
                 HasActiveFabricErrorOrWarning = true;
@@ -932,10 +928,12 @@ namespace FabricObserver.Observers
                     // of user telemetry settings.
                     telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
                     telemetryData.Code = FOErrorWarningCodes.Ok;
+
                     if (replicaOrInstance != null && !string.IsNullOrEmpty(replicaOrInstance.ContainerId))
                     {
                         telemetryData.ContainerId = replicaOrInstance.ContainerId;
                     }
+
                     telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
                     telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
@@ -1029,14 +1027,14 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    healthReport.Property = HealthReportProperties[HealthReportProperties.Count - 1];
+                    healthReport.Property = HealthReportProperties.Last();
 
                     if (HealthReportSourceIds.Count == 0)
                     {
                         HealthReportSourceIds.Add($"{ObserverName}({data.ActiveErrorOrWarningCode})");
                     }
 
-                    healthReport.SourceId = HealthReportSourceIds[HealthReportSourceIds.Count - 1];
+                    healthReport.SourceId = HealthReportSourceIds.Last();
 
                     // Emit an Ok Health Report to clear Fabric Health warning.
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
