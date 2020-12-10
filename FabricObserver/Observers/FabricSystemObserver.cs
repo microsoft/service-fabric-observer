@@ -22,14 +22,11 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    // ***FabricSystemObserver is disabled by default.***
-    // This observer monitors all Fabric system service processes across various resource usage metrics.
-    // It will signal Warnings or Errors based on settings supplied in Settings.xml.
-    // If the FabricObserverWebApi service is deployed: The output (a local file) is created for and used by the API service (http://localhost:5000/api/ObserverManager).
-    // SF Health Report processor will also emit ETW telemetry if configured in Settings.xml.
-    // You should not enable this observer unless you have spent some time analyzing how your services impact SF system services (like Fabric.exe)
-    // If Fabric.exe is running at 70% CPU due to your service code, and this is normal for your workloads, then do not warn at this threshold.
-    // As with all observers, you should first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy states.
+    // When enabled, FabricSystemObserver monitors all Fabric system service processes across various resource usage metrics (CPU Time, Workingset, Ephemeral and all Active TCP ports).
+    // It will signal Warnings or Errors based on settings supplied in ApplicationManifest.xml (Like many observers, most of it's settings are overridable and can be reset with application parameter updates).
+    // If the FabricObserverWebApi service (DEPRECATED - it will not evolve...) is deployed: The output (a local file) is created for and used by the API service (http://localhost:5000/api/ObserverManager).
+    // SF Health Report processor will also emit ETW telemetry if configured in ApplicationManifest.xml.
+    // As with all observers, you should first determine the happy (normal) states across resource usage before you set thresholds for the unhappy ones.
     public class FabricSystemObserver : ObserverBase
     {
         private readonly List<string> processWatchList;
@@ -336,7 +333,27 @@ namespace FabricObserver.Observers
                 }
             }
 
+            ClearDataContainers();
+
             return Task.CompletedTask;
+        }
+
+        private void ClearDataContainers()
+        {
+            this.allActiveTcpPortData.Clear();
+            this.allActiveTcpPortData = null;
+            this.allCpuData.Clear();
+            this.allCpuData = null;
+            this.allEphemeralTcpPortData.Clear();
+            this.allEphemeralTcpPortData = null;
+            this.allMemData.Clear();
+            this.allMemData = null;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                this.evtRecordList.Clear();
+                this.evtRecordList = null;
+            }
         }
 
         /// <summary>
@@ -444,6 +461,7 @@ namespace FabricObserver.Observers
         {
             List<Process> result = new List<Process>();
             Process[] processes = Process.GetProcessesByName("dotnet");
+
             for (int i = 0; i < processes.Length; ++i)
             {
                 Process p = processes[i];
@@ -542,7 +560,8 @@ namespace FabricObserver.Observers
                 }
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.monitorWinEventLog)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.monitorWinEventLog
+                && this.evtRecordList == null)
             {
                 this.evtRecordList = new List<EventRecord>();
             }
