@@ -159,7 +159,7 @@ using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
-    public class SampleNewObserver : ObserverBase
+    public class SomeObserver : ObserverBase
     {
         public SomeObserver(FabricClient fabricClient, StatelessServiceContext context)
           : base(fabricClient, context)
