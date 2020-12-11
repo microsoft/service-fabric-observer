@@ -4,11 +4,12 @@
 // ------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using System.Fabric;
 
 namespace FabricObserver
 {
     public interface IFabricObserverStartup
     {
-        void ConfigureServices(IServiceCollection services);
+        void ConfigureServices(IServiceCollection services, FabricClient fabricClient, StatelessServiceContext context);
     }
 }

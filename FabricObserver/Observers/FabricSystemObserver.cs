@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Globalization;
 using System.IO;
@@ -21,23 +22,22 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    // ***FabricSystemObserver is disabled by default.***
-    // This observer monitors all Fabric system service processes across various resource usage metrics.
-    // It will signal Warnings or Errors based on settings supplied in Settings.xml.
-    // If the FabricObserverWebApi service is deployed: The output (a local file) is created for and used by the API service (http://localhost:5000/api/ObserverManager).
-    // SF Health Report processor will also emit ETW telemetry if configured in Settings.xml.
-    // You should not enable this observer unless you have spent some time analyzing how your services impact SF system services (like Fabric.exe)
-    // If Fabric.exe is running at 70% CPU due to your service code, and this is normal for your workloads, then do not warn at this threshold.
-    // As with all observers, you should first understand what are the happy (normal) states across resource usage before you set thresholds for the unhappy states.
+    // When enabled, FabricSystemObserver monitors all Fabric system service processes across various resource usage metrics (CPU Time, Workingset, Ephemeral and all Active TCP ports).
+    // It will signal Warnings or Errors based on settings supplied in ApplicationManifest.xml (Like many observers, most of it's settings are overridable and can be reset with application parameter updates).
+    // If the FabricObserverWebApi service (DEPRECATED - it will not evolve...) is deployed: The output (a local file) is created for and used by the API service (http://localhost:5000/api/ObserverManager).
+    // SF Health Report processor will also emit ETW telemetry if configured in ApplicationManifest.xml.
+    // As with all observers, you should first determine the happy (normal) states across resource usage before you set thresholds for the unhappy ones.
     public class FabricSystemObserver : ObserverBase
     {
         private readonly List<string> processWatchList;
         private Stopwatch stopwatch;
         private bool disposed;
 
-        // Health Report data container - For use in analysis to deterWarne health state.
+        // Health Report data container - For use in analysis to determine health state.
         private List<FabricResourceUsageData<int>> allCpuData;
         private List<FabricResourceUsageData<float>> allMemData;
+        private List<FabricResourceUsageData<int>> allActiveTcpPortData;
+        private List<FabricResourceUsageData<int>> allEphemeralTcpPortData;
 
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList;
@@ -46,7 +46,8 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
         /// </summary>
-        public FabricSystemObserver()
+        public FabricSystemObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
             // Linux
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -95,22 +96,32 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public int TotalActivePortCount
+        public int TotalActivePortCountAllSystemServices
         {
             get; set;
         }
 
-        public int TotalActiveEphemeralPortCount
+        public int TotalActiveEphemeralPortCountAllSystemServices
         {
             get; set;
         }
 
-        public int PortCountWarning
+        public int ActiveTcpPortCountError
         {
             get; set;
         }
 
-        public int PortCountError
+        public int ActiveEphemeralPortCountError
+        {
+            get; set;
+        }
+
+        public int ActiveTcpPortCountWarning
+        {
+            get; set;
+        }
+
+        public int ActiveEphemeralPortCountWarning
         {
             get; set;
         }
@@ -191,23 +202,21 @@ namespace FabricObserver.Observers
 
             await ReportAsync(token).ConfigureAwait(true);
 
-            // No need to keep these objects in memory across healthy iterations.
-            // Clear out/null list objects.
-            this.allCpuData = null;
-            this.allMemData = null;
             LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
         {
             Token.ThrowIfCancellationRequested();
+
+            // Informational report. For now, Linux is where we pay close attention to memory use by Fabric system services as there are still a few issues in that realm..
             var timeToLiveWarning = SetHealthReportTimeToLive();
             var portInformationReport = new HealthReport
             {
                 Observer = ObserverName,
                 NodeName = NodeName,
-                HealthMessage = $"Number of ports in use by Fabric services: {TotalActivePortCount}\n" +
-                                $"Number of ephemeral ports in use by Fabric services: {TotalActiveEphemeralPortCount}\n" +
+                HealthMessage = $"Number of ports in use by Fabric services: {TotalActivePortCountAllSystemServices}\n" +
+                                $"Number of ephemeral ports in use by Fabric services: {TotalActiveEphemeralPortCountAllSystemServices}\n" +
                                 (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
                                     $"Fabric mem use: {this.allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
                                     $"FabricGateway mem use: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n" +
@@ -217,18 +226,11 @@ namespace FabricObserver.Observers
                 HealthReportTimeToLive = timeToLiveWarning,
             };
 
-            // TODO: Report on port count based on thresholds PortCountWarning/Error.
             HealthReporter.ReportHealthToServiceFabric(portInformationReport);
 
-            // DEBUG
-            WriteToLogWithLevel(
-                ObserverName,
-                $"Number of ports in use by Fabric services: {TotalActivePortCount}\nNumber of ephemeral ports in use by Fabric services: {TotalActiveEphemeralPortCount}\n",
-                LogLevel.Information);
-
             // Reset ports counters.
-            TotalActivePortCount = 0;
-            TotalActiveEphemeralPortCount = 0;
+            TotalActivePortCountAllSystemServices = 0;
+            TotalActiveEphemeralPortCountAllSystemServices = 0;
 
             // CPU
             ProcessResourceDataList(
@@ -241,6 +243,18 @@ namespace FabricObserver.Observers
                 this.allMemData,
                 MemErrorUsageThresholdMb,
                 MemWarnUsageThresholdMb);
+
+            // Ports - Active TCP
+            ProcessResourceDataList(
+               this.allActiveTcpPortData,
+               ActiveTcpPortCountError,
+               ActiveTcpPortCountWarning);
+
+            // Ports - Ephemeral
+            ProcessResourceDataList(
+               this.allEphemeralTcpPortData,
+               ActiveEphemeralPortCountError,
+               ActiveEphemeralPortCountWarning);
 
             // Windows Event Log
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && ObserverManager.ObserverWebAppDeployed
@@ -319,7 +333,27 @@ namespace FabricObserver.Observers
                 }
             }
 
+            ClearDataContainers();
+
             return Task.CompletedTask;
+        }
+
+        private void ClearDataContainers()
+        {
+            this.allActiveTcpPortData?.Clear();
+            this.allActiveTcpPortData = null;
+            this.allCpuData?.Clear();
+            this.allCpuData = null;
+            this.allEphemeralTcpPortData?.Clear();
+            this.allEphemeralTcpPortData = null;
+            this.allMemData?.Clear();
+            this.allMemData = null;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                this.evtRecordList?.Clear();
+                this.evtRecordList = null;
+            }
         }
 
         /// <summary>
@@ -427,6 +461,7 @@ namespace FabricObserver.Observers
         {
             List<Process> result = new List<Process>();
             Process[] processes = Process.GetProcessesByName("dotnet");
+
             for (int i = 0; i < processes.Length; ++i)
             {
                 Process p = processes[i];
@@ -462,21 +497,7 @@ namespace FabricObserver.Observers
 
             SetThresholdSFromConfiguration();
 
-            if (this.allMemData == null)
-            {
-                this.allMemData = new List<FabricResourceUsageData<float>>(this.processWatchList.Count);
-
-                foreach (var proc in this.processWatchList)
-                {
-                    this.allMemData.Add(
-                        new FabricResourceUsageData<float>(
-                            ErrorWarningProperty.TotalMemoryConsumptionMb,
-                            proc,
-                            DataCapacity,
-                            UseCircularBuffer));
-                }
-            }
-
+            // CPU data
             if (this.allCpuData == null)
             {
                 this.allCpuData = new List<FabricResourceUsageData<int>>(this.processWatchList.Count);
@@ -492,7 +513,55 @@ namespace FabricObserver.Observers
                 }
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.monitorWinEventLog)
+            // Memory data
+            if (this.allMemData == null)
+            {
+                this.allMemData = new List<FabricResourceUsageData<float>>(this.processWatchList.Count);
+
+                foreach (var proc in this.processWatchList)
+                {
+                    this.allMemData.Add(
+                        new FabricResourceUsageData<float>(
+                            ErrorWarningProperty.TotalMemoryConsumptionMb,
+                            proc,
+                            DataCapacity,
+                            UseCircularBuffer));
+                }
+            }
+
+            // Ports
+            if (this.allActiveTcpPortData == null)
+            {
+                this.allActiveTcpPortData = new List<FabricResourceUsageData<int>>(this.processWatchList.Count);
+
+                foreach (var proc in this.processWatchList)
+                {
+                    this.allActiveTcpPortData.Add(
+                        new FabricResourceUsageData<int>(
+                            ErrorWarningProperty.TotalActivePorts,
+                            proc,
+                            DataCapacity,
+                            UseCircularBuffer));
+                }
+            }
+
+            if (this.allEphemeralTcpPortData == null)
+            {
+                this.allEphemeralTcpPortData = new List<FabricResourceUsageData<int>>(this.processWatchList.Count);
+
+                foreach (var proc in this.processWatchList)
+                {
+                    this.allEphemeralTcpPortData.Add(
+                        new FabricResourceUsageData<int>(
+                            ErrorWarningProperty.TotalEphemeralPorts,
+                            proc,
+                            DataCapacity,
+                            UseCircularBuffer));
+                }
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.monitorWinEventLog
+                && this.evtRecordList == null)
             {
                 this.evtRecordList = new List<EventRecord>();
             }
@@ -536,6 +605,27 @@ namespace FabricObserver.Observers
                 MemErrorUsageThresholdMb = threshold;
             }
 
+            // Ports
+            var activeTcpPortsError = GetSettingParameterValue(
+                     ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                     ObserverConstants.FabricSystemObserverNetworkErrorActivePorts);
+
+            if (!string.IsNullOrEmpty(activeTcpPortsError))
+            {
+                _ = int.TryParse(activeTcpPortsError, out int threshold);
+                ActiveTcpPortCountError = threshold;
+            }
+
+            var activeEphemeralPortsError = GetSettingParameterValue(
+                    ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                    ObserverConstants.FabricSystemObserverNetworkErrorEphemeralPorts);
+
+            if (!string.IsNullOrEmpty(activeEphemeralPortsError))
+            {
+                _ = int.TryParse(activeEphemeralPortsError, out int threshold);
+                ActiveEphemeralPortCountError = threshold;
+            }
+
             /* Warning thresholds */
 
             Token.ThrowIfCancellationRequested();
@@ -570,6 +660,27 @@ namespace FabricObserver.Observers
                 }
 
                 MemWarnUsageThresholdMb = threshold;
+            }
+
+            // Ports
+            var activeTcpPortsWarning = GetSettingParameterValue(
+                     ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                     ObserverConstants.FabricSystemObserverNetworkWarningActivePorts);
+
+            if (!string.IsNullOrEmpty(activeTcpPortsWarning))
+            {
+                _ = int.TryParse(activeTcpPortsWarning, out int threshold);
+                ActiveTcpPortCountWarning = threshold;
+            }
+
+            var activeEphemeralPortsWarning = GetSettingParameterValue(
+                    ObserverConstants.FabricSystemObserverConfigurationSectionName,
+                    ObserverConstants.FabricSystemObserverNetworkWarningEphemeralPorts);
+
+            if (!string.IsNullOrEmpty(activeEphemeralPortsWarning))
+            {
+                _ = int.TryParse(activeEphemeralPortsWarning, out int threshold);
+                ActiveEphemeralPortCountWarning = threshold;
             }
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -615,25 +726,30 @@ namespace FabricObserver.Observers
 
             foreach (var process in processes)
             {
+                CpuUsage cpuUsage = new CpuUsage();
+
                 try
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    // ports in use by Fabric services.
-                    TotalActivePortCount += OperatingSystemInfoProvider.Instance.GetActivePortCount(process.Id, FabricServiceContext);
-                    TotalActiveEphemeralPortCount += OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id, FabricServiceContext);
+                    // Warm up the perf counters.
+                    _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
 
-                    TimeSpan duration = TimeSpan.FromSeconds(15);
+                    // Ports
+                    int activePortCount = OperatingSystemInfoProvider.Instance.GetActivePortCount(process.Id, FabricServiceContext);
+                    TotalActivePortCountAllSystemServices += activePortCount;
+                    int activeEphemeralPortCount = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id, FabricServiceContext);
+                    TotalActiveEphemeralPortCountAllSystemServices += activeEphemeralPortCount;
+                    
+                    this.allActiveTcpPortData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(activePortCount);
+                    this.allEphemeralTcpPortData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(activeEphemeralPortCount);
+
+                    TimeSpan duration = TimeSpan.FromSeconds(5);
 
                     if (MonitorDuration > TimeSpan.MinValue)
                     {
                         duration = MonitorDuration;
                     }
-
-                    // Warm up the counters.
-                    CpuUsage cpuUsage = new CpuUsage();
-                    _ = cpuUsage.GetCpuUsagePercentageProcess(process);
-                    _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
 
                     timer.Start();
 
@@ -695,7 +811,7 @@ namespace FabricObserver.Observers
             {
                 Token.ThrowIfCancellationRequested();
 
-                if (dataItem.Data.Count == 0 || dataItem.AverageDataValue < 0)
+                if (dataItem.Data.Count == 0 || dataItem.AverageDataValue <= 0)
                 {
                     continue;
                 }
@@ -723,6 +839,7 @@ namespace FabricObserver.Observers
                     CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
                 }
 
+                // This function will clear Data items in list (will call Clear() on the supplied FabricResourceUsageData instance's Data field..)
                 ProcessResourceDataReportHealth(
                     dataItem,
                     thresholdError,

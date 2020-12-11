@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -23,7 +24,8 @@ namespace FabricObserver.Observers
         private const string HowToUpdateSelfSignedCertSfLinkHtml =
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
 
-        public CertificateObserver()
+        public CertificateObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base (fabricClient, context)
         {
         }
 
@@ -102,7 +104,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                store.Open(OpenFlags.ReadOnly);
+                store?.Open(OpenFlags.ReadOnly);
 
                 // Cluster Certificates
                 if (SecurityConfiguration.SecurityType == SecurityType.CommonName)
@@ -117,11 +119,13 @@ namespace FabricObserver.Observers
                 // App certificates
                 foreach (string commonName in AppCertificateCommonNamesToObserve)
                 {
+                    token.ThrowIfCancellationRequested();
                     CheckLatestBySubjectName(store, commonName, DaysUntilAppExpireWarningThreshold);
                 }
 
                 foreach (string thumbprint in AppCertificateThumbprintsToObserve)
                 {
+                    token.ThrowIfCancellationRequested();
                     CheckByThumbprint(store, thumbprint, DaysUntilAppExpireWarningThreshold);
                 }
 
@@ -136,16 +140,22 @@ namespace FabricObserver.Observers
             }
             finally
             {
-                store.Dispose();
+                store?.Dispose();
             }
+
+            ExpiredWarnings?.Clear();
+            ExpiredWarnings = null;
+            ExpiringWarnings?.Clear();
+            ExpiringWarnings = null;
+            NotFoundWarnings?.Clear();
+            NotFoundWarnings = null;
+
+            LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
         {
-            if (token.IsCancellationRequested)
-            {
-                return Task.CompletedTask;
-            }
+            token.ThrowIfCancellationRequested();
 
             // Someone calling without observing first, must be run after a new run of ObserveAsync
             if (ExpiringWarnings == null ||
@@ -204,9 +214,9 @@ namespace FabricObserver.Observers
                         Metric = ErrorWarningProperty.CertificateExpiration,
                         HealthEventDescription = healthMessage,
                         ObserverName = ObserverName,
+                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                         Source = ObserverConstants.FabricObserverName,
-                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(
-                            FOErrorWarningCodes.WarningCertificateExpiration),
+                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration),
                     };
 
                     _ = TelemetryClient?.ReportMetricAsync(
@@ -226,19 +236,14 @@ namespace FabricObserver.Observers
                             Metric = ErrorWarningProperty.CertificateExpiration,
                             HealthEventDescription = healthMessage,
                             ObserverName,
+                            OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                             Source = ObserverConstants.FabricObserverName,
-                            Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(
-                                FOErrorWarningCodes.WarningCertificateExpiration),
+                            Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration),
                         });
                 }
             }
 
             HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-            ExpiredWarnings = null;
-            ExpiringWarnings = null;
-            NotFoundWarnings = null;
-            LastRunDateTime = DateTime.Now;
 
             return Task.CompletedTask;
         }

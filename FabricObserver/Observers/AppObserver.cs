@@ -40,6 +40,7 @@ namespace FabricObserver.Observers
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
         private List<ApplicationInfo> deployedTargetList;
         private bool disposed;
+        private MachineInfoModel.ConfigSettings configSettings;
 
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
@@ -54,9 +55,11 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
         /// </summary>
-        public AppObserver()
+        public AppObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
-            ConfigPackagePath = MachineInfoModel.ConfigSettings.ConfigPackagePath;
+            configSettings = new MachineInfoModel.ConfigSettings(FabricServiceContext);
+            ConfigPackagePath = configSettings.ConfigPackagePath;
             this.allAppCpuData = new List<FabricResourceUsageData<double>>();
             this.allAppMemDataMb = new List<FabricResourceUsageData<float>>();
             this.allAppMemDataPercent = new List<FabricResourceUsageData<double>>();
@@ -148,17 +151,19 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        Process p;
+                        string processName = null;
 
                         try
                         {
-                            p = Process.GetProcessById((int)repOrInst.HostProcessId);
+                            using Process p = Process.GetProcessById((int)repOrInst.HostProcessId);
 
                             // If the process is no longer running, then don't report on it.
                             if (p.HasExited)
                             {
                                 continue;
                             }
+
+                            processName = p.ProcessName;
                         }
                         catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                         {
@@ -167,7 +172,7 @@ namespace FabricObserver.Observers
 
                         string appNameOrType = GetAppNameOrType(repOrInst);
 
-                        var id = $"{appNameOrType}:{p.ProcessName}";
+                        var id = $"{appNameOrType}:{processName}";
 
                         // Log (csv) CPU/Mem/DiskIO per app.
                         if (CsvFileLogger != null && CsvFileLogger.EnableCsvLogging)
@@ -255,8 +260,7 @@ namespace FabricObserver.Observers
             return appNameOrType;
         }
 
-        // Initialize() runs each time ObserveAsync is run to ensure
-        // that any new app targets and config changes will
+        // This runs each time ObserveAsync is run to ensure that any new app targets and config changes will
         // be up to date across observer loop iterations.
         private async Task<bool> InitializeAsync()
         {
@@ -267,7 +271,7 @@ namespace FabricObserver.Observers
 
             if (!IsTestRun)
             {
-                MachineInfoModel.ConfigSettings.Initialize(
+                configSettings.Initialize(
                     FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                         ObserverConstants.ObserverConfigurationPackageName)?.Settings,
                     ConfigurationSectionName,
@@ -277,7 +281,7 @@ namespace FabricObserver.Observers
             // For unit tests, this path will be an empty string and not generate an exception.
             var appObserverConfigFileName = Path.Combine(
                 ConfigPackagePath ?? string.Empty,
-                MachineInfoModel.ConfigSettings.AppObserverConfigFileName ?? string.Empty);
+                configSettings.AppObserverConfigFileName ?? string.Empty);
 
             if (!File.Exists(appObserverConfigFileName))
             {
@@ -470,7 +474,7 @@ namespace FabricObserver.Observers
                     var healthReport = new Utilities.HealthReport
                     {
                         AppName = repOrInst.ApplicationName,
-                        HealthMessage = $"Error: {e}\n\n",
+                        HealthMessage = $"Error:{Environment.NewLine}{e}{Environment.NewLine}",
                         State = HealthState.Ok,
                         Code = FOErrorWarningCodes.Ok,
                         NodeName = NodeName,
@@ -485,7 +489,7 @@ namespace FabricObserver.Observers
                     {
                         WriteToLogWithLevel(
                             ObserverName,
-                            $"MonitorAsync failed to find current service process for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}/n{e}",
+                            $"MonitorAsync failed to find current service process for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
                             LogLevel.Information);
                     }
                     else
@@ -494,7 +498,7 @@ namespace FabricObserver.Observers
                         {
                             WriteToLogWithLevel(
                                 ObserverName,
-                                $"Unhandled exception in MonitorAsync: \n {e}",
+                                $"Unhandled exception in MonitorAsync:{Environment.NewLine}{e}",
                                 LogLevel.Warning);
                         }
 

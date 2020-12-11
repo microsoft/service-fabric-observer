@@ -16,6 +16,9 @@ using NLog.Time;
 
 namespace FabricObserver.Observers.Utilities
 {
+    /// <summary>
+    /// Local file logger.
+    /// </summary>
     public sealed class Logger : IObserverLogger<ILogger>
     {
         private const int Retries = 5;
@@ -60,14 +63,9 @@ namespace FabricObserver.Observers.Utilities
 
         static Logger()
         {
-            if (!ObserverManager.EtwEnabled || string.IsNullOrEmpty(ObserverManager.EtwProviderName))
-            {
-                return;
-            }
-
             if (EtwLogger == null)
             {
-                EtwLogger = new EventSource(ObserverManager.EtwProviderName);
+                EtwLogger = new EventSource(ObserverConstants.FabricObserverETWEventName);
             }
         }
 

@@ -20,11 +20,14 @@ namespace FabricObserver.Observers.Utilities
         {
             const string CategoryName = "Process";
             const string CounterName = "Working Set - Private";
+            string processName;
 
-            Process process;
             try
             {
-                process = Process.GetProcessById(processId);
+                using (Process process = Process.GetProcessById(processId))
+                {
+                    processName = process.ProcessName;
+                }
             }
             catch (ArgumentException ex)
             {
@@ -39,7 +42,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     this.memProcessPrivateWorkingSetCounter.CategoryName = CategoryName;
                     this.memProcessPrivateWorkingSetCounter.CounterName = CounterName;
-                    this.memProcessPrivateWorkingSetCounter.InstanceName = process.ProcessName;
+                    this.memProcessPrivateWorkingSetCounter.InstanceName = processName;
 
                     return this.memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
                 }

@@ -46,27 +46,31 @@ namespace Microsoft.ServiceFabric.TelemetryLib
                 // Safe XML pattern - *Do not use LoadXml*.
                 clusterManifestXdoc = new XmlDocument { XmlResolver = null };
 
-                using var sreader = new StringReader(clusterManifest);
-                using var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
-                clusterManifestXdoc?.Load(xreader);
+                using (var sreader = new StringReader(clusterManifest))
+                {
+                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null }))
+                    {
+                        clusterManifestXdoc?.Load(xreader);
 
-                // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
-                GetValuesFromClusterManifest();
+                        // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
+                        GetValuesFromClusterManifest();
 
-                if (paasClusterId != null)
-                {
-                    clusterId = paasClusterId;
-                    clusterType = TelemetryConstants.ClusterTypeSfrp;
-                }
-                else if (tenantId != TelemetryConstants.Undefined)
-                {
-                    clusterId = tenantId;
-                    clusterType = TelemetryConstants.ClusterTypePaasV1;
-                }
-                else if (diagnosticsClusterId != null)
-                {
-                    clusterId = diagnosticsClusterId;
-                    clusterType = TelemetryConstants.ClusterTypeStandalone;
+                        if (paasClusterId != null)
+                        {
+                            clusterId = paasClusterId;
+                            clusterType = TelemetryConstants.ClusterTypeSfrp;
+                        }
+                        else if (tenantId != TelemetryConstants.Undefined)
+                        {
+                            clusterId = tenantId;
+                            clusterType = TelemetryConstants.ClusterTypePaasV1;
+                        }
+                        else if (diagnosticsClusterId != null)
+                        {
+                            clusterId = diagnosticsClusterId;
+                            clusterType = TelemetryConstants.ClusterTypeStandalone;
+                        }
+                    }
                 }
             }
 

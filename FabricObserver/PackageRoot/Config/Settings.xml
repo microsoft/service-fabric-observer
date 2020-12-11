@@ -156,6 +156,8 @@
     <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
     <Parameter Name="MemoryWarningLimitMb" Value ="" MustOverride="true" />
+    <Parameter Name="NetworkErrorActivePorts" Value="" MustOverride="true"  />
+    <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true"  />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />

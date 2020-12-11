@@ -24,6 +24,7 @@ namespace FabricObserver
     internal sealed class FabricObserver : StatelessService
     {
         private ObserverManager observerManager;
+        private FabricClient fabricClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserver"/> class.
@@ -32,7 +33,7 @@ namespace FabricObserver
         public FabricObserver(StatelessServiceContext context)
             : base(context)
         {
-
+            fabricClient = new FabricClient();
         }
 
         /// <summary>
@@ -46,7 +47,7 @@ namespace FabricObserver
             ConfigureServices(services);
 
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            this.observerManager = new ObserverManager(serviceProvider, cancellationToken);
+            this.observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
             await this.observerManager.StartObserversAsync().ConfigureAwait(false);
         }
 
@@ -56,14 +57,14 @@ namespace FabricObserver
         /// <param name="services">ServiceCollection collection instance.</param>
         private void ConfigureServices(ServiceCollection services)
         {
-            _ = services.AddScoped(typeof(ObserverBase), typeof(AppObserver));
-            _ = services.AddScoped(typeof(ObserverBase), typeof(CertificateObserver));
-            _ = services.AddScoped(typeof(ObserverBase), typeof(DiskObserver));
-            _ = services.AddScoped(typeof(ObserverBase), typeof(FabricSystemObserver));
-            _ = services.AddScoped(typeof(ObserverBase), typeof(NetworkObserver));
-            _ = services.AddScoped(typeof(ObserverBase), typeof(NodeObserver));
-            _ = services.AddScoped(typeof(ObserverBase), typeof(OSObserver));
-            _ = services.AddScoped(typeof(ObserverBase), typeof(SFConfigurationObserver));
+            _ = services.AddScoped(typeof(ObserverBase), s => new AppObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new CertificateObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new DiskObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new FabricSystemObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new NetworkObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new NodeObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new OSObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new SFConfigurationObserver(fabricClient, Context));
             _ = services.AddSingleton(typeof(StatelessServiceContext), Context);
 
             LoadObserversFromPlugins(services);
@@ -115,7 +116,7 @@ namespace FabricObserver
 
                     if (startupObject is IFabricObserverStartup fabricObserverStartup)
                     {
-                        fabricObserverStartup.ConfigureServices(services);
+                        fabricObserverStartup.ConfigureServices(services, fabricClient, Context);
                     }
                     else
                     {

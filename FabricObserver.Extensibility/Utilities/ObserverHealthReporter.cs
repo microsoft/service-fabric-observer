@@ -23,9 +23,9 @@ namespace FabricObserver.Observers.Utilities
         /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
         /// </summary>
         /// <param name="logger">file logger instance.</param>
-        public ObserverHealthReporter(Logger logger)
+        public ObserverHealthReporter(Logger logger, FabricClient fabricClient)
         {
-            this.fabricClient = ObserverManager.FabricClientInstance;
+            this.fabricClient = fabricClient;
             this.fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
             this.fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
             this.logger = logger;
@@ -54,6 +54,10 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        /// <summary>
+        /// This function generates Service Fabric Health Reports that will show up in SFX.
+        /// </summary>
+        /// <param name="healthReport">Utilities.HealthReport instance.</param>
         public void ReportHealthToServiceFabric(HealthReport healthReport)
         {
             if (healthReport == null)
@@ -111,16 +115,33 @@ namespace FabricObserver.Observers.Utilities
 
             if (string.IsNullOrEmpty(healthReport.Property))
             {
-                healthReport.Property = healthReport.Observer switch
+                switch(healthReport.Observer)
                 {
-                    ObserverConstants.AppObserverName => "ApplicationHealth",
-                    ObserverConstants.CertificateObserverName => "SecurityHealth",
-                    ObserverConstants.DiskObserverName => "DiskHealth",
-                    ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
-                    ObserverConstants.NetworkObserverName => "NetworkHealth",
-                    ObserverConstants.OSObserverName => "MachineInformation",
-                    ObserverConstants.NodeObserverName => "MachineResourceHealth",
-                    _ => $"{healthReport.Observer}_HealthProperty",
+                    case ObserverConstants.AppObserverName:
+                        healthReport.Property = "ApplicationHealth";
+                        break;
+                    case ObserverConstants.CertificateObserverName:
+                        healthReport.Property = "SecurityHealth";
+                        break;
+                    case ObserverConstants.DiskObserverName:
+                        healthReport.Property = "DiskHealth";
+                        break;
+                    case ObserverConstants.FabricSystemObserverName:
+                        healthReport.Property = "FabricSystemServiceHealth";
+                        break;
+                    case ObserverConstants.NetworkObserverName:
+                        healthReport.Property = "NetworkHealth";
+                        break;
+                    case ObserverConstants.OSObserverName:
+                        healthReport.Property = "MachineInformation";
+                        break;
+                    case ObserverConstants.NodeObserverName:
+                        healthReport.Property = "MachineResourceHealth";
+                        break;
+                    default:
+                        healthReport.Property = $"{healthReport.Observer}_HealthProperty";
+                        break;
+
                 };
             }
 
@@ -131,9 +152,8 @@ namespace FabricObserver.Observers.Utilities
                 RemoveWhenExpired = true,
             };
 
-            // Log event only if ObserverWebApi (REST API Log reader service) app is deployed.
-            if (ObserverManager.ObserverWebAppDeployed
-                && healthReport.EmitLogEvent)
+            // Log health event locally.
+            if (healthReport.EmitLogEvent)
             {
                 if (healthReport.State == HealthState.Error)
                 {

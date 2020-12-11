@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
@@ -93,7 +94,8 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Initializes a new instance of the <see cref="NodeObserver"/> class.
         /// </summary>
-        public NodeObserver()
+        public NodeObserver(FabricClient fabricClient, StatelessServiceContext context)
+            : base(fabricClient, context)
         {
             this.stopwatch = new Stopwatch();
         }
@@ -121,6 +123,7 @@ namespace FabricObserver.Observers
             this.stopwatch.Reset();
 
             await ReportAsync(token).ConfigureAwait(true);
+
             LastRunDateTime = DateTime.Now;
         }
 
@@ -271,9 +274,9 @@ namespace FabricObserver.Observers
 
         private void InitializeDataContainers()
         {
-            if (AllCpuTimeData == null)
+            if (this.AllCpuTimeData == null)
             {
-                AllCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
+                this.AllCpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
             }
 
             if (this.allMemDataCommittedBytes == null)
@@ -446,7 +449,7 @@ namespace FabricObserver.Observers
                 // as part of the work they perform under normal traffic flow, then it doesn't make sense to warn or
                 // error on these conditions.
                 // TODO: Look into making this a long running background task with signaling.
-                TimeSpan duration = TimeSpan.FromSeconds(30);
+                TimeSpan duration = TimeSpan.FromSeconds(10);
 
                 if (MonitorDuration > TimeSpan.MinValue)
                 {
@@ -455,13 +458,12 @@ namespace FabricObserver.Observers
 
                 cpuUtilizationProvider = CpuUtilizationProvider.Create();
 
-                // Warn up the counters.
+                // Warm up the counters.
                 _ = await cpuUtilizationProvider.NextValueAsync();
 
                 while (this.stopwatch.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
-                    await Task.Delay(500);
 
                     if (CpuWarningUsageThresholdPct > 0
                         && CpuWarningUsageThresholdPct <= 100)
@@ -480,10 +482,13 @@ namespace FabricObserver.Observers
                         this.allMemDataPercentUsed.Data.Add(
                             OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                     }
+
+                    await Task.Delay(250).ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
+
             }
             catch (Exception e)
             {

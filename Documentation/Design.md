@@ -24,7 +24,9 @@ by calling ObserverManager's StopObservers() function.
 
 This is the abstract base class for all Observers. It provides several concrete method and property implementations 
 that are widely used by deriving types, not the least of which is ProcessResourceDataReportHealth(), which is called from all
-observers' ReportAsync function.
+built-in observers that generate numeric data as part of their resource usage observations. Any public member of ObserverBase is available
+to any plugin implementation. Please see [Plugins readme](/Documentation/Plugins.md) for detailed information about building FabricObserver plugins,
+which are implemented as .NET Standard 2.0 libraries and consume FabricObserver's API surface (just as built-in observers do), which is housed in a NET Standard 2.0 library, FabricObserver.Extensibility.dll.
 
 ***Design*** 
 
@@ -34,21 +36,45 @@ derived by all Observer types)
     
     public interface IObserver : IDisposable
     {
-        string ObserverName { get; }
+        string ObserverName
+        {
+            get;
+        }
 
-        string NodeName { get; set; }
+        string NodeName
+        {
+            get; set;
+        }
 
-        Logger ObserverLogger { get; set; }
+        Logger ObserverLogger
+        {
+            get; set;
+        }
 
-        DateTime LastRunDateTime { get; set; }
+        DateTime LastRunDateTime
+        {
+            get; set;
+        }
 
-        TimeSpan RunInterval { get; set; }
+        TimeSpan RunInterval
+        {
+            get; set;
+        }
 
-        bool IsEnabled { get; set; }
+        bool IsEnabled
+        {
+            get; set;
+        }
 
-        bool HasActiveFabricErrorOrWarning { get; set; }
+        bool HasActiveFabricErrorOrWarning
+        {
+            get; set;
+        }
 
-        bool IsUnhealthy { get; set; }
+        bool IsUnhealthy
+        {
+            get; set;
+        }
 
         ConfigSettings ConfigurationSettings
         {
@@ -70,9 +96,14 @@ derived by all Observer types)
         Task ReportAsync(CancellationToken token);
     }
 
-    public abstract class ObserverBase : IObserverBase<StatelessServiceContext>
+    public abstract class ObserverBase : IObserver
     {
-	    // Impl...
+        ...
+        protected ObserverBase(FabricClient fabricClient, StatelessServiceContext statelessServiceContext)
+        {
+            ...
+        }
+        ...
     }
 ```
 
@@ -119,35 +150,38 @@ optionally providing an integer value that represents some timeout or computed r
 
 
 Let's look at the simple design of an Observer:
-```c#
-using System;
-using System.Fabric;
-using System.Fabric.Health;
-using System.IO;
-using System.Threading.Tasks;
+``` C#
+
 using System.Threading;
-using FabricObserver.Utilities;
+using System.Threading.Tasks;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 
-namespace FabricObserver
+namespace FabricObserver.Observers
 {
-	pubic class SomeObserver : ObserverBase
-	{
-		 public SomeObserver() { }
-		
-		 public override async Task ObserveAsync(CancellationToken token)
-	 	 {
-			 // Observe then call ReportAsync.
-		 }
-		
-		 public override async Task ReportAsync(CancellationToken token)
-		 {
-			 // Prepare observational data to send to ObserverBase's ProcessResourceDataReportHealth function.
-		 }
-	 }	
- }
- ```
+    public class SampleNewObserver : ObserverBase
+    {
+        public SomeObserver(FabricClient fabricClient, StatelessServiceContext context)
+          : base(fabricClient, context)
+        {
+            //... Your impl.
+        }
 
-**Data Design**
+        public override async Task ObserveAsync(CancellationToken token)
+        {
+            //... Your impl.
+        }
+
+        public override async Task ReportAsync(CancellationToken token)
+        {
+            //... Your impl.
+        }
+    }
+ }
+``` 
+
+
+**Data Design**  
 
 Each observer is tasked with recording one or more metrics that are
 relevant to local Machine or application service health. Each metric will be stored in an

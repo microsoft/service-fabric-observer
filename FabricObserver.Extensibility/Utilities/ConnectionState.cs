@@ -7,7 +7,7 @@ using System.Fabric.Health;
 
 namespace FabricObserver.Observers.Utilities
 {
-    internal class ConnectionState
+    public class ConnectionState
     {
         public bool Connected
         {

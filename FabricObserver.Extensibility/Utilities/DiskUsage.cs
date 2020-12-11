@@ -130,14 +130,20 @@ namespace FabricObserver.Observers.Utilities
 
         private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)
         {
-            return sizeUnit switch
+            switch(sizeUnit) 
             {
-                SizeUnit.Bytes => amount,
-                SizeUnit.Kilobytes => amount / 1024,
-                SizeUnit.Megabytes => amount / 1024 / 1024,
-                SizeUnit.Gigabytes => amount / 1024 / 1024 / 1024,
-                SizeUnit.Terabytes => amount / 1024 / 1024 / 1024 / 1024,
-                _ => amount,
+                case SizeUnit.Bytes:
+                    return amount;
+                case SizeUnit.Kilobytes:
+                    return amount / 1024;
+                case SizeUnit.Megabytes:
+                    return amount / 1024 / 1024;
+                case SizeUnit.Gigabytes:
+                    return amount / 1024 / 1024 / 1024;
+                case SizeUnit.Terabytes:
+                    return amount / 1024 / 1024 / 1024 / 1024;
+                default:
+                    return amount;
             };
         }
     }

@@ -1,9 +1,14 @@
-## How to implement an observer plugin using our extensibility model*
+## How to implement an observer plugin using FO's extensibility model
 
-Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme. This document is a simple 
-overview of how to get started with building an observer plugin.
+
+**NOTE: FabricObserver version 3.1.0 introduces a refactored plugin implementation that will break existing plugins. The changes required by plugin authors are trivial, however. Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme with examples of the new format.**
+
+This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver).
 
 #### Steps 
+
+FabricObserver is a .NET Core 3.1 application. A FabricObserver plugin is a .NET Standard 2.0 library that consumes FabricObserver's public API, which is housed inside a .NET Standard 2.0 library, FabricObserver.Extensibility.dll. 
+Your plugin must be built as a .NET Standard 2.0 library.
 
 - Install [.Net Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1).
 - Navigate to top level directory (where FabricObserver.sln lives, for example) then,
@@ -20,7 +25,7 @@ You can build them yourself by simply running these scripts, in this order:
 - ./Build-NugetPackages.ps1
 
 
-Create a new .NET Core 3.1 library project, install the nupkg you need for your target OS (Linux (Ubuntu) or Windows):  
+Create a new .NET Standard 2.0 library project, install the nupkg you need for your target OS (Linux (Ubuntu) or Windows):  
 
 	Framework-dependent = Requires that .NET Core 3.1 is already installed on target machine.
 

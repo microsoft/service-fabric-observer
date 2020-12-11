@@ -37,12 +37,12 @@ namespace FabricObserver.Observers.Utilities
                         string n = p.Name;
                         object v = p.Value;
 
-                        if (n.Contains("TotalVisible", StringComparison.OrdinalIgnoreCase))
+                        if (n.Contains("TotalVisible"))
                         {
                             visibleTotal = Convert.ToInt64(v);
                         }
 
-                        if (n.Contains("FreePhysical", StringComparison.OrdinalIgnoreCase))
+                        if (n.Contains("FreePhysical"))
                         {
                             freePhysical = Convert.ToInt64(v);
                         }
@@ -82,59 +82,61 @@ namespace FabricObserver.Observers.Utilities
 
                 int count = 0;
 
-                using var p = new Process();
-                var ps = new ProcessStartInfo
+                using (var p = new Process())
                 {
-                    Arguments = $"-ano -p {protoParam}",
-                    FileName = "netstat.exe",
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                };
-
-                p.StartInfo = ps;
-                _ = p.Start();
-                var stdOutput = p.StandardOutput;
-
-                (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
-
-                string portRow;
-
-                ReadOnlySpan<char> processIdSpan = (processId > -1 ? processId.ToString() : string.Empty).AsSpan();
-
-                while ((portRow = stdOutput.ReadLine()) != null)
-                {
-                    if (!portRow.Contains(protoParam, StringComparison.OrdinalIgnoreCase))
+                    var ps = new ProcessStartInfo
                     {
-                        continue;
-                    }
+                        Arguments = $"-ano -p {protoParam}",
+                        FileName = "netstat.exe",
+                        UseShellExecute = false,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                    };
 
-                    if (processId > -1)
+                    p.StartInfo = ps;
+                    _ = p.Start();
+                    var stdOutput = p.StandardOutput;
+
+                    (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
+
+                    string portRow;
+
+                    var processIdx = processId > -1 ? processId.ToString() : string.Empty;
+
+                    while ((portRow = stdOutput.ReadLine()) != null)
                     {
-                        int lastSpaceIndex = portRow.LastIndexOf(' ');
-
-                        if (portRow.AsSpan(lastSpaceIndex + 1).CompareTo(processIdSpan, StringComparison.Ordinal) != 0)
+                        if (!portRow.ToLower().Contains(protoParam))
                         {
                             continue;
                         }
+
+                        if (processId > -1)
+                        {
+                            int lastSpaceIndex = portRow.LastIndexOf(' ');
+
+                            if (portRow.Substring(lastSpaceIndex + 1).CompareTo(processIdx) != 0)
+                            {
+                                continue;
+                            }
+                        }
+
+                        int port = GetPortNumberFromConsoleOutputRow(portRow);
+
+                        if (port >= lowPortRange && port <= highPortRange)
+                        {
+                            ++count;
+                        }
                     }
 
-                    int port = GetPortNumberFromConsoleOutputRow(portRow);
+                    int exitStatus = p.ExitCode;
+                    stdOutput.Close();
 
-                    if (port >= lowPortRange && port <= highPortRange)
+                    if (exitStatus != 0)
                     {
-                        ++count;
+                        return -1;
                     }
-                }
-
-                int exitStatus = p.ExitCode;
-                stdOutput.Close();
-
-                if (exitStatus != 0)
-                {
-                    return -1;
                 }
 
                 // Compute count of active ports in dynamic range.
@@ -152,51 +154,53 @@ namespace FabricObserver.Observers.Utilities
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
-            using var p = new Process();
-            string protoParam = "tcp";
-
-            try
+            using (var p = new Process())
             {
-                var ps = new ProcessStartInfo
+                string protoParam = "tcp";
+
+                try
                 {
-                    Arguments = $"/c netsh int ipv4 show dynamicportrange {protoParam} | find /i \"port\"",
-                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                };
+                    var ps = new ProcessStartInfo
+                    {
+                        Arguments = $"/c netsh int ipv4 show dynamicportrange {protoParam} | find /i \"port\"",
+                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                        UseShellExecute = false,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                    };
 
-                p.StartInfo = ps;
-                _ = p.Start();
+                    p.StartInfo = ps;
+                    _ = p.Start();
 
-                var stdOutput = p.StandardOutput;
-                string output = stdOutput.ReadToEnd();
-                Match match = Regex.Match(
-                    output,
-                    @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
-                    RegexOptions.Singleline | RegexOptions.IgnoreCase);
+                    var stdOutput = p.StandardOutput;
+                    string output = stdOutput.ReadToEnd();
+                    Match match = Regex.Match(
+                        output,
+                        @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
+                        RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-                string startPort = match.Groups["startPort"].Value;
-                string portCount = match.Groups["numberOfPorts"].Value;
-                string exitStatus = p.ExitCode.ToString();
-                stdOutput.Close();
+                    string startPort = match.Groups["startPort"].Value;
+                    string portCount = match.Groups["numberOfPorts"].Value;
+                    string exitStatus = p.ExitCode.ToString();
+                    stdOutput.Close();
 
-                if (exitStatus != "0")
-                {
-                    return (-1, -1);
+                    if (exitStatus != "0")
+                    {
+                        return (-1, -1);
+                    }
+
+                    int lowPortRange = int.Parse(startPort);
+                    int highPortRange = lowPortRange + int.Parse(portCount);
+
+                    return (lowPortRange, highPortRange);
                 }
-
-                int lowPortRange = int.Parse(startPort);
-                int highPortRange = lowPortRange + int.Parse(portCount);
-
-                return (lowPortRange, highPortRange);
-            }
-            catch (Exception e) when (
-                e is IOException
-                || e is InvalidOperationException
-                || e is Win32Exception)
-            {
+                catch (Exception e) when (
+                    e is IOException
+                    || e is InvalidOperationException
+                    || e is Win32Exception)
+                {
+                }
             }
 
             return (-1, -1);
@@ -219,31 +223,33 @@ namespace FabricObserver.Observers.Utilities
                     findStrProc = $"| find \"{processId}\"";
                 }
 
-                using var p = new Process();
-                var ps = new ProcessStartInfo
+                using (var p = new Process())
                 {
-                    Arguments = $"/c netstat -ano {protoParam} {findStrProc} /c",
-                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                };
+                    var ps = new ProcessStartInfo
+                    {
+                        Arguments = $"/c netstat -ano {protoParam} {findStrProc} /c",
+                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                        UseShellExecute = false,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                    };
 
-                p.StartInfo = ps;
-                _ = p.Start();
+                    p.StartInfo = ps;
+                    _ = p.Start();
 
-                var stdOutput = p.StandardOutput;
-                string output = stdOutput.ReadToEnd().Trim('\n', '\r');
-                string exitStatus = p.ExitCode.ToString();
-                stdOutput.Close();
+                    var stdOutput = p.StandardOutput;
+                    string output = stdOutput.ReadToEnd().Trim('\n', '\r');
+                    string exitStatus = p.ExitCode.ToString();
+                    stdOutput.Close();
 
-                if (exitStatus != "0")
-                {
-                    return -1;
+                    if (exitStatus != "0")
+                    {
+                        return -1;
+                    }
+
+                    return int.TryParse(output, out int ret) ? ret : 0;
                 }
-
-                return int.TryParse(output, out int ret) ? ret : 0;
             }
             catch (Exception e) when (
                 e is ArgumentException
@@ -352,7 +358,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (spaceIndex >= 0)
                 {
-                    return int.Parse(row.AsSpan(colonIndex + 1, spaceIndex - colonIndex - 1));
+                    return int.Parse(row.Substring(colonIndex + 1, spaceIndex - colonIndex - 1));
                 }
             }
 

@@ -1,5 +1,8 @@
 ﻿Sample observer plugin implementation. Please read/experiment with this project to learn how to build an observer plugin.
 
+**NOTE: FabricObserver version 3.1.0 introduces a refactored plugin implementation that will break existing plugins. The changes required by plugin authors are trivial, however. You can see what needs to be done below. Basically,
+you will need to modify your plugin's constructor to take two parameters and pass them to the base ctor. Then, in your startup class, you will need to modify the implementation to support the new IFabricStartup.ConfigureServices signature.**
+
 In general, there are two key pieces to this project, which will be required for your observer plugin:
 
 Like all observers, yours must implement IObserver, which is already mostly taken care of in the
@@ -25,9 +28,11 @@ using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
-    public class MyObserver : ObserverBase
+    public class SampleNewObserver : ObserverBase
     {
-        public SampleNewObserver()
+        // FabricObserver will inject the FabricClient and StatelessServiceContext instances at runtime.        
+        public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context)
+          : base(fabricClient, context)
         {
             //... Your impl.
         }
@@ -45,10 +50,8 @@ namespace FabricObserver.Observers
  }
 ```
 
-When you reference the FabricObserver nuget package, you will have access to
-all of the public code in FabricObserver. That is, you will have the same capabilities 
-that all other observers have. The world is your oyster when it comes to creating your
-custom observer to do whatever the underlying platform affords. 
+When you reference the FabricObserver nuget package, you will have access to all of the public code in FabricObserver. That is, you will have the same capabilities 
+that all other observers have. The world is your oyster when it comes to creating your custom observer to do whatever the underlying platform affords. 
 
 ### Note: make sure you know if .NET Core 3.1 is installed on the target server. If it is not, then you must use the SelfContained package. This is very important.
 
@@ -57,28 +60,36 @@ As you can see in this project, there are two key files:
 1. Your observer implementation.
 2. The IFabricObserverStartup implementation.
 
-For 2., it's designed to be a trivial - and required - impl:
+For 2., it's designed to be a trivial - and required - implementation:
 
 ``` C#
-using FabricObserver.Observers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using FabricObserver.Observers;
+using System.Fabric;
 
-[assembly: FabricObserver.FabricObserverStartup(typeof(FabricObserver.Observers.[Name of this class, e.g., MyObserverStartup]))]
+[assembly: FabricObserver.FabricObserverStartup(typeof(SampleNewObserverStartup))]
 namespace FabricObserver.Observers
 {
-    public class MyObserverStartup : IFabricObserverStartup
+    public class SampleNewObserverStartup : IFabricObserverStartup
     {
-        public void ConfigureServices(IServiceCollection services)
+        // FabricObserver will inject the FabricClient and StatelessServiceContext instances at runtime.
+        public void ConfigureServices(IServiceCollection services, FabricClient fabricClient, StatelessServiceContext context)
         {
-            _ = services.AddScoped(typeof(ObserverBase), typeof([Name of the class that holds your observer impl. E.g., MyObserver]));
+            services.AddScoped(typeof(ObserverBase), s => new SampleNewObserver(fabricClient, context));
         }
     }
 }
+```  
+  
+**NOTE for FO 3.1.0: If you are using ObserverHealthReporter in your current plugin, you will need to modify the ctor:**
+``` C#
+// FabricClientInstance is a built-in object in ObserverBase. 
+var healthReporter = new ObserverHealthReporter(ObserverLogger, FabricClientInstance);
 ```
 
-When you build your plugin as a .NET Core 3.1 library, copy the dll file into the Data/Plugins folder inside your build output directory. E.g., YourObserverPlugin\bin\Debug\netcoreapp3.1. In fact, this directory will contain what is effectively an sfpkg file and folder structure:  
+When you build your plugin as a .NET Standard 2.0, copy the dll file into the Data/Plugins folder inside your build output directory. E.g., YourObserverPlugin\bin\release\netstandard2.0\win-x64. In fact, this directory will contain what is effectively a decompressed sfpkg file:  
 ```
-[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\DEBUG\NETCOREAPP3.1  
+[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NETSTANDARD2.0\WIN-X64  
 │   ApplicationManifest.xml  
 |   SampleNewObserver.dll  
 |   SampleNewObserver.pdb  
@@ -95,7 +106,7 @@ file.
 
 You can deploy using the contents of your build out directory - just remove the pdb, json, dll files from the top level directory, so it looks like this:
 ```
-[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\DEBUG\NETCOREAPP3.1  
+[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NETSTANDARD2.0\WIN-X64
 │   ApplicationManifest.xml  
 │  
 └───FabricObserverPkg  
@@ -112,10 +123,10 @@ You can deploy using the contents of your build out directory - just remove the 
 * Set a $path variable to your deployment content
 * Copy bits to server
 * Register application type
-* Create new instance of FO, which contains your observer!
+* Create new instance of FO, which will contain your observer plugin
 ```Powershell
-$path = "[sourcedir]\MyObserverPlugin\bin\debug\netcoreapp3.1"
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV311 -TimeoutSec 1800
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV311
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.0.11
+$path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os platform, e.g., win-x64 or linux-x64]"
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV31 -TimeoutSec 1800
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV31
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.0
 ```

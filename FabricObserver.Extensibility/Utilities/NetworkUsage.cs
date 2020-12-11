@@ -11,6 +11,9 @@ using System.Xml;
 
 namespace FabricObserver.Observers.Utilities
 {
+    /// <summary>
+    /// Static class that houses networking utilities.
+    /// </summary>
     public static class NetworkUsage
     {
         public static (int LowPort, int HighPort)
