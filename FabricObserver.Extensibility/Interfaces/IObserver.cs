@@ -10,6 +10,9 @@ using FabricObserver.Observers.Utilities;
 
 namespace FabricObserver.Observers.Interfaces
 {
+    /// <summary>
+    /// Base Observer interface implemented by ObserverBase, the base type of all Observers.
+    /// </summary>
     public interface IObserver : IDisposable
     {
         string ObserverName

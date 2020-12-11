@@ -54,6 +54,10 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        /// <summary>
+        /// This function generates Service Fabric Health Reports that will show up in SFX.
+        /// </summary>
+        /// <param name="healthReport">Utilities.HealthReport instance.</param>
         public void ReportHealthToServiceFabric(HealthReport healthReport)
         {
             if (healthReport == null)

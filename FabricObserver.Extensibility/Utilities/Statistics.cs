@@ -15,6 +15,9 @@ namespace FabricObserver.Observers.Utilities
         Min,
     }
 
+    /// <summary>
+    /// Small statistical utilities class.
+    /// </summary>
     public sealed class Statistics
     {
         /// <summary>

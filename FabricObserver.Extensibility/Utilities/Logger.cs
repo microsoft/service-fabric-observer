@@ -16,6 +16,9 @@ using NLog.Time;
 
 namespace FabricObserver.Observers.Utilities
 {
+    /// <summary>
+    /// Local file logger.
+    /// </summary>
     public sealed class Logger : IObserverLogger<ILogger>
     {
         private const int Retries = 5;
