@@ -260,8 +260,7 @@ namespace FabricObserver.Observers
             return appNameOrType;
         }
 
-        // Initialize() runs each time ObserveAsync is run to ensure
-        // that any new app targets and config changes will
+        // This runs each time ObserveAsync is run to ensure that any new app targets and config changes will
         // be up to date across observer loop iterations.
         private async Task<bool> InitializeAsync()
         {
@@ -475,7 +474,7 @@ namespace FabricObserver.Observers
                     var healthReport = new Utilities.HealthReport
                     {
                         AppName = repOrInst.ApplicationName,
-                        HealthMessage = $"Error: {e}\n\n",
+                        HealthMessage = $"Error:{Environment.NewLine}{e}{Environment.NewLine}",
                         State = HealthState.Ok,
                         Code = FOErrorWarningCodes.Ok,
                         NodeName = NodeName,
@@ -490,7 +489,7 @@ namespace FabricObserver.Observers
                     {
                         WriteToLogWithLevel(
                             ObserverName,
-                            $"MonitorAsync failed to find current service process for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}/n{e}",
+                            $"MonitorAsync failed to find current service process for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
                             LogLevel.Information);
                     }
                     else
@@ -499,7 +498,7 @@ namespace FabricObserver.Observers
                         {
                             WriteToLogWithLevel(
                                 ObserverName,
-                                $"Unhandled exception in MonitorAsync: \n {e}",
+                                $"Unhandled exception in MonitorAsync:{Environment.NewLine}{e}",
                                 LogLevel.Warning);
                         }
 

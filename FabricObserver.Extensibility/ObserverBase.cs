@@ -282,17 +282,19 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// 
+        /// This abstract method must be implemented by deriving type. This is called by ObserverManager on any observer instance that is enabled and ready to run.
         /// </summary>
-        /// <param name="token"></param>
-        /// <returns></returns>
+        /// <param name="token">Cancellation token.</param>
+        /// <returns>A Task.</returns>
         public abstract Task ObserveAsync(CancellationToken token);
 
         /// <summary>
-        /// 
+        /// This abstract method must be implemented by deriving type. This is called by an observer's ObserveAsync method when it is time to report on observations.
+        /// It exists as its own abstract method to force a simple pattern in observer implementations: Initiate/orchestrate observations in one method. Do related health reporting in another.
+        /// This is a simple design choice that is enforced.
         /// </summary>
-        /// <param name="token"></param>
-        /// <returns></returns>
+        /// <param name="token">Cancellation token.</param>
+        /// <returns>A Task.</returns>
         public abstract Task ReportAsync(CancellationToken token);
 
         /// <summary>
@@ -383,25 +385,28 @@ namespace FabricObserver.Observers
             Dispose(true);
         }
 
-        // **Windows** process dmp creator.
+        // Windows process dmp creator.
         /// <summary>
-        /// 
+        /// This function will create Windows process dumps in supplied location if there is enough disk space available.
+        /// This function runs if you set dumpProcessOnError to true in AppObserver.config.json, for example.
         /// </summary>
-        /// <param name="processId"></param>
-        /// <param name="dumpType"></param>
-        /// <returns></returns>
-        public bool DumpServiceProcessWindows(int processId, DumpType dumpType = DumpType.Full)
+        /// <param name="processId">Process id of the target process to dump.</param>
+        /// <param name="dumpType">Optional: The type of dump to generate. Default is DumpType.Full.</param>
+        /// <param name="filePath">Optional: The full path to store dump file. Default is %SFLogRoot%\CrashDumps</param>
+        /// <returns>true or false if the operation succeeded.</returns>
+        public bool DumpServiceProcessWindows(int processId, DumpType dumpType = DumpType.Full, string filePath = null)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return false;
             }
 
-            if (string.IsNullOrEmpty(this.dumpsPath))
+            if (string.IsNullOrEmpty(this.dumpsPath) && string.IsNullOrEmpty(filePath))
             {
                 return false;
             }
 
+            string path = !string.IsNullOrEmpty(filePath) ? filePath : this.dumpsPath;
             string processName = string.Empty;
 
             NativeMethods.MINIDUMP_TYPE miniDumpType;
@@ -450,7 +455,7 @@ namespace FabricObserver.Observers
                     IntPtr processHandle = process.Handle;
 
                     // Check disk space availability before writing dump file.
-                    string driveName = this.dumpsPath.Substring(0, 2);
+                    string driveName = path.Substring(0, 2);
                     
                     if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
                     {
@@ -463,7 +468,7 @@ namespace FabricObserver.Observers
                         return false;
                     }
 
-                    using (FileStream file = File.Create(Path.Combine(this.dumpsPath, processName)))
+                    using (FileStream file = File.Create(Path.Combine(path, processName)))
                     {
                         if (!NativeMethods.MiniDumpWriteDump(
                             processHandle,
@@ -481,10 +486,14 @@ namespace FabricObserver.Observers
 
                 return true;
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            catch (Exception e) when (
+                e is ArgumentException ||
+                e is InvalidOperationException ||
+                e is PlatformNotSupportedException ||
+                e is Win32Exception)
             {
-                ObserverLogger.LogInfo(
-                    $"Failure generating Windows process dump file {processName} with error{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning(
+                    $"Failure generating Windows process dump file {processName} with error:{Environment.NewLine}{e}");
             }
 
             return false;
@@ -1088,9 +1097,10 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// 
+        /// Sets TTL for observer health reports based on how long it takes an observer to run, 
+        /// plus more time to guarantee a health report will remain active until the next time the observer runs.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>TimeSpan that contains the TTL value.</returns>
         public TimeSpan SetHealthReportTimeToLive()
         {
             int obsSleepTime = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
