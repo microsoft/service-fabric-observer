@@ -23,6 +23,7 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
+    // TODO: Document public members.
     public abstract class ObserverBase : IObserver
     {
         private const int TtlAddMinutes = 5;
@@ -189,8 +190,10 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverBase"/> class.
+        /// Base type constructor for all observers (both built-in and plugin impls).
         /// </summary>
+        /// <param name="fabricClient">FO employs exactly one instance of a FabricClient object. This protects agains memory abuse. FO will inject the instance when the application starts.</param>
+        /// <param name="statelessServiceContext">The ServiceContext instance for FO, which is a Stateless singleton (1 partition) service that runs on all nodes in an SF cluster. FO will inject this instance when the application starts.</param>
         protected ObserverBase(FabricClient fabricClient, StatelessServiceContext statelessServiceContext)
         {
             ObserverName = GetType().Name;
@@ -278,10 +281,26 @@ namespace FabricObserver.Observers
             HealthReporter = new ObserverHealthReporter(ObserverLogger, fabricClient);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
         public abstract Task ObserveAsync(CancellationToken token);
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
         public abstract Task ReportAsync(CancellationToken token);
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="property"></param>
+        /// <param name="description"></param>
+        /// <param name="level"></param>
         public void WriteToLogWithLevel(
             string property,
             string description,
@@ -365,6 +384,12 @@ namespace FabricObserver.Observers
         }
 
         // **Windows** process dmp creator.
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <param name="dumpType"></param>
+        /// <returns></returns>
         public bool DumpServiceProcessWindows(int processId, DumpType dumpType = DumpType.Full)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -466,14 +491,14 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// This function processes numeric data held in FRUD instances and generates Application or Node level Health Reports depending on supplied thresholds. 
+        /// This function *only* processes *numeric* data held in (FabricResourceUsageData (FRUD) instances and generates Application or Node level Health Reports depending on supplied Error and Warning thresholds. 
         /// </summary>
-        /// <typeparam name="T">This represents the numeric type of data this function will operate on.</typeparam>
-        /// <param name="data">FabricResourceUsageData instance.</param>
+        /// <typeparam name="T">Generic: This represents the numeric type of data this function will operate on.</typeparam>
+        /// <param name="data">FabricResourceUsageData (FRUD) instance.</param>
         /// <param name="thresholdError">Error threshold (numeric)</param>
         /// <param name="thresholdWarning">Warning threshold (numeric)</param>
         /// <param name="healthReportTtl">Health report Time to Live (TimeSpan)</param>
-        /// <param name="healthReportType">HealthReport type. Note, only Application and Node health report types are supported.</param>
+        /// <param name="healthReportType">HealthReport type. Note, only Application and Node health report types are supported by this function.</param>
         /// <param name="replicaOrInstance">Replica or Instance information contained in a type.</param>
         /// <param name="dumpOnError">Wheter or not to dump process if Error threshold has been reached.</param>
         public void ProcessResourceDataReportHealth<T>(
@@ -1062,6 +1087,10 @@ namespace FabricObserver.Observers
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public TimeSpan SetHealthReportTimeToLive()
         {
             int obsSleepTime = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
