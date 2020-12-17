@@ -13,7 +13,12 @@ namespace ClusterObserver.Utilities
 {
     public class ConfigSettings
     {
-        public ConfigurationSection Section
+        private ConfigurationSettings Settings
+        {
+            get; set;
+        }
+
+        private ConfigurationSection Section
         {
             get; set;
         }
@@ -33,12 +38,7 @@ namespace ClusterObserver.Utilities
             get; set;
         }
 
-        public bool IsObserverTelemetryEnabled
-        {
-            get; set;
-        }
-
-        public bool EmitOkHealthStateAfterWarningClear
+        public bool TelemetryEnabled
         {
             get; set;
         }
@@ -51,22 +51,17 @@ namespace ClusterObserver.Utilities
         public TimeSpan AsyncTimeout
         {
             get; set;
-        } = TimeSpan.FromSeconds(60);
+        }
 
         public TimeSpan MaxTimeNodeStatusNotOk
         {
             get; set;
         } = TimeSpan.FromHours(2.0);
 
-        public ConfigurationSettings Settings
+        public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
-            get; set;
-        }
-
-        public ConfigSettings(string observerConfiguration, StatelessServiceContext context)
-        {
-            Settings = context.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings;
-            Section = Settings?.Sections[observerConfiguration];
+            Settings = settings;
+            Section = settings?.Sections[observerConfiguration];
             
             UpdateConfigSettings();
         }
@@ -90,10 +85,10 @@ namespace ClusterObserver.Utilities
             // Observer telemetry enabled?
             if (bool.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.TelemetryEnabled),
+                ObserverConstants.EnableTelemetry),
                 out bool telemetryEnabled))
             {
-                IsObserverTelemetryEnabled = telemetryEnabled;
+                TelemetryEnabled = telemetryEnabled;
             }
 
             // Verbose logging?
@@ -117,7 +112,7 @@ namespace ClusterObserver.Utilities
             // Async cluster operation timeout setting.
             if (int.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.AsyncClusterOperationTimeoutSeconds),
+                ObserverConstants.AsyncOperationTimeoutSeconds),
                 out int asyncOpTimeoutSeconds))
             {
                 AsyncTimeout = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
@@ -130,14 +125,6 @@ namespace ClusterObserver.Utilities
                     out bool emitWarningDetails))
             {
                 EmitWarningDetails = emitWarningDetails;
-            }
-
-            if (bool.TryParse(
-                GetConfigSettingValue(
-                    ObserverConstants.EmitOkHealthStateSetting),
-                    out bool emitOkHealthState))
-            {
-                EmitOkHealthStateAfterWarningClear = emitOkHealthState;
             }
 
             if (TimeSpan.TryParse(

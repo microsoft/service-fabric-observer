@@ -65,7 +65,7 @@ namespace FabricObserver.Observers.Utilities
         {
             if (EtwLogger == null)
             {
-                EtwLogger = new EventSource(ObserverConstants.FabricObserverETWEventName);
+                EtwLogger = new EventSource(ObserverConstants.EventSourceProviderName);
             }
         }
 

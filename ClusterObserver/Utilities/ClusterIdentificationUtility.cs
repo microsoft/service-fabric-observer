@@ -29,7 +29,7 @@ namespace ClusterObserver.Utilities
             FabricClient fabricClient, CancellationToken token)
         {
             string clusterManifest = await fabricClient.ClusterManager.GetClusterManifestAsync(
-                TimeSpan.FromSeconds(ClusterObserverManager.AsyncClusterOperationTimeoutSeconds),
+                TimeSpan.FromSeconds(ClusterObserverManager.AsyncOperationTimeoutSeconds),
                 token);
 
             // Get tenantId for PaasV1 clusters or SFRP.
@@ -41,26 +41,22 @@ namespace ClusterObserver.Utilities
                 // Safe XML pattern - *Do not use LoadXml*.
                 clusterManifestXdoc = new XmlDocument { XmlResolver = null };
 
-                using (var sreader = new StringReader(clusterManifest))
+                using var sreader = new StringReader(clusterManifest);
+                using var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                clusterManifestXdoc?.Load(xreader);
+
+                // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
+                GetValuesFromClusterManifest();
+
+                if (paasClusterId != null)
                 {
-                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null }))
-                    {
-                        clusterManifestXdoc?.Load(xreader);
-
-                        // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
-                        GetValuesFromClusterManifest();
-
-                        if (paasClusterId != null)
-                        {
-                            clusterId = paasClusterId;
-                            clusterType = ObserverConstants.ClusterTypeSfrp;
-                        }
-                        else if (diagnosticsClusterId != null)
-                        {
-                            clusterId = diagnosticsClusterId;
-                            clusterType = ObserverConstants.ClusterTypeStandalone;
-                        }
-                    }
+                    clusterId = paasClusterId;
+                    clusterType = ObserverConstants.ClusterTypeSfrp;
+                }
+                else if (diagnosticsClusterId != null)
+                {
+                    clusterId = diagnosticsClusterId;
+                    clusterType = ObserverConstants.ClusterTypeStandalone;
                 }
             }
 

@@ -64,7 +64,7 @@ namespace ClusterObserver.Utilities
         {
             if (EtwLogger == null && ClusterObserverManager.EtwEnabled)
             {
-                EtwLogger = new EventSource(ClusterObserverManager.EtwProviderName);
+                EtwLogger = new EventSource(ObserverConstants.EventSourceProviderName);
             }
         }
 

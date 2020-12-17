@@ -133,7 +133,7 @@ namespace ClusterObserver.Utilities
             {
                 var fabricUpgradeProgress =
                     await fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                        TimeSpan.FromSeconds(ClusterObserverManager.AsyncClusterOperationTimeoutSeconds),
+                        TimeSpan.FromSeconds(ClusterObserverManager.AsyncOperationTimeoutSeconds),
                         token).ConfigureAwait(true);
 
                 int currentUpgradeDomainInProgress = -1;

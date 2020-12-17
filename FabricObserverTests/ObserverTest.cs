@@ -370,7 +370,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public void ClusterObserverMgr_ClusterObserver_Start_Run_Successful()
+        public void ClusterObserverMgr_ClusterObserver_Start_Run_Stop_Successful()
         {
             ClusterObserverManager.FabricClientInstance = this.fabricClient;
             ClusterObserverManager.FabricServiceContext = this.context;
@@ -379,6 +379,8 @@ namespace FabricObserverTests
             _ = Task.Factory.StartNew(() => clusterObsMgr.Start()).ConfigureAwait(false);
             Wait(() => clusterObsMgr.IsObserverRunning, 1);
             Assert.IsTrue(clusterObsMgr.IsObserverRunning);
+            clusterObsMgr.Stop();
+            Assert.IsFalse(clusterObsMgr.IsObserverRunning);
         }
 
         [TestMethod]

@@ -47,7 +47,7 @@ namespace ClusterObserver
             get; private set; 
         } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
-        public static int AsyncClusterOperationTimeoutSeconds
+        public static int AsyncOperationTimeoutSeconds
         {
             get; private set;
         }
@@ -77,21 +77,6 @@ namespace ClusterObserver
             get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
 
             set => etwEnabled = value;
-        }
-
-        public static string EtwProviderName
-        {
-            get
-            {
-                if (!EtwEnabled)
-                {
-                    return null;
-                }
-
-                string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
-
-                return !string.IsNullOrEmpty(key) ? key : null;
-            }
         }
 
         public static string LogPath
@@ -148,7 +133,7 @@ namespace ClusterObserver
             this.cts = new CancellationTokenSource();
             this.token = this.cts.Token;
   
-            Logger = new Logger("ObserverManagerSingleObserverRun");
+            Logger = new Logger("ClusterObserverUnitTestRun");
             this.observer = new ClusterObserver
             {
                 IsTestRun = true,
@@ -257,14 +242,14 @@ namespace ClusterObserver
                 this.shutdownGracePeriodInSeconds = gracePeriodInSeconds;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.AsyncClusterOperationTimeoutSeconds),
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.AsyncOperationTimeoutSeconds),
                 out int asyncTimeout))
             {
-                AsyncClusterOperationTimeoutSeconds = asyncTimeout;
+                AsyncOperationTimeoutSeconds = asyncTimeout;
             }
 
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableTelemetry), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
             }
@@ -355,20 +340,17 @@ namespace ClusterObserver
                         break;
                     }
 
-                    if (!Run())
-                    {
-                        continue;
-                    }
+                    Run();
 
                     Logger.LogInfo($"Sleeping for {(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10)} seconds before running again.");
-                    ThreadSleep(this.globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
+                    ThreadSleep(this.globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10));
 
                     Logger.Flush();
                 }
             }
             catch (Exception ex)
             {
-                var message = $"Unhanded Exception in ObserverManager on node {this.nodeName}. Taking down CO process. Error info: {ex}";
+                var message = $"Unhanded Exception in ClusterObserverManager on node {this.nodeName}. Taking down CO process. Error info:{Environment.NewLine}{ex}";
                 Logger.LogError(message);
 
                 // Telemetry.
@@ -383,59 +365,95 @@ namespace ClusterObserver
                         this.token);
                 }
 
+                // ETW.
+                if (EtwEnabled)
+                {
+                    Logger.EtwLogger?.Write(
+                            ObserverConstants.ClusterObserverETWEventName,
+                            new
+                            {
+                                HealthScope = "Application",
+                                HealthState = "Warning",
+                                HealthEventDescription = message,
+                                Metric = "ClusterObserverServiceHealth",
+                                Source = ObserverConstants.ClusterObserverName,
+                            });
+                }
+
                 // Don't swallow the unhandled exception. Fix the bug.
                 throw;
             }
         }
 
-        public void Stop(bool shutdown = true)
-        {
-            try
+        public void Stop()
+        { 
+            if (!this.shutdownSignaled)
             {
-                if (shutdown && !this.shutdownSignaled)
-                {
-                    this.shutdownSignaled = true;
-                }
-
-                SignalAbortToRunningObserver();
-                IsObserverRunning = false;
+                this.shutdownSignaled = true;
             }
-            catch (Exception e)
-            {
-                Logger.LogWarning($"Unhandled Exception thrown during ObserverManager.Stop():{Environment.NewLine}{e}");
 
-                throw;
-            }
+            SignalAbortToRunningObserver();
         }
 
         private void SignalAbortToRunningObserver()
         {
             Logger.LogInfo("Signalling task cancellation to currently running Observer.");
-            this.cts.Cancel();
-            Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
+            
+            try
+            {
+                this.cts.Cancel();
+                IsObserverRunning = false;
+            }
+            catch(Exception e) when (e is AggregateException || e is ObjectDisposedException)
+            {
+                // This shouldn't happen, but if it does this info will be useful in identifying the bug..
+                // Telemetry.
+                if (TelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                            HealthScope.Application,
+                            "ClusterObserverServiceHealth",
+                            HealthState.Warning,
+                            $"{e}",
+                            ObserverConstants.ObserverManagerName,
+                            this.token);
+                }
+
+                // ETW.
+                if (EtwEnabled)
+                {
+                    Logger.EtwLogger?.Write(
+                            ObserverConstants.ClusterObserverETWEventName,
+                            new
+                            {
+                                HealthScope = "Application",
+                                HealthState = "Warning",
+                                HealthEventDescription = $"{e}",
+                                Metric = "ClusterObserverServiceHealth",
+                                Source = ObserverConstants.ClusterObserverName,
+                            });
+                }
+            }
         }
 
-        private bool Run()
+        private void Run()
         {
-            if (!this.observer.ConfigSettings.IsEnabled)
+            if (!this.observer.IsEnabled)
             {
-                return true;
+                return;
             }
 
             var exceptionBuilder = new StringBuilder();
-            bool complete = true;
 
             try
             {
                 Logger.LogInfo($"Starting {this.observer.ObserverName}");
-
                 IsObserverRunning = true;
 
                 // Synchronous call.
                 var isCompleted = this.observer.ObserveAsync(this.cts.Token).Wait(this.observerExecTimeout);
-                IsObserverRunning = false;
 
-                // The observer is taking too long (hung?), 
+                // The observer is taking too long (hung?)
                 if (!isCompleted)
                 {
                     string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {this.observerExecTimeout.TotalSeconds} seconds. Aborting.";
@@ -455,28 +473,68 @@ namespace ClusterObserver
                                 this.token);
                     }
 
+                    if (EtwEnabled)
+                    {
+                        Logger.EtwLogger?.Write(
+                                ObserverConstants.ClusterObserverETWEventName,
+                                new
+                                {
+                                    HealthScope = "Application",
+                                    HealthState = "Warning",
+                                    HealthEventDescription = observerHealthWarning,
+                                    Metric = "ClusterObserverServiceHealth",
+                                    Source = ObserverConstants.ClusterObserverName,
+                                });
+                    }
+
                     this.observer = new ClusterObserver();
                     this.cts = new CancellationTokenSource();
                 }
             }
-            catch (AggregateException ex) when (ex.InnerException is OperationCanceledException || ex.InnerException is TaskCanceledException)
+            catch (AggregateException ex) when (
+                ex.InnerException is OperationCanceledException ||
+                ex.InnerException is TaskCanceledException ||
+                ex.InnerException is TimeoutException)
             {
                 IsObserverRunning = false;
                 _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{ex.InnerException}");
-                complete = false;
-            }
-
-            if (complete)
-            {
-                Logger.LogInfo(ObserverConstants.AllObserversExecutedMessage);
-            }
-            else
-            {
                 Logger.LogError(exceptionBuilder.ToString());
                 _ = exceptionBuilder.Clear();
             }
+            catch (Exception e)
+            {
+                string msg = $"Unhandled exception in ClusterObserverManager.Run(). Taking down process. Error info:{Environment.NewLine}{e}";
+                Logger.LogError(msg);
 
-            return complete;
+                if (TelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                            HealthScope.Application,
+                            "ObserverHealthReport",
+                            HealthState.Warning,
+                            msg,
+                            ObserverConstants.ObserverManagerName,
+                            this.token);
+                }
+
+                if (EtwEnabled)
+                {
+                    Logger.EtwLogger?.Write(
+                            ObserverConstants.ClusterObserverETWEventName,
+                            new
+                            {
+                                HealthScope = "Application",
+                                HealthState = "Warning",
+                                HealthEventDescription = msg,
+                                Metric = "ClusterObserverServiceHealth",
+                                Source = ObserverConstants.ClusterObserverName,
+                            });
+                }
+
+                throw;
+            }
+
+            IsObserverRunning = false;
         }
 
         private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(
@@ -486,9 +544,8 @@ namespace ClusterObserver
             this.appParamsUpdating = true;
             this.Logger.LogInfo("Application Parameter upgrade started...");
             SignalAbortToRunningObserver();
-            this.observer = new ClusterObserver();
+            this.observer = new ClusterObserver(e.NewPackage.Settings);
             this.cts = new CancellationTokenSource();
-            this.observer.ConfigSettings?.UpdateConfigSettings(e.NewPackage.Settings);
             this.Logger.LogInfo("Application Parameter upgrade complete...");
             this.appParamsUpdating = false;
         }

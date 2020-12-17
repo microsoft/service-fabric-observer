@@ -13,7 +13,7 @@ namespace FabricObserver.Observers.Utilities
         public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
         public const string Fqdn = "FQDN";
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
-        public const string EventSourceProviderName = "EventSourceProviderName";
+        public const string EventSourceProviderName = "FabricObserverETWProvider";
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
         public const string FabricObserverName = "FabricObserver";

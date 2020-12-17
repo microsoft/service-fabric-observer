@@ -9,7 +9,7 @@
          Below setting represents 30 minutes. -->
     <Parameter Name="ObserverExecutionTimeout" Value="1800" />
     <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large clusters. -->
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          ClusterObserver will write to its own directory on this path.
          **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
@@ -18,28 +18,32 @@
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="EnableEventSourceProvider" Value="True"/>
-    <Parameter Name="EventSourceProviderName" Value="ClusterObserverETWProvider" />
-    <!-- Optional: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
-         but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="True" />
+    <Parameter Name="EnableEventSourceProvider" Value="True" />
+    <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. This can be overriden by the setting 
+         in the ClusterObserverConfiguration section. The idea there is that you can do an application parameter update and turn this feature on and off. -->
+    <Parameter Name="EnableTelemetry" Value="True" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
-    <Parameter Name="LogAnalyticsWorkspaceId" Value="845487a2-4953-4ebf-abf8-665aeab929ec" />
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
-    <Parameter Name="LogAnalyticsSharedKey" Value="zjVxtNEDfBjuao93MO+N6/NMkLDYZ2jYoPob3pTsldxUF9/Rgvuna782JnMQigbgtgU5FqXHRZt2US4jJE7fDg==" />
+    <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="3" />
   </Section>
-  <!-- ClusterObserver Configuration Settings -->
+  <!-- ClusterObserver Configuration Settings. These are overridable and can be set as part of an application parameter updates. See ApplicationManifest.xml. -->
   <Section Name="ClusterObserverConfiguration">
+    <!-- Maximum amount of time to wait for an async operation to complete (e.g., any of the SF API calls..) -->
+    <Parameter Name="AsyncOperationTimeoutSeconds" Value="" MustOverride="true" />
     <!-- Required: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service provider in the ObseverManagerConfiguration section.
+         This setting will override the EnableTelemetry setting in the ObserverManagerConfiguration section, which enables turning this setting on and off in application parameter updates. -->
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -47,10 +51,10 @@
     <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
     <Parameter Name="EmitHealthWarningEvaluationDetails" Value="" MustOverride="true" />
-    <!-- Optional: Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
-    <Parameter Name="EmitOkHealthStateTelemetry" Value="" MustOverride="true" />
     <!-- Maximum amount of time a node can be in disabling/disabled/down state before
          emitting a Warning signal.-->
     <Parameter Name="MaxTimeNodeStatusNotOk" Value="" MustOverride="true" />
+    <!-- How often to run ClusterObserver. This is a Timespan value, e.g., 00:10:00 means every 10 minutes, for example. -->
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
   </Section>
 </Settings>

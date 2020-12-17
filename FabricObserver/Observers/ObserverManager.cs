@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Fabric.Management.ServiceModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -147,7 +147,10 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public static int ObserverExecutionLoopSleepSeconds { get; private set; } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
+        public static int ObserverExecutionLoopSleepSeconds 
+        { 
+            get; private set; 
+        } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
         public static StatelessServiceContext FabricServiceContext
         {
@@ -164,7 +167,8 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public static bool FabricObserverInternalTelemetryEnabled { get; set; } = true;
+        public static bool FabricObserverInternalTelemetryEnabled 
+        { get; set; } = true;
 
         public static bool ObserverWebAppDeployed
         {
@@ -176,21 +180,6 @@ namespace FabricObserver.Observers
             get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
 
             set => etwEnabled = value;
-        }
-
-        public static string EtwProviderName
-        {
-            get
-            {
-                if (!EtwEnabled)
-                {
-                    return null;
-                }
-
-                string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
-
-                return !string.IsNullOrEmpty(key) ? key : null;
-            }
         }
 
         public string ApplicationName
@@ -531,11 +520,20 @@ namespace FabricObserver.Observers
         /// <param name="e">Contains the information necessary for setting new config params from updated package.</param>
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            this.isConfigurationUpdateInProgess = true;
             this.Logger.LogInfo("Application Parameter upgrade started...");
 
             try
             {
+                // For Linux, we need to restart the FO process due to the Capabilities impl: the setup script needs to run again so that privileged operations can succeed when you enable
+                // an observer that requires them, for example. So, exiting here ensures that both the new config settings will be applied when a new process is running after the FO setup script runs that puts
+                // the Linux capabilities set in place for FO..
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    await this.StopObserversAsync().ConfigureAwait(false);
+                    Environment.Exit(42);
+                }
+
+                this.isConfigurationUpdateInProgess = true;
                 await StopObserversAsync(false).ConfigureAwait(true);
                 this.observers.Clear();
 

@@ -16,6 +16,7 @@ using ClusterObserver.Utilities;
 using ClusterObserver.Utilities.Telemetry;
 using ClusterObserver.Interfaces;
 using Newtonsoft.Json;
+using System.Fabric.Description;
 
 namespace ClusterObserver
 {
@@ -26,7 +27,7 @@ namespace ClusterObserver
         private readonly Uri fabricSystemAppUri = new Uri("fabric:/System");
         private bool disposedValue;
 
-        private HealthState ClusterHealthState
+        private HealthState LastKnownClusterHealthState
         {
             get; set;
         } = HealthState.Unknown;
@@ -39,10 +40,18 @@ namespace ClusterObserver
             get;
         } = new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
 
-        protected bool IsTelemetryEnabled 
+        protected bool TelemetryEnabled 
         { 
-            get; set; 
-        } = ClusterObserverManager.TelemetryEnabled;
+            get
+            {
+                if (ConfigSettings != null)
+                {
+                    return ConfigSettings.TelemetryEnabled;
+                }
+
+                return true;
+            }
+        }
 
         protected ITelemetryProvider ObserverTelemetryClient
         {
@@ -104,6 +113,19 @@ namespace ClusterObserver
             get; set;
         }
 
+        public bool IsEnabled
+        {
+            get
+            {
+                if (ConfigSettings != null)
+                {
+                    return ConfigSettings.IsEnabled;
+                }
+
+                return true;
+            }
+        }
+
         public TimeSpan RunInterval
         {
             get
@@ -115,45 +137,39 @@ namespace ClusterObserver
 
                 return TimeSpan.MinValue;
             }
-
-            set
-            {
-                if (ConfigSettings != null)
-                {
-                    ConfigSettings.RunInterval = value;
-                }
-            }
         }
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
         /// This observer is a singleton (one partition) stateless service that runs on one node in an SF cluster.
         /// ClusterObserver and FabricObserver are completely independent service processes.
         /// </summary>
-        public ClusterObserver()
+        public ClusterObserver(ConfigurationSettings settings = null)
         {
-            if (ClusterObserverManager.EtwEnabled
-                && !string.IsNullOrEmpty(ClusterObserverManager.EtwProviderName))
-            {
-                etwEnabled = true;
-            }
-
+            etwEnabled = ClusterObserverManager.EtwEnabled;
             FabricClientInstance = ClusterObserverManager.FabricClientInstance;
-
-            if (IsTelemetryEnabled)
-            {
-                ObserverTelemetryClient = ClusterObserverManager.TelemetryClient;
-            }
-
             ObserverName = ObserverConstants.ClusterObserverName;
             FabricServiceContext = ClusterObserverManager.FabricServiceContext;
             NodeName = FabricServiceContext.NodeContext.NodeName;
             NodeType = FabricServiceContext.NodeContext.NodeType;
-            ConfigSettings = new ConfigSettings(ObserverConstants.ClusterObserverConfigurationSectionName, FabricServiceContext);
             
+            if (settings == null)
+            {
+                settings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings;
+            }
+
+            ConfigSettings = new ConfigSettings(settings, ObserverConstants.ClusterObserverConfigurationSectionName);
+
+            if (TelemetryEnabled)
+            {
+                ObserverTelemetryClient = ClusterObserverManager.TelemetryClient;
+            }
+
             // Observer Logger setup.
-            ObserverLogger = new Logger(ObserverName, ClusterObserverManager.LogPath);
+            ObserverLogger = new Logger(ObserverName, ClusterObserverManager.LogPath)
+            {
+                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
+            };
         }
 
         protected virtual void Dispose(bool disposing)
@@ -183,7 +199,7 @@ namespace ClusterObserver
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml
-            if (!this.ConfigSettings.IsEnabled || (RunInterval > TimeSpan.MinValue
+            if (!this.IsEnabled || (RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
@@ -200,15 +216,15 @@ namespace ClusterObserver
 
         public async Task ReportAsync(CancellationToken token)
         {
-            await ProbeClusterHealthAsync(token).ConfigureAwait(true);
+            await ReportClusterHealthAsync(token).ConfigureAwait(true);
         }
 
-        private async Task ProbeClusterHealthAsync(CancellationToken token)
+        private async Task ReportClusterHealthAsync(CancellationToken token)
         {
             // The point of this service is to emit SF Health telemetry to your external log analytics service, so
-            // if telemetry is not enabled or you don't provide an AppInsights instrumentation key, for example, 
+            // if telemetry is not enabled or you don't provide an AppInsights instrumentation key or LogAnalytic settings, for example, 
             // then querying HM for health info isn't useful.
-            if (!IsTestRun && (!this.etwEnabled && (!IsTelemetryEnabled || ObserverTelemetryClient == null)))
+            if (!IsTestRun && (!this.etwEnabled && (!TelemetryEnabled || ObserverTelemetryClient == null)))
             {
                 return;
             }
@@ -247,14 +263,14 @@ namespace ClusterObserver
                                                 token).ConfigureAwait(true);
 
                 // Previous run generated unhealthy evaluation report. It's now Ok.
-                if (ConfigSettings.EmitOkHealthStateAfterWarningClear && clusterHealth.AggregatedHealthState == HealthState.Ok
-                    && (ClusterHealthState == HealthState.Error
-                    || (ConfigSettings.EmitWarningDetails && ClusterHealthState == HealthState.Warning)))
+                if (clusterHealth.AggregatedHealthState == HealthState.Ok
+                    && (LastKnownClusterHealthState == HealthState.Error
+                    || (ConfigSettings.EmitWarningDetails && LastKnownClusterHealthState == HealthState.Warning)))
                 {
-                    ClusterHealthState = HealthState.Ok;
+                    LastKnownClusterHealthState = HealthState.Ok;
 
                     // Telemetry.
-                    if (IsTelemetryEnabled)
+                    if (TelemetryEnabled)
                     {
                         var telemetry = new TelemetryData(FabricClientInstance, Token)
                         {
@@ -311,7 +327,7 @@ namespace ClusterObserver
                         // Warn when System applications are in warning, but no need to dig in deeper.
                         if (evaluation.Kind == HealthEvaluationKind.SystemApplication)
                         {
-                            if (IsTelemetryEnabled)
+                            if (TelemetryEnabled)
                             {
                                 var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                 {
@@ -432,7 +448,7 @@ namespace ClusterObserver
                                         }
 
                                         // Telemetry.
-                                        if (IsTelemetryEnabled)
+                                        if (TelemetryEnabled)
                                         {
                                             var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                             {
@@ -546,7 +562,7 @@ namespace ClusterObserver
                                             targetNode = targetNodeList[0];
                                         }
 
-                                        if (IsTelemetryEnabled)
+                                        if (TelemetryEnabled)
                                         {
                                             var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                             {
@@ -599,7 +615,7 @@ namespace ClusterObserver
                     }
 
                     // Track current aggregated health state for use in next run.
-                    ClusterHealthState = clusterHealth.AggregatedHealthState;
+                    LastKnownClusterHealthState = clusterHealth.AggregatedHealthState;
                 }
             }
             catch (Exception e) when
@@ -609,7 +625,7 @@ namespace ClusterObserver
                    $"ProbeClusterHealthAsync threw {e.Message}{Environment.NewLine}" +
                     "Probing will continue.");
 #if DEBUG
-                if (IsTelemetryEnabled)
+                if (TelemetryEnabled)
                 {
                     var telemetryData = new TelemetryData(FabricClientInstance, Token)
                     {
@@ -650,7 +666,7 @@ namespace ClusterObserver
                     }
 
                     // Telemetry.
-                    if (IsTelemetryEnabled)
+                    if (TelemetryEnabled)
                     {
                         var telemetry = new TelemetryData(FabricClientInstance, Token)
                         {
@@ -730,7 +746,7 @@ namespace ClusterObserver
                             $"for {Math.Round(kvp.Value.LastDetectedTime.Subtract(kvp.Value.FirstDetectedTime).TotalHours, 2)} hours.{Environment.NewLine}";
 
                         // Telemetry.
-                        if (IsTelemetryEnabled)
+                        if (TelemetryEnabled)
                         {
                             var telemetry = new TelemetryData(FabricClientInstance, Token)
                             {
