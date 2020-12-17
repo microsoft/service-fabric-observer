@@ -6,16 +6,14 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricClusterObserver.Interfaces;
-using FabricClusterObserver.Observers;
+using ClusterObserver.Interfaces;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 
-namespace FabricClusterObserver.Utilities.Telemetry
+namespace ClusterObserver.Utilities.Telemetry
 {
     /// <summary>
     /// Abstracts the ApplicationInsights telemetry API calls allowing
@@ -52,7 +50,7 @@ namespace FabricClusterObserver.Utilities.Telemetry
         /// <summary>
         /// Gets an indicator if the telemetry is enabled or not.
         /// </summary>
-        public bool IsEnabled => this.telemetryClient.IsEnabled() && ObserverManager.TelemetryEnabled;
+        public bool IsEnabled => this.telemetryClient.IsEnabled() && ClusterObserverManager.TelemetryEnabled;
 
         /// <summary>
         /// Gets or sets the key.

@@ -7,7 +7,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace FabricClusterObserver.Interfaces
+namespace ClusterObserver.Interfaces
 {
     public interface IObserver : IDisposable
     {

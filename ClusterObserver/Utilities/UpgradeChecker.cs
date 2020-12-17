@@ -1,4 +1,8 @@
-﻿using FabricClusterObserver.Observers;
+﻿// ------------------------------------------------------------
+//  Copyright (c) Microsoft Corporation.  All rights reserved.
+//  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Fabric;
@@ -7,7 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace FabricClusterObserver.Utilities
+namespace ClusterObserver.Utilities
 {
     public static class UpgradeChecker
     {
@@ -129,7 +133,7 @@ namespace FabricClusterObserver.Utilities
             {
                 var fabricUpgradeProgress =
                     await fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                        TimeSpan.FromSeconds(ObserverManager.AsyncClusterOperationTimeoutSeconds),
+                        TimeSpan.FromSeconds(ClusterObserverManager.AsyncClusterOperationTimeoutSeconds),
                         token).ConfigureAwait(true);
 
                 int currentUpgradeDomainInProgress = -1;

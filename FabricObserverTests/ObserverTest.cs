@@ -8,12 +8,11 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricClusterObserver.Observers;
 using FabricObserver.Observers;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ClusterObserverManager = FabricClusterObserver.Observers.ObserverManager;
+using ClusterObserverManager = ClusterObserver.ClusterObserverManager;
 using ObserverManager = FabricObserver.Observers.ObserverManager;
 
 /*
@@ -70,7 +69,7 @@ namespace FabricObserverTests
             this.isSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
 
             // You must set ObserverBase's static IsTestRun to true to run these unit tests.
-            FabricObserver.Observers.ObserverBase.IsTestRun = true;
+            ObserverBase.IsTestRun = true;
         }
 
         private static bool InstallCerts()
@@ -164,21 +163,6 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public void ClusterObserver_Constructor_Test()
-        {
-            ClusterObserverManager.FabricServiceContext = this.context;
-            ClusterObserverManager.FabricClientInstance = this.fabricClient;
-            ClusterObserverManager.TelemetryEnabled = false;
-
-            var obs = new ClusterObserver();
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.ObserverName == FabricClusterObserver.Utilities.ObserverConstants.ClusterObserverName);
-
-            obs.Dispose();
-        }
-
-        [TestMethod]
         public void DiskObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = this.context;
@@ -190,12 +174,8 @@ namespace FabricObserverTests
             var obs = new DiskObserver(this.fabricClient, this.context);
 
             Assert.IsTrue(obs.ObserverLogger != null);
-            
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.DiskObserverName);
-
-            obs.Dispose();
-            
         }
 
         [TestMethod]
@@ -387,13 +367,20 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            
         }
 
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public void ClusterObserverMgr_ClusterObserver_Start_Run_Successful()
+        {
+            ClusterObserverManager.FabricClientInstance = this.fabricClient;
+            ClusterObserverManager.FabricServiceContext = this.context;
+
+            var clusterObsMgr = new ClusterObserverManager();
+            _ = Task.Factory.StartNew(() => clusterObsMgr.Start()).ConfigureAwait(false);
+            Wait(() => clusterObsMgr.IsObserverRunning, 1);
+            Assert.IsTrue(clusterObsMgr.IsObserverRunning);
+        }
+
         [TestMethod]
         public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
@@ -402,18 +389,12 @@ namespace FabricObserverTests
             ClusterObserverManager.FabricClientInstance = this.fabricClient;
             ClusterObserverManager.TelemetryEnabled = false;
 
-            var obs = new ClusterObserver
-            {
-                IsTestRun = true,
-            };
+            var obs = new ClusterObserver.ClusterObserver();
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
@@ -702,7 +683,6 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             obs.Dispose();
-            
         }
 
         [TestMethod]
@@ -1181,10 +1161,7 @@ namespace FabricObserverTests
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
             };
 
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                
-            };
+            var obsMgr = new ObserverManager(obs, this.fabricClient);
 
             await obs.ObserveAsync(this.token).ConfigureAwait(true);
 
@@ -1201,7 +1178,6 @@ namespace FabricObserverTests
             await obsMgr.StopObserversAsync();
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
             obs.Dispose();
-            obsMgr.Dispose();
         }
 
         /// <summary>

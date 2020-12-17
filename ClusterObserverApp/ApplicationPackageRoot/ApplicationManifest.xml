@@ -1,14 +1,42 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.0.3" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.0.4" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
+    <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserver_InstanceCount" DefaultValue="1" />
+    <Parameter Name="Enabled" DefaultValue="true" />
+    <Parameter Name="EnableTelemetry" DefaultValue="true" />
+    <Parameter Name="EnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
+    <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
+    <Parameter Name="EmitOkHealthStateTelemetry" DefaultValue="true" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.0.3" />
-    <ConfigOverrides />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.0.4" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="ClusterObserverConfiguration">
+            <!-- Required: To enable or not to enable, that is the question. -->
+            <Parameter Name="Enabled" Value="[Enabled]" />
+            <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+                 will be locally logged. This is the recommended setting. Note that file logging is generally
+                 only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+            <Parameter Name="EnableVerboseLogging" Value="[EnableVerboseLogging]" />
+            <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
+                 Aggregated Error evaluations will always be transmitted regardless of this setting. -->
+            <Parameter Name="EmitHealthWarningEvaluationDetails" Value="[EmitHealthWarningEvaluationDetails]" />
+            <!-- Optional: Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
+            <Parameter Name="EmitOkHealthStateTelemetry" Value="[EmitOkHealthStateTelemetry]" />
+            <!-- Maximum amount of time a node can be in disabling/disabled/down state before
+                 emitting a Warning signal.-->
+            <Parameter Name="MaxTimeNodeStatusNotOk" Value="[MaxTimeNodeStatusNotOk]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -16,7 +44,7 @@
          ServiceFabric PowerShell module.
          
          The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
-    <Service Name="FabricClusterObserver" ServicePackageActivationMode="ExclusiveProcess">
+    <Service Name="ClusterObserver" ServicePackageActivationMode="ExclusiveProcess">
       <StatelessService ServiceTypeName="ClusterObserverType" InstanceCount="[ClusterObserver_InstanceCount]">
         <SingletonPartition />
       </StatelessService>

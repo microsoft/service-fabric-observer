@@ -74,12 +74,45 @@ namespace FabricObserver.Observers
 
         public bool IsEnabled 
         { 
-            get; set; 
-        } = true;
+            get
+            {
+                if (ConfigurationSettings != null)
+                {
+                    return ConfigurationSettings.IsEnabled;
+                }
+
+                // default is observer enabled.
+                return true;
+            }
+            
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.IsEnabled = value;
+                }
+            }
+        }
 
         public bool IsObserverTelemetryEnabled
         {
-            get; set;
+            get
+            {
+                if (ConfigurationSettings != null)
+                {
+                    return ConfigurationSettings.IsObserverTelemetryEnabled;
+                }
+
+                return false;
+            }
+
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.IsObserverTelemetryEnabled = value;
+                }
+            }
         }
 
         public bool IsUnhealthy
@@ -96,14 +129,28 @@ namespace FabricObserver.Observers
 
         public Utilities.ConfigSettings ConfigurationSettings
         {
-            get;
-            set;
+            get; set;
         }
 
         public bool EnableVerboseLogging
         {
-            get;
-            private set;
+            get
+            {
+                if (ConfigurationSettings != null)
+                {
+                    return ConfigurationSettings.EnableVerboseLogging;
+                }
+
+                return false;
+            }
+
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.EnableVerboseLogging = value;
+                }
+            }
         }
 
         public Logger ObserverLogger
@@ -139,8 +186,24 @@ namespace FabricObserver.Observers
 
         public TimeSpan RunInterval
         {
-            get; set;
-        } = TimeSpan.MinValue;
+            get 
+            { 
+                if (ConfigurationSettings != null)
+                {
+                    return ConfigurationSettings.RunInterval;
+                }
+
+                return TimeSpan.MinValue;
+            }
+
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.RunInterval = value;
+                }
+            }
+        }
 
         public TimeSpan AsyncClusterOperationTimeoutSeconds
         {
@@ -149,18 +212,66 @@ namespace FabricObserver.Observers
 
         public int DataCapacity
         {
-            get; set;
-        } = 30;
+            get
+            {
+                if (ConfigurationSettings != null)
+                {
+                    return ConfigurationSettings.DataCapacity;
+                }
+
+                return 30;
+            }
+
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.DataCapacity = value;
+                }
+            }
+
+        }
 
         public bool UseCircularBuffer
         {
-            get; set;
-        } = false;
+            get
+            {
+                if (ConfigurationSettings != null)
+                {
+                    return ConfigurationSettings.UseCircularBuffer;
+                }
+
+                return false;
+            }
+
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.UseCircularBuffer = value;
+                }
+            }
+        }
 
         public TimeSpan MonitorDuration
         {
-            get; set;
-        } = TimeSpan.MinValue;
+            get
+            {
+                if (ConfigurationSettings != null)
+                {
+                    return ConfigurationSettings.MonitorDuration;
+                }
+
+                return TimeSpan.MinValue;
+            }
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.MonitorDuration = value;
+                }
+            }
+        }
 
         protected bool IsTelemetryProviderEnabled
         {
@@ -223,7 +334,7 @@ namespace FabricObserver.Observers
 
             ObserverLogger = new Logger(ObserverName, logFolderBasePath);
 
-            if (string.IsNullOrEmpty(this.dumpsPath))
+            if (string.IsNullOrEmpty(dumpsPath))
             {
                 SetDefaultSfDumpPath();
             }
@@ -257,27 +368,16 @@ namespace FabricObserver.Observers
                 }
             }
 
-            if (string.IsNullOrEmpty(this.dumpsPath))
+            if (string.IsNullOrEmpty(dumpsPath))
             {
                 SetDefaultSfDumpPath();
             }
 
-            if (!IsTestRun)
-            {
-                ConfigurationSettings = new Utilities.ConfigSettings(
-                    FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings,
+            ConfigurationSettings = new Utilities.ConfigSettings(
+                    FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings,
                     ConfigurationSectionName);
 
-                EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
-                IsEnabled = ConfigurationSettings.IsEnabled;
-                IsObserverTelemetryEnabled = ConfigurationSettings.IsObserverTelemetryEnabled;
-                MonitorDuration = ConfigurationSettings.MonitorDuration;
-                RunInterval = ConfigurationSettings.RunInterval;
-                ObserverLogger.EnableVerboseLogging = EnableVerboseLogging;
-                DataCapacity = ConfigurationSettings.DataCapacity;
-                UseCircularBuffer = ConfigurationSettings.UseCircularBuffer;
-            }
-
+            ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
             HealthReporter = new ObserverHealthReporter(ObserverLogger, fabricClient);
         }
 
@@ -401,12 +501,12 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            if (string.IsNullOrEmpty(this.dumpsPath) && string.IsNullOrEmpty(filePath))
+            if (string.IsNullOrEmpty(dumpsPath) && string.IsNullOrEmpty(filePath))
             {
                 return false;
             }
 
-            string path = !string.IsNullOrEmpty(filePath) ? filePath : this.dumpsPath;
+            string path = !string.IsNullOrEmpty(filePath) ? filePath : dumpsPath;
             string processName = string.Empty;
 
             NativeMethods.MINIDUMP_TYPE miniDumpType;
@@ -527,7 +627,7 @@ namespace FabricObserver.Observers
 
             if (healthReportType != HealthReportType.Application && healthReportType != HealthReportType.Node)
             {
-                this.ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Unsupported HealthReport type -> {Enum.GetName(typeof(HealthReportType), healthReportType)}");
+                ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Unsupported HealthReport type -> {Enum.GetName(typeof(HealthReportType), healthReportType)}");
                 return;
             }
 
@@ -699,12 +799,12 @@ namespace FabricObserver.Observers
                     {
                         int procId = (int)replicaOrInstance.HostProcessId;
 
-                        if (!this.serviceDumpCountDictionary.ContainsKey(procName))
+                        if (!serviceDumpCountDictionary.ContainsKey(procName))
                         {
-                            this.serviceDumpCountDictionary.Add(procName, 0);
+                            serviceDumpCountDictionary.Add(procName, 0);
                         }
 
-                        if (this.serviceDumpCountDictionary[procName] < this.maxDumps)
+                        if (serviceDumpCountDictionary[procName] < maxDumps)
                         {
                             // DumpServiceProcess defaults to a Full dump with
                             // process memory, handles and thread data.
@@ -712,7 +812,7 @@ namespace FabricObserver.Observers
 
                             if (success)
                             {
-                                this.serviceDumpCountDictionary[procName]++;
+                                serviceDumpCountDictionary[procName]++;
                             }
                         }
                     }
@@ -1127,7 +1227,7 @@ namespace FabricObserver.Observers
 
         protected virtual void Dispose(bool disposing)
         {
-            if (this.disposedValue)
+            if (disposedValue)
             {
                 return;
             }
@@ -1141,30 +1241,30 @@ namespace FabricObserver.Observers
                 }
             }
 
-            this.disposedValue = true;
+            disposedValue = true;
         }
 
         private void SetDefaultSfDumpPath()
         {
             // This only needs to be set once.
-            if (string.IsNullOrEmpty(this.dumpsPath))
+            if (string.IsNullOrEmpty(dumpsPath))
             {
-                this.SFLogRoot = ServiceFabricConfiguration.Instance.FabricLogRoot;
+                SFLogRoot = ServiceFabricConfiguration.Instance.FabricLogRoot;
 
-                if (!string.IsNullOrEmpty(this.SFLogRoot))
+                if (!string.IsNullOrEmpty(SFLogRoot))
                 {
-                    this.dumpsPath = Path.Combine(this.SFLogRoot, "CrashDumps");
+                    dumpsPath = Path.Combine(SFLogRoot, "CrashDumps");
                 }
             }
 
-            if (Directory.Exists(this.dumpsPath))
+            if (Directory.Exists(dumpsPath))
             {
                 return;
             }
 
             try
             {
-                _ = Directory.CreateDirectory(this.dumpsPath);
+                _ = Directory.CreateDirectory(dumpsPath);
             }
             catch (IOException e)
             {
@@ -1174,7 +1274,7 @@ namespace FabricObserver.Observers
                     HealthState.Warning,
                     $"Unable to create dumps directory:{Environment.NewLine}{e}");
 
-                this.dumpsPath = null;
+                dumpsPath = null;
             }
         }
 

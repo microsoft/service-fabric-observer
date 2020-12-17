@@ -8,10 +8,10 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricClusterObserver.Utilities;
-using FabricClusterObserver.Utilities.Telemetry;
+using ClusterObserver.Utilities;
+using ClusterObserver.Utilities.Telemetry;
 
-namespace FabricClusterObserver.Interfaces
+namespace ClusterObserver.Interfaces
 {
     /// <summary>
     /// IObserverTelemetry interface.

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
+using System.Fabric.Management.ServiceModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -236,7 +237,7 @@ namespace FabricObserver.Observers
                 // Observers run sequentially. See RunObservers impl.
                 while (true)
                 {
-                    if (this.shutdownSignaled || this.token.IsCancellationRequested)
+                    if (!isConfigurationUpdateInProgess && (this.shutdownSignaled || this.token.IsCancellationRequested))
                     {
                         _ = this.globalShutdownEventHandle.Set();
                         this.Logger.LogWarning("Shutdown signaled. Stopping.");
@@ -531,20 +532,37 @@ namespace FabricObserver.Observers
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
             this.isConfigurationUpdateInProgess = true;
-            await StopObserversAsync(false).ConfigureAwait(false);
-
-            await Task.Delay(
-                TimeSpan.FromSeconds(1),
-                this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token : this.token).ConfigureAwait(false);
+            this.Logger.LogInfo("Application Parameter upgrade started...");
 
             try
             {
+                await StopObserversAsync(false).ConfigureAwait(true);
+                this.observers.Clear();
+
                 foreach (var observer in this.serviceCollection)
                 {
-                    observer.ConfigurationSettings.UpdateConfigSettings(e.NewPackage.Settings);
+                    observer.ConfigurationSettings = new ConfigSettings(e.NewPackage.Settings, $"{observer.ObserverName}Configuration");
+
+                    if (observer.ConfigurationSettings.IsEnabled)
+                    {
+                        // The ObserverLogger instance (member of each observer type) checks its EnableVerboseLogging setting before writing Info events (it won't write if this setting is false, thus non-verbose).
+                        // So, we set it here in case the parameter update includes a change to this config setting. 
+                        // This is the only update-able setting that requires we do this as part of the config update event handling.
+                        string oldVerboseLoggingSetting = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
+                        string newVerboseLoggingSetting = e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
+                        
+                        if (newVerboseLoggingSetting != oldVerboseLoggingSetting)
+                        {
+                            observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
+                        }
+
+                        this.observers.Add(observer);
+                    }
                 }
 
-                this.observers = this.serviceCollection.Where(o => o.IsEnabled).ToList();
+                this.cts = new CancellationTokenSource();
+                this.linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, this.token);
+                this.Logger.LogInfo($"Application Parameter upgrade in progress: new observer list count -> {this.observers.Count}");
             }
             catch (Exception err)
             {
@@ -553,16 +571,18 @@ namespace FabricObserver.Observers
                     AppName = new Uri(FabricServiceContext.CodePackageActivationContext.ApplicationName),
                     Code = FOErrorWarningCodes.Ok,
                     ReportType = HealthReportType.Application,
-                    HealthMessage = $"Error updating observer with new configuration:{Environment.NewLine}{err}",
+                    HealthMessage = $"Error updating FabricObserver with new configuration settings:{Environment.NewLine}{err}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
                     Property = $"Configuration_Upate_Error",
+                    EmitLogEvent = true,
                 };
 
                 this.HealthReporter.ReportHealthToServiceFabric(healthReport);
             }
 
             this.isConfigurationUpdateInProgess = false;
+            this.Logger.LogWarning("Application Parameter upgrade completed...");
         }
 
         /// <summary>
@@ -703,16 +723,7 @@ namespace FabricObserver.Observers
         private void SignalAbortToRunningObserver()
         {
             this.Logger.LogInfo("Signalling task cancellation to currently running Observer.");
-
-            if (this.linkedSFRuntimeObserverTokenSource != null)
-            {
-                this.linkedSFRuntimeObserverTokenSource.Cancel();
-            }
-            else
-            {
-                this.cts?.Cancel();
-            }
-
+            this.cts?.Cancel();
             this.Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
         }
 
@@ -725,8 +736,15 @@ namespace FabricObserver.Observers
             var exceptionBuilder = new StringBuilder();
             bool allExecuted = true;
 
-            foreach (var observer in this.observers)
+            for (int i = 0; i < this.observers.Count; i++)
             {
+                if (isConfigurationUpdateInProgess)
+                {
+                    return true;
+                }
+
+                var observer = this.observers[i];
+
                 try
                 {
                     // Shutdown/cancellation signaled, so stop.

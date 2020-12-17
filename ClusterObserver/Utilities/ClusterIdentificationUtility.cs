@@ -1,12 +1,16 @@
-﻿using System;
+﻿// ------------------------------------------------------------
+//  Copyright (c) Microsoft Corporation.  All rights reserved.
+//  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
+
+using System;
 using System.Fabric;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using FabricClusterObserver.Observers;
 
-namespace FabricClusterObserver.Utilities
+namespace ClusterObserver.Utilities
 {
     /// <summary>
     /// Helper class to facilitate non-PII identification of cluster.
@@ -25,7 +29,7 @@ namespace FabricClusterObserver.Utilities
             FabricClient fabricClient, CancellationToken token)
         {
             string clusterManifest = await fabricClient.ClusterManager.GetClusterManifestAsync(
-                TimeSpan.FromSeconds(ObserverManager.AsyncClusterOperationTimeoutSeconds),
+                TimeSpan.FromSeconds(ClusterObserverManager.AsyncClusterOperationTimeoutSeconds),
                 token);
 
             // Get tenantId for PaasV1 clusters or SFRP.
@@ -37,22 +41,26 @@ namespace FabricClusterObserver.Utilities
                 // Safe XML pattern - *Do not use LoadXml*.
                 clusterManifestXdoc = new XmlDocument { XmlResolver = null };
 
-                using var sreader = new StringReader(clusterManifest);
-                using var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
-                clusterManifestXdoc?.Load(xreader);
-
-                // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
-                GetValuesFromClusterManifest();
-
-                if (paasClusterId != null)
+                using (var sreader = new StringReader(clusterManifest))
                 {
-                    clusterId = paasClusterId;
-                    clusterType = ObserverConstants.ClusterTypeSfrp;
-                }
-                else if (diagnosticsClusterId != null)
-                {
-                    clusterId = diagnosticsClusterId;
-                    clusterType = ObserverConstants.ClusterTypeStandalone;
+                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null }))
+                    {
+                        clusterManifestXdoc?.Load(xreader);
+
+                        // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
+                        GetValuesFromClusterManifest();
+
+                        if (paasClusterId != null)
+                        {
+                            clusterId = paasClusterId;
+                            clusterType = ObserverConstants.ClusterTypeSfrp;
+                        }
+                        else if (diagnosticsClusterId != null)
+                        {
+                            clusterId = diagnosticsClusterId;
+                            clusterType = ObserverConstants.ClusterTypeStandalone;
+                        }
+                    }
                 }
             }
 
