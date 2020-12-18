@@ -523,7 +523,7 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Event handler for application parameter updates (Application Upgrades).
+        /// Event handler for application parameter updates (Un-versioned application parameter-only Application Upgrades).
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e">Contains the information necessary for setting new config params from updated package.</param>
@@ -533,13 +533,17 @@ namespace FabricObserver.Observers
 
             try
             {
-                // For Linux, we need to restart the FO process due to the Capabilities impl: the setup script needs to run again so that privileged operations can succeed when you enable
-                // an observer that requires them, for example. So, exiting here ensures that both the new config settings will be applied when a new process is running after the FO setup script runs that puts
-                // the Linux capabilities set in place for FO..
+                // For Linux, we need to restart the FO process due to the Linux Capabilities impl that enables us to run docker and netstat commands as elevated user (FO Linux should always be run as standard user on Linux).
+                // So, the netstats.sh FO setup script needs to run again so that the privileged operations can succeed when you enable/disable observers that need them, which is most observers (not all). These files are used by a shared utility.
+                // Exiting here ensures that both the new config settings you provided will be applied when a new FO process is running after the FO setup script runs that puts
+                // the Linux capabilities set in place for the elevated_netstat and elevated_docker_stats binaries. The reason this must happen is that SF touches the files during this upgrade (this may be an SF bug, but it is not preventing
+                // the shipping of FO 3.1.1.) and this unsets the Capabilities on the binaries. It looks like SF changes attributes on the files (permissions).
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     // Graceful stop.
                     await this.StopObserversAsync(true, true).ConfigureAwait(false);
+
+                    // Bye.
                     Environment.Exit(42);
                 }
 
