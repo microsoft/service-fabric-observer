@@ -505,7 +505,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync();
             });
 
-            Wait(() => obsMgr.IsObserverRunning, 10);
+            Wait(() => obsMgr.IsObserverRunning, 5);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             _ = obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);

@@ -288,12 +288,21 @@ namespace FabricObserver.Observers
             }
         }
 
-        public async Task StopObserversAsync(bool shutdownSignaled = true)
-        {   
+        public async Task StopObserversAsync(bool shutdownSignaled = true, bool isConfigurationUpdateLinux = false)
+        {
+            string configUpdateLinux = string.Empty;
+
+            if (isConfigurationUpdateLinux)
+            {
+                configUpdateLinux = 
+                    $" Note: This is due to a configuration update which requires an FO process restart on Linux (with UD walk (one by one) and safety checks).{Environment.NewLine}" +
+                    $"The reason FO needs to be restarted as part of a parameter-only upgrade is due to the Linux Capabilities set FO employs not persisting across application upgrades (by design) " +
+                    $"even when the upgrade is just a configuration parameter update. In order to re-create the Capabilities set, FO's setup script must be re-run by SF. Restarting FO is therefore required here.";
+            }
+
             foreach (var obs in this.observers)
             {
-                // If the node goes down, for example, or the app is gracefully closed,
-                // then clear all existing error or health reports suppled by FO.
+                // If the node goes down, for example, or the app is gracefully closed, then clear all existing error or health reports suppled by FO.
                 // NetworkObserver takes care of this internally, so ignore here.
                 if (obs.HasActiveFabricErrorOrWarning &&
                     obs.ObserverName != ObserverConstants.NetworkObserverName)
@@ -301,7 +310,7 @@ namespace FabricObserver.Observers
                     Utilities.HealthReport healthReport = new Utilities.HealthReport
                     {
                         Code = FOErrorWarningCodes.Ok,
-                        HealthMessage = $"Clearing existing Health Error/Warning as FO is stopping or updating.",
+                        HealthMessage = $"Clearing existing Health Error/Warning as FO is stopping or updating.{configUpdateLinux}.",
                         State = HealthState.Ok,
                         ReportType = HealthReportType.Application,
                         NodeName = obs.NodeName,
@@ -529,7 +538,8 @@ namespace FabricObserver.Observers
                 // the Linux capabilities set in place for FO..
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    await this.StopObserversAsync().ConfigureAwait(false);
+                    // Graceful stop.
+                    await this.StopObserversAsync(true, true).ConfigureAwait(false);
                     Environment.Exit(42);
                 }
 
