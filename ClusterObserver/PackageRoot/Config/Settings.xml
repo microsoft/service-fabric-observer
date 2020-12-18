@@ -35,7 +35,12 @@
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="3" />
   </Section>
-  <!-- ClusterObserver Configuration Settings. These are overridable and can be set as part of an application parameter updates. See ApplicationManifest.xml. -->
+  <!-- ClusterObserver Configuration Settings. NOTE: These are overridable settings, see ApplicationManifest.xml. 
+       The Values for these will be overriden by ApplicationManifest Parameter settings. Set DefaultValue for each
+       overridable parameter in that file, not here, as the parameter DefaultValues in ApplicationManifest.xml will be used, by default. 
+       This design is to enable unversioned application-parameter-only updates. This means you will be able to change
+       any of the MustOverride parameters below at runtime by doing an ApplicationUpdate with ApplicationParameters flag. 
+       See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version -->
   <Section Name="ClusterObserverConfiguration">
     <!-- Maximum amount of time to wait for an async operation to complete (e.g., any of the SF API calls..) -->
     <Parameter Name="AsyncOperationTimeoutSeconds" Value="" MustOverride="true" />
