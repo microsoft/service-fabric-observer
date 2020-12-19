@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Fabric;
 using System.Globalization;
 using System.IO;
@@ -66,41 +65,35 @@ namespace FabricObserverWeb.Controllers
                 return Content(GetHtml(name), "text/html");
             }
 
-            JsonResult ret = Json(new ObserverLogEntry
-            {
-                Date = DateTime.UtcNow.ToString(
-                "MM-dd-yyyy HH:mm:ss.ffff",
-                CultureInfo.InvariantCulture),
-                HealthState = "Ok",
-                Message = string.Empty,
-            });
+            // Note: FO produces Json output for health report messages/logs..
+            ContentResult ret = Content(string.Empty);
 
             string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
-            string observerLogFilePath = null;
+            string logFolder;
 
             try
             {
-                var configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
-                string logFolder, logFileName;
+                System.Fabric.Description.ConfigurationSettings configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
 
-                if (configSettings != null)
+                if (!Directory.Exists(logFolder))
                 {
-                    logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
-
-                    if (!Directory.Exists(logFolder))
-                    {
-                        throw new ArgumentException($"Specified log folder, {logFolder}, does not exist");
-                    }
-
-                    logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverManagerLogFileName");
-                    observerLogFilePath = Path.Combine(logFolder, logFileName);
+                    throw new ArgumentException($"Specified log folder, {logFolder}, does not exist.");
                 }
             }
             catch (Exception e)
             {
-                ret = Json(e.ToString());
+                ret = Content(e.ToString());
                 return ret;
             }
+
+            // Observer log paths.
+            string appObserverLogPath = Path.Combine(logFolder, "AppObserver", "AppObserver.log");
+            string osObserverLogPath = Path.Combine(logFolder, "OSObserver", "OSObserver.log");
+            string diskObserverLogPath = Path.Combine(logFolder, "DiskObserver", "DiskObserver.log");
+            string networkObserverLogPath = Path.Combine(logFolder, "NetworkObserver", "NetworkObserver.log");
+            string fabricSystemObserverLogPath = Path.Combine(logFolder, "FabricSystemObserver", "FabricSystemObserver.log");
+            string nodeObserverLogPath = Path.Combine(logFolder, "NodeObserver", "NodeObserver.log");
 
             // Implicit retry loop. Will run only once if no exceptions arise.
             // Can only run at most MaxRetries times.
@@ -108,15 +101,6 @@ namespace FabricObserverWeb.Controllers
             {
                 try
                 {
-                    // Observer log paths.
-                    var appObserverLogPath = observerLogFilePath.Replace("ObserverManager", "AppObserver");
-                    var osObserverLogPath = observerLogFilePath.Replace("ObserverManager", "OSObserver");
-                    var diskObserverLogPath = observerLogFilePath.Replace("ObserverManager", "DiskObserver");
-                    var networkObserverLogPath = observerLogFilePath.Replace("ObserverManager", "NetworkObserver");
-                    var fabricSystemObserverLogPath = observerLogFilePath.Replace("ObserverManager", "FabricSystemObserver");
-                    var nodeObserverLogPath = observerLogFilePath.Replace("ObserverManager", "NodeObserver");
-
-                    // Observer logs.
                     if (System.IO.File.Exists(appObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(appObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
@@ -153,67 +137,39 @@ namespace FabricObserverWeb.Controllers
                         osObserverLogText = System.IO.File.ReadAllText(osObserverLogPath, Encoding.UTF8);
                     }
 
+                    string reportItems = string.Empty;
+
                     switch (name.ToLower())
                     {
                         case "appobserver":
-                            if (!string.IsNullOrEmpty(appObserverLogText))
-                            {
-                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(appObserverLogText);
-
-                                ret = Json(reportItems);
-                            }
-
+                            reportItems = GetObserverErrWarnLogEntryListFromLogText(appObserverLogText);
                             break;
+
                         case "diskobserver":
-                            if (!string.IsNullOrEmpty(diskObserverLogText))
-                            {
-                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(diskObserverLogText);
-
-                                ret = Json(reportItems);
-                            }
-
+                            reportItems = GetObserverErrWarnLogEntryListFromLogText(diskObserverLogText);
                             break;
+
                         case "fabricsystemobserver":
-                            if (!string.IsNullOrEmpty(fabricSystemObserverLogText))
-                            {
-                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(fabricSystemObserverLogText);
-
-                                ret = Json(reportItems);
-                            }
-
+                            reportItems = GetObserverErrWarnLogEntryListFromLogText(fabricSystemObserverLogText);
                             break;
+
                         case "networkobserver":
-                            if (!string.IsNullOrEmpty(networkObserverLogText))
-                            {
-                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(networkObserverLogText);
-
-                                ret = Json(reportItems);
-                            }
-
+                            reportItems = GetObserverErrWarnLogEntryListFromLogText(networkObserverLogText);
                             break;
+
                         case "nodeobserver":
-                            if (!string.IsNullOrEmpty(nodeObserverLogText))
-                            {
-                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(nodeObserverLogText);
-
-                                ret = Json(reportItems);
-                            }
-
+                             reportItems = GetObserverErrWarnLogEntryListFromLogText(nodeObserverLogText);
                             break;
+
                         case "osobserver":
-                            if (!string.IsNullOrEmpty(osObserverLogText))
-                            {
-                                var reportItems = GetObserverErrWarnLogEntryListFromLogText(osObserverLogText);
-
-                                ret = Json(reportItems);
-                            }
-
+                             reportItems = GetObserverErrWarnLogEntryListFromLogText(osObserverLogText); 
                             break;
+
                         default:
-                            ret = Json("Specified Observer, " + name + ", does not exist.");
-                            break;
+                            return Json("Specified Observer, " + name + ", does not exist.");
                     }
 
+                    ret = Content(reportItems);
                     break;
                 }
                 catch (IOException)
@@ -236,11 +192,11 @@ namespace FabricObserverWeb.Controllers
         {
             try
             {
-                var node = this.fabricClient.QueryManager.GetNodeListAsync(nodename).Result;
+                System.Fabric.Query.NodeList node = this.fabricClient.QueryManager.GetNodeListAsync(nodename).Result;
 
                 if (node.Count > 0)
                 {
-                    var addr = node[0].IpAddressOrFQDN;
+                    string addr = node[0].IpAddressOrFQDN;
 
                     // By default this service is node-local, http, port 5000.
                     // If you modify the service to support Internet communication over a
@@ -254,15 +210,15 @@ namespace FabricObserverWeb.Controllers
 
                     // If you modify the service to support Internet communication over a
                     // secure channel, then change this code to reflect the correct port.
-                    var req = WebRequest.Create(addr + $":5000/api/ObserverLog/{observername}/{format}{fqdn}");
+                    WebRequest req = WebRequest.Create(addr + $":5000/api/ObserverLog/{observername}/{format}{fqdn}");
                     req.Credentials = CredentialCache.DefaultCredentials;
-                    var response = (HttpWebResponse)req.GetResponse();
+                    HttpWebResponse response = (HttpWebResponse)req.GetResponse();
                     Stream dataStream = response.GetResponseStream();
 
                     // Open the stream using a StreamReader for easy access.
                     StreamReader reader = new StreamReader(dataStream);
                     string responseFromServer = reader.ReadToEnd();
-                    var ret = responseFromServer;
+                    string ret = responseFromServer;
 
                     // Cleanup the streams and the response.
                     reader.Close();
@@ -287,19 +243,19 @@ namespace FabricObserverWeb.Controllers
         private string GetHtml(string name)
         {
             string html = string.Empty;
-            string observerLogFilePath = null;
-            var nodeName = this.serviceContext.NodeContext.NodeName;
-            var configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
-
-            string logFolder, logFileName;
+            string logFolder;
+            string nodeName = this.serviceContext.NodeContext.NodeName;
+            System.Fabric.Description.ConfigurationSettings configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
             string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
+            logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
 
-            if (configSettings != null)
-            {
-                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
-                logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverManagerLogFileName");
-                observerLogFilePath = Path.Combine(logFolder, logFileName);
-            }
+            // Observer log paths.
+            string appObserverLogPath = Path.Combine(logFolder, "AppObserver", "AppObserver.log");
+            string osObserverLogPath = Path.Combine(logFolder, "OSObserver", "OSObserver.log");
+            string diskObserverLogPath = Path.Combine(logFolder, "DiskObserver", "DiskObserver.log");
+            string networkObserverLogPath = Path.Combine(logFolder, "NetworkObserver", "NetworkObserver.log");
+            string fabricSystemObserverLogPath = Path.Combine(logFolder, "FabricSystemObserver", "FabricSystemObserver.log");
+            string nodeObserverLogPath = Path.Combine(logFolder, "NodeObserver", "NodeObserver.log");
 
             // Implicit retry loop. Will run only once if no exceptions arise.
             // Can only run at most MaxRetries times.
@@ -307,43 +263,34 @@ namespace FabricObserverWeb.Controllers
             {
                 try
                 {
-                    // Observer log paths.
-                    var appObserverLogPath = observerLogFilePath.Replace("ObserverManager", "AppObserver");
-                    var osObserverLogPath = observerLogFilePath.Replace("ObserverManager", "OSObserver");
-                    var diskObserverLogPath = observerLogFilePath.Replace("ObserverManager", "DiskObserver");
-                    var networkObserverLogPath = observerLogFilePath.Replace("ObserverManager", "NetworkObserver");
-                    var fabricSystemObserverLogPath = observerLogFilePath.Replace("ObserverManager", "FabricSystemObserver");
-                    var nodeObserverLogPath = observerLogFilePath.Replace("ObserverManager", "NodeObserver");
-
-                    // Observer logs.
                     if (System.IO.File.Exists(appObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(appObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
-                        appObserverLogText = System.IO.File.ReadAllText(appObserverLogPath, Encoding.UTF8).Replace("\n", "<br/>");
+                        appObserverLogText = System.IO.File.ReadAllText(appObserverLogPath, Encoding.UTF8).Replace(Environment.NewLine, "<br/>");
                     }
 
                     if (System.IO.File.Exists(diskObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(diskObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
-                        diskObserverLogText = System.IO.File.ReadAllText(diskObserverLogPath, Encoding.UTF8).Replace("\n", "<br/>");
+                        diskObserverLogText = System.IO.File.ReadAllText(diskObserverLogPath, Encoding.UTF8).Replace(Environment.NewLine, "<br/>");
                     }
 
                     if (System.IO.File.Exists(fabricSystemObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(fabricSystemObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
-                        fabricSystemObserverLogText = System.IO.File.ReadAllText(fabricSystemObserverLogPath, Encoding.UTF8).Replace("\n", "<br/>");
+                        fabricSystemObserverLogText = System.IO.File.ReadAllText(fabricSystemObserverLogPath, Encoding.UTF8).Replace(Environment.NewLine, "<br/>");
                     }
 
                     if (System.IO.File.Exists(networkObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(networkObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
-                        networkObserverLogText = System.IO.File.ReadAllText(networkObserverLogPath, Encoding.UTF8).Replace("\n", "<br/>");
+                        networkObserverLogText = System.IO.File.ReadAllText(networkObserverLogPath, Encoding.UTF8).Replace(Environment.NewLine, "<br/>");
                     }
 
                     if (System.IO.File.Exists(nodeObserverLogPath)
                         && System.IO.File.GetCreationTimeUtc(nodeObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
-                        nodeObserverLogText = System.IO.File.ReadAllText(nodeObserverLogPath, Encoding.UTF8).Replace("\n", "<br/>");
+                        nodeObserverLogText = System.IO.File.ReadAllText(nodeObserverLogPath, Encoding.UTF8).Replace(Environment.NewLine, "<br/>");
                     }
 
                     if (System.IO.File.Exists(osObserverLogPath)
@@ -352,7 +299,7 @@ namespace FabricObserverWeb.Controllers
                         osObserverLogText = System.IO.File.ReadAllText(osObserverLogPath, Encoding.UTF8).Trim();
                     }
 
-                    var host = Request.Host.Value;
+                    string host = Request.Host.Value;
 
                     string nodeLinks = string.Empty;
 
@@ -362,10 +309,10 @@ namespace FabricObserverWeb.Controllers
                         host = Request.Query["fqdn"];
 
                         // Node links.
-                        var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
-                        var ordered = nodeList.OrderBy(node => node.NodeName);
+                        System.Fabric.Query.NodeList nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
+                        IOrderedEnumerable<System.Fabric.Query.Node> ordered = nodeList.OrderBy(node => node.NodeName);
 
-                        foreach (var node in ordered)
+                        foreach (System.Fabric.Query.Node node in ordered)
                         {
                             nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverLog/" + name + "/" + node.NodeName + "/html'>" + node.NodeName + "</a> | ";
                         }
@@ -463,12 +410,24 @@ namespace FabricObserverWeb.Controllers
             return html;
         }
 
-        private List<ObserverLogEntry> GetObserverErrWarnLogEntryListFromLogText(string observerLogText)
+        private string GetObserverErrWarnLogEntryListFromLogText(string observerLogText)
         {
-            var reportItems = new List<ObserverLogEntry>();
-            var logArray = observerLogText.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+            if (string.IsNullOrEmpty(observerLogText))
+            {
+                ObserverLogEntry ret = new ObserverLogEntry
+                {
+                    Date = DateTime.UtcNow.ToString("MM-dd-yyyy HH:mm:ss.ffff", CultureInfo.InvariantCulture),
+                    HealthState = "Ok",
+                    Message = string.Empty,
+                };
 
-            foreach (var item in logArray)
+                return System.Text.Json.JsonSerializer.Serialize(ret);
+            }
+
+            string[] logArray = observerLogText.Split($"{Environment.NewLine}", StringSplitOptions.RemoveEmptyEntries);
+            string entry = "[";
+
+            foreach (string item in logArray)
             {
                 if (!item.Contains("--") &&
                     (!item.Contains("WARN") || !item.Contains("ERROR")))
@@ -478,17 +437,14 @@ namespace FabricObserverWeb.Controllers
 
                 string[] arr = item.Split("--", StringSplitOptions.RemoveEmptyEntries);
 
-                var logReport = new ObserverLogEntry
-                {
-                    Date = arr[0],
-                    HealthState = arr[1],
-                    Message = arr[2].Trim('\n'),
-                };
-
-                reportItems.Add(logReport);
+                // Note: This is already Json (it's a serialized instance of FO's TelemetryData type)..
+                entry += arr[2][arr[2].IndexOf("{")..] + ",";
             }
 
-            return reportItems;
+            entry = entry.TrimEnd(',');
+            entry += "]";
+
+            return entry;
         }
     }
 }

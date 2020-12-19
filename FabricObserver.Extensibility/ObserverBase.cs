@@ -447,7 +447,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                var serviceConfiguration = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
+                ConfigurationPackage serviceConfiguration = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
                 if (serviceConfiguration == null)
                 {
@@ -631,11 +631,11 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            var thresholdName = "Minimum";
+            string thresholdName = "Minimum";
             bool warningOrError = false;
             string repPartitionId = null, repOrInstanceId = null, name = null, id = null, procName = null;
             T threshold = thresholdWarning;
-            var healthState = HealthState.Ok;
+            HealthState healthState = HealthState.Ok;
             Uri appName = null;
             Uri serviceName = null;
             TelemetryData telemetryData = null;
@@ -909,7 +909,7 @@ namespace FabricObserver.Observers
                         break;
                 }
 
-                var healthMessage = new StringBuilder();
+                StringBuilder healthMessage = new StringBuilder();
 
                 string drive = string.Empty;
 
@@ -924,7 +924,7 @@ namespace FabricObserver.Observers
                 }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.AppendLine($" - {data.Property}: {Math.Round(data.AverageDataValue)}{data.Units}");
+                _ = healthMessage.Append($" - {data.Property}: {data.AverageDataValue}{data.Units}");
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
@@ -972,7 +972,7 @@ namespace FabricObserver.Observers
                         });
                 }
 
-                var healthReport = new HealthReport
+                HealthReport healthReport = new HealthReport
                 {
                     AppName = appName,
                     Code = errorWarningCode,
@@ -1102,7 +1102,7 @@ namespace FabricObserver.Observers
                             });
                     }
 
-                    var healthReport = new HealthReport
+                    HealthReport healthReport = new HealthReport
                     {
                         AppName = appName,
                         Code = data.ActiveErrorOrWarningCode,
@@ -1308,13 +1308,13 @@ namespace FabricObserver.Observers
                 {
                     case TelemetryProviderType.AzureLogAnalytics:
                         {
-                            var logAnalyticsLogType =
+                            string logAnalyticsLogType =
                                 GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsLogTypeParameter);
 
-                            var logAnalyticsSharedKey =
+                            string logAnalyticsSharedKey =
                                 GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsSharedKeyParameter);
 
-                            var logAnalyticsWorkspaceId =
+                            string logAnalyticsWorkspaceId =
                                 GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
 
                             if (string.IsNullOrEmpty(logAnalyticsWorkspaceId)
