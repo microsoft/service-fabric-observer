@@ -9,11 +9,16 @@ using System.Fabric;
 using System.Fabric.Description;
 using System.Linq;
 
-namespace FabricObserver.Observers.Utilities
+namespace ClusterObserver.Utilities
 {
     public class ConfigSettings
     {
-        private ConfigurationSection section
+        private ConfigurationSettings Settings
+        {
+            get; set;
+        }
+
+        private ConfigurationSection Section
         {
             get; set;
         }
@@ -23,12 +28,6 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
-        public TimeSpan MonitorDuration
-        {
-            get; set;
-        }
-
-        // Default enablement for any observer is enabled (true).
         public bool IsEnabled
         {
             get; set;
@@ -39,7 +38,12 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
-        public bool IsObserverTelemetryEnabled
+        public bool TelemetryEnabled
+        {
+            get; set;
+        }
+
+        public bool EmitWarningDetails
         {
             get; set;
         }
@@ -47,33 +51,22 @@ namespace FabricObserver.Observers.Utilities
         public TimeSpan AsyncTimeout
         {
             get; set;
-        } = TimeSpan.FromSeconds(60);
-
-        public int DataCapacity
-        {
-            get; set;
         }
 
-        public ConfigurationSettings Settings
+        public TimeSpan MaxTimeNodeStatusNotOk
         {
             get; set;
-        }
-
-        public bool UseCircularBuffer
-        {
-            get; set;
-        }
+        } = TimeSpan.FromHours(2.0);
 
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
             Settings = settings;
-            section = settings?.Sections[observerConfiguration];
-
+            Section = settings?.Sections[observerConfiguration];
+            
             UpdateConfigSettings();
         }
 
-        public void UpdateConfigSettings(
-            ConfigurationSettings settings = null)
+        public void UpdateConfigSettings(ConfigurationSettings settings = null)
         {
             if (settings != null)
             {
@@ -83,7 +76,7 @@ namespace FabricObserver.Observers.Utilities
             // Observer enabled?
             if (bool.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.ObserverEnabledParameter),
+                ObserverConstants.ObserverEnabled),
                 out bool enabled))
             {
                 IsEnabled = enabled;
@@ -92,10 +85,10 @@ namespace FabricObserver.Observers.Utilities
             // Observer telemetry enabled?
             if (bool.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.ObserverTelemetryEnabledParameter),
+                ObserverConstants.EnableTelemetry),
                 out bool telemetryEnabled))
             {
-                IsObserverTelemetryEnabled = telemetryEnabled;
+                TelemetryEnabled = telemetryEnabled;
             }
 
             // Verbose logging?
@@ -110,46 +103,36 @@ namespace FabricObserver.Observers.Utilities
             // RunInterval?
             if (TimeSpan.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.ObserverRunIntervalParameter),
+                ObserverConstants.ObserverRunIntervalParameterName),
                 out TimeSpan runInterval))
             {
                 RunInterval = runInterval;
             }
 
-            // Monitor duration.
-            if (TimeSpan.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.MonitorDurationParameter),
-                out TimeSpan monitorDuration))
-            {
-                MonitorDuration = monitorDuration;
-            }
-
-            // Async cluster operation timeout setting..
+            // Async cluster operation timeout setting.
             if (int.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.AsyncClusterOperationTimeoutSeconds),
+                ObserverConstants.AsyncOperationTimeoutSeconds),
                 out int asyncOpTimeoutSeconds))
             {
                 AsyncTimeout = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
             }
 
-            // Resource usage data collection item capacity.
-            if (int.TryParse(
-               GetConfigSettingValue(
-               ObserverConstants.DataCapacityParameter),
-               out int dataCapacity))
-            {
-                DataCapacity = dataCapacity;
-            }
-
-            // Resource usage data collection type.
+            // Get ClusterObserver settings (specified in PackageRoot/Config/Settings.xml).
             if (bool.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.UseCircularBufferParameter),
-                out bool useCircularBuffer))
+                    ObserverConstants.EmitHealthWarningEvaluationConfigurationSetting),
+                    out bool emitWarningDetails))
             {
-                UseCircularBuffer = useCircularBuffer;
+                EmitWarningDetails = emitWarningDetails;
+            }
+
+            if (TimeSpan.TryParse(
+                GetConfigSettingValue(
+                   ObserverConstants.MaxTimeNodeStatusNotOkSetting),
+                   out TimeSpan maxTimeNodeStatusNotOk))
+            {
+                MaxTimeNodeStatusNotOk = maxTimeNodeStatusNotOk;
             }
         }
 
@@ -159,21 +142,21 @@ namespace FabricObserver.Observers.Utilities
             {
                 var configSettings = Settings;
 
-                if (configSettings == null || string.IsNullOrEmpty(section.Name))
+                if (configSettings == null || string.IsNullOrEmpty(Section.Name))
                 {
                     return null;
                 }
 
-                if (section == null)
+                if (Section == null)
                 {
                     return null;
                 }
 
                 ConfigurationProperty parameter = null;
 
-                if (section.Parameters.Any(p => p.Name == parameterName))
+                if (Section.Parameters.Any(p => p.Name == parameterName))
                 {
-                    parameter = section.Parameters[parameterName];
+                    parameter = Section.Parameters[parameterName];
                 }
 
                 if (parameter == null)

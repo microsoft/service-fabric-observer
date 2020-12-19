@@ -5,7 +5,7 @@
 
 using System;
 
-namespace FabricClusterObserver.Utilities.Telemetry
+namespace ClusterObserver.Utilities.Telemetry
 {
     public enum TelemetryProviderType
     {

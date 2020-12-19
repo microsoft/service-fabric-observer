@@ -43,14 +43,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ClusterObserver\ClusterObserver.csproj">
-      <Project>{5e990052-7b55-4af1-bcd9-48de6ea0e547}</Project>
-      <Name>ClusterObserver</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
-  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.6.1" />
     <PackageReference Include="MSTest.TestAdapter" Version="2.1.2" />
@@ -59,5 +51,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ClusterObserver\ClusterObserver.csproj" />
+    <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
   </ItemGroup>
 </Project>

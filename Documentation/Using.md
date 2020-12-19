@@ -315,7 +315,7 @@ You deploy CO into your cluster just as you would any other Service Fabric servi
 <a name="parameterUpdates"></a>
 ***Problem***: I want to update an Observer's settings without having to redeploy the application.
 
-***Solution***: Application Update with ApplicationParameters to the rescue.
+***Solution***: [Application Upgrade with Configuration-Parameters-only update](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version) to the rescue.
 
 Example: 
 
@@ -332,5 +332,8 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.0.11 -ApplicationParameter $appParams -Monitored -FailureAction rollback
-```
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.1 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+```  
+
+Note: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to 
+get the Capabilities in place. For Windows, FO processes will NOT be restarted.

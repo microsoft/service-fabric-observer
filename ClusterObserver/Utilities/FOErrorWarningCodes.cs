@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace FabricClusterObserver.Utilities
+namespace ClusterObserver.Utilities
 {
     // FabricObserver Error/Warning/Ok Codes.
     public sealed class FoErrorWarningCodes

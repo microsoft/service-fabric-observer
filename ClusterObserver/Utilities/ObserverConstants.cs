@@ -3,22 +3,21 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace FabricClusterObserver.Utilities
+namespace ClusterObserver.Utilities
 {
     public sealed class ObserverConstants
     {
         public const string ObserverManagerName = "ClusterObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
-        public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
-        public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
         public const string ObserverLogPath = "ObserverLogPath";
         public const string ObserverRunIntervalParameterName = "RunInterval";
         public const string ObserverEnabled = "Enabled";
         public const string AiKey = "AppInsightsInstrumentationKey";
-        public const string TelemetryEnabled = "EnableTelemetryProvider";
-        public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
+        public const string EnableTelemetry = "EnableTelemetry";
+        public const string AsyncOperationTimeoutSeconds = "AsyncOperationTimeoutSeconds";
         public const string ClusterObserverETWEventName = "ClusterObserverDataEvent";
+        public const string EventSourceProviderName = "ClusterObserverETWProvider";
 
         // The name of the package that contains this Observer's configuration.
         public const string ObserverConfigurationPackageName = "Config";
@@ -28,8 +27,6 @@ namespace FabricClusterObserver.Utilities
 
         // Default to 1 minute if frequency is not supplied in config.
         public const int ObserverRunLoopSleepTimeSeconds = 60;
-
-        public const string AllObserversExecutedMessage = "All Observers have been executed.";
 
         // Setting name for Grace period of shutdown in seconds.
         public const string ObserverShutdownGracePeriodInSeconds = "ObserverShutdownGracePeriodInSeconds";
@@ -45,8 +42,6 @@ namespace FabricClusterObserver.Utilities
 
         // Settings.
         public const string ClusterObserverConfigurationSectionName = "ClusterObserverConfiguration";
-        public const string EmitOkHealthStateSetting = "EmitOkHealthStateTelemetry";
-        public const string EmitHealthStatisticsSetting = "EmitHealthStatistics";
         public const string MaxTimeNodeStatusNotOkSetting = "MaxTimeNodeStatusNotOk";
 
         // Telemetry Settings Parameters.
@@ -60,6 +55,5 @@ namespace FabricClusterObserver.Utilities
         public const string ClusterTypePaasV1 = "PaasV1";
         public const string ClusterTypeStandalone = "Standalone";
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
-        public const string EventSourceProviderName = "EventSourceProviderName";
     }
 }

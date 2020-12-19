@@ -230,33 +230,33 @@ namespace FabricObserver.Observers
                     FirewallRulesWarningThreshold,
                     timeToLiveWarning);
 
-                // Ports
+                // Ports - Active TCP
                 ProcessResourceDataReportHealth(
                     this.activePortsData,
                     ActivePortsErrorThreshold,
                     ActivePortsWarningThreshold,
                     timeToLiveWarning);
 
+                // Ports - Active Ephemeral TCP
                 ProcessResourceDataReportHealth(
                     this.ephemeralPortsData,
                     EphemeralPortsErrorThreshold,
                     EphemeralPortsWarningThreshold,
                     timeToLiveWarning);
 
-                return Task.FromResult(1);
+                return Task.CompletedTask;
+            }
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+            {
+                return Task.CompletedTask;
             }
             catch (Exception e)
             {
-                if (e is OperationCanceledException)
-                {
-                    return Task.FromResult(1);
-                }
-
                 HealthReporter.ReportFabricObserverServiceHealth(
                     FabricServiceContext.ServiceName.OriginalString,
                     ObserverName,
                     HealthState.Warning,
-                    e.ToString());
+                    $"Unhandled exception re-thrown:{Environment.NewLine}{e}");
 
                 throw;
             }

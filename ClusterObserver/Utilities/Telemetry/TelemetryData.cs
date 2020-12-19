@@ -9,7 +9,7 @@ using System.Fabric;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace FabricClusterObserver.Utilities.Telemetry
+namespace ClusterObserver.Utilities.Telemetry
 {
     public class TelemetryData
     {

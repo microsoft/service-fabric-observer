@@ -2,15 +2,8 @@
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="FabricObserverLogs">
     <!-- For Windows deployments, add the drive letter to ObserverLogBaseFolderPath Value. Do not do this
-         for Linux deployments. These folder paths must be the same as those specified in FabricObserver's log paths in its Settings.xml file.-->
+         for Linux deployments. This folder path must be the same as the one specified in FabricObserver's Settings.xml file.-->
     <Parameter Name="ObserverLogBaseFolderPath" Value="C:\observer_logs" />
-    <Parameter Name="ObserverManagerLogFileName" Value="ObserverManager\ObserverManager.log" />
-    <Parameter Name="AppObserverLogFileName" Value="AppObserver\AppObserver.log" />
-    <Parameter Name="DiskObserverLogFileName" Value="DiskObserver\DiskObserver.log" />
-    <Parameter Name="FabricSystemObserverLogFileName" Value="FabricSystemObserver\FabricSystemObserver.log" />
-    <Parameter Name="NetworkObserverLogFileName" Value="NetworkObserver\NetworkObserver.log" />
-    <Parameter Name="NodeObserverLogFileName" Value="NodeObserver\NodeObserver.log" />
-    <Parameter Name="OSObserverLogFileName" Value="OSObserver\OSObserver.log" />
   </Section>
   <Section Name="SecurityInfo">
     <Parameter Name="Thumbprint" Value="[Your cert thumbprint]" />

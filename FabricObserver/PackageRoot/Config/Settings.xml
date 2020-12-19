@@ -42,9 +42,8 @@
     <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
-    <!-- Optional: EventSource Tracing. -->
+    <!-- Optional: EventSource Tracing. This will create an EventSource static object on Logger instances that will emit FabricObserverDataEvent data from ETW provider named FabricObserverETWProvider. -->
     <Parameter Name="EnableEventSourceProvider" Value="true" />
-    <Parameter Name="EventSourceProviderName" Value="FabricObserverETWProvider" />
     <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII. 
          Please enable so we can learn how FO is being used. Nothing more.
          True by default as this is how the authors of FO can see how it's doing
@@ -66,7 +65,7 @@
        overridable parameter in that file, not here, as the parameter DefaultValues in ApplicationManifest.xml will be used, by default. 
        This design is to enable unversioned application-parameter-only updates. This means you will be able to change
        any of the MustOverride parameters below at runtime by doing an ApplicationUpdate with ApplicationParameters flag. 
-       See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version-->
+       See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version -->
   <Section Name="AppObserverConfiguration">
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="" MustOverride="true" />

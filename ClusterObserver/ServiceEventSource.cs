@@ -3,7 +3,7 @@ using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
 
-namespace FabricClusterObserver
+namespace ClusterObserver
 {
     [EventSource(Name = "Service-Fabric-ClusterObserver", Guid = "d0103e75-a77d-5fcf-004b-9ee8b258f51f")]
     internal sealed class ServiceEventSource : EventSource

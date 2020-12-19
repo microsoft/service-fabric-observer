@@ -293,7 +293,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                if (!(e is OperationCanceledException))
+                if (!(e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException))
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
                             FabricServiceContext.ServiceName.OriginalString,

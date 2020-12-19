@@ -215,12 +215,12 @@ namespace FabricObserver.Observers
             {
                 Observer = ObserverName,
                 NodeName = NodeName,
-                HealthMessage = $"Number of ports in use by Fabric services: {TotalActivePortCountAllSystemServices}\n" +
-                                $"Number of ephemeral ports in use by Fabric services: {TotalActiveEphemeralPortCountAllSystemServices}\n" +
+                HealthMessage = $"Number of ports in use by Fabric services: {TotalActivePortCountAllSystemServices}{Environment.NewLine}" +
+                                $"Number of ephemeral ports in use by Fabric services: {TotalActiveEphemeralPortCountAllSystemServices}{Environment.NewLine}" +
+                                $"Fabric memory use MB: {this.allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" +
                                 (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                    $"Fabric mem use: {this.allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}\n" +
-                                    $"FabricGateway mem use: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}\n" +
-                                    $"FabricHost mem use: {this.allMemData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue}\n" : string.Empty),
+                                    $"FabricGateway memory use MB: {this.allMemData.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" +
+                                    $"FabricHost memory use MB: {this.allMemData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" : string.Empty),
 
                 State = HealthState.Ok,
                 HealthReportTimeToLive = timeToLiveWarning,

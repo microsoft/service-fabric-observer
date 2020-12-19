@@ -10,6 +10,7 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -146,7 +147,10 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public static int ObserverExecutionLoopSleepSeconds { get; private set; } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
+        public static int ObserverExecutionLoopSleepSeconds 
+        { 
+            get; private set; 
+        } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
         public static StatelessServiceContext FabricServiceContext
         {
@@ -163,7 +167,8 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public static bool FabricObserverInternalTelemetryEnabled { get; set; } = true;
+        public static bool FabricObserverInternalTelemetryEnabled 
+        { get; set; } = true;
 
         public static bool ObserverWebAppDeployed
         {
@@ -175,21 +180,6 @@ namespace FabricObserver.Observers
             get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
 
             set => etwEnabled = value;
-        }
-
-        public static string EtwProviderName
-        {
-            get
-            {
-                if (!EtwEnabled)
-                {
-                    return null;
-                }
-
-                string key = GetConfigSettingValue(ObserverConstants.EventSourceProviderName);
-
-                return !string.IsNullOrEmpty(key) ? key : null;
-            }
         }
 
         public string ApplicationName
@@ -236,7 +226,7 @@ namespace FabricObserver.Observers
                 // Observers run sequentially. See RunObservers impl.
                 while (true)
                 {
-                    if (this.shutdownSignaled || this.token.IsCancellationRequested)
+                    if (!isConfigurationUpdateInProgess && (this.shutdownSignaled || this.token.IsCancellationRequested))
                     {
                         _ = this.globalShutdownEventHandle.Set();
                         this.Logger.LogWarning("Shutdown signaled. Stopping.");
@@ -298,12 +288,21 @@ namespace FabricObserver.Observers
             }
         }
 
-        public async Task StopObserversAsync(bool shutdownSignaled = true)
-        {   
+        public async Task StopObserversAsync(bool shutdownSignaled = true, bool isConfigurationUpdateLinux = false)
+        {
+            string configUpdateLinux = string.Empty;
+
+            if (isConfigurationUpdateLinux)
+            {
+                configUpdateLinux = 
+                    $" Note: This is due to a configuration update which requires an FO process restart on Linux (with UD walk (one by one) and safety checks).{Environment.NewLine}" +
+                    $"The reason FO needs to be restarted as part of a parameter-only upgrade is due to the Linux Capabilities set FO employs not persisting across application upgrades (by design) " +
+                    $"even when the upgrade is just a configuration parameter update. In order to re-create the Capabilities set, FO's setup script must be re-run by SF. Restarting FO is therefore required here.";
+            }
+
             foreach (var obs in this.observers)
             {
-                // If the node goes down, for example, or the app is gracefully closed,
-                // then clear all existing error or health reports suppled by FO.
+                // If the node goes down, for example, or the app is gracefully closed, then clear all existing error or health reports suppled by FO.
                 // NetworkObserver takes care of this internally, so ignore here.
                 if (obs.HasActiveFabricErrorOrWarning &&
                     obs.ObserverName != ObserverConstants.NetworkObserverName)
@@ -311,7 +310,7 @@ namespace FabricObserver.Observers
                     Utilities.HealthReport healthReport = new Utilities.HealthReport
                     {
                         Code = FOErrorWarningCodes.Ok,
-                        HealthMessage = $"Clearing existing Health Error/Warning as FO is stopping or updating.",
+                        HealthMessage = $"Clearing existing Health Error/Warning as FO is stopping or updating.{configUpdateLinux}.",
                         State = HealthState.Ok,
                         ReportType = HealthReportType.Application,
                         NodeName = obs.NodeName,
@@ -524,27 +523,58 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Event handler for application parameter updates (Application Upgrades).
+        /// Event handler for application parameter updates (Un-versioned application parameter-only Application Upgrades).
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e">Contains the information necessary for setting new config params from updated package.</param>
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            this.isConfigurationUpdateInProgess = true;
-            await StopObserversAsync(false).ConfigureAwait(false);
-
-            await Task.Delay(
-                TimeSpan.FromSeconds(1),
-                this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token : this.token).ConfigureAwait(false);
+            this.Logger.LogInfo("Application Parameter upgrade started...");
 
             try
             {
-                foreach (var observer in this.serviceCollection)
+                // For Linux, we need to restart the FO process due to the Linux Capabilities impl that enables us to run docker and netstat commands as elevated user (FO Linux should always be run as standard user on Linux).
+                // So, the netstats.sh FO setup script needs to run again so that the privileged operations can succeed when you enable/disable observers that need them, which is most observers (not all). These files are used by a shared utility.
+                // Exiting here ensures that both the new config settings you provided will be applied when a new FO process is running after the FO setup script runs that puts
+                // the Linux capabilities set in place for the elevated_netstat and elevated_docker_stats binaries. The reason this must happen is that SF touches the files during this upgrade (this may be an SF bug, but it is not preventing
+                // the shipping of FO 3.1.1.) and this unsets the Capabilities on the binaries. It looks like SF changes attributes on the files (permissions).
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    observer.ConfigurationSettings.UpdateConfigSettings(e.NewPackage.Settings);
+                    // Graceful stop.
+                    await this.StopObserversAsync(true, true).ConfigureAwait(false);
+
+                    // Bye.
+                    Environment.Exit(42);
                 }
 
-                this.observers = this.serviceCollection.Where(o => o.IsEnabled).ToList();
+                this.isConfigurationUpdateInProgess = true;
+                await StopObserversAsync(false).ConfigureAwait(true);
+                this.observers.Clear();
+
+                foreach (var observer in this.serviceCollection)
+                {
+                    observer.ConfigurationSettings = new ConfigSettings(e.NewPackage.Settings, $"{observer.ObserverName}Configuration");
+
+                    if (observer.ConfigurationSettings.IsEnabled)
+                    {
+                        // The ObserverLogger instance (member of each observer type) checks its EnableVerboseLogging setting before writing Info events (it won't write if this setting is false, thus non-verbose).
+                        // So, we set it here in case the parameter update includes a change to this config setting. 
+                        // This is the only update-able setting that requires we do this as part of the config update event handling.
+                        string oldVerboseLoggingSetting = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
+                        string newVerboseLoggingSetting = e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
+                        
+                        if (newVerboseLoggingSetting != oldVerboseLoggingSetting)
+                        {
+                            observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
+                        }
+
+                        this.observers.Add(observer);
+                    }
+                }
+
+                this.cts = new CancellationTokenSource();
+                this.linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, this.token);
+                this.Logger.LogInfo($"Application Parameter upgrade in progress: new observer list count -> {this.observers.Count}");
             }
             catch (Exception err)
             {
@@ -553,16 +583,18 @@ namespace FabricObserver.Observers
                     AppName = new Uri(FabricServiceContext.CodePackageActivationContext.ApplicationName),
                     Code = FOErrorWarningCodes.Ok,
                     ReportType = HealthReportType.Application,
-                    HealthMessage = $"Error updating observer with new configuration:{Environment.NewLine}{err}",
+                    HealthMessage = $"Error updating FabricObserver with new configuration settings:{Environment.NewLine}{err}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
                     Property = $"Configuration_Upate_Error",
+                    EmitLogEvent = true,
                 };
 
                 this.HealthReporter.ReportHealthToServiceFabric(healthReport);
             }
 
             this.isConfigurationUpdateInProgess = false;
+            this.Logger.LogWarning("Application Parameter upgrade completed...");
         }
 
         /// <summary>
@@ -703,16 +735,7 @@ namespace FabricObserver.Observers
         private void SignalAbortToRunningObserver()
         {
             this.Logger.LogInfo("Signalling task cancellation to currently running Observer.");
-
-            if (this.linkedSFRuntimeObserverTokenSource != null)
-            {
-                this.linkedSFRuntimeObserverTokenSource.Cancel();
-            }
-            else
-            {
-                this.cts?.Cancel();
-            }
-
+            this.cts?.Cancel();
             this.Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
         }
 
@@ -725,8 +748,15 @@ namespace FabricObserver.Observers
             var exceptionBuilder = new StringBuilder();
             bool allExecuted = true;
 
-            foreach (var observer in this.observers)
+            for (int i = 0; i < this.observers.Count; i++)
             {
+                if (isConfigurationUpdateInProgess)
+                {
+                    return true;
+                }
+
+                var observer = this.observers[i];
+
                 try
                 {
                     // Shutdown/cancellation signaled, so stop.
