@@ -246,7 +246,7 @@ namespace FabricObserver.Observers
 
                 return Task.CompletedTask;
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+            catch (AggregateException e) when (e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException || e.InnerException is TimeoutException)
             {
                 return Task.CompletedTask;
             }
@@ -486,9 +486,9 @@ namespace FabricObserver.Observers
                     await Task.Delay(250).ConfigureAwait(false);
                 }
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            catch (AggregateException e) when (e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException || e.InnerException is TimeoutException)
             {
-
+                return;
             }
             catch (Exception e)
             {
