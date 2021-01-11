@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
-using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -23,9 +22,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     // LogAnalyticsTelemetry class is partially based on public (non-license-protected) sample https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
+        private const int MaxRetries = 5;
         private readonly FabricClient fabricClient;
         private readonly CancellationToken token;
         private readonly Logger logger;
+        private int retries;
 
         public string WorkspaceId
         {
@@ -233,7 +234,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// </summary>
         /// <param name="payload">Json string containing telemetry data.</param>
         /// <returns>A completed task or task containing exception info.</returns>
-        private Task SendTelemetryAsync(string payload, CancellationToken token)
+        private async Task SendTelemetryAsync(string payload, CancellationToken token)
         {
             var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
@@ -247,35 +248,57 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             request.Headers["Authorization"] = signature;
             byte[] content = Encoding.UTF8.GetBytes(payload);
 
-            using (var requestStreamAsync = request.GetRequestStream())
+            if (token.IsCancellationRequested)
             {
-                requestStreamAsync.Write(content, 0, content.Length);
+                return;
+            }
 
-                using (var responseAsync = (HttpWebResponse)request.GetResponse())
+            try
+            {
+                using (var requestStreamAsync = await request.GetRequestStreamAsync())
                 {
+                    await requestStreamAsync.WriteAsync(content, 0, content.Length);
 
-                    token.ThrowIfCancellationRequested();
-
-                    if (responseAsync.StatusCode == HttpStatusCode.OK ||
-                        responseAsync.StatusCode == HttpStatusCode.Accepted)
+                    using (var responseAsync = await request.GetResponseAsync() as HttpWebResponse)
                     {
-                        return Task.CompletedTask;
-                    }
+                        if (token.IsCancellationRequested)
+                        {
+                            return;
+                        }
 
-                    var responseStream = responseAsync.GetResponseStream();
+                        if (responseAsync.StatusCode == HttpStatusCode.OK ||
+                            responseAsync.StatusCode == HttpStatusCode.Accepted)
+                        {
+                            this.retries = 0;
+                            return;
+                        }
 
-                    if (responseStream == null)
-                    {
-                        return Task.CompletedTask;
-                    }
-
-                    using (var streamReader = new StreamReader(responseStream))
-                    {
-                        string err = $"Exception sending LogAnalytics Telemetry:{Environment.NewLine}{streamReader.ReadToEnd()}";
-                        this.logger.LogWarning(err);
-                        return Task.FromException(new Exception(err));
+                        this.logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                // An Exception during telemetry data submission should never take down FO process. Log it.
+                this.logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
+            }
+
+            if (this.retries < MaxRetries)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                this.retries++;
+                await Task.Delay(1000).ConfigureAwait(false);
+                await SendTelemetryAsync(payload, token).ConfigureAwait(false);
+            }
+            else
+            {
+                // Exhausted retries. Reset counter.
+                this.logger.LogWarning($"Exhausted request retries in LogAnalyticsTelemetry.SendTelemetryAsync: {MaxRetries}. See logs for error details.");
+                this.retries = 0;
             }
         }
 

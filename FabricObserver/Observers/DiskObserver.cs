@@ -291,16 +291,17 @@ namespace FabricObserver.Observers
 
                 return Task.CompletedTask;
             }
+            catch (AggregateException e) when (e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException || e.InnerException is TimeoutException)
+            {
+                return Task.CompletedTask;
+            }
             catch (Exception e)
             {
-                if (!(e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException))
-                {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                            FabricServiceContext.ServiceName.OriginalString,
-                            ObserverName,
-                            HealthState.Error,
-                            $"Unhandled exception processing Disk information:{Environment.NewLine}{e}");
-                }
+                HealthReporter.ReportFabricObserverServiceHealth(
+                        FabricServiceContext.ServiceName.OriginalString,
+                        ObserverName,
+                        HealthState.Warning,
+                        $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
                 throw;
             }
