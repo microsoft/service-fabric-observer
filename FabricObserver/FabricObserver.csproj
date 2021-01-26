@@ -5,7 +5,6 @@
     <RootNamespace>FabricObserver</RootNamespace>
     <AssemblyName>FabricObserver</AssemblyName>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <PackageLicenseFile>License.txt</PackageLicenseFile>
     <PlatformTarget>x64</PlatformTarget>
     <!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
          For Windows, use win-x64. For Linux, use linux-x64.
@@ -13,7 +12,7 @@
     <!-- For multi-target publish (say, from Azure Pipeline build or for when you build FO using supplied scripts), you can use multi-target RIDs: 
          linux-x64;win-x64. -->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers> 
-    <FileVersion>3.0.0.9</FileVersion>
+    <FileVersion>3.1.2.0</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>FabricObserver</Product>
     <ProductName>Service Fabric Observer</ProductName>
@@ -97,9 +96,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="netstat_cap.sh">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="License.txt" Pack="true" PackagePath="">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
