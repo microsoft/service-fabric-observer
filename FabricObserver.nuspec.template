@@ -7,7 +7,8 @@
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <title>FabricObserver 3.1.2</title>
-    <language>en-us</language>
+    <icon>icon.png</icon>
+    <language>en-US</language>
     <description>This package contains the Service Fabric FabricObserver Application (Config files and Microsoft-signed binaries).</description>
     <summary>This package contains the Service Fabric FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Service Fabric Windows and Linux clusters. This package is required to build observer plugins.</summary>
     <contentFiles>
@@ -23,5 +24,6 @@
   <files>
     <file src="**" target="contentFiles\any\any" />
     <file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
+    <file src="%ROOT_PATH%\icon.png" target="" />
   </files>
 </package>
