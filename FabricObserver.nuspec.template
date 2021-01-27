@@ -3,7 +3,7 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>3.1.2</version>
-    <authors>ctorre</authors>
+    <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <title>Service Fabric FabricObserver Application</title>
