@@ -4,16 +4,21 @@
     <id>%PACKAGE_ID%</id>
     <version>2.1.1</version>
     <authors>ctorre</authors>
-    <icon>icon.png</icon>
+    <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>This package contains the Service Fabric ClusterObserver Application (Config files and Microsoft-signed binaries).</description>
-    <summary>This package contains the Service Fabric ClusterObserver Application, a configurable SF service for cluster health monitoring and telemetry.</summary>
+    <title>Service Fabric ClusterObserver Application</title>
+    <icon>icon.png</icon>
+    <language>en-US</language>
+    <description>This package contains the Service Fabric ClusterObserver Application, a configurable Service Fabric stateless service that monitors aggregated cluster health and emits SF entity-specific telemetry. It is designed to be run in Service Fabric Windows and Linux clusters.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
     <dependencies>
       <group targetFramework=".NETStandard2.1" />
     </dependencies>
+    <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
+    <tags>azure servicefabric clusterobserver utility watchdog-service observability</tags>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
   </metadata>
   <files>
     <file src="**" target="contentFiles\any\any" />

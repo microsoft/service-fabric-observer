@@ -3,14 +3,13 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>3.1.2</version>
-    <authors>Microsoft</authors>
+    <authors>ctorre</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <title>FabricObserver 3.1.2</title>
+    <title>Service Fabric FabricObserver Application</title>
     <icon>icon.png</icon>
     <language>en-US</language>
-    <description>This package contains the Service Fabric FabricObserver Application (Config files and Microsoft-signed binaries).</description>
-    <summary>This package contains the Service Fabric FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Service Fabric Windows and Linux clusters. This package is required to build observer plugins.</summary>
+    <description>This package contains the Service Fabric FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Service Fabric Windows and Linux clusters. This package contains the entire application and is required to build .NET Standard 2.0 observer plugins.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
