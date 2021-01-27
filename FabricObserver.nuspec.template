@@ -18,7 +18,7 @@
       <group targetFramework=".NETStandard2.0" />
     </dependencies>
     <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
-    <tags>azure servicefabric fabricobserver utility watchdog observability</tags>
+    <tags>azure servicefabric fabricobserver utility watchdog-service observability</tags>
     <copyright>© Microsoft Corporation. All rights reserved.</copyright>
   </metadata>
   <files>
