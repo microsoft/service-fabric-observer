@@ -4,6 +4,7 @@
     <id>%PACKAGE_ID%</id>
     <version>2.1.1</version>
     <authors>ctorre</authors>
+    <icon>icon.png</icon>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>This package contains the Service Fabric ClusterObserver Application (Config files and Microsoft-signed binaries).</description>
     <summary>This package contains the Service Fabric ClusterObserver Application, a configurable SF service for cluster health monitoring and telemetry.</summary>
@@ -17,5 +18,6 @@
   <files>
     <file src="**" target="contentFiles\any\any" />
     <file src="ClusterObserverPkg\Code\ClusterObserver.dll" target="lib\netstandard2.1"/>
+    <file src="%ROOT_PATH%\icon.png" target="" />
   </files>
 </package>
