@@ -21,11 +21,11 @@ function Build-Nuget {
 try {
     Push-Location $scriptPath
 
-    Build-Nuget "FabricObserverWeb.Linux.SelfContained" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\self-contained\FabricObserverWebApiType"
-    Build-Nuget "FabricObserverWeb.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\framework-dependent\FabricObserverWebApiType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserverWeb.Linux.SelfContained" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\self-contained\FabricObserverWebApiType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserverWeb.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\framework-dependent\FabricObserverWebApiType"
 
-    Build-Nuget "FabricObserverWeb.Windows.SelfContained" "$scriptPath\bin\release\FabricObserverWeb\win-x64\self-contained\FabricObserverWebApiType"
-    Build-Nuget "FabricObserverWeb.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricObserverWeb\win-x64\framework-dependent\FabricObserverWebApiType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserverWeb.Windows.SelfContained" "$scriptPath\bin\release\FabricObserverWeb\win-x64\self-contained\FabricObserverWebApiType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserverWeb.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricObserverWeb\win-x64\framework-dependent\FabricObserverWebApiType"
 }
 finally {
     Pop-Location

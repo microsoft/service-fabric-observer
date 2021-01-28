@@ -3,8 +3,11 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>2.0.0</version>
-    <authors>ctorre</authors>
+    <authors>Microsoft</authors>
+    <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <title>FabricObserver Web Api App</title>
+    <language>en-us</language>
     <description>This package contains the Service Fabric FabricObserver Web Api Application (Config files and Microsoft-signed binaries).</description>
     <summary>This package contains the Service Fabric FabricObserver Web Api Application, a configurable SF log reader web service for querying FabricObserver logs.</summary>
     <contentFiles>
@@ -13,6 +16,8 @@
     <dependencies>
       <group targetFramework=".NETStandard2.1" />
     </dependencies>
+    <projectUrl>https://github.com/microsoft/service-fabric-observer/tree/master/FabricObserverWeb</projectUrl>
+    <tags>azure servicefabric fabricobserver fabricobserverweb utility aspnetcore observability</tags>
   </metadata>
   <files>
     <file src="**" target="contentFiles\any\any" />

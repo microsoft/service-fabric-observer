@@ -11,7 +11,7 @@ function Build-Nuget {
 
     [string] $nugetSpecPath = "$scriptPath\bin\release\ClusterObserver\$($packageId).nuspec"
 
-    [System.IO.File]::WriteAllText($nugetSpecPath,  $nugetSpecTemplate.Replace("%PACKAGE_ID%", $packageId))
+     [System.IO.File]::WriteAllText($nugetSpecPath,  $nugetSpecTemplate.Replace("%PACKAGE_ID%", $packageId).Replace("%ROOT_PATH%", $scriptPath))
 
     .\nuget.exe pack $nugetSpecPath -basepath $basePath -OutputDirectory bin\release\ClusterObserver\Nugets -properties NoWarn=NU5100
 }
@@ -21,11 +21,11 @@ function Build-Nuget {
 try {
     Push-Location $scriptPath
 
-    Build-Nuget "ClusterObserver.Linux.SelfContained" "$scriptPath\bin\release\ClusterObserver\linux-x64\self-contained\ClusterObserverType"
-    Build-Nuget "ClusterObserver.Linux.FrameworkDependent" "$scriptPath\bin\release\ClusterObserver\linux-x64\framework-dependent\ClusterObserverType"
+    Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Linux.SelfContained" "$scriptPath\bin\release\ClusterObserver\linux-x64\self-contained\ClusterObserverType"
+    Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Linux.FrameworkDependent" "$scriptPath\bin\release\ClusterObserver\linux-x64\framework-dependent\ClusterObserverType"
 
-    Build-Nuget "ClusterObserver.Windows.SelfContained" "$scriptPath\bin\release\ClusterObserver\win-x64\self-contained\ClusterObserverType"
-    Build-Nuget "ClusterObserver.Windows.FrameworkDependent" "$scriptPath\bin\release\ClusterObserver\win-x64\framework-dependent\ClusterObserverType"
+    Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained" "$scriptPath\bin\release\ClusterObserver\win-x64\self-contained\ClusterObserverType"
+    Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Windows.FrameworkDependent" "$scriptPath\bin\release\ClusterObserver\win-x64\framework-dependent\ClusterObserverType"
 }
 finally {
     Pop-Location
