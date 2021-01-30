@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.2" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.3" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
@@ -17,8 +17,8 @@
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <!-- <Parameter Name="SampleNewObserverEnabled" DefaultValue="true" /> -->
     <!-- Telemetry -->
+    <!-- <Parameter Name="SampleNewObserverEnabled" DefaultValue="true" /> -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="true" />
@@ -27,8 +27,8 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- <Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
     <!-- Verbose Logging -->
+    <!-- <Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
@@ -37,8 +37,8 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- <Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
+    <!-- <Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
@@ -52,13 +52,13 @@
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!-- <Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <!-- AppObserver -->
+    <!-- <Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- Certificate Observer Overrides -->
+    <!-- CertificateObserver-->
     <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -70,36 +70,38 @@
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthWarningThreshold" DefaultValue="15" />
-    <!-- FabricSystemObserver Warning/Error Thresholds -->
-    <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="true" />
+    <!-- FabricSystemObserver -->
+    <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="5" />
+    <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="85" />
+    <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverMemoryErrorLimitMb" DefaultValue="" />
     <Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="4096" />
     <Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="1000" />
+    <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="800" />
+    <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="" />
     <!-- Whether to monitor Windows Event Log. -->
     <Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
-    <!-- NodeObserver Warning/Error Thresholds -->
+    <!-- NodeObserver -->
     <Parameter Name="NodeObserverUseCircularBuffer" DefaultValue="true" />
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="NodeObserverResourceUsageDataCapacity" DefaultValue="5" />
+    <!-- NodeObserver Warning/Error Thresholds -->
     <Parameter Name="NodeObserverCpuErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="80" />
+    <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="90" />
     <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="80" />
+    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="85" />
     <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="55000" />
+    <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
     <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
     <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="5000" />
+    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="8000" />
     <!-- OSObserver Windows AutoUpdate Settings Check -->
     <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
     <!-- Observers with JSON config - File names.
@@ -111,7 +113,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.2" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.3" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
