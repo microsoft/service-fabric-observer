@@ -9,5 +9,12 @@
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40
+  },
+  {
+    "targetApp": "fabric:/MyApp42",
+    "cpuWarningLimitPercent": 60,
+    "memoryWarningLimitPercent": 50,
+    "networkWarningActivePorts": 600,
+    "networkWarningEphemeralPorts": 300
   }
 ]

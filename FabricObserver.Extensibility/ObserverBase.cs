@@ -622,7 +622,7 @@ namespace FabricObserver.Observers
         {
             if (data == null)
             {
-                throw new ArgumentException("Supply all required parameters with non-null value.");
+                return;
             }
 
             if (healthReportType != HealthReportType.Application && healthReportType != HealthReportType.Node)

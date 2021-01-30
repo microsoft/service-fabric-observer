@@ -2,7 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.2</version>
+    <version>3.1.3</version>
+    <releaseNotes>Updated 4 observers (AppObserver, DiskObserver, FabricSystemObserver, NodeObserver) to only monitor machine resources that have corresponding error or warning thresholds in related configuration. The behavior prior to this version was that each observer which monitors machine resource use would do so for all metrics they support, regardless of the specific error/warning thresholds set in configuration. This adds more efficiency to the system.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
