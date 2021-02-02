@@ -75,16 +75,16 @@ When you use this property, you can also use either serviceExcludeList or servic
 
 ***Solution:*** DiskObserver to the rescue. 
 
-DiskObserver's Threshold settings are housed in the usual place: PackageRoot/Config/Settings.xml.
+DiskObserver's Threshold setting values are required to be overriden and are set in FO's ApplicationManifest.xml file.
 
-Add this to DiskObserver's configuration section and it will warn you when disk space consumption reaches 80%:
+Add this to DiskObserver's configuration section in FO's ApplicationManifest.xml file and it will warn you when disk space consumption reaches 80%:
 
 ```XML
-  <Section Name="DiskObserverConfiguration">
-    <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="80" />
-  </Section>
+ <!-- Disk Observer Warning/Error Thresholds -->
+    <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="80" />
+    <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
+    <Parameter Name="AverageQueueLengthErrorThreshold" DefaultValue="" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" DefaultValue="15" />
 ```  
 
 Example Output in SFX: 
@@ -179,16 +179,22 @@ reaches certain points and then emit a Warning.
 
 ***Solution:*** Enter NodeObserver.  
 
-NodeObserver doesn't speak JSON (can you believe it!!??....). So, you simply set the desired warning
-thresholds in PackageRoot/Config/Settings.xml:  
+NodeObserver doesn't speak JSON (can you believe it!!??....). So, you simply set the desired warning thresholds in FO's ApplicationManifest.xml file:  
 
 ```XML
-  <Section Name="NodeObserverConfiguration">
-    <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="CpuWarningLimitPercent" Value="90" />
-    <Parameter Name="MemoryWarningLimitPercent" Value="90" />
-  </Section>
+    <!-- NodeObserver Warning/Error Thresholds -->
+    <Parameter Name="NodeObserverCpuErrorLimitPercent" DefaultValue="" />
+    <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="90" />
+    <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
+    <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
+    <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
+    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="85" />
+    <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
+    <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
+    <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
+    <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
+    <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
+    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="8000" />
 ```  
 
 Example Output in SFX: 
@@ -268,22 +274,44 @@ All you have to do is provide either your instrumentation key in two files: Sett
 supply your Azure LogAnalytics WorkspaceId and SharedKey in Settings.xml. You can 
 configure CO to emit Warning state signals in addition to the default Error signalling. It's up to you.  
 
-Telemetry config sample:
+ClusterObserver's ObserverManager config (Settings.xml). These are not overridable:
 
 ```XML
-    <!-- Optional: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
-         but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="True" />
+  <Section Name="ObserverManagerConfiguration">
+    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observers run loop. 
+         0 means run continuously with no pausing. We recommend at least 60 seconds for ClusterObserver. -->
+    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="60" />
+    <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
+         then the offending observer will be marked as broken and will not run again. 
+         Below setting represents 30 minutes. -->
+    <Parameter Name="ObserverExecutionTimeout" Value="1800" />
+    <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large clusters. -->
+    <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
+    <!-- Required: Location on disk to store observer data, including ObserverManager. 
+         ClusterObserver will write to its own directory on this path.
+         **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
+    <Parameter Name="ObserverLogPath" Value="clusterobserver_logs" />
+    <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+    <Parameter Name="EnableVerboseLogging" Value="False" />
+    <Parameter Name="EnableEventSourceProvider" Value="True" />
+    <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. This can be overriden by the setting 
+         in the ClusterObserverConfiguration section. The idea there is that you can do an application parameter update and turn this feature on and off. -->
+    <Parameter Name="EnableTelemetry" Value="True" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
-    <Parameter Name="LogAnalyticsWorkspaceId" Value="[LogAnalytics Workspace Id]" />
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
-    <Parameter Name="LogAnalyticsSharedKey" Value="[Log Analytics Shared Key]" />
+    <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
-    <Parameter Name="LogAnalyticsLogType" Value="Application" />
+    <Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
+    <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
+    <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="3" />
+  </Section>
 ```
 
 By design, CO will send an Ok health state report when a cluster goes from Warning or Error state to Ok.
@@ -291,24 +319,14 @@ By design, CO will send an Ok health state report when a cluster goes from Warni
 Example Configuration:  
 
 ```XML
-  <Section Name="ClusterObserverConfiguration">
-    <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
-    <Parameter Name="Enabled" Value="True" />
-    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
-    <Parameter Name="EnableVerboseLogging" Value="False" />
-    <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-    <!-- Emit health details for both Warning and Error for aggregated cluster health? Error details will
-    always be transmitted.-->
-    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="True" />
-    <!-- Emit Ok aggregated health state telemetry when cluster health goes from Warning or Error to Ok. -->
-    <Parameter Name="EmitOkHealthStateTelemetry" Value="True" />
-    <!-- Maximum amount of time a node can be in disabling/disabled/down state before
-         emitting a Warning signal.-->
-    <Parameter Name="MaxTimeNodeStatusNotOk" Value="02:00:00"/>
-  </Section>
+    <!-- ClusterObserver settings. -->
+    <Parameter Name="Enabled" DefaultValue="true" />
+    <Parameter Name="EnableTelemetry" DefaultValue="true" />
+    <Parameter Name="EnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
+    <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
+    <Parameter Name="RunInterval" DefaultValue="00:02:00" />
+    <Parameter Name="AsyncOperationTimeoutSeconds" DefaultValue="120" />
 ``` 
 You deploy CO into your cluster just as you would any other Service Fabric service.
 ### Application Parameter Updates
@@ -332,8 +350,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.1 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.3 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
-Note: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to 
-get the Capabilities in place. For Windows, FO processes will NOT be restarted.
+Note: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to get the Capabilities in place. For Windows, FO processes will NOT be restarted.
