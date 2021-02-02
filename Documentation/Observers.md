@@ -1,12 +1,14 @@
 # Observers
 
-Observers are low-impact, long-lived objects that perform specialied monitoring and reporting activities. Observers monitor and report, but they aren't designed to take action. Observers generally monitor appliations through their side effects on the node, like resource usage, but do not actually communicate with the applications. Observers report to SF Event Store (viewable through SFX) in warning and error states, and can use built-in AppInsights support to report there as well.
+Observers are low-impact, long-lived objects that perform specialied monitoring and reporting activities. Observers monitor and report, but they aren't designed to take action. Observers generally monitor appliations through their side effects on the node, like resource usage, but do not actually communicate with the applications. Observers report to SF Event Store (viewable through SFX) in warning and error states, and can use built-in AppInsights support to report there as well.  
 
-> AppInsights can be enabled in `Settings.xml` by providing your AppInsights key
+### Note: All of the observers that collect resource usage data also emit telemetry: EventSource ETW and either LogAnalytics or ApplicationInsights diagnostic service calls. 
+
+> AppInsights or LogAnalytics telemetry can be enabled in `Settings.xml` by providing your related authorization/identity information (keys).
 
 ### Logging
 
-Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide an ApplicationInsights key, then you will also see the output in your log analytics queries. Each observer has configuration settings in PackageRoot/Config/Settings.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds) in json files located in PackageRoot/Observers.Data folder.  
+Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide ApplicationInsights/LogAnalytics settings, then you will also see the output in your Azure analytics queries. Each observer has configuration settings in PackageRoot/Config/Settings.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds) in json files located in PackageRoot/Observers.Data folder.  
 
 ### Emiting Errors
 
@@ -143,15 +145,21 @@ Monitors the expiration date of the cluster certificate and any other certificat
 
 ### Configuration
 ```xml
-<Section Name="CertificateObserverConfiguration">
-  <Parameter Name="Enabled" Value="True" />
-  <!-- Default is 14 days for each -->
-  <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="14" />
-  <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="14" />
-  <!-- These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
-  <Parameter Name="AppCertThumbprintsToObserve" Value="[]"/>
-  <Parameter Name="AppCertCommonNamesToObserve" Value="[]"/>
-</Section>
+  <Section Name="CertificateObserverConfiguration">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
+         below, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter.
+         Just add a Parameter like below to any of the observers' config sections when you want this level of run control.
+         Format: Day(s).Hours:Minutes:Seconds e.g., 1.00:00:00 = 1 day. -->
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    <!-- Cluster and App Certs Warning Start (Days) -> DefaultValue is 42 -->
+    <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="" MustOverride="true" />
+    <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="" MustOverride="true" />
+    <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
+    <Parameter Name="AppCertThumbprintsToObserve" Value="" MustOverride="true" />
+    <Parameter
 ```
 
 ## DiskObserver
@@ -159,20 +167,19 @@ This observer monitors, records and analyzes storage disk information.
 Depending upon configuration settings, it signals disk health status
 warnings (or OK state) for all logical disks it detects.
 
-After DiskObserver logs basic disk information, it performs 5 seconds of
-measurements on all logical disks across space usage and IO. The data collected are averaged and then
-used in ReportAsync to determine if a Warning shot should be fired based on user-supplied threshold 
-settings housed in Settings.xml. Note that you do not need to specify a threshold parameter that you 
-don't plan you using... You can either omit the XML node or leave the value blank (or set to 0).
+After DiskObserver logs basic disk information, it performs measurements on all logical disks across space usage (Consumption) and IO (Average Queue Length). The data collected are used in ReportAsync to determine if a Warning shot should be fired based on user-supplied threshold settings housed in Settings.xml. Note that you do not need to specify a threshold parameter that you don't plan you using. You can either omit the XML node or leave the value blank (or set to 0).
 
 ```xml
   <Section Name="DiskObserverConfiguration">
-    <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="DiskSpacePercentWarningThreshold" Value="80" />
-    <Parameter Name="DiskSpacePercentErrorThreshold" Value="" />
-    <Parameter Name="AverageQueueLengthErrorThreshold" Value="" />
-    <Parameter Name="AverageQueueLengthWarningThreshold" Value="7" />
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="" MustOverride="true" />
+    <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" MustOverride="true" />
+    <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" MustOverride="true" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="" MustOverride="true" />
   </Section>
 ```
 
@@ -326,24 +333,27 @@ until the observer runs again.
 **Input**:
 ```xml
   <Section Name="NodeObserverConfiguration">
-    <Parameter Name="Enabled" Value="True" />
-    <Parameter Name="EnableTelemetry" Value="False" />
-    <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="60" />
-    <Parameter Name="CpuErrorLimitPercent" Value="" />
-    <Parameter Name="CpuWarningLimitPercent" Value="90" />
-    <Parameter Name="MemoryErrorLimitMb" Value="" />
-    <Parameter Name="MemoryWarningLimitMb" Value="" />
-    <Parameter Name="MemoryErrorLimitPercent" Value="" />
-    <Parameter Name="MemoryWarningLimitPercent" Value="90" />
-    <Parameter Name="NetworkErrorActivePorts" Value="" />
-    <Parameter Name="NetworkWarningActivePorts" Value="55000" />
-    <Parameter Name="NetworkErrorFirewallRules" Value="" />
-    <Parameter Name="NetworkWarningFirewallRules" Value="2500" />
-    <Parameter Name="NetworkErrorEphemeralPorts" Value="" />
-    <Parameter Name="NetworkWarningEphemeralPorts" Value="5000" />
-    <Parameter Name="UseCircularBuffer" Value="False" />
-    <Parameter Name="ResourceUsageDataCapacity" Value="" />
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
+    <!-- Required-If UseCircularBuffer = True -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
+    <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
+    <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
+    <Parameter Name="MemoryWarningLimitMb" Value ="" MustOverride="true" />
+    <Parameter Name="MemoryErrorLimitPercent" Value="" MustOverride="true" />
+    <Parameter Name="MemoryWarningLimitPercent" Value ="" MustOverride="true" />
+    <Parameter Name="NetworkErrorActivePorts" Value="" MustOverride="true" />
+    <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true" />
+    <Parameter Name="NetworkErrorFirewallRules" Value="" MustOverride="true" />
+    <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
+    <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
+    <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
   </Section>
 ```  
 | Setting | Description |
@@ -373,10 +383,9 @@ all run iterations of the observer) if csv output is enabled, structured telemet
 
 
 ## OSObserver
-This observer records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. It submits an infinite OK SF Health Report that is visible in SFX at the node level (Details tab) and by calling http://localhost:5000/api/ObserverManager. It's best to enable this observer in all deployments of FO.
-\
-\
-**Input**: This observer does not take input.\
+This observer records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. It creates an OK Health State SF Health Report that is visible in SFX at the node level (Details tab) and by calling http://localhost:5000/api/ObserverManager if you have deployed the FabricObserver Web Api App. It's best to enable this observer in all deployments of FO. OSObserver will check the VM's Windows Update AutoUpdate settings and Warn if Windows AutoUpdate Downloads setting is enabled. It is critical to not install Windows Updates in an unregulated (non-rolling) manner is this can take down multiple VMs concurrently, which can lead to seed node quorum loss in your cluster. Please do not enable Automatic Windows Update downloads. **It is highly recommended that you enable [Azure virtual machine scale set automatic OS image upgrades](https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade).**
+
+**Input**: This observer does not take input. 
 **Output**: Log text(Error/Warning), Service Fabric Health Report (Ok/Error), structured telemetry, HTML output for API service and SFX (node level Details tab). 
 
 The output of OSObserver is stored in its local log file when the FabricObserverWebApi service is deployed/enabled. The only Fabric health reports generated by this observer 
