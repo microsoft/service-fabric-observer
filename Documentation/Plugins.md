@@ -1,9 +1,16 @@
 ## How to implement an observer plugin using FO's extensibility model
 
 
-**NOTE: FabricObserver version 3.1.0 introduces a refactored plugin implementation that will break existing plugins. The changes required by plugin authors are trivial, however. Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme with examples of the new format.**
+**FabricObserver version 3.1.0 introduces a refactored plugin implementation that will break existing plugins. The changes required by plugin authors are trivial, however. Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme with examples of the new format.**
 
 This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver).
+
+Note: The plugin model depends on the following packages, which **must have the same versions in both your plugin project and FabricObserver**:
+
+Current: 
+
+**Microsoft.Extensions.DependencyInjection, Version 5.0.1**
+**Microsoft.Extensions.DependencyInjection.Abstractions, Version 5.0.0**
 
 #### Steps 
 
@@ -40,4 +47,4 @@ SelfContained = Includes all the binaries necessary for running .NET Core 3.1 ap
 
 - Deploy FabricObserver to your cluster. Your new observer will be managed and run just like any other observer.
 
-#### Note: Due to the complexity of unloading plugins at runtime, in order to add or update a plugin, you must redeploy FabricObserver. The problem is easier to solve for new plugins, as this could be done via a Data configuration update, but we have not added support for this yet.
+#### Due to the complexity of unloading plugins at runtime, in order to add or update a plugin, you must redeploy FabricObserver. The problem is easier to solve for new plugins, as this could be done via a Data configuration update, but we have not added support for this yet.
