@@ -10,7 +10,7 @@ Note: The plugin model depends on the following packages, which **must have the 
 Current: 
 
 **Microsoft.Extensions.DependencyInjection, Version 5.0.1**  
-**Microsoft.Extensions.DependencyInjection.Abstractions, Version 5.0.0**  (Observer plugins must employ this package, which must be the same version as the FabricObserver's referenced package)  
+**Microsoft.Extensions.DependencyInjection.Abstractions, Version 5.0.0**  (Observer plugins must employ this package, which must be the same version as FabricObserver's referenced package)  
 
 #### Steps 
 
