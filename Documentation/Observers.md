@@ -62,7 +62,9 @@ folder (AppObserver.config.json):
     "networkErrorActivePorts": 0,
     "networkErrorEphemeralPorts": 0,
     "networkWarningActivePorts": 800,
-    "networkWarningEphemeralPorts": 400
+    "networkWarningEphemeralPorts": 400,
+    "errorOpenFileHandles": 0,
+    "warningOpenFileHandles": 5000,
   },
   {
     "targetApp": "fabric:/MyApp1",
@@ -124,7 +126,9 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning. |
 | **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Error. |
 | **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Warning. |  
-| **Output**| Log text(Error/Warning), Service Fabric Application Health Report |
+| **errorOpenFileHandles** | Maximum number of open file handles in use by an app process that will generate a Fabric Error. |  
+| **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Fabric Warning. |  
+| **Output**| Log text(Error/Warning), Service Fabric Application Health Report, ETW (EventSource), Telemetry (AppInsights/LogAnalytics) |
 
 AppObserver also optionally outputs CSV files for each app containing all resource usage data across iterations for use in analysis. Included are Average and Peak measurements. You can turn this on/off in Settings.xml, where there are comments explaining the feature further.  
   

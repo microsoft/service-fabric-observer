@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System.Fabric;
 using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
@@ -10,7 +11,7 @@ namespace FabricObserver.Observers.Utilities
     public abstract class ProcessInfoProvider : IProcessInfoProvider
     {
         private static IProcessInfoProvider instance;
-        private static object lockObj = new object();
+        private static readonly object lockObj = new object();
 
         protected ProcessInfoProvider()
         {
@@ -42,8 +43,13 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        protected Logger Logger { get; } = new Logger("Utilities");
+        protected Logger Logger 
+        { 
+            get; 
+        } = new Logger("Utilities");
 
         public abstract float GetProcessPrivateWorkingSetInMB(int processId);
+
+        public abstract float GetProcessOpenFileHandles(int processId, StatelessServiceContext context = null);
     }
 }

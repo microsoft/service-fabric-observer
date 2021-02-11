@@ -4,22 +4,27 @@
 // ------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Fabric;
 
 namespace FabricObserver.Observers.Utilities
 {
     // Since we only create a single instance of WindowsProcessInfoProvider, it is OK
-    // to not dispose memProcessPrivateWorkingSetCounter.
+    // to not dispose counters.
 #pragma warning disable CA1001 // Types that own disposable fields should be disposable
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
+        const string CategoryName = "Process";
+
         private readonly PerformanceCounter memProcessPrivateWorkingSetCounter = new PerformanceCounter();
-        private readonly object perfCounterLock = new object();
+        private readonly PerformanceCounter processFileHandleCounter = new PerformanceCounter();
+        private readonly object memPerfCounterLock = new object();
+        private readonly object fileHandlesPerfCounterLock = new object();
 
         public override float GetProcessPrivateWorkingSetInMB(int processId)
         {
-            const string CategoryName = "Process";
-            const string CounterName = "Working Set - Private";
+            const string WorkingSetCounterName = "Working Set - Private";
             string processName;
 
             try
@@ -33,31 +38,77 @@ namespace FabricObserver.Observers.Utilities
             {
                 // "Process with an Id of 12314 is not running."
                 Logger.LogError(ex.Message);
-                return 0;
+                return 0F;
             }
 
-            lock (this.perfCounterLock)
+            lock (this.memPerfCounterLock)
             {
                 try
                 {
                     this.memProcessPrivateWorkingSetCounter.CategoryName = CategoryName;
-                    this.memProcessPrivateWorkingSetCounter.CounterName = CounterName;
+                    this.memProcessPrivateWorkingSetCounter.CounterName = WorkingSetCounterName;
                     this.memProcessPrivateWorkingSetCounter.InstanceName = processName;
 
                     return this.memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
                 }
+                catch (Exception e) when (e is ArgumentNullException || e is PlatformNotSupportedException ||
+                                          e is Win32Exception || e is UnauthorizedAccessException)
+                {
+                    Logger.LogError($"{CategoryName} {WorkingSetCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
+
+                    // Don't throw.
+                    return 0F;
+                }
+                catch (Exception e)
+                { 
+                    Logger.LogError($"{CategoryName} {WorkingSetCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
+
+                    throw;
+                }
+            }
+        }
+
+        // File Handles
+        public override float GetProcessOpenFileHandles(int processId, StatelessServiceContext context = null)
+        {
+            const string FileHandlesCounterName = "Handles";
+            string processName;
+
+            try
+            {
+                using (Process process = Process.GetProcessById(processId))
+                {
+                    processName = process.ProcessName;
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                // "Process with an Id of 12314 is not running."
+                Logger.LogError(ex.Message);
+                return 0F;
+            }
+
+            lock (this.fileHandlesPerfCounterLock)
+            {
+                try
+                {
+                    this.processFileHandleCounter.CategoryName = CategoryName;
+                    this.processFileHandleCounter.CounterName = FileHandlesCounterName;
+                    this.processFileHandleCounter.InstanceName = processName;
+
+                    return this.processFileHandleCounter.NextValue() / (1024 * 1024);
+                }
+                catch (Exception e) when (e is ArgumentNullException || e is PlatformNotSupportedException ||
+                                          e is Win32Exception || e is UnauthorizedAccessException)
+                {
+                    Logger.LogError($"{CategoryName} {FileHandlesCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
+
+                    // Don't throw.
+                    return 0F;
+                }
                 catch (Exception e)
                 {
-                    if (e is ArgumentNullException || e is PlatformNotSupportedException
-                        || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
-                    {
-                        Logger.LogError($"{CategoryName} {CounterName} PerfCounter handled error: " + e);
-
-                        // Don't throw.
-                        return 0F;
-                    }
-
-                    Logger.LogError($"{CategoryName} {CounterName} PerfCounter unhandled error: " + e);
+                    Logger.LogError($"{CategoryName} {FileHandlesCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
 
                     throw;
                 }

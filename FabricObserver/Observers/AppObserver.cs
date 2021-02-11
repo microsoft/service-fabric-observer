@@ -32,6 +32,7 @@ namespace FabricObserver.Observers
         private readonly List<FabricResourceUsageData<double>> AllAppMemDataPercent;
         private readonly List<FabricResourceUsageData<int>> AllAppTotalActivePortsData;
         private readonly List<FabricResourceUsageData<int>> AllAppEphemeralPortsData;
+        private readonly List<FabricResourceUsageData<float>> AllAppFileHandlesData;
         private readonly Stopwatch stopwatch;
 
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration.
@@ -67,6 +68,7 @@ namespace FabricObserver.Observers
             this.AllAppMemDataPercent = new List<FabricResourceUsageData<double>>();
             this.AllAppTotalActivePortsData = new List<FabricResourceUsageData<int>>();
             this.AllAppEphemeralPortsData = new List<FabricResourceUsageData<int>>();
+            this.AllAppFileHandlesData = new List<FabricResourceUsageData<float>>();
             this.stopwatch = new Stopwatch();
         }
 
@@ -403,7 +405,7 @@ namespace FabricObserver.Observers
                 var timer = new Stopwatch();
                 int processId = (int)repOrInst.HostProcessId;
                 var cpuUsage = new CpuUsage();
-                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false;
+                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkFileHandles = false;
                 var application = this.deployedTargetList?.FirstOrDefault(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString?.ToLower() ||
                                     app?.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
@@ -487,8 +489,19 @@ namespace FabricObserver.Observers
                         this.AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(currentProcess.Id, FabricServiceContext));
                     }
 
-                    // No need to proceed further if no cpu and mem thresholds are specified in configuration.
-                    if (!checkCpu && !checkMemMb && !checkMemPct)
+                    // File Handles (FD on linux)
+                    if (this.AllAppFileHandlesData.All(list => list.Id != id) && (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0))
+                    {
+                        this.AllAppFileHandlesData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalOpenFileHandles, id, 1));
+                    }
+
+                    if (this.AllAppFileHandlesData.Any(list => list.Id == id))
+                    {
+                        checkFileHandles = true;
+                    }
+
+                    // No need to proceed further if no cpu/mem/file handles thresholds are specified in configuration.
+                    if (!checkCpu && !checkMemMb && !checkMemPct && !checkFileHandles)
                     {
                         continue;
                     }
@@ -558,6 +571,16 @@ namespace FabricObserver.Observers
                             {
                                 double usedPct = Math.Round(((double)(processMem * 100)) / (totalMem * 1024), 2);
                                 this.AllAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
+                            }
+                        }
+
+                        if (checkFileHandles)
+                        {
+                            float fileHandles = ProcessInfoProvider.Instance.GetProcessOpenFileHandles(currentProcess.Id, FabricServiceContext);
+                            
+                            if (fileHandles > -1)
+                            {
+                                this.AllAppFileHandlesData.FirstOrDefault(x => x.Id == id).Data.Add(fileHandles);
                             }
                         }
 

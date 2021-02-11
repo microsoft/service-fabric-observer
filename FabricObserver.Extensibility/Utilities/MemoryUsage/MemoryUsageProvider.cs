@@ -10,7 +10,7 @@ namespace FabricObserver.Observers.Utilities
     public abstract class MemoryUsageProvider
     {
         private static MemoryUsageProvider instance;
-        private static object lockObj = new object();
+        private static readonly object lockObj = new object();
 
         public static MemoryUsageProvider Instance
         {

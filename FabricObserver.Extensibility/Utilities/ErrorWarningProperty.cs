@@ -27,5 +27,8 @@ namespace FabricObserver.Observers.Utilities
         public const string TotalActiveFirewallRules = "Total Active Firewall Rules";
         public const string TotalActivePorts = "Total Active TCP Ports";
         public const string TotalEphemeralPorts = "Total Ephemeral Active TCP Ports";
+
+        // File Handles
+        public const string TotalOpenFileHandles = "Total Open File Handles";
     }
 }

@@ -11,7 +11,11 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsCpuUtilizationProvider : CpuUtilizationProvider
     {
-        private PerformanceCounter performanceCounter = new PerformanceCounter(categoryName: "Processor", counterName: "% Processor Time", instanceName: "_Total", readOnly: true);
+        private PerformanceCounter performanceCounter = new PerformanceCounter(
+            categoryName: "Processor",
+            counterName: "% Processor Time",
+            instanceName: "_Total",
+            readOnly: true);
 
         public override Task<float> NextValueAsync()
         {
