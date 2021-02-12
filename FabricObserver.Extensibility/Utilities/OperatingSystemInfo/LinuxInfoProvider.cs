@@ -15,13 +15,6 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxInfoProvider : OperatingSystemInfoProvider
     {
-        private readonly Logger logger;
-
-        public LinuxInfoProvider()
-        {
-            this.logger = new Logger("LinuxInfoProvider");
-        }
-
         public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
@@ -223,8 +216,6 @@ namespace FabricObserver.Observers.Utilities
             // sysctl fs.file-max
             string cmdResult = "sysctl fs.file-max".Bash();
 
-            this.logger.LogWarning($"sysctl fs.file-max result: {cmdResult}");
-
             // result will be in this format:
             // fs.file-max = 1616177
 
@@ -242,11 +233,34 @@ namespace FabricObserver.Observers.Utilities
 
             if (int.TryParse(splitArr[1].TrimStart(), out int maxHandles))
             {
-                this.logger.LogWarning($"maxHandles: {maxHandles}");
-
                 return maxHandles;
             }
 
+
+            return -1;
+        }
+
+        /// <summary>
+        /// Returns the Maximum number of FileHandles/FDs configured in the OS.
+        /// </summary>
+        /// <returns>int value representing maximum number of filed handles/fds configured on host OS.</returns>
+        public override int GetTotalAllocatedFileDescriptorsCount()
+        {
+            // fs.file-nr result will be in this format:
+            // fs.file-nr = 30112      0       1616177x
+            string cmdResult = "sysctl fs.file-nr | awk '{ print $3 }'".Bash();
+
+            this.Logger.LogWarning($"cmdResult: {cmdResult}");
+
+            if (string.IsNullOrEmpty(cmdResult))
+            {
+                return -1;
+            }
+
+            if (int.TryParse(cmdResult.Trim(), out int totalFDs))
+            {
+                return totalFDs;
+            }
 
             return -1;
         }

@@ -45,6 +45,12 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        protected Logger Logger
+        {
+            get;
+        } = new Logger("OSUtilities");
+
+
         public abstract (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse();
 
         public abstract int GetActivePortCount(int processId = -1, ServiceContext context = null);
@@ -58,7 +64,13 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Returns the Maximum number of FileHandles/FDs configured in the OS. Note: This is not really meaningful on Windows. This is useful for Linux only.
         /// </summary>
-        /// <returns>int value representing maximum number of filed handles/fds configured on host OS. For Windows, this always returns -1.</returns>
+        /// <returns>int value representing the maximum number of file handles/fds configured on host OS at the time of the call. For Windows, this always returns -1.</returns>
         public abstract int GetMaximumConfiguredFileDescriptorCount();
+
+        /// <summary>
+        /// Returns the Total number of allocated FileHandles/FDs. Note: This is not really meaningful on Windows. This is useful for Linux only.
+        /// </summary>
+        /// <returns>int value representing total number of allocated file handles/fds on host OS. For Windows, this always returns -1.</returns>
+        public abstract int GetTotalAllocatedFileDescriptorsCount();
     }
 }

@@ -348,15 +348,6 @@ namespace FabricObserver.Observers.Utilities
             return Task.FromResult(osInfo);
         }
 
-        /// <summary>
-        /// Returns the Maximum number of FileHandles/FDs configured in the OS. Note: This is not really meaningful on Windows. This is useful for Linux only.
-        /// </summary>
-        /// <returns>int value representing maximum number of filed handles/fds configured on host OS. For Windows, this always returns -1.</returns>
-        public override int GetMaximumConfiguredFileDescriptorCount()
-        {
-            return -1;
-        }
-
         private static int GetPortNumberFromConsoleOutputRow(string row)
         {
             int colonIndex = row.IndexOf(':');
@@ -371,6 +362,16 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
+            return -1;
+        }
+
+        public override int GetMaximumConfiguredFileDescriptorCount()
+        {
+            return -1;
+        }
+
+        public override int GetTotalAllocatedFileDescriptorsCount()
+        {
             return -1;
         }
     }

@@ -618,7 +618,7 @@ namespace FabricObserver.Observers
                         // Windows does not have a similar configuration for Max file handles, so this call (passing -1) is for Linux only. Windows callers will always get a -1 back when -1 is supplied.
                         // **This call can take some time (seconds) to complete (lsof is intensive). It is not a good idea to run this function several times. 
                         //   Once is fine and it will provide an accurate enough number to determine whether a real threshold breach has occurred or not.**
-                        float totalOpenFileDescriptors = await ProcessInfoProvider.Instance.GetProcessOpenFileHandlesAsync(-1, FabricServiceContext, Token);
+                        float totalOpenFileDescriptors = OperatingSystemInfoProvider.Instance.GetTotalAllocatedFileDescriptorsCount();
 
                         if (totalOpenFileDescriptors > 0)
                         {

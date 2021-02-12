@@ -104,7 +104,7 @@
     <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="8000" />
     <!-- The below settings only make sense for Linux. -->
     <Parameter Name="NodeObserverFileDescriptorsErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverFileDescriptorsWarningLimitPercent" DefaultValue="95" />
+    <Parameter Name="NodeObserverFileDescriptorsWarningLimitPercent" DefaultValue="90" />
     <!-- OSObserver Windows AutoUpdate Settings Check -->
     <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
     <!-- Observers with JSON config - File names.

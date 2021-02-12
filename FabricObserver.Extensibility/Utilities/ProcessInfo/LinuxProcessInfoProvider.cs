@@ -25,21 +25,18 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        // TODO: This is long running when processId is -1. Use token cancellation to throw out of this.
         public override async Task<float> GetProcessOpenFileHandlesAsync(int processId, StatelessServiceContext context, CancellationToken token)
         {
+            if (processId < 0)
+            {
+                return -1f;
+            }
+
             // We need the full path to the currently deployed FO CodePackage, which is where our 
             // proxy binary lives.
             string path = context.CodePackageActivationContext.GetCodePackageObject("Code").Path;
             string arg = processId.ToString();
-
-            // This is a proxy binary that employs Linux Capabilites to run either ls /proc/[pid]/fd (with piped output via wc) or lsof (with piped output via wc) 
-            // with elevated privilege (sudo) from a non-privileged process (FabricObserver, which runs as sfappuser).
-            // FO runs as sfappsuser (SF default, Linux normal user), which can't run ls. During deployment, a setup script is run (as root user)
-            // that adds capabilities to the elevated_proc_fd binary (which internally implements the same set of capabilites), which will *only* run a single command:
-            // in this case, either ls (when a real process id is passed in) or lsof (when you pass -1 for processId, which means you want the number *ALL* allocated FDs - which is an expensive operation. Use it wisely..).
             string bin = $"{path}/elevated_proc_fd";
-
             float result;
 
             ProcessStartInfo startInfo = new ProcessStartInfo
