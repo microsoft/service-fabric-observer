@@ -250,7 +250,7 @@ namespace FabricObserver.Observers.Utilities
             // fs.file-nr = 30112      0       1616177x
             string cmdResult = "sysctl fs.file-nr | awk '{ print $3 }'".Bash();
 
-            this.Logger.LogWarning($"cmdResult: {cmdResult}");
+            //this.Logger.LogWarning($"cmdResult: {cmdResult}");
 
             if (string.IsNullOrEmpty(cmdResult))
             {
