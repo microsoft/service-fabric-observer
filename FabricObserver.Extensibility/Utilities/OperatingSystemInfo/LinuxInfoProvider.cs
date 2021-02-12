@@ -15,7 +15,14 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxInfoProvider : OperatingSystemInfoProvider
     {
-        public override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        private readonly Logger logger;
+
+        public LinuxInfoProvider()
+        {
+            this.logger = new Logger("LinuxInfoProvider");
+        }
+
+        public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
 
@@ -24,7 +31,10 @@ namespace FabricObserver.Observers.Utilities
             long availableMem = (long)memInfo[MemInfoConstants.MemAvailable];
 
             // Divide by 1048576 to convert total memory from KB to GB.
-            return (totalMemory / 1048576, (int)(((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100));
+            long totalMem = totalMemory / 1048576;
+            double pctUsed = ((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100;
+
+            return (totalMem, Math.Round(pctUsed, 2));
         }
 
         public override int GetActivePortCount(int processId = -1, ServiceContext context = null)
@@ -204,6 +214,43 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
+        /// <summary>
+        /// Returns the Maximum number of FileHandles/FDs configured in the OS.
+        /// </summary>
+        /// <returns>int value representing maximum number of filed handles/fds configured on host OS.</returns>
+        public override int GetMaximumConfiguredFileDescriptorCount()
+        {
+            // sysctl fs.file-max
+            string cmdResult = "sysctl fs.file-max".Bash();
+
+            this.logger.LogWarning($"sysctl fs.file-max result: {cmdResult}");
+
+            // result will be in this format:
+            // fs.file-max = 1616177
+
+            if (string.IsNullOrEmpty(cmdResult))
+            {
+                return -1;
+            }
+
+            var splitArr = cmdResult.Split('=');
+
+            if (splitArr.Length == 0)
+            {
+                return -1;
+            }
+
+            if (int.TryParse(splitArr[1].TrimStart(), out int maxHandles))
+            {
+                this.logger.LogWarning($"maxHandles: {maxHandles}");
+
+                return maxHandles;
+            }
+
+
+            return -1;
+        }
+
         public async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
@@ -232,6 +279,31 @@ namespace FabricObserver.Observers.Utilities
 
                 return (process.ExitCode, output);
             }
+        }
+    }
+
+    // https://loune.net/2017/06/running-shell-bash-commands-in-net-core/
+    internal static class LinuxShellHelper
+    {
+        public static string Bash(this string cmd)
+        {
+            var escapedArgs = cmd.Replace("\"", "\\\"");
+
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    Arguments = $"-c \"{escapedArgs}\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }
+            };
+            process.Start();
+            string result = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return result;
         }
     }
 }

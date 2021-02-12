@@ -7,6 +7,8 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -69,9 +71,14 @@ namespace FabricObserver.Observers.Utilities
         }
 
         // File Handles
-        public override float GetProcessOpenFileHandles(int processId, StatelessServiceContext context = null)
+        public override Task<float> GetProcessOpenFileHandlesAsync(int processId, StatelessServiceContext context, CancellationToken token)
         {
-            const string FileHandlesCounterName = "Handles";
+            if (processId < 0)
+            {
+                return Task.FromResult(-1F);
+            }
+
+            const string FileHandlesCounterName = "Handle Count";
             string processName;
 
             try
@@ -85,7 +92,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 // "Process with an Id of 12314 is not running."
                 Logger.LogError(ex.Message);
-                return 0F;
+                return Task.FromResult(-1F);
             }
 
             lock (this.fileHandlesPerfCounterLock)
@@ -96,7 +103,7 @@ namespace FabricObserver.Observers.Utilities
                     this.processFileHandleCounter.CounterName = FileHandlesCounterName;
                     this.processFileHandleCounter.InstanceName = processName;
 
-                    return this.processFileHandleCounter.NextValue() / (1024 * 1024);
+                    return Task.FromResult(this.processFileHandleCounter.NextValue());
                 }
                 catch (Exception e) when (e is ArgumentNullException || e is PlatformNotSupportedException ||
                                           e is Win32Exception || e is UnauthorizedAccessException)
@@ -104,7 +111,7 @@ namespace FabricObserver.Observers.Utilities
                     Logger.LogError($"{CategoryName} {FileHandlesCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
 
                     // Don't throw.
-                    return 0F;
+                    return Task.FromResult(-1F);
                 }
                 catch (Exception e)
                 {

@@ -56,6 +56,14 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
 
+        // File Handles / File Descriptors - Linux (File Descriptors) and Windows (File Handles)
+        public const string AppErrorTooManyOpenFileHandles = "FO033";
+        public const string AppWarningTooManyOpenFileHandles = "FO034";
+
+        // Linux only. Windows does not have the same type of max handles configuration to monitor all-up use.
+        public const string NodeErrorAllocatedFileDescriptorsPercent = "FO035";
+        public const string NodeWarningAllocatedFileDescriptorsPercent = "FO036";
+
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
             get;
@@ -74,6 +82,8 @@ namespace FabricObserver.Observers.Utilities
             { AppWarningTooManyActiveTcpPorts, "AppWarningTooManyActiveTcpPorts" },
             { AppErrorTooManyActiveEphemeralPorts, "AppErrorTooManyActiveEphemeralPorts" },
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
+            { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
+            { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
         };
 
         public static Dictionary<string, string> NodeErrorCodesDictionary
@@ -102,6 +112,8 @@ namespace FabricObserver.Observers.Utilities
             { WarningTooManyFirewallRules, "NodeWarningTooManyFirewallRules" },
             { NodeErrorTooManyActiveEphemeralPorts, "NodeErrorTooManyActiveEphemeralPorts" },
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
+            { NodeErrorAllocatedFileDescriptorsPercent, "NodeErrorAllocatedFileDescriptorsPercent" },
+            { NodeWarningAllocatedFileDescriptorsPercent, "NodeWarningAllocatedFileDescriptorsPercent" },
         };
 
         public static string GetErrorWarningNameFromFOCode(string id)

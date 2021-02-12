@@ -16,7 +16,8 @@
   {
     "targetAppType": "CpuStressType",
     "cpuWarningLimitPercent": 20.75,
-    "memoryWarningLimitMb": 150
+    "memoryWarningLimitMb": 150,
+    "warningOpenFileHandles": 1000
   },
   {
     "targetAppType": "PatchOrchestrationApplicationType",

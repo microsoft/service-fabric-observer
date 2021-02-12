@@ -29,6 +29,7 @@ namespace FabricObserver.Observers.Utilities
         public const string TotalEphemeralPorts = "Total Ephemeral Active TCP Ports";
 
         // File Handles
-        public const string TotalOpenFileHandles = "Total Open File Handles";
+        public const string TotalFileHandles = "Allocated File Handles";
+        public const string TotalFileDescriptorsPct = "Total Allocated File Descriptors %";
     }
 }

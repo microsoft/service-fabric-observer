@@ -102,6 +102,10 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
+        
+        // For use by Linux File Descriptors monitor.
+        public const string NodeObserverFileDescriptorsErrorLimitPct = "FileDescriptorsErrorLimitPercent";
+        public const string NodeObserverFileDescriptorsWarningLimitPct = "FileDescriptorsWarningLimitPercent";
 
         // OSObserver.
         public const string OSObserverName = "OSObserver";

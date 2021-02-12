@@ -34,4 +34,8 @@
 | FO029 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Error*** threshold for an App service process. | 
 | FO030 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold for an App service process. | 
 | FO031 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Error*** threshold on a VM instance.  | 
-| FO032 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold on a VM instance.  |  
+| FO032 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold on a VM instance.  | 
+| FO033 | Number of allocated File Handles is at or exceeding configured ***Error*** threshold for an App service process.  | 
+| FO034 | Number of allocated File Handles is at or exceeding configured ***Warning*** threshold for an App service process.  |
+| FO035 | Percentage of allocated File Descriptors (from total pool) is at or exceeding configured ***Error*** threshold on a Linux VM instance.  | 
+| FO036 | Percentage of allocated File Descriptors (from total pool) is at or exceeding configured ***Warning*** threshold on a Linux VM instance.  | 

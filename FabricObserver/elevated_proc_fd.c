@@ -1,13 +1,14 @@
-﻿// This is the proxy binary we run that can call "sudo ls /proc/[pid]/fd | wc -l" as a normal user.
+﻿// This is the Capabilities proxy binary that enables the FabricObserver process to successfully execute "ls /proc/[pid]/fd | wc -l" as a normal user. 
+// By default, FabricObserver runs as a low privilege user on Linux, but can  successfully execute a command that requires root privilege (sudo user) thanks to Linux Capabilities.
 
 // Build/Run Instructions.
-// ***NOTE: This binary has already been built and is deployed as part of FO->Ubuntu deployment.
+// ***NOTE: This binary has already been built and is deployed as part of FO->Ubuntu during the setup phase of application activation.
+
 // 1. Install libcap library: sudo apt-get install -y libcap-dev
 // 2. Compile : gcc elevated_proc_fd.c -lcap -o elevated_proc_fd
 // ***NOTE: The following is already taken care of by FO Setup and the related FO utility function that runs this binary. 
 // 3. Assign PTRACE and DAC_READ_SEARCH capabilities to elevated_netstat : "sudo setcap CAP_DAC_READ_SEARCH,CAP_SYS_PTRACE+p ./elevated_proc_fd"
-// 4. Run elevated_netstat as a regular user : ./elevated_proc_fd [pid] 
-//
+// 4. Run elevated_proc_fd as a normal user: ./elevated_proc_fd [pid] (Note: If you pass -1 for PID, this will run lsof and return the count of ALL open fds. lsof takes a long time to complete and may not be useful. That's up to you.)
 
 #include <string.h>
 #include <stdio.h>
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
 {
     if (argc < 1)
     {
-        printf("You have to supply one argument; a process id.");
+        printf("You have to supply one argument; a process id for use in ls or -1 which would mean run lsof.");
         return -1;
     }
 

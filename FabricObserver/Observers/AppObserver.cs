@@ -244,6 +244,18 @@ namespace FabricObserver.Observers
                                 HealthReportType.Application,
                                 repOrInst);
                         }
+
+                        // Open File Handles
+                        if (this.AllAppFileHandlesData.Any(x => x.Id == id))
+                        {
+                            ProcessResourceDataReportHealth(
+                                this.AllAppFileHandlesData.FirstOrDefault(x => x.Id == id),
+                                app.ErrorOpenFileHandles,
+                                app.WarningOpenFileHandles,
+                                healthReportTimeToLive,
+                                HealthReportType.Application,
+                                repOrInst);
+                        }
                     }
                 }
 
@@ -492,7 +504,7 @@ namespace FabricObserver.Observers
                     // File Handles (FD on linux)
                     if (this.AllAppFileHandlesData.All(list => list.Id != id) && (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0))
                     {
-                        this.AllAppFileHandlesData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalOpenFileHandles, id, 1));
+                        this.AllAppFileHandlesData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, id, 1));
                     }
 
                     if (this.AllAppFileHandlesData.Any(list => list.Id == id))
@@ -565,18 +577,17 @@ namespace FabricObserver.Observers
                         { 
                             // Memory (percent in use (total)).
                             var (TotalMemory, PercentInUse) = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
-                            long totalMem = TotalMemory;
 
-                            if (totalMem > 0)
+                            if (TotalMemory > 0)
                             {
-                                double usedPct = Math.Round(((double)(processMem * 100)) / (totalMem * 1024), 2);
+                                double usedPct = Math.Round(((double)(processMem * 100)) / (TotalMemory * 1024), 2);
                                 this.AllAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
                             }
                         }
 
                         if (checkFileHandles)
                         {
-                            float fileHandles = ProcessInfoProvider.Instance.GetProcessOpenFileHandles(currentProcess.Id, FabricServiceContext);
+                            float fileHandles = await ProcessInfoProvider.Instance.GetProcessOpenFileHandlesAsync(currentProcess.Id, FabricServiceContext, Token);
                             
                             if (fileHandles > -1)
                             {

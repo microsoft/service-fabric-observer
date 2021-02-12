@@ -17,7 +17,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsInfoProvider : OperatingSystemInfoProvider
     {
-        public override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
@@ -54,9 +54,9 @@ namespace FabricObserver.Observers.Utilities
                     }
 
                     double used = ((double)(visibleTotal - freePhysical)) / visibleTotal;
-                    int usedPct = (int)(used * 100);
+                    double usedPct = used * 100;
 
-                    return (visibleTotal / 1024 / 1024, usedPct);
+                    return (visibleTotal / 1024 / 1024, Math.Round(usedPct, 2));
                 }
             }
             catch (Exception e) when (
@@ -346,6 +346,15 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return Task.FromResult(osInfo);
+        }
+
+        /// <summary>
+        /// Returns the Maximum number of FileHandles/FDs configured in the OS. Note: This is not really meaningful on Windows. This is useful for Linux only.
+        /// </summary>
+        /// <returns>int value representing maximum number of filed handles/fds configured on host OS. For Windows, this always returns -1.</returns>
+        public override int GetMaximumConfiguredFileDescriptorCount()
+        {
+            return -1;
         }
 
         private static int GetPortNumberFromConsoleOutputRow(string row)

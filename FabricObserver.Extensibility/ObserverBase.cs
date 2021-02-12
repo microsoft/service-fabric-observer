@@ -907,6 +907,16 @@ namespace FabricObserver.Observers
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
                         break;
+
+                    case ErrorWarningProperty.TotalFileHandles when healthReportType == HealthReportType.Application:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorTooManyOpenFileHandles : FOErrorWarningCodes.AppWarningTooManyOpenFileHandles;
+                        break;
+
+                    case ErrorWarningProperty.TotalFileDescriptorsPct:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorAllocatedFileDescriptorsPercent : FOErrorWarningCodes.NodeWarningAllocatedFileDescriptorsPercent;
+                        break;
                 }
 
                 StringBuilder healthMessage = new StringBuilder();

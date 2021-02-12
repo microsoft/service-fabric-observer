@@ -4,6 +4,8 @@
 // ------------------------------------------------------------
 
 using System.Fabric;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -11,6 +13,6 @@ namespace FabricObserver.Observers.Utilities
     {
         float GetProcessPrivateWorkingSetInMB(int processId);
 
-        float GetProcessOpenFileHandles(int processId, StatelessServiceContext context = null);
+        Task<float> GetProcessOpenFileHandlesAsync(int processId, StatelessServiceContext context, CancellationToken token);
     }
 }

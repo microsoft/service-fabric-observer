@@ -5,6 +5,8 @@
 
 using System.Diagnostics;
 using System.Fabric;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -23,22 +25,19 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public override float GetProcessOpenFileHandles(int processId, StatelessServiceContext context)
+        // TODO: This is long running when processId is -1. Use token cancellation to throw out of this.
+        public override async Task<float> GetProcessOpenFileHandlesAsync(int processId, StatelessServiceContext context, CancellationToken token)
         {
-            if (context == null || processId < 0)
-            {
-                return -1;
-            }
-
-            // We need the full path to the currently deployed FO CodePackage, which is were our 
-            // proxy binary lives, which is used for elevated netstat call.
+            // We need the full path to the currently deployed FO CodePackage, which is where our 
+            // proxy binary lives.
             string path = context.CodePackageActivationContext.GetCodePackageObject("Code").Path;
             string arg = processId.ToString();
 
-            // This is a proxy binary that uses Capabilites to run netstat -tpna with elevated privilege.
-            // FO runs as sfappsuser (SF default, Linux normal user), which can't run netstat -tpna. 
-            // During deployment, a setup script is run (as root user)
-            // that adds capabilities to elevated_netstat program, which will *only* run (execv) "netstat -tpna".
+            // This is a proxy binary that employs Linux Capabilites to run either ls /proc/[pid]/fd (with piped output via wc) or lsof (with piped output via wc) 
+            // with elevated privilege (sudo) from a non-privileged process (FabricObserver, which runs as sfappuser).
+            // FO runs as sfappsuser (SF default, Linux normal user), which can't run ls. During deployment, a setup script is run (as root user)
+            // that adds capabilities to the elevated_proc_fd binary (which internally implements the same set of capabilites), which will *only* run a single command:
+            // in this case, either ls (when a real process id is passed in) or lsof (when you pass -1 for processId, which means you want the number *ALL* allocated FDs - which is an expensive operation. Use it wisely..).
             string bin = $"{path}/elevated_proc_fd";
 
             float result;
@@ -48,20 +47,24 @@ namespace FabricObserver.Observers.Utilities
                 Arguments = arg,
                 FileName = bin,
                 UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden,
                 RedirectStandardInput = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = false,
+                CreateNoWindow = true,
             };
 
             using (Process process = Process.Start(startInfo))
             {
-                result = !string.IsNullOrEmpty(process.StandardOutput.ReadToEnd()) ? float.Parse(process.StandardOutput.ReadToEnd()) : -1f;
+                var stdOut = process.StandardOutput;
+                string output = await stdOut.ReadToEndAsync().ConfigureAwait(false);
 
                 process.WaitForExit();
 
+                result = float.TryParse(output, out float ret) ? ret : -42f;
+
                 if (process.ExitCode != 0)
                 {
+                    this.Logger.LogWarning($"elevated_proc_fd exited with: {process.ExitCode}");
                     return -1f;
                 }
             }

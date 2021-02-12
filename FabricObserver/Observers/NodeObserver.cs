@@ -42,12 +42,26 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public FabricResourceUsageData<int> MemDataPercentUsed
+        public FabricResourceUsageData<double> MemDataPercentUsed
         {
             get; set;
         }
 
         public FabricResourceUsageData<float> CpuTimeData
+        {
+            get; set;
+        }
+
+        // These are only useful for Linux.\\
+
+        // Holds data for percentage of total configured file descriptors that are in use.
+        public FabricResourceUsageData<double> FileDescriptorDataPercentAllocated
+        {
+            get; set;
+        }
+
+        // Holds raw number of allocated file descriptors.
+        public FabricResourceUsageData<int> FileDescriptorDataRawNumberAllocated
         {
             get; set;
         }
@@ -102,12 +116,34 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public int MemoryErrorLimitPercent
+        public double MemoryErrorLimitPercent
         {
             get; set;
         }
 
-        public int MemoryWarningLimitPercent
+        public double MemoryWarningLimitPercent
+        {
+            get; set;
+        }
+
+        /* Thresholds for Percentage/Raw Count of available FileDescriptors/FDs in use on VM.
+           NOTE: These are only used for Linux. */
+        public double ErrorFileDescriptorsPercent
+        {
+            get; set;
+        }
+
+        public double WarningFileDescriptorsPercent
+        {
+            get; set;
+        }
+
+        public int ErrorFileDescriptorsCount
+        {
+            get; set;
+        }
+
+        public int WarningFileDescriptorsCount
         {
             get; set;
         }
@@ -238,7 +274,7 @@ namespace FabricObserver.Observers
                 // Memory - Percent
                 if (this.MemDataPercentUsed != null && (this.MemoryErrorLimitPercent > 0 || this.MemoryWarningLimitPercent > 0))
                 {
-                    ProcessResourceDataReportHealth<int>(
+                    ProcessResourceDataReportHealth<double>(
                         this.MemDataPercentUsed,
                         this.MemoryErrorLimitPercent,
                         this.MemoryWarningLimitPercent,
@@ -273,6 +309,19 @@ namespace FabricObserver.Observers
                         this.EphemeralPortsErrorThreshold,
                         this.EphemeralPortsWarningThreshold,
                         timeToLiveWarning);
+                }
+
+                // File Descriptors (Linux)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    if (this.FileDescriptorDataPercentAllocated != null && (this.ErrorFileDescriptorsPercent > 0 || this.WarningFileDescriptorsPercent > 0))
+                    {
+                        ProcessResourceDataReportHealth(
+                            this.FileDescriptorDataPercentAllocated,
+                            this.ErrorFileDescriptorsPercent,
+                            this.WarningFileDescriptorsPercent,
+                            timeToLiveWarning);
+                    }
                 }
 
                 return Task.CompletedTask;
@@ -317,7 +366,7 @@ namespace FabricObserver.Observers
 
             if (this.MemDataPercentUsed == null && (this.MemoryErrorLimitPercent > 0 || this.MemoryWarningLimitPercent > 0))
             {
-                this.MemDataPercentUsed = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataCapacity, UseCircularBuffer);
+                this.MemDataPercentUsed = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataCapacity, UseCircularBuffer);
             }
 
             if (this.FirewallData == null && (this.FirewallRulesErrorThreshold > 0 || this.FirewallRulesWarningThreshold > 0))
@@ -334,6 +383,15 @@ namespace FabricObserver.Observers
             {
                 this.EphemeralPortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUse", 1);
             }
+
+            // This only makes sense for Linux.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                if (this.FileDescriptorDataPercentAllocated == null && (this.ErrorFileDescriptorsPercent > 0 || this.WarningFileDescriptorsPercent > 0))
+                {
+                    this.FileDescriptorDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalFileDescriptorsPct, "TotalFileDescriptorsPercentage", 1);
+                }
+            }
         }
 
         private void SetThresholdSFromConfiguration()
@@ -346,7 +404,7 @@ namespace FabricObserver.Observers
                 ConfigurationSectionName,
                 ObserverConstants.NodeObserverCpuErrorLimitPct);
 
-            if (!string.IsNullOrEmpty(cpuError) && int.TryParse(cpuError, out int cpuErrorUsageThresholdPct))
+            if (!string.IsNullOrEmpty(cpuError) && float.TryParse(cpuError, out float cpuErrorUsageThresholdPct))
             {
                 if (cpuErrorUsageThresholdPct > 0 && cpuErrorUsageThresholdPct <= 100)
                 {
@@ -394,11 +452,27 @@ namespace FabricObserver.Observers
                 ConfigurationSectionName,
                 ObserverConstants.NodeObserverMemoryUsePercentError);
 
-            if (!string.IsNullOrEmpty(errMemPercentUsed) && int.TryParse(errMemPercentUsed, out int memoryPercentUsedErrorThreshold))
+            if (!string.IsNullOrEmpty(errMemPercentUsed) && double.TryParse(errMemPercentUsed, out double memoryPercentUsedErrorThreshold))
             {
                 if (memoryPercentUsedErrorThreshold > 0 && memoryPercentUsedErrorThreshold <= 100)
                 {
                     this.MemoryErrorLimitPercent = memoryPercentUsedErrorThreshold;
+                }
+            }
+
+            // Linux FDs.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                var errFileDescriptorsPercentUsed = GetSettingParameterValue(
+                    ConfigurationSectionName,
+                    ObserverConstants.NodeObserverFileDescriptorsErrorLimitPct);
+
+                if (!string.IsNullOrEmpty(errFileDescriptorsPercentUsed) && double.TryParse(errFileDescriptorsPercentUsed, out double fileDescriptorsPercentUsedErrorThreshold))
+                {
+                    if (fileDescriptorsPercentUsedErrorThreshold > 0 && fileDescriptorsPercentUsedErrorThreshold <= 100)
+                    {
+                        this.ErrorFileDescriptorsPercent = fileDescriptorsPercentUsedErrorThreshold;
+                    }
                 }
             }
 
@@ -455,14 +529,30 @@ namespace FabricObserver.Observers
             }
 
             var warnMemPercentUsed = GetSettingParameterValue(
-              ConfigurationSectionName,
-              ObserverConstants.NodeObserverMemoryUsePercentWarning);
+                ConfigurationSectionName,
+                ObserverConstants.NodeObserverMemoryUsePercentWarning);
 
-            if (!string.IsNullOrEmpty(warnMemPercentUsed) && int.TryParse(warnMemPercentUsed, out int memoryPercentUsedWarningThreshold))
+            if (!string.IsNullOrEmpty(warnMemPercentUsed) && double.TryParse(warnMemPercentUsed, out double memoryPercentUsedWarningThreshold))
             {
                 if (memoryPercentUsedWarningThreshold > 0 && memoryPercentUsedWarningThreshold <= 100)
                 {
                     this.MemoryWarningLimitPercent = memoryPercentUsedWarningThreshold;
+                }
+            }
+
+            // Linux FDs.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                var warnFileDescriptorsPercentUsed = GetSettingParameterValue(
+                    ConfigurationSectionName,
+                    ObserverConstants.NodeObserverFileDescriptorsWarningLimitPct);
+
+                if (!string.IsNullOrEmpty(warnFileDescriptorsPercentUsed) && double.TryParse(warnFileDescriptorsPercentUsed, out double fileDescriptorsPercentUsedWarningThreshold))
+                {
+                    if (fileDescriptorsPercentUsedWarningThreshold > 0 && fileDescriptorsPercentUsedWarningThreshold <= 100)
+                    {
+                        this.WarningFileDescriptorsPercent = fileDescriptorsPercentUsedWarningThreshold;
+                    }
                 }
             }
         }
@@ -502,7 +592,8 @@ namespace FabricObserver.Observers
                     duration = MonitorDuration;
                 }
 
-                /* CPU and Memory.
+                /* CPU, Memory, File Descriptors (Linux)
+                 
                    Note: Please make sure you understand the normal state of your nodes
                    with respect to the machine resource use and/or abuse by your service(s).
                    For example, if it is normal for your services to consume 90% of available CPU and memory
@@ -513,8 +604,33 @@ namespace FabricObserver.Observers
                 {
                     cpuUtilizationProvider = CpuUtilizationProvider.Create();
 
-                    // Warm up the counters.
+                    // Warm up the counter.
                     _ = await cpuUtilizationProvider.NextValueAsync();
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    if (this.FileDescriptorDataPercentAllocated != null && (this.ErrorFileDescriptorsPercent > 0 || this.WarningFileDescriptorsPercent > 0))
+                    {
+                        // Note, you will notice that the GetProcessOpenFileHandles function is also used by AppObserver (both Linux and Windows) 
+                        // to get open file handles per process. For VM level monitoring, it only makes sense to pass -1 for pid if running on Linux,
+                        // which instructs the Capabilities-laced binary that FO calls to run lsof (which will pipe output to wc -l and then return the count for ***ALL*** allocated FDs).
+                        // Windows does not have a similar configuration for Max file handles, so this call (passing -1) is for Linux only. Windows callers will always get a -1 back when -1 is supplied.
+                        // **This call can take some time (seconds) to complete (lsof is intensive). It is not a good idea to run this function several times. 
+                        //   Once is fine and it will provide an accurate enough number to determine whether a real threshold breach has occurred or not.**
+                        float totalOpenFileDescriptors = await ProcessInfoProvider.Instance.GetProcessOpenFileHandlesAsync(-1, FabricServiceContext, Token);
+
+                        if (totalOpenFileDescriptors > 0)
+                        {
+                            int maximumConfiguredFDCount = OperatingSystemInfoProvider.Instance.GetMaximumConfiguredFileDescriptorCount();
+
+                            if (maximumConfiguredFDCount > 0)
+                            {
+                                double usedPct = totalOpenFileDescriptors / maximumConfiguredFDCount * 100;
+                                this.FileDescriptorDataPercentAllocated.Data.Add(Math.Round(usedPct, 2));
+                            }
+                        }
+                    } 
                 }
 
                 while (this.stopwatch.Elapsed <= duration)
@@ -534,8 +650,7 @@ namespace FabricObserver.Observers
 
                     if (this.MemDataPercentUsed != null && (this.MemoryErrorLimitPercent > 0 || this.MemoryWarningLimitPercent > 0))
                     {
-                        this.MemDataPercentUsed.Data.Add(
-                            (int)OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
+                        this.MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                     }
 
                     await Task.Delay(250).ConfigureAwait(false);
