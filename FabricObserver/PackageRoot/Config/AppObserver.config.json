@@ -4,20 +4,22 @@
     "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
     "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40
+    "networkWarningEphemeralPorts": 40,
+    "warningOpenFileHandles": 2000
   },
   {
     "targetApp": "fabric:/FabricObserver",
     "cpuWarningLimitPercent": 35,
     "memoryWarningLimitPercent": 35,
     "networkWarningActivePorts": 50,
-    "networkWarningEphemeralPorts": 30
+    "networkWarningEphemeralPorts": 40,
+    "warningOpenFileHandles": 2000
   },
   {
     "targetAppType": "CpuStressType",
     "cpuWarningLimitPercent": 20.75,
     "memoryWarningLimitMb": 150,
-    "warningOpenFileHandles": 1000
+    "warningOpenFileHandles": 2000
   },
   {
     "targetAppType": "PatchOrchestrationApplicationType",

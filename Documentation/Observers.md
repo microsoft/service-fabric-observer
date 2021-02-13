@@ -64,7 +64,7 @@ folder (AppObserver.config.json):
     "networkWarningActivePorts": 800,
     "networkWarningEphemeralPorts": 400,
     "errorOpenFileHandles": 0,
-    "warningOpenFileHandles": 5000,
+    "warningOpenFileHandles": 5000
   },
   {
     "targetApp": "fabric:/MyApp1",
@@ -77,7 +77,9 @@ folder (AppObserver.config.json):
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
-    "networkWarningEphemeralPorts": 400
+    "networkWarningEphemeralPorts": 400,
+    "errorOpenFileHandles": 0,
+    "warningOpenFileHandles": 2500
   },
   {
     "targetApp": "fabric:/FabricObserver",
@@ -89,7 +91,9 @@ folder (AppObserver.config.json):
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
-    "networkWarningEphemeralPorts": 400
+    "networkWarningEphemeralPorts": 400,
+    "errorOpenFileHandles": 0,
+    "warningOpenFileHandles": 1000
   },
   {
     "targetApp": "fabric:/FabricObserverWebApi",
@@ -101,7 +105,9 @@ folder (AppObserver.config.json):
     "networkErrorActivePorts": 0,
     "networkWarningActivePorts": 800,
     "networkErrorEphemeralPorts": 0,
-    "networkWarningEphemeralPorts": 400
+    "networkWarningEphemeralPorts": 400,
+    "errorOpenFileHandles": 0,
+    "warningOpenFileHandles": 1000
   }
 ]
 ```
@@ -390,9 +396,9 @@ until the observer runs again.
     <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
-    <!-- The below parameters only make sense for Linux. -->
-    <Parameter Name="FileDescriptorsErrorLimitPercent" Value="" MustOverride="true"/>
-    <Parameter Name="FileDescriptorsWarningLimitPercent" Value="" MustOverride="true"/>
+    <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
+    <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
+    <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
   </Section>
 ```  
 | Setting | Description |
@@ -414,8 +420,8 @@ until the observer runs again.
 | **NetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on node that will generate a Fabric warning. |
 | **UseCircularBuffer** | You can choose between of `List<T>` or a `CircularBufferCollection<T>` for observer data storage. | 
 | **ResourceUsageDataCapacity** | Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for the observer. | 
-| **FileDescriptorsErrorLimitPercent** | Maximum percentage of allocated file descriptors (as a percentage of maximum FDs configured) in use on Linux virtual machine that will generate an Error. | 
-| **FileDescriptorsWarningLimitPercent** | Minumum percentage of allocated file descriptors (as a percentage of maximum FDs configured) in use on Linux virtual machine that will generate a Warning. |
+| **LinuxFileHandlesErrorLimitPercent** | Maximum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux virtual machine that will generate an Error. | 
+| **LinuxFileHandlesWarningLimitPercent** | Minumum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux virtual machine that will generate a Warning. |
 
 **Output**:\
 SFX Warnings when min/max thresholds are reached. CSV file,

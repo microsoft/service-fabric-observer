@@ -194,57 +194,86 @@ namespace FabricObserver.Observers
 
                 if (CsvFileLogger != null && CsvFileLogger.EnableCsvLogging)
                 {
-                    var fileName = "CpuMemFirewallsPorts" + NodeName;
+                    var fileName = "CpuMemFirewallsPortsHandles" + NodeName;
 
-                    // Log (csv) system-wide CPU/Mem data.
-                    CsvFileLogger.LogData(
+                    // Log (csv) system-wide CPU/Mem/Ports/File Handles(Linux)/Firewall Rules(Windows) data.
+                    if (this.CpuTimeData != null && (this.CpuErrorUsageThresholdPct > 0 || this.CpuWarningUsageThresholdPct > 0))
+                    {
+                        CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "CPU Time",
                         "Average",
                         Math.Round(CpuTimeData.AverageDataValue));
 
-                    CsvFileLogger.LogData(
-                        fileName,
-                        NodeName,
-                        "CPU Time",
-                        "Peak",
-                        Math.Round(CpuTimeData.MaxDataValue));
+                        CsvFileLogger.LogData(
+                            fileName,
+                            NodeName,
+                            "CPU Time",
+                            "Peak",
+                            Math.Round(CpuTimeData.MaxDataValue));
+                    }
 
-                    CsvFileLogger.LogData(
+                    // Memory
+                    if (this.MemDataCommittedBytes != null && (this.MemErrorUsageThresholdMb > 0 || this.MemWarningUsageThresholdMb > 0))
+                    {
+                        CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "Committed Memory (MB)",
                         "Average",
                         Math.Round(this.MemDataCommittedBytes.AverageDataValue));
 
-                    CsvFileLogger.LogData(
-                        fileName,
-                        NodeName,
-                        "Committed Memory (MB)",
-                        "Peak",
-                        Math.Round(this.MemDataCommittedBytes.MaxDataValue));
+                        CsvFileLogger.LogData(
+                            fileName,
+                            NodeName,
+                            "Committed Memory (MB)",
+                            "Peak",
+                            Math.Round(this.MemDataCommittedBytes.MaxDataValue));
+                    }
 
-                    CsvFileLogger.LogData(
+                    if (this.ActivePortsData != null && (this.ActivePortsErrorThreshold > 0 || this.ActivePortsWarningThreshold > 0))
+                    {
+                        CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "All Active Ports",
                         "Total",
                         this.ActivePortsData.Data[0]);
+                    }
 
-                    CsvFileLogger.LogData(
+                    if (this.EphemeralPortsData != null && (this.EphemeralPortsErrorThreshold > 0 || this.EphemeralPortsWarningThreshold > 0))
+                    {
+                        CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "Ephemeral Active Ports",
                         "Total",
                         this.EphemeralPortsData.Data[0]);
+                    }
 
-                    CsvFileLogger.LogData(
+                    if (this.FirewallData != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (this.FirewallRulesErrorThreshold > 0 || this.FirewallRulesWarningThreshold > 0))
+                    {
+                        CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "Firewall Rules",
                         "Total",
                         this.FirewallData.Data[0]);
+                    }
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        if (this.LinuxFileHandlesDataPercentAllocated != null && (this.LinuxFileHandlesErrorPercent > 0 || this.LinuxFileHandlesWarningPercent > 0))
+                        {
+                            CsvFileLogger.LogData(
+                                fileName,
+                                NodeName,
+                                ErrorWarningProperty.TotalFileHandlesPct,
+                                "Percent In Use",
+                                this.LinuxFileHandlesDataPercentAllocated.Data[0]);
+                        }
+                    }
 
                     DataTableFileLogger.Flush();
                 }
