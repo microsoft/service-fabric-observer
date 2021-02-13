@@ -159,6 +159,8 @@
     <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true"  />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
+    <Parameter Name="AllocatedHandlesErrorLimit" Value="" MustOverride="true" />
+    <Parameter Name="AllocatedHandlesWarningLimit" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="NetworkObserverConfiguration">

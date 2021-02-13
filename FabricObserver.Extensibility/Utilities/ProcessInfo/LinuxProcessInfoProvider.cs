@@ -25,7 +25,7 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public override async Task<float> GetProcessOpenFileHandlesAsync(int processId, StatelessServiceContext context, CancellationToken token)
+        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context)
         {
             if (processId < 0)
             {
@@ -53,7 +53,7 @@ namespace FabricObserver.Observers.Utilities
             using (Process process = Process.Start(startInfo))
             {
                 var stdOut = process.StandardOutput;
-                string output = await stdOut.ReadToEndAsync().ConfigureAwait(false);
+                string output = stdOut.ReadToEnd();
 
                 process.WaitForExit();
 

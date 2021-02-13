@@ -224,7 +224,7 @@ Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean set
 
 ## FabricSystemObserver 
 This observer monitors Fabric system service processes e.g., Fabric, FabricApplicationGateway, FabricCAS,
-FabricDCA, FabricDnsService, FabricFAS, FabricGateway, FabricHost, FabricUS, etc.  
+FabricDCA, FabricDnsService, FabricFAS, FabricGateway, FabricHost, etc...
 
 **NOTE:**
 Only enable FabricSystemObserver ***after*** you get a sense of what impact your services have on the SF runtime. 
@@ -233,9 +233,41 @@ That is, we (the SF team) do not have a fixed set of guaranteed problematic warn
  
 Again, it is best to Enable this observer only after you have done some experimentation with monitoring how your service code impacts Service Fabric system services. Otherwise, you may end up generating noise and creating support tickets when there is in fact nothing wrong with SF, but that your service code is just stressing SF services (e.g., Fabric.exe). This is of course useful to know, but FabricSystemObserver can't tell you that your code is the problem and we do not want you to create a support ticket because FSO warned you about something SF engineers can't fix for you...  
 
-**Input**: Settings.xml in PackageRoot\\Observers.Config\
-**Output**: Log text(Error/Warning), Service Fabric Health Report
-(Error/Warning)
+**Input**: Settings defined in Settings.xml with required overridable settings specified in ApplicationManifest.xml.
+
+```xml
+  <Section Name="FabricSystemObserverConfiguration">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
+    <!-- Required-If UseCircularBuffer = True -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    <!-- Optional: SF Event Log can be noisy and full of non-error errors., 
+         so it's recommended that you only enable this for debugging purposes. This
+         only works if you deploy the FabricObserverWebApi service and enable it above (ObserverWebApiEnabled). -->
+    <Parameter Name="MonitorWindowsEventLog" Value="" MustOverride="true" />
+    <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
+    <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
+    <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
+    <Parameter Name="MemoryWarningLimitMb" Value ="" MustOverride="true" />
+    <Parameter Name="NetworkErrorActivePorts" Value="" MustOverride="true"  />
+    <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true"  />
+    <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
+    <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
+    <Parameter Name="AllocatedHandlesErrorLimit" Value="" MustOverride="true" />
+    <Parameter Name="AllocatedHandlesWarningLimit" Value="" MustOverride="true" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+  </Section>
+```
+**Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning), ETW, Telemetry
 
 **This observer also optionally outputs a CSV file containing all resource usage
 data across iterations for use in analysis. Included are Average and
@@ -243,7 +275,7 @@ Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean set
 
 This observer runs for either a specified configuration setting of time
 or default of 30 seconds. Each fabric system process is monitored for
-CPU and memory usage, with related values stored in instances of
+CPU, memory, ports, and allocated handle usage, with related values stored in instances of
 FabricResourceUsageData object.
 
 ## NetworkObserver

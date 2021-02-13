@@ -82,6 +82,8 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricSystemObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";
         public const string FabricSystemObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string FabricSystemObserverMonitorWindowsEventLog = "MonitorWindowsEventLog";
+        public const string FabricSystemObserverErrorHandles = "AllocatedHandlesErrorLimit";
+        public const string FabricSystemObserverWarningHandles = "AllocatedHandlesWarningLimit";
 
         // NetworkObserver.
         public const string NetworkObserverName = "NetworkObserver";

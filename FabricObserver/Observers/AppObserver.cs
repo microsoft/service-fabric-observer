@@ -32,7 +32,7 @@ namespace FabricObserver.Observers
         private readonly List<FabricResourceUsageData<double>> AllAppMemDataPercent;
         private readonly List<FabricResourceUsageData<int>> AllAppTotalActivePortsData;
         private readonly List<FabricResourceUsageData<int>> AllAppEphemeralPortsData;
-        private readonly List<FabricResourceUsageData<float>> AllAppFileHandlesData;
+        private readonly List<FabricResourceUsageData<float>> AllAppHandlesData;
         private readonly Stopwatch stopwatch;
 
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration.
@@ -68,7 +68,7 @@ namespace FabricObserver.Observers
             this.AllAppMemDataPercent = new List<FabricResourceUsageData<double>>();
             this.AllAppTotalActivePortsData = new List<FabricResourceUsageData<int>>();
             this.AllAppEphemeralPortsData = new List<FabricResourceUsageData<int>>();
-            this.AllAppFileHandlesData = new List<FabricResourceUsageData<float>>();
+            this.AllAppHandlesData = new List<FabricResourceUsageData<float>>();
             this.stopwatch = new Stopwatch();
         }
 
@@ -245,11 +245,11 @@ namespace FabricObserver.Observers
                                 repOrInst);
                         }
 
-                        // Open File Handles
-                        if (this.AllAppFileHandlesData.Any(x => x.Id == id))
+                        // Allocated (in use) Handles
+                        if (this.AllAppHandlesData.Any(x => x.Id == id))
                         {
                             ProcessResourceDataReportHealth(
-                                this.AllAppFileHandlesData.FirstOrDefault(x => x.Id == id),
+                                this.AllAppHandlesData.FirstOrDefault(x => x.Id == id),
                                 app.ErrorOpenFileHandles,
                                 app.WarningOpenFileHandles,
                                 healthReportTimeToLive,
@@ -417,7 +417,7 @@ namespace FabricObserver.Observers
                 var timer = new Stopwatch();
                 int processId = (int)repOrInst.HostProcessId;
                 var cpuUsage = new CpuUsage();
-                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkFileHandles = false;
+                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false;
                 var application = this.deployedTargetList?.FirstOrDefault(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString?.ToLower() ||
                                     app?.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
@@ -502,18 +502,18 @@ namespace FabricObserver.Observers
                     }
 
                     // File Handles (FD on linux)
-                    if (this.AllAppFileHandlesData.All(list => list.Id != id) && (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0))
+                    if (this.AllAppHandlesData.All(list => list.Id != id) && (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0))
                     {
-                        this.AllAppFileHandlesData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, id, 1));
+                        this.AllAppHandlesData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, id, 1));
                     }
 
-                    if (this.AllAppFileHandlesData.Any(list => list.Id == id))
+                    if (this.AllAppHandlesData.Any(list => list.Id == id))
                     {
-                        checkFileHandles = true;
+                        checkHandles = true;
                     }
 
                     // No need to proceed further if no cpu/mem/file handles thresholds are specified in configuration.
-                    if (!checkCpu && !checkMemMb && !checkMemPct && !checkFileHandles)
+                    if (!checkCpu && !checkMemMb && !checkMemPct && !checkHandles)
                     {
                         continue;
                     }
@@ -585,13 +585,13 @@ namespace FabricObserver.Observers
                             }
                         }
 
-                        if (checkFileHandles)
+                        if (checkHandles)
                         {
-                            float fileHandles = await ProcessInfoProvider.Instance.GetProcessOpenFileHandlesAsync(currentProcess.Id, FabricServiceContext, Token);
+                            float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(currentProcess.Id, FabricServiceContext);
                             
-                            if (fileHandles > -1)
+                            if (handles > -1)
                             {
-                                this.AllAppFileHandlesData.FirstOrDefault(x => x.Id == id).Data.Add(fileHandles);
+                                this.AllAppHandlesData.FirstOrDefault(x => x.Id == id).Data.Add(handles);
                             }
                         }
 

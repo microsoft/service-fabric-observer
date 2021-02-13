@@ -71,11 +71,11 @@ namespace FabricObserver.Observers.Utilities
         }
 
         // File Handles
-        public override Task<float> GetProcessOpenFileHandlesAsync(int processId, StatelessServiceContext context, CancellationToken token)
+        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context)
         {
             if (processId < 0)
             {
-                return Task.FromResult(-1F);
+                return -1F;
             }
 
             const string FileHandlesCounterName = "Handle Count";
@@ -92,7 +92,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 // "Process with an Id of 12314 is not running."
                 Logger.LogError(ex.Message);
-                return Task.FromResult(-1F);
+                return -1F;
             }
 
             lock (this.fileHandlesPerfCounterLock)
@@ -103,7 +103,7 @@ namespace FabricObserver.Observers.Utilities
                     this.processFileHandleCounter.CounterName = FileHandlesCounterName;
                     this.processFileHandleCounter.InstanceName = processName;
 
-                    return Task.FromResult(this.processFileHandleCounter.NextValue());
+                    return this.processFileHandleCounter.NextValue();
                 }
                 catch (Exception e) when (e is ArgumentNullException || e is PlatformNotSupportedException ||
                                           e is Win32Exception || e is UnauthorizedAccessException)
@@ -111,7 +111,7 @@ namespace FabricObserver.Observers.Utilities
                     Logger.LogError($"{CategoryName} {FileHandlesCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
 
                     // Don't throw.
-                    return Task.FromResult(-1F);
+                    return -1F;
                 }
                 catch (Exception e)
                 {

@@ -123,6 +123,7 @@ namespace FabricObserverTests
             }
             catch (IOException)
             {
+
             }
         }
 
@@ -435,6 +436,8 @@ namespace FabricObserverTests
             obsMgr.Dispose();
         }
 
+        /* NOTE: Run the Run Cancellation tests below one by one, not as part of a Run All test or grouping. These can be flaky due to the Test infra. */
+
         [TestMethod]
         public async Task Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
         {
@@ -640,7 +643,10 @@ namespace FabricObserverTests
             obsMgr.Dispose();
         }
 
-        /****** These tests do NOT work without a running local SF cluster
+        /* End Run Cancellation Tests */
+
+        
+        /****** NOTE: These tests below do NOT work without a running local SF cluster
                 or in an Azure DevOps VSTest Pipeline ******/
 
         [TestMethod]
@@ -1417,6 +1423,59 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ActiveEphemeralPortCountWarning = 1, // This will definitely cause Warning.
+            };
+
+            var obsMgr = new ObserverManager(obs, this.fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            await obs.ObserveAsync(this.token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Experiment with err/warn detection/reporting behavior.
+            // observer detected errors or warnings for supplied threshold(s).
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync();
+            await Task.Delay(1000).ConfigureAwait(false);
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_HandlesWarningsOrErrorsDetected()
+        {
+            if (!this.isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var nodeList = await this.fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = this.context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = this.fabricClient;
+
+            var obs = new FabricSystemObserver(this.fabricClient, this.context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                AllocatedHandlesWarning = 100, // This will definitely cause Warning.
             };
 
             var obsMgr = new ObserverManager(obs, this.fabricClient)

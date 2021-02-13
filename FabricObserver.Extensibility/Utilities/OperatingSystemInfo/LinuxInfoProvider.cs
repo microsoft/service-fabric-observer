@@ -208,15 +208,15 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Returns the Maximum number of FileHandles/FDs configured in the OS.
+        /// Returns the Maximum configured number of File Handles/FDs in Linux OS instance.
         /// </summary>
-        /// <returns>int value representing maximum number of filed handles/fds configured on host OS.</returns>
+        /// <returns>int value representing configured maximum number of file handles/fds in Linux OS instance.</returns>
         public override int GetMaximumConfiguredFileDescriptorCount()
         {
             // sysctl fs.file-max
-            string cmdResult = "sysctl fs.file-max".Bash();
+            string cmdResult = "sysctl fs.file-max | awk '{ print $3 }'".Bash();
 
-            // result will be in this format:
+            // sysctl fs.file-max result will be in this format:
             // fs.file-max = 1616177
 
             if (string.IsNullOrEmpty(cmdResult))
@@ -224,33 +224,23 @@ namespace FabricObserver.Observers.Utilities
                 return -1;
             }
 
-            var splitArr = cmdResult.Split('=');
-
-            if (splitArr.Length == 0)
-            {
-                return -1;
-            }
-
-            if (int.TryParse(splitArr[1].TrimStart(), out int maxHandles))
+            if (int.TryParse(cmdResult.Trim(), out int maxHandles))
             {
                 return maxHandles;
             }
-
 
             return -1;
         }
 
         /// <summary>
-        /// Returns the Maximum number of FileHandles/FDs configured in the OS.
+        /// Returns the total number of allocated (in use) Linux File Handles/FDs.
         /// </summary>
-        /// <returns>int value representing maximum number of filed handles/fds configured on host OS.</returns>
+        /// <returns>integer value representing the total number of allocated (in use) Linux FileHandles/FDs.</returns>
         public override int GetTotalAllocatedFileDescriptorsCount()
         {
             // fs.file-nr result will be in this format:
             // fs.file-nr = 30112      0       1616177x
             string cmdResult = "sysctl fs.file-nr | awk '{ print $3 }'".Bash();
-
-            //this.Logger.LogWarning($"cmdResult: {cmdResult}");
 
             if (string.IsNullOrEmpty(cmdResult))
             {

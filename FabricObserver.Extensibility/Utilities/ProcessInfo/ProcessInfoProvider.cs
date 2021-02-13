@@ -52,6 +52,6 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessPrivateWorkingSetInMB(int processId);
 
-        public abstract Task<float> GetProcessOpenFileHandlesAsync(int processId, StatelessServiceContext context, CancellationToken token);
+        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
     }
 }

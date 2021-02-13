@@ -13,6 +13,12 @@ namespace FabricObserver.Observers.Utilities
     {
         float GetProcessPrivateWorkingSetInMB(int processId);
 
-        Task<float> GetProcessOpenFileHandlesAsync(int processId, StatelessServiceContext context, CancellationToken token);
+        /// <summary>
+        /// Returns the number of allocated (in use) file handles for a specified process.
+        /// </summary>
+        /// <param name="processId">The id of the process.</param>
+        /// <param name="context">StatelessServiceContext instance.</param>
+        /// <returns>float value representing number of allocated file handles for the process.</returns>
+        float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
     }
 }
