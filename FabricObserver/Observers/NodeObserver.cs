@@ -55,13 +55,13 @@ namespace FabricObserver.Observers
         // These are only useful for Linux.\\
 
         // Holds data for percentage of total configured file descriptors that are in use.
-        public FabricResourceUsageData<double> FileDescriptorDataPercentAllocated
+        public FabricResourceUsageData<double> LinuxFileHandlesDataPercentAllocated
         {
             get; set;
         }
 
-        // Holds raw number of allocated file descriptors.
-        public FabricResourceUsageData<int> FileDescriptorDataRawNumberAllocated
+        // TODO: Holds raw number of allocated file descriptors.
+        public FabricResourceUsageData<int> LinuxFileDescriptorDataRawNumberAllocated
         {
             get; set;
         }
@@ -126,24 +126,26 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        /* Thresholds for Percentage/Raw Count of available FileDescriptors/FDs in use on VM.
+        /* Thresholds for Percentage/Raw Count of available FileHandles/FDs in use on VM.
            NOTE: These are only used for Linux. */
-        public double ErrorFileDescriptorsPercent
+        public double LinuxFileHandlesErrorPercent
         {
             get; set;
         }
 
-        public double WarningFileDescriptorsPercent
+        public double LinuxFileHandlesWarningPercent
         {
             get; set;
         }
 
-        public int ErrorFileDescriptorsCount
+        // TODO..
+        public int LinuxFileHandlesErrorCount
         {
             get; set;
         }
 
-        public int WarningFileDescriptorsCount
+        // TODO..
+        public int LinuxFileHandlesWarningCount
         {
             get; set;
         }
@@ -311,15 +313,15 @@ namespace FabricObserver.Observers
                         timeToLiveWarning);
                 }
 
-                // File Descriptors (Linux)
+                // File Handles (Linux) - Percent Allocated (in use) of configured Maximum File Handles.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    if (this.FileDescriptorDataPercentAllocated != null && (this.ErrorFileDescriptorsPercent > 0 || this.WarningFileDescriptorsPercent > 0))
+                    if (this.LinuxFileHandlesDataPercentAllocated != null && (this.LinuxFileHandlesErrorPercent > 0 || this.LinuxFileHandlesWarningPercent > 0))
                     {
                         ProcessResourceDataReportHealth(
-                            this.FileDescriptorDataPercentAllocated,
-                            this.ErrorFileDescriptorsPercent,
-                            this.WarningFileDescriptorsPercent,
+                            this.LinuxFileHandlesDataPercentAllocated,
+                            this.LinuxFileHandlesErrorPercent,
+                            this.LinuxFileHandlesWarningPercent,
                             timeToLiveWarning);
                     }
                 }
@@ -387,9 +389,9 @@ namespace FabricObserver.Observers
             // This only makes sense for Linux.
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                if (this.FileDescriptorDataPercentAllocated == null && (this.ErrorFileDescriptorsPercent > 0 || this.WarningFileDescriptorsPercent > 0))
+                if (this.LinuxFileHandlesDataPercentAllocated == null && (this.LinuxFileHandlesErrorPercent > 0 || this.LinuxFileHandlesWarningPercent > 0))
                 {
-                    this.FileDescriptorDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalFileDescriptorsPct, "TotalFileDescriptorsPercentage", 1);
+                    this.LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalFileHandlesPct, "TotalFileHandlesPercentage", 1);
                 }
             }
         }
@@ -463,15 +465,15 @@ namespace FabricObserver.Observers
             // Linux FDs.
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                var errFileDescriptorsPercentUsed = GetSettingParameterValue(
+                var errFileHandlesPercentUsed = GetSettingParameterValue(
                     ConfigurationSectionName,
-                    ObserverConstants.NodeObserverFileDescriptorsErrorLimitPct);
+                    ObserverConstants.NodeObserverLinuxFileHandlesErrorLimitPct);
 
-                if (!string.IsNullOrEmpty(errFileDescriptorsPercentUsed) && double.TryParse(errFileDescriptorsPercentUsed, out double fileDescriptorsPercentUsedErrorThreshold))
+                if (!string.IsNullOrEmpty(errFileHandlesPercentUsed) && double.TryParse(errFileHandlesPercentUsed, out double fileDescriptorsPercentUsedErrorThreshold))
                 {
                     if (fileDescriptorsPercentUsedErrorThreshold > 0 && fileDescriptorsPercentUsedErrorThreshold <= 100)
                     {
-                        this.ErrorFileDescriptorsPercent = fileDescriptorsPercentUsedErrorThreshold;
+                        this.LinuxFileHandlesErrorPercent = fileDescriptorsPercentUsedErrorThreshold;
                     }
                 }
             }
@@ -543,15 +545,15 @@ namespace FabricObserver.Observers
             // Linux FDs.
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                var warnFileDescriptorsPercentUsed = GetSettingParameterValue(
+                var warnFileHandlesPercentUsed = GetSettingParameterValue(
                     ConfigurationSectionName,
-                    ObserverConstants.NodeObserverFileDescriptorsWarningLimitPct);
+                    ObserverConstants.NodeObserverLinuxFileHandlesWarningLimitPct);
 
-                if (!string.IsNullOrEmpty(warnFileDescriptorsPercentUsed) && double.TryParse(warnFileDescriptorsPercentUsed, out double fileDescriptorsPercentUsedWarningThreshold))
+                if (!string.IsNullOrEmpty(warnFileHandlesPercentUsed) && double.TryParse(warnFileHandlesPercentUsed, out double fileDescriptorsPercentUsedWarningThreshold))
                 {
                     if (fileDescriptorsPercentUsedWarningThreshold > 0 && fileDescriptorsPercentUsedWarningThreshold <= 100)
                     {
-                        this.WarningFileDescriptorsPercent = fileDescriptorsPercentUsedWarningThreshold;
+                        this.LinuxFileHandlesWarningPercent = fileDescriptorsPercentUsedWarningThreshold;
                     }
                 }
             }
@@ -608,26 +610,23 @@ namespace FabricObserver.Observers
                     _ = await cpuUtilizationProvider.NextValueAsync();
                 }
 
+                // VM-level file handle monitoring only makes sense for Linux, where Maximum number of handles is a configuration setting.
+                // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
+                // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    if (this.FileDescriptorDataPercentAllocated != null && (this.ErrorFileDescriptorsPercent > 0 || this.WarningFileDescriptorsPercent > 0))
+                    if (this.LinuxFileHandlesDataPercentAllocated != null && (this.LinuxFileHandlesErrorPercent > 0 || this.LinuxFileHandlesWarningPercent > 0))
                     {
-                        // Note, you will notice that the GetProcessOpenFileHandles function is also used by AppObserver (both Linux and Windows) 
-                        // to get open file handles per process. For VM level monitoring, it only makes sense to pass -1 for pid if running on Linux,
-                        // which instructs the Capabilities-laced binary that FO calls to run lsof (which will pipe output to wc -l and then return the count for ***ALL*** allocated FDs).
-                        // Windows does not have a similar configuration for Max file handles, so this call (passing -1) is for Linux only. Windows callers will always get a -1 back when -1 is supplied.
-                        // **This call can take some time (seconds) to complete (lsof is intensive). It is not a good idea to run this function several times. 
-                        //   Once is fine and it will provide an accurate enough number to determine whether a real threshold breach has occurred or not.**
-                        float totalOpenFileDescriptors = OperatingSystemInfoProvider.Instance.GetTotalAllocatedFileDescriptorsCount();
+                        float totalOpenFileHandles = OperatingSystemInfoProvider.Instance.GetTotalAllocatedFileHandlesCount();
 
-                        if (totalOpenFileDescriptors > 0)
+                        if (totalOpenFileHandles > 0)
                         {
-                            int maximumConfiguredFDCount = OperatingSystemInfoProvider.Instance.GetMaximumConfiguredFileDescriptorCount();
+                            int maximumConfiguredFDCount = OperatingSystemInfoProvider.Instance.GetMaximumConfiguredFileHandlesCount();
 
                             if (maximumConfiguredFDCount > 0)
                             {
-                                double usedPct = totalOpenFileDescriptors / maximumConfiguredFDCount * 100;
-                                this.FileDescriptorDataPercentAllocated.Data.Add(Math.Round(usedPct, 2));
+                                double usedPct = totalOpenFileHandles / maximumConfiguredFDCount * 100;
+                                this.LinuxFileHandlesDataPercentAllocated.Data.Add(Math.Round(usedPct, 2));
                             }
                         }
                     } 

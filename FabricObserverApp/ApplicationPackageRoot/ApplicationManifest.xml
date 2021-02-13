@@ -105,8 +105,8 @@
     <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="8000" />
     <!-- The below settings only make sense for Linux. -->
-    <Parameter Name="NodeObserverFileDescriptorsErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverFileDescriptorsWarningLimitPercent" DefaultValue="90" />
+    <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
+    <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
     <!-- OSObserver Windows AutoUpdate Settings Check -->
     <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
     <!-- Observers with JSON config - File names.
@@ -208,8 +208,8 @@
             <Parameter Name="NetworkWarningFirewallRules" Value="[NodeObserverNetworkWarningFirewallRules]" />
             <Parameter Name="NetworkErrorEphemeralPorts" Value="[NodeObserverNetworkErrorEphemeralPorts]" />
             <Parameter Name="NetworkWarningEphemeralPorts" Value="[NodeObserverNetworkWarningEphemeralPorts]" />
-            <Parameter Name="FileDescriptorsErrorLimitPercent" Value="[NodeObserverFileDescriptorsErrorLimitPercent]" />
-            <Parameter Name="FileDescriptorsWarningLimitPercent" Value="[NodeObserverFileDescriptorsWarningLimitPercent]" />
+            <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="[NodeObserverLinuxFileHandlesErrorLimitPercent]" />
+            <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="[NodeObserverLinuxFileHandlesWarningLimitPercent]" />
           </Section>
           <Section Name="OSObserverConfiguration">
             <Parameter Name="Enabled" Value="[OSObserverEnabled]" />

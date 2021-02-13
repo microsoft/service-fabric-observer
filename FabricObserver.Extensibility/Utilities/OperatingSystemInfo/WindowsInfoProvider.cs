@@ -365,12 +365,14 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        public override int GetMaximumConfiguredFileDescriptorCount()
+        // Not implemented. No Windows support.
+        public override int GetMaximumConfiguredFileHandlesCount()
         {
             return -1;
         }
 
-        public override int GetTotalAllocatedFileDescriptorsCount()
+        // Not implemented. No Windows support.
+        public override int GetTotalAllocatedFileHandlesCount()
         {
             return -1;
         }

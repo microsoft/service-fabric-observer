@@ -62,15 +62,15 @@ namespace FabricObserver.Observers.Utilities
         public abstract Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken);
 
         /// <summary>
-        /// Returns the Maximum number of FileHandles/FDs configured in the OS. Note: This is not really meaningful on Windows. This is useful for Linux only.
+        /// Returns the Maximum number of Linux File Handles configured in the OS. Note: This is not implemented for Windows.
         /// </summary>
         /// <returns>int value representing the maximum number of file handles/fds configured on host OS at the time of the call. For Windows, this always returns -1.</returns>
-        public abstract int GetMaximumConfiguredFileDescriptorCount();
+        public abstract int GetMaximumConfiguredFileHandlesCount();
 
         /// <summary>
-        /// Returns the Total number of allocated FileHandles/FDs. Note: This is not really meaningful on Windows. This is useful for Linux only.
+        /// Returns the Total number of allocated Linux File Handles. Note: This is not implemented for Windows.
         /// </summary>
         /// <returns>int value representing total number of allocated file handles/fds on host OS. For Windows, this always returns -1.</returns>
-        public abstract int GetTotalAllocatedFileDescriptorsCount();
+        public abstract int GetTotalAllocatedFileHandlesCount();
     }
 }

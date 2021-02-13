@@ -211,7 +211,7 @@ namespace FabricObserver.Observers.Utilities
         /// Returns the Maximum configured number of File Handles/FDs in Linux OS instance.
         /// </summary>
         /// <returns>int value representing configured maximum number of file handles/fds in Linux OS instance.</returns>
-        public override int GetMaximumConfiguredFileDescriptorCount()
+        public override int GetMaximumConfiguredFileHandlesCount()
         {
             // sysctl fs.file-max
             string cmdResult = "sysctl fs.file-max | awk '{ print $3 }'".Bash();
@@ -236,7 +236,7 @@ namespace FabricObserver.Observers.Utilities
         /// Returns the total number of allocated (in use) Linux File Handles/FDs.
         /// </summary>
         /// <returns>integer value representing the total number of allocated (in use) Linux FileHandles/FDs.</returns>
-        public override int GetTotalAllocatedFileDescriptorsCount()
+        public override int GetTotalAllocatedFileHandlesCount()
         {
             // fs.file-nr result will be in this format:
             // fs.file-nr = 30112      0       1616177x

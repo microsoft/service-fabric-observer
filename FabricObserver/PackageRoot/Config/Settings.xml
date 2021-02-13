@@ -195,9 +195,9 @@
     <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
-    <!-- The below parameters only make sense for Linux. -->
-    <Parameter Name="FileDescriptorsErrorLimitPercent" Value="" MustOverride="true"/>
-    <Parameter Name="FileDescriptorsWarningLimitPercent" Value="" MustOverride="true"/>
+    <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
+    <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
+    <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
   </Section>
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />

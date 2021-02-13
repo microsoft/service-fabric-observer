@@ -913,7 +913,7 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorTooManyOpenFileHandles : FOErrorWarningCodes.AppWarningTooManyOpenFileHandles;
                         break;
 
-                    case ErrorWarningProperty.TotalFileDescriptorsPct:
+                    case ErrorWarningProperty.TotalFileHandlesPct:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorAllocatedFileDescriptorsPercent : FOErrorWarningCodes.NodeWarningAllocatedFileDescriptorsPercent;
                         break;
