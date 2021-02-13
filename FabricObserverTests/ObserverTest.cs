@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
+using System.Fabric.Health;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -57,7 +59,7 @@ namespace FabricObserverTests
                     Guid.NewGuid(),
                     long.MaxValue);
 
-        private readonly bool isSFRuntimePresentOnTestMachine;
+        private static readonly bool isSFRuntimePresentOnTestMachine;
         private readonly CancellationToken token = new CancellationToken { };
         private readonly FabricClient fabricClient = new FabricClient(FabricClientRole.User);
 
@@ -66,10 +68,13 @@ namespace FabricObserverTests
         /// </summary>
         public ObserverTest()
         {
-            this.isSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
-
             // You must set ObserverBase's static IsTestRun to true to run these unit tests.
             ObserverBase.IsTestRun = true;
+        }
+
+        static ObserverTest()
+        {
+            isSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
         }
 
         private static bool InstallCerts()
@@ -124,6 +129,83 @@ namespace FabricObserverTests
             catch (IOException)
             {
 
+            }
+
+            // Don't proceed if tests were run on a machine with no SF cluster running.
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            // Clear any existing node or fabric:/System app Test Health Reports.
+            try
+            {
+                FabricObserver.Observers.Utilities.HealthReport healthReport = new FabricObserver.Observers.Utilities.HealthReport
+                {
+                    Code = FOErrorWarningCodes.Ok,
+                    HealthMessage = $"Clearing existing Error/Warning Test Health Reports.",
+                    State = HealthState.Ok,
+                    ReportType = HealthReportType.Application,
+                    NodeName = "_Node_0",
+                };
+
+                var logger = new Logger("TestCleanUp");
+
+                var fabricClient = new FabricClient(FabricClientRole.Admin);
+
+                // System apps reports
+                var appHealth = fabricClient.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System")).GetAwaiter().GetResult();
+
+                int? unhealthyEventsCount = appHealth.HealthEvents?.Count(s => s.HealthInformation.SourceId.Contains("FabricSystemObserver"));
+
+                if (unhealthyEventsCount != null && unhealthyEventsCount > 0)
+                {
+                    foreach (var evt in appHealth.HealthEvents)
+                    {
+                        if (!evt.HealthInformation.SourceId.Contains("FabricSystemObserver") || evt.HealthInformation.HealthState == HealthState.Ok)
+                        {
+                            continue;
+                        }
+
+                        healthReport.AppName = new Uri("fabric:/System");
+                        healthReport.Property = evt.HealthInformation.Property;
+                        healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                        var healthReporter = new ObserverHealthReporter(logger, fabricClient);
+                        healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                        Thread.Sleep(250);
+                    }
+                }
+
+                // Node reports
+                var nodeHealth = fabricClient.HealthManager.GetNodeHealthAsync("_Node_0").GetAwaiter().GetResult();
+
+                int? unhealthyEvtsCount = nodeHealth.HealthEvents?.Count(s => s.HealthInformation.SourceId.Contains("Observer"));
+
+                healthReport.ReportType = HealthReportType.Node;
+
+                if (unhealthyEvtsCount != null && unhealthyEvtsCount > 0)
+                {
+                    foreach (var evt in nodeHealth.HealthEvents)
+                    {
+                        if (!evt.HealthInformation.SourceId.Contains("Observer") || evt.HealthInformation.HealthState == HealthState.Ok)
+                        {
+                            continue;
+                        }
+
+                        healthReport.Property = evt.HealthInformation.Property;
+                        healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                        var healthReporter = new ObserverHealthReporter(logger, fabricClient);
+                        healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                        Thread.Sleep(250);
+                    }
+                }
+            }
+            catch (FabricException)
+            {
             }
         }
 
@@ -281,7 +363,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -329,7 +411,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -441,7 +523,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -652,7 +734,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task CertificateObserver_validCerts()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -718,7 +800,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task CertificateObserver_expiredAndexpiringCerts()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -781,7 +863,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -826,7 +908,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Negative_Integer_CPU_Mem_Ports_Firewalls_Values_No_Exceptions_In_Intialize()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -867,7 +949,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Negative_Integer_Thresholds_CPU_Mem_Ports_Firewalls_All_Data_Containers_Are_Null()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -914,7 +996,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -962,7 +1044,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1010,7 +1092,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1068,7 +1150,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NetworkObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1105,7 +1187,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NetworkObserver_ObserveAsync_Successful_Observer_WritesLocalFile_ObsWebDeployed()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1155,7 +1237,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1201,7 +1283,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task SFConfigurationObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1249,7 +1331,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1296,7 +1378,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1350,7 +1432,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1402,7 +1484,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1455,7 +1537,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_HandlesWarningsOrErrorsDetected()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1508,7 +1590,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1553,7 +1635,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            if (!this.isSFRuntimePresentOnTestMachine)
+            if (!isSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1593,7 +1675,7 @@ namespace FabricObserverTests
 
         /***** End Tests that require a currently running SF Cluster. *****/
 
-        private bool IsLocalSFRuntimePresent()
+        private static bool IsLocalSFRuntimePresent()
         {
             try
             {

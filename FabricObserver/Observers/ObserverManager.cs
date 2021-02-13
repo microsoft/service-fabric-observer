@@ -333,7 +333,7 @@ namespace FabricObserver.Observers
 
                                 foreach (var evt in appHealth.HealthEvents)
                                 {
-                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName))
+                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName) || evt.HealthInformation.HealthState == HealthState.Ok)
                                     {
                                         continue;
                                     }
@@ -345,12 +345,14 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(500, token).ConfigureAwait(false);
+                                    await Task.Delay(250, token).ConfigureAwait(false);
                                 }
                             }
                             catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
                             {
                             }
+
+                            await Task.Delay(250, token).ConfigureAwait(false);
                         }
                     }
                     else
@@ -367,7 +369,7 @@ namespace FabricObserver.Observers
                             {
                                 foreach (var evt in nodeHealth.HealthEvents)
                                 {
-                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName))
+                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName) || evt.HealthInformation.HealthState == HealthState.Ok)
                                     {
                                         continue;
                                     }
@@ -378,7 +380,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(500, token).ConfigureAwait(false);
+                                    await Task.Delay(250, token).ConfigureAwait(false);
                                 }
                             }
                         }
