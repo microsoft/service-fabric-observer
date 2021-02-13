@@ -235,7 +235,7 @@ namespace FabricObserver.Observers
                                     (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
                                     $"Fabric memory use MB: {allMemData?.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" +
                                     $"FabricGateway memory use MB: {allMemData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" +
-                                    $"FabricGateway allocated file handles: {allHandlesData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" +
+                                    $"FabricGateway allocated file handles: {allHandlesData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.MaxDataValue}{Environment.NewLine}" +
                                     $"FabricHost memory use MB: {allMemData?.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" : string.Empty),
 
                 State = HealthState.Ok,
@@ -925,12 +925,24 @@ namespace FabricObserver.Observers
 
                     switch (propertyName)
                     {
+                        case ErrorWarningProperty.TotalCpuTime:
+                            dataLogMonitorType = "% CPU Time";
+                            break;
+
                         case ErrorWarningProperty.TotalMemoryConsumptionMb:
                             dataLogMonitorType = "Working Set %";
                             break;
 
-                        case ErrorWarningProperty.TotalCpuTime:
-                            dataLogMonitorType = "% CPU Time";
+                        case ErrorWarningProperty.TotalActivePorts:
+                            dataLogMonitorType = "Active TCP Ports";
+                            break;
+
+                        case ErrorWarningProperty.TotalEphemeralPorts:
+                            dataLogMonitorType = "Active Ephemeral Ports";
+                            break;
+
+                        case ErrorWarningProperty.TotalFileHandlesPct:
+                            dataLogMonitorType = "Allocated (in use) File Handles %";
                             break;
                     }
 

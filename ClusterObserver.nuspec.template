@@ -3,7 +3,7 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>2.1.2</version>
-    <releaseNotes>Supports new error/warnings from FabricObserver: Allocated file handles per service process (AppObserver - Windows and Linux) and percentage of allocated FDs relative to maximum number of configured FDs (Node Observer - Linux only).</releaseNotes>
+    <releaseNotes>Supports new error/warnings from FabricObserver: Allocated file handles per service process (AppObserver - Windows and Linux) and percentage of allocated File Handles relative to Maximum number of configured File Handles (Node Observer - Linux only).</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

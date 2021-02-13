@@ -3,7 +3,7 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>3.1.4</version>
-    <releaseNotes>Updated 4 observers (AppObserver, NodeObserver) to monitor allocated file handles for service processes (AppObserver - Windows and Linux) and percent allocated of configured maximum FDs (NodeObserver - Linux only).</releaseNotes>
+    <releaseNotes>Updated 3 observers (AppObserver, FabricSystemObserver, NodeObserver) to monitor allocated (in use) file handles for service processes (AppObserver/FabricSystemObserver - Windows and Linux) and percent allocated of configured Maximum number of File Handles (NodeObserver - Linux only).</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
