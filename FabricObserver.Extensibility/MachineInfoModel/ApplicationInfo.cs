@@ -3,6 +3,8 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
+
 namespace FabricObserver.Observers.MachineInfoModel
 {
     public class ApplicationInfo
@@ -92,22 +94,34 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public override string ToString() => $"ApplicationName: {TargetApp ?? string.Empty}\n" +
-                                             $"ApplicationTypeName: {TargetAppType ?? string.Empty}\n" +
-                                             $"ServiceExcludeList: {ServiceExcludeList ?? string.Empty}\n" +
-                                             $"ServiceIncludeList: {ServiceIncludeList ?? string.Empty}\n" +
-                                             $"MemoryWarningLimitMB: {MemoryWarningLimitMb}\n" +
-                                             $"MemoryErrorLimitMB: {MemoryErrorLimitMb}\n" +
-                                             $"MemoryWarningLimitPercent: {MemoryWarningLimitPercent}\n" +
-                                             $"MemoryErrorLimitPercent: {MemoryErrorLimitPercent}\n" +
-                                             $"CpuWarningLimitPercent: {CpuWarningLimitPercent}\n" +
-                                             $"CpuErrorLimitPercent: {CpuErrorLimitPercent}\n" +
-                                             $"NetworkErrorActivePorts: {NetworkErrorActivePorts}\n" +
-                                             $"NetworkWarningActivePorts: {NetworkWarningActivePorts}\n" +
-                                             $"NetworkErrorEphemeralPorts: {NetworkErrorEphemeralPorts}\n" +
-                                             $"NetworkWarningEphemeralPorts: {NetworkWarningEphemeralPorts}\n" +
-                                             $"NetworkErrorFirewallRules: {NetworkErrorFirewallRules}\n" +
-                                             $"NetworkWarningFirewallRules: {NetworkWarningFirewallRules}\n" +
-                                             $"DumpProcessOnError: {DumpProcessOnError}\n";
+        public int ErrorOpenFileHandles 
+        { 
+            get; set; 
+        }
+
+        public int WarningOpenFileHandles
+        {
+            get; set;
+        }
+
+        public override string ToString() => $"ApplicationName: {TargetApp ?? string.Empty}{Environment.NewLine}" +
+                                             $"ApplicationTypeName: {TargetAppType ?? string.Empty}{Environment.NewLine}" +
+                                             $"ServiceExcludeList: {ServiceExcludeList ?? string.Empty}{Environment.NewLine}" +
+                                             $"ServiceIncludeList: {ServiceIncludeList ?? string.Empty}{Environment.NewLine}" +
+                                             $"MemoryWarningLimitMB: {MemoryWarningLimitMb}{Environment.NewLine}" +
+                                             $"MemoryErrorLimitMB: {MemoryErrorLimitMb}{Environment.NewLine}" +
+                                             $"MemoryWarningLimitPercent: {MemoryWarningLimitPercent}{Environment.NewLine}" +
+                                             $"MemoryErrorLimitPercent: {MemoryErrorLimitPercent}{Environment.NewLine}" +
+                                             $"CpuWarningLimitPercent: {CpuWarningLimitPercent}{Environment.NewLine}" +
+                                             $"CpuErrorLimitPercent: {CpuErrorLimitPercent}{Environment.NewLine}" +
+                                             $"NetworkErrorActivePorts: {NetworkErrorActivePorts}{Environment.NewLine}" +
+                                             $"NetworkWarningActivePorts: {NetworkWarningActivePorts}{Environment.NewLine}" +
+                                             $"NetworkErrorEphemeralPorts: {NetworkErrorEphemeralPorts}{Environment.NewLine}" +
+                                             $"NetworkWarningEphemeralPorts: {NetworkWarningEphemeralPorts}{Environment.NewLine}" +
+                                             $"NetworkErrorFirewallRules: {NetworkErrorFirewallRules}{Environment.NewLine}" +
+                                             $"NetworkWarningFirewallRules: {NetworkWarningFirewallRules}{Environment.NewLine}" +
+                                             $"DumpProcessOnError: {DumpProcessOnError}{Environment.NewLine}" +
+                                             $"ErrorOpenFileHandles: {ErrorOpenFileHandles}{Environment.NewLine}" +
+                                             $"WarningOpenFileHandles: {WarningOpenFileHandles}{Environment.NewLine}";
     }
 }

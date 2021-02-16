@@ -46,11 +46,11 @@ namespace FabricObserver.Observers.Utilities
         {
             if (healthState == HealthState.Error)
             {
-                this.logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + " | {0}", description);
+                logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + " | {0}", description);
             }
             else if (healthState == HealthState.Warning)
             {
-                this.logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + " | {0}", description);
+                logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + " | {0}", description);
             }
         }
 
@@ -157,15 +157,15 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (healthReport.State == HealthState.Error)
                 {
-                    this.logger.LogError(healthReport.NodeName + ": {0}", healthInformation.Description);
+                    logger.LogError(healthReport.NodeName + ": {0}", healthInformation.Description);
                 }
                 else if (healthReport.State == HealthState.Warning)
                 {
-                    this.logger.LogWarning(healthReport.NodeName + ": {0}", healthInformation.Description);
+                    logger.LogWarning(healthReport.NodeName + ": {0}", healthInformation.Description);
                 }
                 else
                 {
-                    this.logger.LogInfo(healthReport.NodeName + ": {0}", healthInformation.Description);
+                    logger.LogInfo(healthReport.NodeName + ": {0}", healthInformation.Description);
                 }
             }
 
@@ -173,39 +173,39 @@ namespace FabricObserver.Observers.Utilities
             if (healthReport.ReportType == HealthReportType.Application && healthReport.AppName != null)
             {
                 var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
             }
             else if (healthReport.ReportType == HealthReportType.Service && healthReport.ServiceName != null)
             {
                 var serviceHealthReport = new ServiceHealthReport(healthReport.ServiceName, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
             }
             else if (healthReport.ReportType == HealthReportType.StatefulService
                 && healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0)
             {
                 var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
+                fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
             }
             else if (healthReport.ReportType == HealthReportType.StatelessService
                   && healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0)
             {
                 var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
+                fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
             }
             else if (healthReport.ReportType == HealthReportType.Partition && healthReport.PartitionId != Guid.Empty)
             {
                 var partitionHealthReport = new PartitionHealthReport(healthReport.PartitionId, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
+                fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
             }
             else if (healthReport.ReportType == HealthReportType.DeployedApplication && healthReport.AppName != null)
             {
                 var deployedApplicationHealthReport = new DeployedApplicationHealthReport(healthReport.AppName, healthReport.NodeName, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
+                fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
             }
             else
             {
                 var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
-                this.fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
             }
         }
     }

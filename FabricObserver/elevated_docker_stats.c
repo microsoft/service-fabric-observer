@@ -34,7 +34,7 @@ static void set_ambient_caps(int* newcaps, int num_elem)
             printf("Fail!\n");
             return;
         }
-        printf("Success!\n");
+        //printf("Success!\n");
     }
 }
 
@@ -42,7 +42,7 @@ int main()
 {
     cap_value_t newcaps[2] = { CAP_DAC_READ_SEARCH,CAP_DAC_OVERRIDE };
 
-    //Add capabilities in the Inheritable set.
+    // Add capabilities in the Inheritable set.
     cap_t caps = cap_get_proc();
     printf("Capabilities: %s\n", cap_to_text(caps, NULL));
     cap_set_flag(caps, CAP_INHERITABLE, 2, newcaps, CAP_SET);

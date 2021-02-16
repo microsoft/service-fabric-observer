@@ -78,7 +78,7 @@ namespace FabricObserver.Observers.Utilities
         {
             FolderName = observerName;
             Filename = observerName + ".log";
-            this.loggerName = observerName;
+            loggerName = observerName;
 
             if (!string.IsNullOrEmpty(logFolderBasePath))
             {
@@ -228,7 +228,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            this.LogFolderBasePath = logFolderBase;
+            LogFolderBasePath = logFolderBase;
             string file = Path.Combine(logFolderBase, "fabric_observer.log");
 
             if (!string.IsNullOrEmpty(FolderName) && !string.IsNullOrEmpty(Filename))
@@ -239,7 +239,7 @@ namespace FabricObserver.Observers.Utilities
 
             FilePath = file;
 
-            var targetName = this.loggerName + "LogFile";
+            var targetName = loggerName + "LogFile";
 
             if (LogManager.Configuration == null)
             {
@@ -261,16 +261,16 @@ namespace FabricObserver.Observers.Utilities
                     AutoFlush = true,
                 };
 
-                LogManager.Configuration.AddTarget(this.loggerName + "LogFile", target);
+                LogManager.Configuration.AddTarget(loggerName + "LogFile", target);
 
-                var ruleInfo = new LoggingRule(this.loggerName, NLog.LogLevel.Debug, target);
+                var ruleInfo = new LoggingRule(loggerName, NLog.LogLevel.Debug, target);
 
                 LogManager.Configuration.LoggingRules.Add(ruleInfo);
                 LogManager.ReconfigExistingLoggers();
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
-            OLogger = LogManager.GetLogger(this.loggerName);
+            OLogger = LogManager.GetLogger(loggerName);
         }
     }
 }

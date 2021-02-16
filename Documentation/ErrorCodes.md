@@ -25,13 +25,17 @@
 | FO020 | Total Committed memory (MB) has exceeded configured ***Warning*** threshold on a VM instance. | 
 | FO021 | ***Error***: Configured endpoint detected as unreachable. | 
 | FO022 | ***Warning***: Configured endpoint detected as unreachable. | 
-| FO023 | Number of active TCP ports at or exceeding configured ***Error*** threshold for an App service process.  | 
-| FO024 | Number of active TCP ports at or exceeding configured ***Warning*** threshold for an App service process. | 
+| FO023 | Number of active TCP ports at or exceeding configured ***Error*** threshold for an app service process.  | 
+| FO024 | Number of active TCP ports at or exceeding configured ***Warning*** threshold for an app service process. | 
 | FO025 | Number of active TCP ports at or exceeding configured ***Error*** threshold on a VM instance. | 
 | FO026 | Number of active TCP ports at or exceeding configured ***Warning*** threshold on a VM instance.  | 
 | FO027 | Number of enabled Firewall Rules at or exceeding configured ***Error*** threshold on a VM instance.  | 
 | FO028 | Number of enabled Firewall Rules at or exceeding configured ***Warning*** threshold on a VM instance. | 
-| FO029 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Error*** threshold for an App service process. | 
-| FO030 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold for an App service process. | 
+| FO029 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO030 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold for an app service process. | 
 | FO031 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Error*** threshold on a VM instance.  | 
-| FO032 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold on a VM instance.  |  
+| FO032 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold on a VM instance.  | 
+| FO033 | Number of allocated File Handles is at or exceeding configured ***Error*** threshold for an app service process.  | 
+| FO034 | Number of allocated File Handles is at or exceeding configured ***Warning*** threshold for an app service process.  |
+| FO035 | Percentage of Maximum number of File Handles in use is at or exceeding configured ***Error*** threshold on a Linux VM instance.  | 
+| FO036 | Percentage of Maximum number of File Handles in use is at or exceeding configured ***Warning*** threshold on a Linux VM instance.  | 

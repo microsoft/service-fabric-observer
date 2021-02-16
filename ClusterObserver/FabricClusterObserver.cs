@@ -24,17 +24,17 @@ namespace ClusterObserver
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            this.observerManager = new ClusterObserverManager(Context, cancellationToken);
+            observerManager = new ClusterObserverManager(Context, cancellationToken);
 
-            await Task.Factory.StartNew(() => this.observerManager.Start()).ConfigureAwait(true);
+            await observerManager.StartAsync().ConfigureAwait(true);
         }
 
 
         protected override Task OnCloseAsync(CancellationToken cancellationToken)
         {
-            if (this.observerManager != null)
+            if (observerManager != null)
             {
-                this.observerManager.Dispose();
+                observerManager.Dispose();
             }
 
             return base.OnCloseAsync(cancellationToken);

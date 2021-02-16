@@ -47,8 +47,8 @@ namespace FabricObserver
             ConfigureServices(services);
 
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            this.observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
-            await this.observerManager.StartObserversAsync().ConfigureAwait(false);
+            observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
+            await observerManager.StartObserversAsync().ConfigureAwait(false);
         }
 
         /// <summary>

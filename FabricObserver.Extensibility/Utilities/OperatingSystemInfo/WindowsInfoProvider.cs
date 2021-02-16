@@ -17,7 +17,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsInfoProvider : OperatingSystemInfoProvider
     {
-        public override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
@@ -54,9 +54,9 @@ namespace FabricObserver.Observers.Utilities
                     }
 
                     double used = ((double)(visibleTotal - freePhysical)) / visibleTotal;
-                    int usedPct = (int)(used * 100);
+                    double usedPct = used * 100;
 
-                    return (visibleTotal / 1024 / 1024, usedPct);
+                    return (visibleTotal / 1024 / 1024, Math.Round(usedPct, 2));
                 }
             }
             catch (Exception e) when (
@@ -362,6 +362,18 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
+            return -1;
+        }
+
+        // Not implemented. No Windows support.
+        public override int GetMaximumConfiguredFileHandlesCount()
+        {
+            return -1;
+        }
+
+        // Not implemented. No Windows support.
+        public override int GetTotalAllocatedFileHandlesCount()
+        {
             return -1;
         }
     }

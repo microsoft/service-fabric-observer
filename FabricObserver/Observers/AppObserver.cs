@@ -32,6 +32,7 @@ namespace FabricObserver.Observers
         private readonly List<FabricResourceUsageData<double>> AllAppMemDataPercent;
         private readonly List<FabricResourceUsageData<int>> AllAppTotalActivePortsData;
         private readonly List<FabricResourceUsageData<int>> AllAppEphemeralPortsData;
+        private readonly List<FabricResourceUsageData<float>> AllAppHandlesData;
         private readonly Stopwatch stopwatch;
 
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration.
@@ -60,14 +61,15 @@ namespace FabricObserver.Observers
         {
             configSettings = new MachineInfoModel.ConfigSettings(FabricServiceContext);
             ConfigPackagePath = configSettings.ConfigPackagePath;
-            this.userTargetList = new List<ApplicationInfo>();
-            this.deployedTargetList = new List<ApplicationInfo>();
-            this.AllAppCpuData = new List<FabricResourceUsageData<double>>();
-            this.AllAppMemDataMb = new List<FabricResourceUsageData<float>>();
-            this.AllAppMemDataPercent = new List<FabricResourceUsageData<double>>();
-            this.AllAppTotalActivePortsData = new List<FabricResourceUsageData<int>>();
-            this.AllAppEphemeralPortsData = new List<FabricResourceUsageData<int>>();
-            this.stopwatch = new Stopwatch();
+            userTargetList = new List<ApplicationInfo>();
+            deployedTargetList = new List<ApplicationInfo>();
+            AllAppCpuData = new List<FabricResourceUsageData<double>>();
+            AllAppMemDataMb = new List<FabricResourceUsageData<float>>();
+            AllAppMemDataPercent = new List<FabricResourceUsageData<double>>();
+            AllAppTotalActivePortsData = new List<FabricResourceUsageData<int>>();
+            AllAppEphemeralPortsData = new List<FabricResourceUsageData<int>>();
+            AllAppHandlesData = new List<FabricResourceUsageData<float>>();
+            stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -80,7 +82,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            this.stopwatch.Start();
+            stopwatch.Start();
             bool initialized = await InitializeAsync();
             Token = token;
 
@@ -92,8 +94,8 @@ namespace FabricObserver.Observers
                     HealthState.Warning,
                     "This observer was unable to initialize correctly due to missing configuration info.");
 
-                this.stopwatch.Stop();
-                this.stopwatch.Reset();
+                stopwatch.Stop();
+                stopwatch.Reset();
 
                 return;
             }
@@ -102,9 +104,9 @@ namespace FabricObserver.Observers
 
             // The time it took to get to ReportAsync.
             // For use in computing actual HealthReport TTL.
-            this.stopwatch.Stop();
-            RunDuration = this.stopwatch.Elapsed;
-            this.stopwatch.Reset();
+            stopwatch.Stop();
+            RunDuration = stopwatch.Elapsed;
+            stopwatch.Reset();
 
             await ReportAsync(token).ConfigureAwait(true);
             LastRunDateTime = DateTime.Now;
@@ -116,7 +118,7 @@ namespace FabricObserver.Observers
             {
                 token.ThrowIfCancellationRequested();
 
-                if (this.deployedTargetList.Count == 0)
+                if (deployedTargetList.Count == 0)
                 {
                     return Task.CompletedTask;
                 }
@@ -124,7 +126,7 @@ namespace FabricObserver.Observers
                 var healthReportTimeToLive = SetHealthReportTimeToLive();
 
                 // App-specific reporting.
-                foreach (var app in this.deployedTargetList)
+                foreach (var app in deployedTargetList)
                 {
                     token.ThrowIfCancellationRequested();
 
@@ -181,10 +183,10 @@ namespace FabricObserver.Observers
                         }
 
                         // CPU
-                        if (this.AllAppCpuData.Any(x => x.Id == id))
+                        if (AllAppCpuData.Any(x => x.Id == id))
                         {
                             ProcessResourceDataReportHealth(
-                                this.AllAppCpuData.FirstOrDefault(x => x.Id == id),
+                                AllAppCpuData.FirstOrDefault(x => x.Id == id),
                                 app.CpuErrorLimitPercent,
                                 app.CpuWarningLimitPercent,
                                 healthReportTimeToLive,
@@ -194,10 +196,10 @@ namespace FabricObserver.Observers
                         }
 
                         // Memory MB
-                        if (this.AllAppMemDataMb.Any(x => x.Id == id))
+                        if (AllAppMemDataMb.Any(x => x.Id == id))
                         {
                             ProcessResourceDataReportHealth(
-                                this.AllAppMemDataMb.FirstOrDefault(x => x.Id == id),
+                                AllAppMemDataMb.FirstOrDefault(x => x.Id == id),
                                 app.MemoryErrorLimitMb,
                                 app.MemoryWarningLimitMb,
                                 healthReportTimeToLive,
@@ -207,10 +209,10 @@ namespace FabricObserver.Observers
                         }
 
                         // Memory Percent
-                        if (this.AllAppMemDataPercent.Any(x => x.Id == id))
+                        if (AllAppMemDataPercent.Any(x => x.Id == id))
                         {
                             ProcessResourceDataReportHealth(
-                                this.AllAppMemDataPercent.FirstOrDefault(x => x.Id == id),
+                                AllAppMemDataPercent.FirstOrDefault(x => x.Id == id),
                                 app.MemoryErrorLimitPercent,
                                 app.MemoryWarningLimitPercent,
                                 healthReportTimeToLive,
@@ -220,10 +222,10 @@ namespace FabricObserver.Observers
                         }
 
                         // TCP Ports - Active
-                        if (this.AllAppTotalActivePortsData.Any(x => x.Id == id))
+                        if (AllAppTotalActivePortsData.Any(x => x.Id == id))
                         {
                             ProcessResourceDataReportHealth(
-                                this.AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id),
+                                AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id),
                                 app.NetworkErrorActivePorts,
                                 app.NetworkWarningActivePorts,
                                 healthReportTimeToLive,
@@ -232,12 +234,24 @@ namespace FabricObserver.Observers
                         }
 
                         // TCP Ports - Ephemeral (port numbers fall in the dynamic range)
-                        if (this.AllAppEphemeralPortsData.Any(x => x.Id == id))
+                        if (AllAppEphemeralPortsData.Any(x => x.Id == id))
                         {
                             ProcessResourceDataReportHealth(
-                                this.AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id),
+                                AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id),
                                 app.NetworkErrorEphemeralPorts,
                                 app.NetworkWarningEphemeralPorts,
+                                healthReportTimeToLive,
+                                HealthReportType.Application,
+                                repOrInst);
+                        }
+
+                        // Allocated (in use) Handles
+                        if (AllAppHandlesData.Any(x => x.Id == id))
+                        {
+                            ProcessResourceDataReportHealth(
+                                AllAppHandlesData.FirstOrDefault(x => x.Id == id),
+                                app.ErrorOpenFileHandles,
+                                app.WarningOpenFileHandles,
                                 healthReportTimeToLive,
                                 HealthReportType.Application,
                                 repOrInst);
@@ -260,12 +274,12 @@ namespace FabricObserver.Observers
 
         protected override void Dispose(bool disposing)
         {
-            if (this.disposed || !disposing)
+            if (disposed || !disposing)
             {
                 return;
             }
 
-            this.disposed = true;
+            disposed = true;
         }
 
         private static string GetAppNameOrType(ReplicaOrInstanceMonitoringInfo repOrInst)
@@ -311,15 +325,15 @@ namespace FabricObserver.Observers
 
             // This code runs each time ObserveAsync is called,
             // so clear app list and deployed replica/instance list in case a new app has been added to watch list.
-            if (this.userTargetList.Count > 0)
+            if (userTargetList.Count > 0)
             {
-                this.userTargetList.Clear();
+                userTargetList.Clear();
                 ReplicaOrInstanceList.Clear();
             }
 
-            if (this.deployedTargetList.Count > 0)
+            if (deployedTargetList.Count > 0)
             {
-                this.deployedTargetList.Clear();
+                deployedTargetList.Clear();
             }
 
             using Stream stream = new FileStream(
@@ -331,11 +345,11 @@ namespace FabricObserver.Observers
             if (stream.Length > 0
                 && JsonHelper.IsJson<List<ApplicationInfo>>(File.ReadAllText(appObserverConfigFileName)))
             {
-                this.userTargetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
+                userTargetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
             }
 
             // Are any of the config-supplied apps deployed?.
-            if (this.userTargetList.Count == 0)
+            if (userTargetList.Count == 0)
             {
                 WriteToLogWithLevel(
                     ObserverName,
@@ -347,7 +361,7 @@ namespace FabricObserver.Observers
 
             int settingSFail = 0;
 
-            foreach (var application in this.userTargetList)
+            foreach (var application in userTargetList)
             {
                 if (string.IsNullOrWhiteSpace(application.TargetApp)
                     && string.IsNullOrWhiteSpace(application.TargetAppType))
@@ -364,7 +378,7 @@ namespace FabricObserver.Observers
                 }
 
                 // No required settings supplied for deployed application(s).
-                if (settingSFail == this.userTargetList.Count)
+                if (settingSFail == userTargetList.Count)
                 {
                     return false;
                 }
@@ -403,8 +417,8 @@ namespace FabricObserver.Observers
                 var timer = new Stopwatch();
                 int processId = (int)repOrInst.HostProcessId;
                 var cpuUsage = new CpuUsage();
-                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false;
-                var application = this.deployedTargetList?.FirstOrDefault(
+                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false;
+                var application = deployedTargetList?.FirstOrDefault(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString?.ToLower() ||
                                     app?.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
                 
@@ -426,52 +440,52 @@ namespace FabricObserver.Observers
                     var id = $"{appNameOrType}:{procName}";
 
                     // Add new resource data structures for each app service process where the metric is specified in configuration for related observation.
-                    if (this.AllAppCpuData.All(list => list.Id != id) && (application.CpuErrorLimitPercent > 0 || application.CpuWarningLimitPercent > 0))
+                    if (AllAppCpuData.All(list => list.Id != id) && (application.CpuErrorLimitPercent > 0 || application.CpuWarningLimitPercent > 0))
                     {
-                        this.AllAppCpuData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, id, DataCapacity, UseCircularBuffer));
+                        AllAppCpuData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, id, DataCapacity, UseCircularBuffer));
                     }
 
-                    if (this.AllAppCpuData.Any(list => list.Id == id))
+                    if (AllAppCpuData.Any(list => list.Id == id))
                     {
                         checkCpu = true;
                     }
 
-                    if (this.AllAppMemDataMb.All(list => list.Id != id) && (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0))
+                    if (AllAppMemDataMb.All(list => list.Id != id) && (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0))
                     {
-                        this.AllAppMemDataMb.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, DataCapacity, UseCircularBuffer));
+                        AllAppMemDataMb.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, DataCapacity, UseCircularBuffer));
                     }
 
-                    if (this.AllAppMemDataMb.Any(list => list.Id == id))
+                    if (AllAppMemDataMb.Any(list => list.Id == id))
                     {
                         checkMemMb = true;
                     }
 
-                    if (this.AllAppMemDataPercent.All(list => list.Id != id) && (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0))
+                    if (AllAppMemDataPercent.All(list => list.Id != id) && (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0))
                     {
-                        this.AllAppMemDataPercent.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id, DataCapacity, UseCircularBuffer));
+                        AllAppMemDataPercent.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id, DataCapacity, UseCircularBuffer));
                     }
 
-                    if (this.AllAppMemDataPercent.Any(list => list.Id == id))
+                    if (AllAppMemDataPercent.Any(list => list.Id == id))
                     {
                         checkMemPct = true;
                     }
 
-                    if (this.AllAppTotalActivePortsData.All(list => list.Id != id) && (application.NetworkErrorActivePorts > 0 || application.NetworkWarningActivePorts > 0))
+                    if (AllAppTotalActivePortsData.All(list => list.Id != id) && (application.NetworkErrorActivePorts > 0 || application.NetworkWarningActivePorts > 0))
                     {
-                        this.AllAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id, 1));
+                        AllAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id, 1));
                     }
 
-                    if (this.AllAppTotalActivePortsData.Any(list => list.Id == id))
+                    if (AllAppTotalActivePortsData.Any(list => list.Id == id))
                     {
                         checkAllPorts = true;
                     }
 
-                    if (this.AllAppEphemeralPortsData.All(list => list.Id != id) && (application.NetworkErrorEphemeralPorts > 0 || application.NetworkWarningEphemeralPorts > 0))
+                    if (AllAppEphemeralPortsData.All(list => list.Id != id) && (application.NetworkErrorEphemeralPorts > 0 || application.NetworkWarningEphemeralPorts > 0))
                     {
-                        this.AllAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1));
+                        AllAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1));
                     }
 
-                    if (this.AllAppEphemeralPortsData.Any(list => list.Id == id))
+                    if (AllAppEphemeralPortsData.Any(list => list.Id == id))
                     {
                         checkEphemeralPorts = true;
                     }
@@ -479,16 +493,27 @@ namespace FabricObserver.Observers
                     // Measure Total and Ephemeral ports.
                     if (checkAllPorts)
                     {
-                        this.AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActivePortCount(currentProcess.Id, FabricServiceContext));
+                        AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActivePortCount(currentProcess.Id, FabricServiceContext));
                     }
 
                     if (checkEphemeralPorts)
                     {
-                        this.AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(currentProcess.Id, FabricServiceContext));
+                        AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(currentProcess.Id, FabricServiceContext));
                     }
 
-                    // No need to proceed further if no cpu and mem thresholds are specified in configuration.
-                    if (!checkCpu && !checkMemMb && !checkMemPct)
+                    // File Handles (FD on linux)
+                    if (AllAppHandlesData.All(list => list.Id != id) && (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0))
+                    {
+                        AllAppHandlesData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, id, 1));
+                    }
+
+                    if (AllAppHandlesData.Any(list => list.Id == id))
+                    {
+                        checkHandles = true;
+                    }
+
+                    // No need to proceed further if no cpu/mem/file handles thresholds are specified in configuration.
+                    if (!checkCpu && !checkMemMb && !checkMemPct && !checkHandles)
                     {
                         continue;
                     }
@@ -531,7 +556,7 @@ namespace FabricObserver.Observers
                                     cpu = 100;
                                 }
 
-                                this.AllAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
+                                AllAppCpuData.FirstOrDefault(x => x.Id == id).Data.Add(cpu);
                             }
                         }
 
@@ -545,19 +570,28 @@ namespace FabricObserver.Observers
                         if (checkMemMb)
                         {
                             // Memory (private working set (process)).
-                            this.AllAppMemDataMb.FirstOrDefault(x => x.Id == id).Data.Add(processMem);
+                            AllAppMemDataMb.FirstOrDefault(x => x.Id == id).Data.Add(processMem);
                         }
 
                         if (checkMemPct)
                         { 
                             // Memory (percent in use (total)).
                             var (TotalMemory, PercentInUse) = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
-                            long totalMem = TotalMemory;
 
-                            if (totalMem > 0)
+                            if (TotalMemory > 0)
                             {
-                                double usedPct = Math.Round(((double)(processMem * 100)) / (totalMem * 1024), 2);
-                                this.AllAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
+                                double usedPct = Math.Round(((double)(processMem * 100)) / (TotalMemory * 1024), 2);
+                                AllAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
+                            }
+                        }
+
+                        if (checkHandles)
+                        {
+                            float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(currentProcess.Id, FabricServiceContext);
+                            
+                            if (handles > -1)
+                            {
+                                AllAppHandlesData.FirstOrDefault(x => x.Id == id).Data.Add(handles);
                             }
                         }
 
@@ -648,7 +682,7 @@ namespace FabricObserver.Observers
             {
                 List<string> filteredServiceList = null;
 
-                var appFilter = this.userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
+                var appFilter = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
                                                            && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
                                                                || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
                                                            && (!string.IsNullOrEmpty(x.ServiceExcludeList)
@@ -679,7 +713,7 @@ namespace FabricObserver.Observers
 
                 ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
-                this.deployedTargetList.AddRange(this.userTargetList.Where(
+                deployedTargetList.AddRange(userTargetList.Where(
                     x => (x.TargetApp != null || x.TargetAppType != null)
                             && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
                                 || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())));
@@ -787,63 +821,79 @@ namespace FabricObserver.Observers
             var fileName = $"{appName.Replace(":", string.Empty)}{NodeName}";
 
             // CPU Time
-            CsvFileLogger.LogData(
-                fileName,
-                appName,
-                ErrorWarningProperty.TotalCpuTime,
-                "Average",
-                Math.Round((double)this.AllAppCpuData
-                    .FirstOrDefault(x => x.Id == appName).AverageDataValue));
+            if (AllAppCpuData.Any(x => x.Id == appName))
+            {
+                CsvFileLogger.LogData(
+                    fileName,
+                    appName,
+                    ErrorWarningProperty.TotalCpuTime,
+                    "Average",
+                    Math.Round((double)AllAppCpuData.FirstOrDefault(x => x.Id == appName).AverageDataValue));
 
-            CsvFileLogger.LogData(
-                fileName,
-                appName,
-                ErrorWarningProperty.TotalCpuTime,
-                "Peak",
-                Math.Round(Convert.ToDouble(this.AllAppCpuData
-                    .FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+                CsvFileLogger.LogData(
+                    fileName,
+                    appName,
+                    ErrorWarningProperty.TotalCpuTime,
+                    "Peak",
+                    Math.Round(Convert.ToDouble(AllAppCpuData.FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+            }
 
-            // Memory
-            CsvFileLogger.LogData(
-                fileName,
-                appName,
-                ErrorWarningProperty.TotalMemoryConsumptionMb,
-                "Average",
-                Math.Round(this.AllAppMemDataMb
-                    .FirstOrDefault(x => x.Id == appName).AverageDataValue));
+            // Memory - MB
+            if (AllAppMemDataMb.Any(x => x.Id == appName))
+            {
+                CsvFileLogger.LogData(
+                    fileName,
+                    appName,
+                    ErrorWarningProperty.TotalMemoryConsumptionMb,
+                    "Average",
+                    Math.Round(AllAppMemDataMb.FirstOrDefault(x => x.Id == appName).AverageDataValue));
 
-            CsvFileLogger.LogData(
-                fileName,
-                appName,
-                ErrorWarningProperty.TotalMemoryConsumptionMb,
-                "Peak",
-                Math.Round(Convert.ToDouble(this.AllAppMemDataMb
-                    .FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+                CsvFileLogger.LogData(
+                    fileName,
+                    appName,
+                    ErrorWarningProperty.TotalMemoryConsumptionMb,
+                    "Peak",
+                    Math.Round(Convert.ToDouble(AllAppMemDataMb.FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+            }
 
-            CsvFileLogger.LogData(
-               fileName,
-               appName,
-               ErrorWarningProperty.TotalMemoryConsumptionPct,
-               "Average",
-               Math.Round(this.AllAppMemDataPercent
-                   .FirstOrDefault(x => x.Id == appName).AverageDataValue));
+            if (AllAppMemDataPercent.Any(x => x.Id == appName))
+            {
+                CsvFileLogger.LogData(
+                   fileName,
+                   appName,
+                   ErrorWarningProperty.TotalMemoryConsumptionPct,
+                   "Average",
+                   Math.Round(AllAppMemDataPercent.FirstOrDefault(x => x.Id == appName).AverageDataValue));
 
-            CsvFileLogger.LogData(
-                fileName,
-                appName,
-                ErrorWarningProperty.TotalMemoryConsumptionPct,
-                "Peak",
-                Math.Round(Convert.ToDouble(this.AllAppMemDataPercent
-                    .FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+                CsvFileLogger.LogData(
+                    fileName,
+                    appName,
+                    ErrorWarningProperty.TotalMemoryConsumptionPct,
+                    "Peak",
+                    Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+            }
 
-            // Network
-            CsvFileLogger.LogData(
-                fileName,
-                appName,
-                ErrorWarningProperty.TotalActivePorts,
-                "Total",
-                Math.Round(Convert.ToDouble(this.AllAppTotalActivePortsData
-                    .FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+            if (AllAppTotalActivePortsData.Any(x => x.Id == appName))
+            {
+                // Network
+                CsvFileLogger.LogData(
+                    fileName,
+                    appName,
+                    ErrorWarningProperty.TotalActivePorts,
+                    "Total",
+                    Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+            }
+
+            if (AllAppHandlesData.Any(x => x.Id == appName))
+            {
+                // Handles
+                CsvFileLogger.LogData(
+                     fileName,
+                     appName,
+                     ErrorWarningProperty.TotalFileHandles,
+                     "Total",
+                     Math.Round(AllAppHandlesData.FirstOrDefault(x => x.Id == appName).MaxDataValue));
+            }
 
             DataTableFileLogger.Flush();
         }

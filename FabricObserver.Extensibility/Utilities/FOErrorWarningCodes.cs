@@ -56,6 +56,14 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
 
+        // Process owned File Handles / File Descriptors - Linux (File Descriptors) and Windows (File Handles)
+        public const string AppErrorTooManyOpenFileHandles = "FO033";
+        public const string AppWarningTooManyOpenFileHandles = "FO034";
+
+        // System-wide open File Handles / File Descriptors - Linux only.
+        public const string NodeErrorTotalOpenFileHandlesPercent = "FO035";
+        public const string NodeWarningTotalOpenFileHandlesPercent = "FO036";
+
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
             get;
@@ -74,6 +82,8 @@ namespace FabricObserver.Observers.Utilities
             { AppWarningTooManyActiveTcpPorts, "AppWarningTooManyActiveTcpPorts" },
             { AppErrorTooManyActiveEphemeralPorts, "AppErrorTooManyActiveEphemeralPorts" },
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
+            { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
+            { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
         };
 
         public static Dictionary<string, string> NodeErrorCodesDictionary
@@ -102,6 +112,8 @@ namespace FabricObserver.Observers.Utilities
             { WarningTooManyFirewallRules, "NodeWarningTooManyFirewallRules" },
             { NodeErrorTooManyActiveEphemeralPorts, "NodeErrorTooManyActiveEphemeralPorts" },
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
+            { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
+            { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
         };
 
         public static string GetErrorWarningNameFromFOCode(string id)

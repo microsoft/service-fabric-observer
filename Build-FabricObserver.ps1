@@ -45,7 +45,7 @@ function Update-ServiceManifestForLinux {
 [string] $newNode = @"
     <SetupEntryPoint>
       <ExeHost>
-        <Program>netstat_cap.sh</Program>
+        <Program>setcaps.sh</Program>
         <WorkingFolder>CodePackage</WorkingFolder>
       </ExeHost>
     </SetupEntryPoint>

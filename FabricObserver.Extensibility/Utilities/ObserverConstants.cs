@@ -82,6 +82,8 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricSystemObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";
         public const string FabricSystemObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string FabricSystemObserverMonitorWindowsEventLog = "MonitorWindowsEventLog";
+        public const string FabricSystemObserverErrorHandles = "AllocatedHandlesErrorLimit";
+        public const string FabricSystemObserverWarningHandles = "AllocatedHandlesWarningLimit";
 
         // NetworkObserver.
         public const string NetworkObserverName = "NetworkObserver";
@@ -102,6 +104,10 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
+        
+        // For use by Linux File Descriptors monitor.
+        public const string NodeObserverLinuxFileHandlesErrorLimitPct = "LinuxFileHandlesErrorLimitPercent";
+        public const string NodeObserverLinuxFileHandlesWarningLimitPct = "LinuxFileHandlesWarningLimitPercent";
 
         // OSObserver.
         public const string OSObserverName = "OSObserver";

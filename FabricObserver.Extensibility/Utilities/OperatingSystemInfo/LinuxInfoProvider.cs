@@ -15,7 +15,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxInfoProvider : OperatingSystemInfoProvider
     {
-        public override (long TotalMemory, int PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
 
@@ -24,7 +24,10 @@ namespace FabricObserver.Observers.Utilities
             long availableMem = (long)memInfo[MemInfoConstants.MemAvailable];
 
             // Divide by 1048576 to convert total memory from KB to GB.
-            return (totalMemory / 1048576, (int)(((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100));
+            long totalMem = totalMemory / 1048576;
+            double pctUsed = ((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100;
+
+            return (totalMem, Math.Round(pctUsed, 2));
         }
 
         public override int GetActivePortCount(int processId = -1, ServiceContext context = null)
@@ -204,6 +207,54 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
+        /// <summary>
+        /// Returns the Maximum configured number of File Handles/FDs in Linux OS instance.
+        /// </summary>
+        /// <returns>int value representing configured maximum number of file handles/fds in Linux OS instance.</returns>
+        public override int GetMaximumConfiguredFileHandlesCount()
+        {
+            // sysctl fs.file-max - Maximum number of file handles the Linux kernel will allocate. This is a configurable setting on Linux.
+            string cmdResult = "sysctl fs.file-max | awk '{ print $3 }'".Bash();
+
+            // sysctl fs.file-max result will be in this format:
+            // fs.file-max = 1616177
+
+            if (string.IsNullOrEmpty(cmdResult))
+            {
+                return -1;
+            }
+
+            if (int.TryParse(cmdResult.Trim(), out int maxHandles))
+            {
+                return maxHandles;
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// Returns the total number of allocated (in use) Linux File Handles/FDs.
+        /// </summary>
+        /// <returns>integer value representing the total number of allocated (in use) Linux FileHandles/FDs.</returns>
+        public override int GetTotalAllocatedFileHandlesCount()
+        {
+            // sysctl fs.file-nr result will be in this format:
+            // fs.file-nr = 30112      0       1616177
+            string cmdResult = "sysctl fs.file-nr | awk '{ print $3 }'".Bash();
+
+            if (string.IsNullOrEmpty(cmdResult))
+            {
+                return -1;
+            }
+
+            if (int.TryParse(cmdResult.Trim(), out int totalFDs))
+            {
+                return totalFDs;
+            }
+
+            return -1;
+        }
+
         public async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
@@ -232,6 +283,38 @@ namespace FabricObserver.Observers.Utilities
 
                 return (process.ExitCode, output);
             }
+        }
+    }
+
+    // https://loune.net/2017/06/running-shell-bash-commands-in-net-core/
+    internal static class LinuxShellHelper
+    {
+        /// <summary>
+        /// This string extension will run a supplied linux bash command and return the console output.
+        /// </summary>
+        /// <param name="cmd">The bash command to run.</param>
+        /// <returns>The console output of the command.</returns>
+        public static string Bash(this string cmd)
+        {
+            var escapedArgs = cmd.Replace("\"", "\\\"");
+
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    Arguments = $"-c \"{escapedArgs}\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }
+            };
+
+            process.Start();
+            string result = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            return result;
         }
     }
 }

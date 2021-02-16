@@ -48,15 +48,15 @@ namespace FabricObserver.Observers
         /// <param name="observer">Observer instance.</param>
         public ObserverManager(ObserverBase observer, FabricClient fabricClient)
         {
-            this.cts = new CancellationTokenSource();
-            this.token = this.cts.Token;
-            this.Logger = new Logger("ObserverManagerSingleObserverRun");
-            this.HealthReporter = new ObserverHealthReporter(this.Logger, fabricClient);
+            cts = new CancellationTokenSource();
+            token = cts.Token;
+            Logger = new Logger("ObserverManagerSingleObserverRun");
+            HealthReporter = new ObserverHealthReporter(Logger, fabricClient);
 
             // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
 
-            this.observers = new List<ObserverBase>(new[]
+            observers = new List<ObserverBase>(new[]
             {
                 observer,
             });
@@ -70,11 +70,11 @@ namespace FabricObserver.Observers
         public ObserverManager(IServiceProvider serviceProvider, FabricClient fabricClient, CancellationToken token)
         {
             this.token = token;
-            this.cts = new CancellationTokenSource();
-            this.linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, this.token);
+            cts = new CancellationTokenSource();
+            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
             FabricClientInstance = fabricClient;
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
-            this.nodeName = FabricServiceContext?.NodeContext.NodeName;
+            nodeName = FabricServiceContext?.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
 
             // Observer Logger setup.
@@ -93,13 +93,13 @@ namespace FabricObserver.Observers
             }
 
             // this logs error/warning/info messages for ObserverManager.
-            this.Logger = new Logger("ObserverManager", logFolderBasePath);
-            this.HealthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
-            this.SetPropertieSFromConfigurationParameters();
-            this.serviceCollection = serviceProvider.GetServices<ObserverBase>();
+            Logger = new Logger("ObserverManager", logFolderBasePath);
+            HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+            SetPropertieSFromConfigurationParameters();
+            serviceCollection = serviceProvider.GetServices<ObserverBase>();
 
             // Populate the Observer list for the sequential run loop.
-            this.observers = this.serviceCollection.Where(o => o.IsEnabled).ToList();
+            observers = serviceCollection.Where(o => o.IsEnabled).ToList();
 
             // FabricObserver Internal Diagnostic Telemetry (Non-PII).
             // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
@@ -115,7 +115,7 @@ namespace FabricObserver.Observers
 
             string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
             string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
-            string filepath = Path.Combine(this.Logger.LogFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
+            string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
 
 #if !DEBUG
             // If this has already been sent for this activated version (code/config) of nodetype x
@@ -124,21 +124,21 @@ namespace FabricObserver.Observers
                 return;
             }
 #endif
-            this.telemetryEvents = new TelemetryEvents(
+            telemetryEvents = new TelemetryEvents(
                 FabricClientInstance,
                 FabricServiceContext,
                 ServiceEventSource.Current,
                 this.token);
 
-            string foInternalTelemetryData = this.GetFabricObserverInternalConfiguration();
-            if (this.telemetryEvents.FabricObserverRuntimeNodeEvent(
+            string foInternalTelemetryData = GetFabricObserverInternalConfiguration();
+            if (telemetryEvents.FabricObserverRuntimeNodeEvent(
                 codePkgVersion,
                 foInternalTelemetryData,
                 "HealthState.Initialized"))
             {
                 // Log a file to prevent re-sending this in case of process restart(s).
                 // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates.).
-                _ = this.Logger.TryWriteLogFile(filepath, foInternalTelemetryData);
+                _ = Logger.TryWriteLogFile(filepath, foInternalTelemetryData);
             }
         }
 
@@ -212,38 +212,38 @@ namespace FabricObserver.Observers
             try
             {
                 // Nothing to do here.
-                if (this.observers.Count == 0)
+                if (observers.Count == 0)
                 {
                     return;
                 }
 
                 // Create Global Shutdown event handler
-                this.globalShutdownEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
+                globalShutdownEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
 
                 // Continue running until a shutdown signal is sent
-                this.Logger.LogInfo("Starting Observers loop.");
+                Logger.LogInfo("Starting Observers loop.");
 
                 // Observers run sequentially. See RunObservers impl.
                 while (true)
                 {
-                    if (!isConfigurationUpdateInProgess && (this.shutdownSignaled || this.token.IsCancellationRequested))
+                    if (!isConfigurationUpdateInProgess && (shutdownSignaled || token.IsCancellationRequested))
                     {
-                        _ = this.globalShutdownEventHandle.Set();
-                        this.Logger.LogWarning("Shutdown signaled. Stopping.");
+                        _ = globalShutdownEventHandle.Set();
+                        Logger.LogWarning("Shutdown signaled. Stopping.");
                         await ShutDownAsync().ConfigureAwait(false);
 
                         break;
                     }
 
-                    if (!await this.RunObserversAsync().ConfigureAwait(false))
+                    if (!await RunObserversAsync().ConfigureAwait(false))
                     {
                         continue;
                     }
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
-                        this.Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again.");
-                        this.ThreadSleep(this.globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
+                        Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again.");
+                        ThreadSleep(globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
                     }
                 }
             }
@@ -251,10 +251,10 @@ namespace FabricObserver.Observers
             {
                 var message =
                     $"Unhanded Exception in {ObserverConstants.ObserverManagerName} on node " +
-                    $"{this.nodeName}. Taking down FO process. " +
+                    $"{nodeName}. Taking down FO process. " +
                     $"Error info:{Environment.NewLine}{ex}";
 
-                this.Logger.LogError(message);
+                Logger.LogError(message);
 
                 // Telemetry.
                 if (TelemetryEnabled)
@@ -265,7 +265,7 @@ namespace FabricObserver.Observers
                             HealthState.Warning,
                             message,
                             ObserverConstants.ObserverManagerName,
-                            this.token)).ConfigureAwait(false);
+                            token)).ConfigureAwait(false);
                 }
 
                 // ETW.
@@ -276,7 +276,7 @@ namespace FabricObserver.Observers
                         new
                         {
                             Level = 2, // Error
-                            Node = this.nodeName,
+                            Node = nodeName,
                             Observer = ObserverConstants.ObserverManagerName,
                             Value = message,
                         });
@@ -300,7 +300,7 @@ namespace FabricObserver.Observers
                     $"even when the upgrade is just a configuration parameter update. In order to re-create the Capabilities set, FO's setup script must be re-run by SF. Restarting FO is therefore required here.";
             }
 
-            foreach (var obs in this.observers)
+            foreach (var obs in observers)
             {
                 // If the node goes down, for example, or the app is gracefully closed, then clear all existing error or health reports suppled by FO.
                 // NetworkObserver takes care of this internally, so ignore here.
@@ -333,7 +333,7 @@ namespace FabricObserver.Observers
 
                                 foreach (var evt in appHealth.HealthEvents)
                                 {
-                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName))
+                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName) || evt.HealthInformation.HealthState == HealthState.Ok)
                                     {
                                         continue;
                                     }
@@ -342,15 +342,17 @@ namespace FabricObserver.Observers
                                     healthReport.Property = evt.HealthInformation.Property;
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                    var healthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
+                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(500, token).ConfigureAwait(false);
+                                    await Task.Delay(250, token).ConfigureAwait(false);
                                 }
                             }
                             catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
                             {
                             }
+
+                            await Task.Delay(250, token).ConfigureAwait(false);
                         }
                     }
                     else
@@ -367,7 +369,7 @@ namespace FabricObserver.Observers
                             {
                                 foreach (var evt in nodeHealth.HealthEvents)
                                 {
-                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName))
+                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName) || evt.HealthInformation.HealthState == HealthState.Ok)
                                     {
                                         continue;
                                     }
@@ -375,10 +377,10 @@ namespace FabricObserver.Observers
                                     healthReport.Property = evt.HealthInformation.Property;
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                    var healthReporter = new ObserverHealthReporter(this.Logger, FabricClientInstance);
+                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(500, token).ConfigureAwait(false);
+                                    await Task.Delay(250, token).ConfigureAwait(false);
                                 }
                             }
                         }
@@ -392,20 +394,20 @@ namespace FabricObserver.Observers
             }
 
             this.shutdownSignaled = shutdownSignaled;
-            this.SignalAbortToRunningObserver();
-            this.IsObserverRunning = false;
+            SignalAbortToRunningObserver();
+            IsObserverRunning = false;
         }
 
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            this.Dispose(disposing: true);
+            Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposedValue)
+            if (!disposedValue)
             {
                 if (disposing)
                 {
@@ -416,9 +418,9 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= this.CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+                FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
 
-                this.disposedValue = true;
+                disposedValue = true;
             }
         }
 
@@ -455,15 +457,15 @@ namespace FabricObserver.Observers
 
         private async Task ShutDownAsync()
         {
-            await this.StopObserversAsync().ConfigureAwait(false);
+            await StopObserversAsync().ConfigureAwait(false);
 
-            if (this.cts != null)
+            if (cts != null)
             {
-                this.cts.Dispose();
-                this.cts = null;
+                cts.Dispose();
+                cts = null;
             }
 
-            this.globalShutdownEventHandle?.Dispose();
+            globalShutdownEventHandle?.Dispose();
 
             // Flush and Dispose all NLog targets. No more logging.
             Logger.Flush();
@@ -478,9 +480,9 @@ namespace FabricObserver.Observers
         /// </summary>
         private string GetFabricObserverInternalConfiguration()
         {
-            int enabledObserverCount = this.observers.Count(obs => obs.IsEnabled);
+            int enabledObserverCount = observers.Count(obs => obs.IsEnabled);
             string ret;
-            string observerList = this.observers.Aggregate("{ ", (current, obs) => current + $"{obs.ObserverName} ");
+            string observerList = observers.Aggregate("{ ", (current, obs) => current + $"{obs.ObserverName} ");
 
             observerList += "}";
             ret = $"EnabledObserverCount: {enabledObserverCount}, EnabledObservers: {observerList}";
@@ -502,8 +504,8 @@ namespace FabricObserver.Observers
             var elapsedTime = new TimeSpan(0, 0, 0);
             var stopwatch = new Stopwatch();
 
-            while (!this.shutdownSignaled &&
-                   !this.token.IsCancellationRequested &&
+            while (!shutdownSignaled &&
+                   !token.IsCancellationRequested &&
                    timeout > elapsedTime)
             {
                 stopwatch.Start();
@@ -529,7 +531,7 @@ namespace FabricObserver.Observers
         /// <param name="e">Contains the information necessary for setting new config params from updated package.</param>
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            this.Logger.LogInfo("Application Parameter upgrade started...");
+            Logger.LogInfo("Application Parameter upgrade started...");
 
             try
             {
@@ -541,17 +543,17 @@ namespace FabricObserver.Observers
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     // Graceful stop.
-                    await this.StopObserversAsync(true, true).ConfigureAwait(false);
+                    await StopObserversAsync(true, true).ConfigureAwait(false);
 
                     // Bye.
                     Environment.Exit(42);
                 }
 
-                this.isConfigurationUpdateInProgess = true;
+                isConfigurationUpdateInProgess = true;
                 await StopObserversAsync(false).ConfigureAwait(true);
-                this.observers.Clear();
+                observers.Clear();
 
-                foreach (var observer in this.serviceCollection)
+                foreach (var observer in serviceCollection)
                 {
                     observer.ConfigurationSettings = new ConfigSettings(e.NewPackage.Settings, $"{observer.ObserverName}Configuration");
 
@@ -568,13 +570,13 @@ namespace FabricObserver.Observers
                             observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
                         }
 
-                        this.observers.Add(observer);
+                        observers.Add(observer);
                     }
                 }
 
-                this.cts = new CancellationTokenSource();
-                this.linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(this.cts.Token, this.token);
-                this.Logger.LogInfo($"Application Parameter upgrade in progress: new observer list count -> {this.observers.Count}");
+                cts = new CancellationTokenSource();
+                linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
+                Logger.LogInfo($"Application Parameter upgrade in progress: new observer list count -> {observers.Count}");
             }
             catch (Exception err)
             {
@@ -590,11 +592,11 @@ namespace FabricObserver.Observers
                     EmitLogEvent = true,
                 };
 
-                this.HealthReporter.ReportHealthToServiceFabric(healthReport);
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
             }
 
-            this.isConfigurationUpdateInProgess = false;
-            this.Logger.LogWarning("Application Parameter upgrade completed...");
+            isConfigurationUpdateInProgess = false;
+            Logger.LogWarning("Application Parameter upgrade completed...");
         }
 
         /// <summary>
@@ -603,14 +605,14 @@ namespace FabricObserver.Observers
         /// </summary>
         private void SetPropertieSFromConfigurationParameters()
         {
-            this.ApplicationName = FabricRuntime.GetActivationContext().ApplicationName;
+            ApplicationName = FabricRuntime.GetActivationContext().ApplicationName;
 
             // Observers
             if (int.TryParse(
                 GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout),
                 out int result))
             {
-                this.observerExecTimeout = TimeSpan.FromSeconds(result);
+                observerExecTimeout = TimeSpan.FromSeconds(result);
             }
 
             // Logger
@@ -618,7 +620,7 @@ namespace FabricObserver.Observers
                 GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter),
                 out bool enableVerboseLogging))
             {
-                this.Logger.EnableVerboseLogging = enableVerboseLogging;
+                Logger.EnableVerboseLogging = enableVerboseLogging;
             }
 
             if (int.TryParse(
@@ -627,7 +629,7 @@ namespace FabricObserver.Observers
             {
                 ObserverExecutionLoopSleepSeconds = execFrequency;
 
-                this.Logger.LogInfo($"ExecutionFrequency is {ObserverExecutionLoopSleepSeconds} Seconds");
+                Logger.LogInfo($"ExecutionFrequency is {ObserverExecutionLoopSleepSeconds} Seconds");
             }
 
             // FQDN for use in warning or error hyperlinks in HTML output
@@ -635,7 +637,7 @@ namespace FabricObserver.Observers
             string fqdn = GetConfigSettingValue(ObserverConstants.Fqdn);
             if (!string.IsNullOrEmpty(fqdn))
             {
-                this.Fqdn = fqdn;
+                Fqdn = fqdn;
             }
 
             // FabricObserver runtime telemetry (Non-PII)
@@ -697,7 +699,7 @@ namespace FabricObserver.Observers
                             logAnalyticsSharedKey,
                             logAnalyticsLogType,
                             FabricClientInstance,
-                            this.token);
+                            token);
 
                         break;
                     }
@@ -734,9 +736,9 @@ namespace FabricObserver.Observers
         /// </summary>
         private void SignalAbortToRunningObserver()
         {
-            this.Logger.LogInfo("Signalling task cancellation to currently running Observer.");
-            this.cts?.Cancel();
-            this.Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
+            Logger.LogInfo("Signalling task cancellation to currently running Observer.");
+            cts?.Cancel();
+            Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
         }
 
         /// <summary>
@@ -748,21 +750,23 @@ namespace FabricObserver.Observers
             var exceptionBuilder = new StringBuilder();
             bool allExecuted = true;
 
-            for (int i = 0; i < this.observers.Count; i++)
+            for (int i = 0; i < observers.Count; i++)
             {
                 if (isConfigurationUpdateInProgess)
                 {
                     return true;
                 }
 
-                var observer = this.observers[i];
+                var observer = observers[i];
 
                 try
                 {
                     // Shutdown/cancellation signaled, so stop.
-                    bool taskCancelled = this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token.IsCancellationRequested : this.token.IsCancellationRequested;
+                    bool taskCancelled = linkedSFRuntimeObserverTokenSource != null ? 
+                        linkedSFRuntimeObserverTokenSource.Token.IsCancellationRequested : 
+                        token.IsCancellationRequested;
 
-                    if (taskCancelled || this.shutdownSignaled)
+                    if (taskCancelled || shutdownSignaled)
                     {
                         return false;
                     }
@@ -773,22 +777,22 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    this.Logger.LogInfo($"Starting {observer.ObserverName}");
+                    Logger.LogInfo($"Starting {observer.ObserverName}");
 
-                    this.IsObserverRunning = true;
+                    IsObserverRunning = true;
 
                     // Synchronous call.
                     var isCompleted = observer.ObserveAsync(
-                        this.linkedSFRuntimeObserverTokenSource != null ? this.linkedSFRuntimeObserverTokenSource.Token : this.token).Wait(this.observerExecTimeout);
+                        linkedSFRuntimeObserverTokenSource != null ? linkedSFRuntimeObserverTokenSource.Token : token).Wait(observerExecTimeout);
 
                     // The observer is taking too long (hung?), move on to next observer.
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
                     if (!isCompleted)
                     {
-                        string observerHealthWarning = observer.ObserverName + $" has exceeded its specified run time of {this.observerExecTimeout.TotalSeconds} seconds. " +
+                        string observerHealthWarning = observer.ObserverName + $" has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. " +
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it.";
 
-                        this.Logger.LogError(observerHealthWarning);
+                        Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
 
                         if (TelemetryEnabled)
@@ -799,13 +803,13 @@ namespace FabricObserver.Observers
                                     HealthState.Error,
                                     observerHealthWarning,
                                     ObserverConstants.ObserverManagerName,
-                                    this.token)).ConfigureAwait(false);
+                                    token)).ConfigureAwait(false);
                         }
 
                         continue;
                     }
 
-                    this.Logger.LogInfo($"Successfully ran {observer.ObserverName}.");
+                    Logger.LogInfo($"Successfully ran {observer.ObserverName}.");
 
                     if (!ObserverWebAppDeployed)
                     {
@@ -814,9 +818,9 @@ namespace FabricObserver.Observers
 
                     if (observer.HasActiveFabricErrorOrWarning)
                     {
-                        var errWarnMsg = !string.IsNullOrEmpty(this.Fqdn) ? $"<a style=\"font-weight: bold; color: red;\" href=\"http://{this.Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>." : $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
+                        var errWarnMsg = !string.IsNullOrEmpty(Fqdn) ? $"<a style=\"font-weight: bold; color: red;\" href=\"http://{Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>." : $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
 
-                        this.Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
+                        Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
                     }
                     else
                     {
@@ -825,12 +829,12 @@ namespace FabricObserver.Observers
 
                         try
                         {
-                            if (File.Exists(this.Logger.FilePath))
+                            if (File.Exists(Logger.FilePath))
                             {
                                 // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s).
                                 File.WriteAllLines(
-                                    this.Logger.FilePath,
-                                    File.ReadLines(this.Logger.FilePath)
+                                    Logger.FilePath,
+                                    File.ReadLines(Logger.FilePath)
                                         .Where(line => !line.Contains(observer.ObserverName)).ToList());
                             }
                         }
@@ -841,15 +845,15 @@ namespace FabricObserver.Observers
                 }
                 catch (AggregateException ex)
                 {
-                    this.IsObserverRunning = false;
+                    IsObserverRunning = false;
 
                     if (ex.InnerException is FabricException ||
                         ex.InnerException is OperationCanceledException ||
                         ex.InnerException is TaskCanceledException)
                     {
-                        if (this.isConfigurationUpdateInProgess)
+                        if (isConfigurationUpdateInProgess)
                         {
-                            this.IsObserverRunning = false;
+                            IsObserverRunning = false;
 
                             return true;
                         }
@@ -862,9 +866,9 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
                 {
-                    if (this.isConfigurationUpdateInProgess)
+                    if (isConfigurationUpdateInProgess)
                     {
-                        this.IsObserverRunning = false;
+                        IsObserverRunning = false;
 
                         return true;
                     }
@@ -874,29 +878,29 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e)
                 {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                    HealthReporter.ReportFabricObserverServiceHealth(
                             ObserverConstants.ObserverManagerName,
-                            this.ApplicationName,
+                            ApplicationName,
                             HealthState.Error,
                             $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
 
                     allExecuted = false;
                 }
 
-                this.IsObserverRunning = false;
+                IsObserverRunning = false;
             }
 
             if (allExecuted)
             {
-                this.Logger.LogInfo(ObserverConstants.AllObserversExecutedMessage);
+                Logger.LogInfo(ObserverConstants.AllObserversExecutedMessage);
             }
             else
             {
-                if (this.Logger.EnableVerboseLogging)
+                if (Logger.EnableVerboseLogging)
                 {
-                    this.HealthReporter.ReportFabricObserverServiceHealth(
+                    HealthReporter.ReportFabricObserverServiceHealth(
                         ObserverConstants.ObserverManagerName,
-                        this.ApplicationName,
+                        ApplicationName,
                         HealthState.Warning,
                         exceptionBuilder.ToString());
                 }

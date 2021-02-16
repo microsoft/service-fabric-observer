@@ -71,19 +71,19 @@ namespace ClusterObserver.Utilities.Telemetry
         /// <returns>A completed task or task containing exception info.</returns>
         private async Task SendTelemetryAsync(string payload, CancellationToken token)
         {
-            if (string.IsNullOrEmpty(this.WorkspaceId))
+            if (string.IsNullOrEmpty(WorkspaceId))
             {
                 return;
             }
 
-            var requestUri = new Uri($"https://{this.WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={this.ApiVersion}");
+            var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
-            string signature = this.GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
+            string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
 
             var request = (HttpWebRequest)WebRequest.Create(requestUri);
             request.ContentType = "application/json";
             request.Method = "POST";
-            request.Headers["Log-Type"] = this.LogType;
+            request.Headers["Log-Type"] = LogType;
             request.Headers["x-ms-date"] = date;
             request.Headers["Authorization"] = signature;
             byte[] content = Encoding.UTF8.GetBytes(payload);
@@ -115,34 +115,34 @@ namespace ClusterObserver.Utilities.Telemetry
                 if (responseAsync.StatusCode == HttpStatusCode.OK ||
                     responseAsync.StatusCode == HttpStatusCode.Accepted)
                 {
-                    this.retries = 0;
+                    retries = 0;
                     return;
                 }
 
-                this.logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
+                logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
             }
             catch (Exception e)
             {
                 // An Exception during telemetry data submission should never take down CO process. Log it.
-                this.logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
             }
 
-            if (this.retries < MaxRetries)
+            if (retries < MaxRetries)
             {
                 if (token.IsCancellationRequested)
                 {
                     return;
                 }
 
-                this.retries++;
+                retries++;
                 await Task.Delay(1000).ConfigureAwait(false);
                 await SendTelemetryAsync(payload, token).ConfigureAwait(false);
             }
             else
             {
                 // Exhausted retries. Reset counter.
-                this.logger.LogWarning($"Exhausted request retries in LogAnalyticsTelemetry.SendTelemetryAsync: {MaxRetries}. See logs for error details.");
-                this.retries = 0;
+                logger.LogWarning($"Exhausted request retries in LogAnalyticsTelemetry.SendTelemetryAsync: {MaxRetries}. See logs for error details.");
+                retries = 0;
             }
         }
 

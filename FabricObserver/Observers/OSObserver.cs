@@ -93,9 +93,9 @@ namespace FabricObserver.Observers
                 token.ThrowIfCancellationRequested();
 
                 // OS Health.
-                if (this.osStatus != null && !string.Equals(this.osStatus, "OK", StringComparison.OrdinalIgnoreCase))
+                if (osStatus != null && !string.Equals(osStatus, "OK", StringComparison.OrdinalIgnoreCase))
                 {
-                    string healthMessage = $"OS reporting unhealthy: {this.osStatus}";
+                    string healthMessage = $"OS reporting unhealthy: {osStatus}";
                     var healthReport = new HealthReport
                     {
                         Observer = ObserverName,
@@ -117,15 +117,15 @@ namespace FabricObserver.Observers
                             HealthScope.Application,
                             FabricRuntime.GetActivationContext().ApplicationName,
                             HealthState.Error,
-                            $"{NodeName} - OS reporting unhealthy: {this.osStatus}",
+                            $"{NodeName} - OS reporting unhealthy: {osStatus}",
                             ObserverName,
                             Token);
                     }
                 }
-                else if (HasActiveFabricErrorOrWarning && string.Equals(this.osStatus, "OK", StringComparison.OrdinalIgnoreCase))
+                else if (HasActiveFabricErrorOrWarning && string.Equals(osStatus, "OK", StringComparison.OrdinalIgnoreCase))
                 {
                     // Clear Error or Warning with an OK Health Report.
-                    string healthMessage = $"OS reporting healthy: {this.osStatus}";
+                    string healthMessage = $"OS reporting healthy: {osStatus}";
 
                     var healthReport = new HealthReport
                     {
@@ -147,7 +147,7 @@ namespace FabricObserver.Observers
                     var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "SysInfo.txt");
 
                     // This file is used by the web application (log reader.).
-                    if (!ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{this.osReport}"))
+                    if (!ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{osReport}"))
                     {
                         HealthReporter.ReportFabricObserverServiceHealth(
                             FabricServiceContext.ServiceName.OriginalString,
@@ -160,7 +160,7 @@ namespace FabricObserver.Observers
                 var report = new HealthReport
                 {
                     Observer = ObserverName,
-                    HealthMessage = this.osReport,
+                    HealthMessage = osReport,
                     State = HealthState.Ok,
                     NodeName = NodeName,
                     HealthReportTimeToLive = SetHealthReportTimeToLive(),
@@ -169,8 +169,7 @@ namespace FabricObserver.Observers
                 HealthReporter.ReportHealthToServiceFabric(report);
 
                 // Windows Update automatic download enabled?
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    && this.isWindowsUpdateAutoDownloadEnabled)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && isWindowsUpdateAutoDownloadEnabled)
                 {
                     string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
@@ -203,7 +202,7 @@ namespace FabricObserver.Observers
                             HealthEventDescription = auServiceEnabledMessage,
                             HealthState = "Warning",
                             Metric = "WUAutoDownloadEnabled",
-                            Value = this.isWindowsUpdateAutoDownloadEnabled,
+                            Value = isWindowsUpdateAutoDownloadEnabled,
                             NodeName = NodeName,
                             ObserverName = ObserverName,
                             Source = ObserverConstants.FabricObserverName,
@@ -225,7 +224,7 @@ namespace FabricObserver.Observers
                                 HealthEventDescription = auServiceEnabledMessage,
                                 ObserverName,
                                 Metric = "WUAutoDownloadEnabled",
-                                Value = this.isWindowsUpdateAutoDownloadEnabled,
+                                Value = isWindowsUpdateAutoDownloadEnabled,
                                 NodeName,
                             });
                     }
@@ -234,9 +233,9 @@ namespace FabricObserver.Observers
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // reset au globals for fresh detection during next observer run.
-                    this.isWindowsUpdateAutoDownloadEnabled = false;
-                    this.auStateUnknown = false;
-                    this.isWUADSettingEnabled = false;
+                    isWindowsUpdateAutoDownloadEnabled = false;
+                    auStateUnknown = false;
+                    isWUADSettingEnabled = false;
                 }
 
                 return Task.CompletedTask;
@@ -318,7 +317,7 @@ namespace FabricObserver.Observers
             try
             {
                 var wuLibAutoUpdates = new AutomaticUpdatesClass();
-                this.isWindowsUpdateAutoDownloadEnabled =
+                isWindowsUpdateAutoDownloadEnabled =
                     wuLibAutoUpdates.ServiceEnabled &&
                     wuLibAutoUpdates.Settings.NotificationLevel == AutomaticUpdatesNotificationLevel.aunlScheduledInstallation;
             }
@@ -331,7 +330,7 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogWarning(
                     $"{AuStateUnknownMessage}{Environment.NewLine}{e}");
 
-                this.auStateUnknown = true;
+                auStateUnknown = true;
             }
 
             return Task.CompletedTask;
@@ -345,7 +344,7 @@ namespace FabricObserver.Observers
             try
             {
                 OSInfo osInfo = await OperatingSystemInfoProvider.Instance.GetOSInfoAsync(token);
-                this.osStatus = osInfo.Status;
+                osStatus = osInfo.Status;
 
                 // Active, bound ports.
                 int activePorts = OperatingSystemInfoProvider.Instance.GetActivePortCount();
@@ -383,17 +382,17 @@ namespace FabricObserver.Observers
                 {
                     // WU AutoUpdate - Download enabled.
                     // If the config setting EnableWindowsAutoUpdateCheck is set to false, then don't add this info to sb.
-                    if (this.isWUADSettingEnabled)
+                    if (isWUADSettingEnabled)
                     {
                         string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
 
-                        if (this.auStateUnknown)
+                        if (auStateUnknown)
                         {
                             auMessage += "Unknown";
                         }
                         else
                         {
-                            auMessage += this.isWindowsUpdateAutoDownloadEnabled;
+                            auMessage += isWindowsUpdateAutoDownloadEnabled;
                         }
                         _ = sb.AppendLine(auMessage);
                     }
@@ -492,7 +491,7 @@ namespace FabricObserver.Observers
                 // Dynamic info qualifier (*)
                 _ = sb.AppendLine($"\n* Dynamic data.");
 
-                this.osReport = sb.ToString();
+                osReport = sb.ToString();
 
                 string hotFixes = string.Empty;
 
@@ -514,9 +513,9 @@ namespace FabricObserver.Observers
                             OS = osInfo.Name,
                             OSVersion = osInfo.Version,
                             OSInstallDate = osInfo.InstallDate,
-                            AutoUpdateEnabled = this.auStateUnknown ? "Unknown" : this.isWindowsUpdateAutoDownloadEnabled.ToString(),
+                            AutoUpdateEnabled = auStateUnknown ? "Unknown" : isWindowsUpdateAutoDownloadEnabled.ToString(),
                             osInfo.LastBootUpTime,
-                            WindowsAutoUpdateEnabled = this.isWindowsUpdateAutoDownloadEnabled,
+                            WindowsAutoUpdateEnabled = isWindowsUpdateAutoDownloadEnabled,
                             TotalMemorySizeGB = (int)(osInfo.TotalVisibleMemorySizeKB / 1048576),
                             AvailablePhysicalMemoryGB = Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
                             AvailableVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
@@ -551,7 +550,7 @@ namespace FabricObserver.Observers
                             OSVersion = osInfo.Version,
                             OSInstallDate = osInfo.InstallDate,
                             LastBootUpTime = osInfo.LastBootUpTime,
-                            WindowsUpdateAutoDownloadEnabled = this.isWindowsUpdateAutoDownloadEnabled,
+                            WindowsUpdateAutoDownloadEnabled = isWindowsUpdateAutoDownloadEnabled,
                             TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
                             AvailablePhysicalMemoryGB = Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
                             AvailableVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),

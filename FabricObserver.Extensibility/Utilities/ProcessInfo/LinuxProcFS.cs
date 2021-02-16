@@ -80,17 +80,17 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Parses /proc/{pid}/status file.
         /// </summary>
-        public static bool TryParseStatuSFile(int pid, out ParsedStatus result)
+        public static bool TryParseStatusFile(int pid, out ParsedStatus result)
         {
             string statuSFilePath = RootPath + pid.ToString() + StatuSFileName;
 
-            return TryParseStatuSFile(statuSFilePath, out result);
+            return TryParseStatusFile(statuSFilePath, out result);
         }
 
         /// <summary>
         /// Parses /proc/{pid}/status file.
         /// </summary>
-        public static bool TryParseStatuSFile(string statuSFilePath, out ParsedStatus result)
+        public static bool TryParseStatusFile(string statuSFilePath, out ParsedStatus result)
         {
             result = default(ParsedStatus);
 

@@ -31,18 +31,18 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             CancellationToken token)
         {
             this.eventSource = eventSource;
-            this.serviceContext = context;
+            serviceContext = context;
             var appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.TelemetryChannel.EndpointAddress = TelemetryConstants.TelemetryEndpoint;
-            this.telemetryClient = new TelemetryClient(appInsightsTelemetryConf)
+            telemetryClient = new TelemetryClient(appInsightsTelemetryConf)
             {
                 InstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey,
             };
 
             var clusterInfoTuple = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
-            this.clusterId = clusterInfoTuple.Item1;
-            this.tenantId = clusterInfoTuple.Item2;
-            this.clusterType = clusterInfoTuple.Item3;
+            clusterId = clusterInfoTuple.Item1;
+            tenantId = clusterInfoTuple.Item2;
+            clusterType = clusterInfoTuple.Item3;
         }
 
         public bool FabricObserverRuntimeNodeEvent(
@@ -57,8 +57,8 @@ namespace Microsoft.ServiceFabric.TelemetryLib
                 return false;
             }
 
-            this.eventSource.FabricObserverRuntimeNodeEvent(
-                this.clusterId,
+            eventSource.FabricObserverRuntimeNodeEvent(
+                clusterId,
                 applicationVersion,
                 foConfigInfo,
                 foHealthInfo);
@@ -67,18 +67,18 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             {
                 { "EventName", $"{EventName}" },
                 { "TaskName", $"{TaskName}" },
-                { "ClusterId", $"{this.clusterId}" ?? "" },
-                { "ClusterType", $"{this.clusterType}" ?? "" },
-                { "TenantId", $"{this.tenantId}" ?? "" },
+                { "ClusterId", $"{clusterId}" ?? "" },
+                { "ClusterType", $"{clusterType}" ?? "" },
+                { "TenantId", $"{tenantId}" ?? "" },
                 { "FabricObserverVersion", applicationVersion ?? "" },
-                { "NodeNameHash", ((uint)this.serviceContext?.NodeContext?.NodeName.GetHashCode()).ToString() ?? "" },
+                { "NodeNameHash", ((uint)serviceContext?.NodeContext?.NodeName.GetHashCode()).ToString() ?? "" },
                 { "FabricObserverHealthInfo", foHealthInfo ?? "" },
                 { "FabricObserverConfigInfo", foConfigInfo ?? "" },
                 { "Timestamp", DateTime.Now.ToString("G") }
             };
 
-            this.telemetryClient?.TrackEvent(string.Format("{0}.{1}", TaskName, EventName), eventProperties);
-            this.telemetryClient?.Flush();
+            telemetryClient?.TrackEvent(string.Format("{0}.{1}", TaskName, EventName), eventProperties);
+            telemetryClient?.Flush();
             
             // allow time for flushing
             Thread.Sleep(1000);

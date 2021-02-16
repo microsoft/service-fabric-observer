@@ -159,6 +159,8 @@
     <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true"  />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
+    <Parameter Name="AllocatedHandlesErrorLimit" Value="" MustOverride="true" />
+    <Parameter Name="AllocatedHandlesWarningLimit" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="NetworkObserverConfiguration">
@@ -193,6 +195,9 @@
     <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
+    <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
+    <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
+    <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
   </Section>
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
