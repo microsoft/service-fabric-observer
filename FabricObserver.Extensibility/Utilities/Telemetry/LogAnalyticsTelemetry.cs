@@ -19,7 +19,7 @@ using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
-    // LogAnalyticsTelemetry class is partially based on public (non-license-protected) sample https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
+    // LogAnalyticsTelemetry class is partially (SendTelemetryAsync/GetSignature) based on public sample: https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
         private const int MaxRetries = 5;
@@ -62,7 +62,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             this.fabricClient = fabricClient;
             this.token = token;
             ApiVersion = apiVersion;
-            this.logger = new Logger("TelemetryLogger");
+            logger = new Logger("TelemetryLogger");
         }
 
         public async Task ReportHealthAsync(
@@ -76,7 +76,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string instanceName = null)
         {
             var (clusterId, _, clusterType) =
-                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(this.fabricClient, this.token).ConfigureAwait(true);
+                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
 
             string jsonPayload = JsonConvert.SerializeObject(
                 new
@@ -150,8 +150,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         {
             var (clusterId, _, _) =
                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(
-                   this.fabricClient,
-                   this.token).ConfigureAwait(true);
+                   fabricClient,
+                   token).ConfigureAwait(true);
 
             string jsonPayload = JsonConvert.SerializeObject(
                 new
@@ -269,36 +269,36 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         if (responseAsync.StatusCode == HttpStatusCode.OK ||
                             responseAsync.StatusCode == HttpStatusCode.Accepted)
                         {
-                            this.retries = 0;
+                            retries = 0;
                             return;
                         }
 
-                        this.logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
+                        logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
                     }
                 }
             }
             catch (Exception e)
             {
                 // An Exception during telemetry data submission should never take down FO process. Log it.
-                this.logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
             }
 
-            if (this.retries < MaxRetries)
+            if (retries < MaxRetries)
             {
                 if (token.IsCancellationRequested)
                 {
                     return;
                 }
 
-                this.retries++;
+                retries++;
                 await Task.Delay(1000).ConfigureAwait(false);
                 await SendTelemetryAsync(payload, token).ConfigureAwait(false);
             }
             else
             {
                 // Exhausted retries. Reset counter.
-                this.logger.LogWarning($"Exhausted request retries in LogAnalyticsTelemetry.SendTelemetryAsync: {MaxRetries}. See logs for error details.");
-                this.retries = 0;
+                logger.LogWarning($"Exhausted request retries in LogAnalyticsTelemetry.SendTelemetryAsync: {MaxRetries}. See logs for error details.");
+                retries = 0;
             }
         }
 

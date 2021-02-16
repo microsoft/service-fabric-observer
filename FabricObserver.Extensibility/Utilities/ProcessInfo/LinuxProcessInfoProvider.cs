@@ -5,8 +5,6 @@
 
 using System.Diagnostics;
 using System.Fabric;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -61,7 +59,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (process.ExitCode != 0)
                 {
-                    this.Logger.LogWarning($"elevated_proc_fd exited with: {process.ExitCode}");
+                    Logger.LogWarning($"elevated_proc_fd exited with: {process.ExitCode}");
                     return -1f;
                 }
             }

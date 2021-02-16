@@ -915,7 +915,7 @@ namespace FabricObserver.Observers
 
                     case ErrorWarningProperty.TotalFileHandlesPct:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorAllocatedFileDescriptorsPercent : FOErrorWarningCodes.NodeWarningAllocatedFileDescriptorsPercent;
+                            FOErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent;
                         break;
                 }
 

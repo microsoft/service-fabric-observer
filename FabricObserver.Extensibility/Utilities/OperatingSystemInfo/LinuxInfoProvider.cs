@@ -213,7 +213,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>int value representing configured maximum number of file handles/fds in Linux OS instance.</returns>
         public override int GetMaximumConfiguredFileHandlesCount()
         {
-            // sysctl fs.file-max
+            // sysctl fs.file-max - Maximum number of file handles the Linux kernel will allocate. This is a configurable setting on Linux.
             string cmdResult = "sysctl fs.file-max | awk '{ print $3 }'".Bash();
 
             // sysctl fs.file-max result will be in this format:
@@ -238,8 +238,8 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>integer value representing the total number of allocated (in use) Linux FileHandles/FDs.</returns>
         public override int GetTotalAllocatedFileHandlesCount()
         {
-            // fs.file-nr result will be in this format:
-            // fs.file-nr = 30112      0       1616177x
+            // sysctl fs.file-nr result will be in this format:
+            // fs.file-nr = 30112      0       1616177
             string cmdResult = "sysctl fs.file-nr | awk '{ print $3 }'".Bash();
 
             if (string.IsNullOrEmpty(cmdResult))
@@ -289,6 +289,11 @@ namespace FabricObserver.Observers.Utilities
     // https://loune.net/2017/06/running-shell-bash-commands-in-net-core/
     internal static class LinuxShellHelper
     {
+        /// <summary>
+        /// This string extension will run a supplied linux bash command and return the console output.
+        /// </summary>
+        /// <param name="cmd">The bash command to run.</param>
+        /// <returns>The console output of the command.</returns>
         public static string Bash(this string cmd)
         {
             var escapedArgs = cmd.Replace("\"", "\\\"");
@@ -304,9 +309,11 @@ namespace FabricObserver.Observers.Utilities
                     CreateNoWindow = true,
                 }
             };
+
             process.Start();
             string result = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
+
             return result;
         }
     }

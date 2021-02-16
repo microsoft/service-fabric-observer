@@ -8,11 +8,17 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Linq;
+using System.Threading;
+using ClusterObserver.Interfaces;
+using ClusterObserver.Utilities.Telemetry;
 
 namespace ClusterObserver.Utilities
 {
     public class ConfigSettings
     {
+        private readonly FabricClient fabricClient;
+        private readonly CancellationToken token;
+
         private ConfigurationSettings Settings
         {
             get; set;
@@ -43,6 +49,11 @@ namespace ClusterObserver.Utilities
             get; set;
         }
 
+        public ITelemetryProvider TelemetryClient
+        {
+            get; set;
+        }
+
         public bool EmitWarningDetails
         {
             get; set;
@@ -58,11 +69,17 @@ namespace ClusterObserver.Utilities
             get; set;
         } = TimeSpan.FromHours(2.0);
 
-        public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
+        public ConfigSettings(
+            ConfigurationSettings settings,
+            string observerConfiguration,
+            FabricClient fabricClient,
+            CancellationToken token)
         {
             Settings = settings;
             Section = settings?.Sections[observerConfiguration];
-            
+            this.fabricClient = fabricClient;
+            this.token = token;
+
             UpdateConfigSettings();
         }
 
@@ -82,15 +99,7 @@ namespace ClusterObserver.Utilities
                 IsEnabled = enabled;
             }
 
-            // Observer telemetry enabled?
-            if (bool.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.EnableTelemetry),
-                out bool telemetryEnabled))
-            {
-                TelemetryEnabled = telemetryEnabled;
-            }
-
+            
             // Verbose logging?
             if (bool.TryParse(
                 GetConfigSettingValue(
@@ -133,6 +142,75 @@ namespace ClusterObserver.Utilities
                    out TimeSpan maxTimeNodeStatusNotOk))
             {
                 MaxTimeNodeStatusNotOk = maxTimeNodeStatusNotOk;
+            }
+
+            // Observer telemetry enabled?
+            if (bool.TryParse(
+                GetConfigSettingValue(
+                ObserverConstants.EnableTelemetry),
+                out bool telemetryEnabled))
+            {
+                TelemetryEnabled = telemetryEnabled;
+            }
+
+            if (TelemetryEnabled)
+            {
+                string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderType);
+
+                if (string.IsNullOrWhiteSpace(telemetryProviderType))
+                {
+                    TelemetryEnabled = false;
+                    return;
+                }
+
+                if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
+                {
+                    TelemetryEnabled = false;
+                    return;
+                }
+
+                switch (telemetryProvider)
+                {
+                    case TelemetryProviderType.AzureLogAnalytics:
+
+                        var logAnalyticsLogType =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter) ?? "Application";
+
+                        var logAnalyticsSharedKey =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
+
+                        var logAnalyticsWorkspaceId =
+                            GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+
+                        if (string.IsNullOrWhiteSpace(logAnalyticsSharedKey) || string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+                        
+                        TelemetryClient = new LogAnalyticsTelemetry(
+                            logAnalyticsWorkspaceId,
+                            logAnalyticsSharedKey,
+                            logAnalyticsLogType,
+                            this.fabricClient,
+                            this.token);
+                        
+                        break;
+
+                    case TelemetryProviderType.AzureApplicationInsights:
+
+                        string aiKey = GetConfigSettingValue(ObserverConstants.AiKey);
+
+                        if (string.IsNullOrWhiteSpace(aiKey))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+                         
+                        TelemetryClient = new AppInsightsTelemetry(aiKey);
+                        
+                        break;
+                }
             }
         }
 

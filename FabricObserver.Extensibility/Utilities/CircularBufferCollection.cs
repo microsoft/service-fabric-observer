@@ -35,8 +35,8 @@ namespace FabricObserver.Observers.Utilities
                 throw new ArgumentException("You must provide a fixed capacity that is greater than 0.");
             }
 
-            this.buffer = new List<T>(new T[capacity]);
-            this.head = capacity - 1;
+            buffer = new List<T>(new T[capacity]);
+            head = capacity - 1;
         }
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public int Capacity
         {
-            get => this.buffer.Count;
+            get => buffer.Count;
             set
             {
                 if (value <= 0)
@@ -69,7 +69,7 @@ namespace FabricObserver.Observers.Utilities
                         nameof(value), $"value must be greater than 0 ({value}).");
                 }
 
-                if (value == this.buffer.Count)
+                if (value == buffer.Count)
                 {
                     return;
                 }
@@ -82,10 +82,10 @@ namespace FabricObserver.Observers.Utilities
                     buffer1[count++] = Dequeue();
                 }
 
-                this.buffer = buffer1;
+                buffer = buffer1;
                 Count = count;
-                this.head = count - 1;
-                this.tail = 0;
+                head = count - 1;
+                tail = 0;
             }
         }
 
@@ -103,7 +103,7 @@ namespace FabricObserver.Observers.Utilities
                     throw new ArgumentOutOfRangeException(nameof(index));
                 }
 
-                return this.buffer[(this.tail + index) % Capacity];
+                return buffer[(tail + index) % Capacity];
             }
 
             set
@@ -113,7 +113,7 @@ namespace FabricObserver.Observers.Utilities
                     throw new ArgumentOutOfRangeException(nameof(index));
                 }
 
-                this.buffer[(this.tail + index) % Capacity] = value;
+                buffer[(tail + index) % Capacity] = value;
             }
         }
 
@@ -142,13 +142,13 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Item that was enqueued.</returns>
         public T Enqueue(T item)
         {
-            this.head = (this.head + 1) % Capacity;
-            var overwritten = this.buffer[this.head];
-            this.buffer[this.head] = item;
+            head = (head + 1) % Capacity;
+            var overwritten = buffer[head];
+            buffer[head] = item;
 
             if (Count == Capacity)
             {
-                this.tail = (this.tail + 1) % Capacity;
+                tail = (tail + 1) % Capacity;
             }
             else
             {
@@ -169,9 +169,9 @@ namespace FabricObserver.Observers.Utilities
                 throw new InvalidOperationException("queue exhausted");
             }
 
-            var dequeued = this.buffer[this.tail];
-            this.buffer[this.tail] = default(T);
-            this.tail = (this.tail + 1) % Capacity;
+            var dequeued = buffer[tail];
+            buffer[tail] = default(T);
+            tail = (tail + 1) % Capacity;
             --Count;
 
             return dequeued;
@@ -192,10 +192,10 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public void Clear()
         {
-            this.head = Capacity - 1;
-            this.tail = 0;
+            head = Capacity - 1;
+            tail = 0;
             Count = 0;
-            this.buffer = new List<T>(new T[Capacity]);
+            buffer = new List<T>(new T[Capacity]);
         }
 
         /// <summary>
@@ -205,7 +205,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Boolean value.</returns>
         public bool Contains(T item)
         {
-            return this.buffer.Contains(item);
+            return buffer.Contains(item);
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="index">The index of the target array to start copying to.</param>
         public void CopyTo(T[] array, int index)
         {
-            this.buffer.CopyTo(array, index);
+            buffer.CopyTo(array, index);
         }
 
         /// <summary>

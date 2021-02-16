@@ -62,8 +62,8 @@ namespace FabricObserverWeb
         {
             string html = string.Empty;
             string observerLogFilePath = null;
-            var nodeName = this.serviceContext.NodeContext.NodeName;
-            var configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+            var nodeName = serviceContext.NodeContext.NodeName;
+            var configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
             string logFolder = null;
             string logFileName = null;
 
@@ -143,7 +143,7 @@ namespace FabricObserverWeb
                     // Node links..
                     string nodeLinks = string.Empty;
 
-                    var nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
+                    var nodeList = fabricClient.QueryManager.GetNodeListAsync().Result;
                     var ordered = nodeList.OrderBy(node => node.NodeName);
                     var host = Request.Host.Value;
 
@@ -158,12 +158,12 @@ namespace FabricObserverWeb
                         }
                     }
 
-                    this.sb = new StringBuilder();
+                    sb = new StringBuilder();
 
-                    _ = this.sb.AppendLine("<html>\n\t<head>");
-                    _ = this.sb.AppendLine("\n\t\t<title>FabricObserver Node Health Information: Errors and Warnings</title>");
-                    _ = this.sb.AppendLine("\n\t\t" + this.script);
-                    _ = this.sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
+                    _ = sb.AppendLine("<html>\n\t<head>");
+                    _ = sb.AppendLine("\n\t\t<title>FabricObserver Node Health Information: Errors and Warnings</title>");
+                    _ = sb.AppendLine("\n\t\t" + script);
+                    _ = sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
                                    "\t\t\t.container {\n" +
                                    "\t\t\t\tfont-family: Consolas; font-size: 14px; background-color: lightblue; padding: 5px; border: 1px solid grey; " +
                                    "width: 98%;\n" +
@@ -177,30 +177,30 @@ namespace FabricObserverWeb
                                    "\t\t\t}\n" +
                                    "\t\t\t a:link { text-decoration: none; }" +
                                    "\n\t\t</style>");
-                    _ = this.sb.AppendLine("\n\t</head>");
-                    _ = this.sb.AppendLine("\n\t<body>");
-                    _ = this.sb.AppendLine("\n\t\t\t <br/>");
+                    _ = sb.AppendLine("\n\t</head>");
+                    _ = sb.AppendLine("\n\t<body>");
+                    _ = sb.AppendLine("\n\t\t\t <br/>");
 
                     if (!string.IsNullOrEmpty(sysInfofileText))
                     {
-                        _ = this.sb.AppendLine("\n\t\t\t<div class=\"container\"><div style=\"position: relative; width: 80%; margin-left: auto; margin-right: auto; font-family: Consolas;\"><br/>" +
-                                       "<h2>Host Machine and Service Fabric Information: Node " + this.serviceContext.NodeContext.NodeName + "</h2>" + nodeLinks + "<pre>" +
+                        _ = sb.AppendLine("\n\t\t\t<div class=\"container\"><div style=\"position: relative; width: 80%; margin-left: auto; margin-right: auto; font-family: Consolas;\"><br/>" +
+                                       "<h2>Host Machine and Service Fabric Information: Node " + serviceContext.NodeContext.NodeName + "</h2>" + nodeLinks + "<pre>" +
                                        sysInfofileText + "\n\nDisk Info: \n\n" + diskInfoTxt + netInfofileText + "\n\n" + sfInfraText + "</pre></div></div>");
                     }
 
-                    _ = this.sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\">" +
+                    _ = sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\">" +
                                        "<br/><strong>Daily Errors and Warnings on " + nodeName + " - " + DateTime.UtcNow.ToString("MM/dd/yyyy") + " UTC</strong><br/><br/>" + log + appHealthText + "</div>");
 
                     if (!string.IsNullOrEmpty(evtVwrErrorsText))
                     {
-                        _ = this.sb.AppendLine("\n\t\t\t" + evtVwrErrorsText);
+                        _ = sb.AppendLine("\n\t\t\t" + evtVwrErrorsText);
                     }
 
-                    _ = this.sb.AppendLine("\n\t\t\t</div>");
-                    _ = this.sb.AppendLine("\n\t</body>");
-                    _ = this.sb.AppendLine("</html>");
-                    html = this.sb.ToString();
-                    _ = this.sb.Clear();
+                    _ = sb.AppendLine("\n\t\t\t</div>");
+                    _ = sb.AppendLine("\n\t</body>");
+                    _ = sb.AppendLine("</html>");
+                    html = sb.ToString();
+                    _ = sb.Clear();
 
                     break;
                 }
@@ -222,7 +222,7 @@ namespace FabricObserverWeb
         {
             try
             {
-                var node = this.fabricClient.QueryManager.GetNodeListAsync(name).Result;
+                var node = fabricClient.QueryManager.GetNodeListAsync(name).Result;
 
                 if (node.Count > 0)
                 {

@@ -156,20 +156,20 @@ namespace FabricObserver.Observers
         public NodeObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            this.stopwatch = new Stopwatch();
+            stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (this.RunInterval > TimeSpan.MinValue
+            if (RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
 
-            this.stopwatch.Start();
+            stopwatch.Start();
 
             Initialize();
 
@@ -177,9 +177,9 @@ namespace FabricObserver.Observers
 
             await GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
 
-            this.stopwatch.Stop();
-            RunDuration = this.stopwatch.Elapsed;
-            this.stopwatch.Reset();
+            stopwatch.Stop();
+            RunDuration = stopwatch.Elapsed;
+            stopwatch.Reset();
 
             await ReportAsync(token).ConfigureAwait(true);
 
@@ -197,7 +197,7 @@ namespace FabricObserver.Observers
                     var fileName = "CpuMemFirewallsPortsHandles" + NodeName;
 
                     // Log (csv) system-wide CPU/Mem/Ports/File Handles(Linux)/Firewall Rules(Windows) data.
-                    if (this.CpuTimeData != null && (this.CpuErrorUsageThresholdPct > 0 || this.CpuWarningUsageThresholdPct > 0))
+                    if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
                         CsvFileLogger.LogData(
                         fileName,
@@ -215,63 +215,65 @@ namespace FabricObserver.Observers
                     }
 
                     // Memory
-                    if (this.MemDataCommittedBytes != null && (this.MemErrorUsageThresholdMb > 0 || this.MemWarningUsageThresholdMb > 0))
+                    if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                     {
                         CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "Committed Memory (MB)",
                         "Average",
-                        Math.Round(this.MemDataCommittedBytes.AverageDataValue));
+                        Math.Round(MemDataCommittedBytes.AverageDataValue));
 
                         CsvFileLogger.LogData(
                             fileName,
                             NodeName,
                             "Committed Memory (MB)",
                             "Peak",
-                            Math.Round(this.MemDataCommittedBytes.MaxDataValue));
+                            Math.Round(MemDataCommittedBytes.MaxDataValue));
                     }
 
-                    if (this.ActivePortsData != null && (this.ActivePortsErrorThreshold > 0 || this.ActivePortsWarningThreshold > 0))
+                    if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "All Active Ports",
                         "Total",
-                        this.ActivePortsData.Data[0]);
+                        ActivePortsData.Data[0]);
                     }
 
-                    if (this.EphemeralPortsData != null && (this.EphemeralPortsErrorThreshold > 0 || this.EphemeralPortsWarningThreshold > 0))
+                    if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "Ephemeral Active Ports",
                         "Total",
-                        this.EphemeralPortsData.Data[0]);
+                        EphemeralPortsData.Data[0]);
                     }
 
-                    if (this.FirewallData != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (this.FirewallRulesErrorThreshold > 0 || this.FirewallRulesWarningThreshold > 0))
+                    if (FirewallData != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
                         fileName,
                         NodeName,
                         "Firewall Rules",
                         "Total",
-                        this.FirewallData.Data[0]);
+                        FirewallData.Data[0]);
                     }
 
+                    // Windows does not have a corresponding FD/FH limit which can be set by a user, nor does Windows have a reliable way of determing the total number of open handles in the system.
+                    // As such, it does not make sense to monitor system-wide, percent usage of ALL available file handles on Windows. This feature of NodeObserver is therefore Linux-only.
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
-                        if (this.LinuxFileHandlesDataPercentAllocated != null && (this.LinuxFileHandlesErrorPercent > 0 || this.LinuxFileHandlesWarningPercent > 0))
+                        if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                         {
                             CsvFileLogger.LogData(
                                 fileName,
                                 NodeName,
                                 ErrorWarningProperty.TotalFileHandlesPct,
                                 "Percent In Use",
-                                this.LinuxFileHandlesDataPercentAllocated.Data[0]);
+                                LinuxFileHandlesDataPercentAllocated.Data[0]);
                         }
                     }
 
@@ -283,74 +285,74 @@ namespace FabricObserver.Observers
                 var timeToLiveWarning = SetHealthReportTimeToLive();
 
                 // CPU
-                if (this.CpuTimeData != null && (this.CpuErrorUsageThresholdPct > 0 || this.CpuWarningUsageThresholdPct > 0))
+                if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                 {
                     ProcessResourceDataReportHealth(
-                        this.CpuTimeData,
-                        this.CpuErrorUsageThresholdPct,
-                        this.CpuWarningUsageThresholdPct,
+                        CpuTimeData,
+                        CpuErrorUsageThresholdPct,
+                        CpuWarningUsageThresholdPct,
                         timeToLiveWarning);
                 }
 
                 // Memory - MB
-                if (this.MemDataCommittedBytes != null && (this.MemErrorUsageThresholdMb > 0 || this.MemWarningUsageThresholdMb > 0))
+                if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                 {
                     ProcessResourceDataReportHealth(
-                        this.MemDataCommittedBytes,
-                        this.MemErrorUsageThresholdMb,
-                        this.MemWarningUsageThresholdMb,
+                        MemDataCommittedBytes,
+                        MemErrorUsageThresholdMb,
+                        MemWarningUsageThresholdMb,
                         timeToLiveWarning);
                 }
 
                 // Memory - Percent
-                if (this.MemDataPercentUsed != null && (this.MemoryErrorLimitPercent > 0 || this.MemoryWarningLimitPercent > 0))
+                if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                 {
                     ProcessResourceDataReportHealth<double>(
-                        this.MemDataPercentUsed,
-                        this.MemoryErrorLimitPercent,
-                        this.MemoryWarningLimitPercent,
+                        MemDataPercentUsed,
+                        MemoryErrorLimitPercent,
+                        MemoryWarningLimitPercent,
                         timeToLiveWarning);
                 }
 
                 // Firewall rules
-                if (this.FirewallData != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (this.FirewallRulesErrorThreshold > 0 || this.FirewallRulesWarningThreshold > 0))
+                if (FirewallData != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
-                        this.FirewallData,
-                        this.FirewallRulesErrorThreshold,
-                        this.FirewallRulesWarningThreshold,
+                        FirewallData,
+                        FirewallRulesErrorThreshold,
+                        FirewallRulesWarningThreshold,
                         timeToLiveWarning);
                 }
 
                 // Ports - Active TCP
-                if (this.ActivePortsData != null && (this.ActivePortsErrorThreshold > 0 || this.ActivePortsWarningThreshold > 0))
+                if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
-                        this.ActivePortsData,
-                        this.ActivePortsErrorThreshold,
-                        this.ActivePortsWarningThreshold,
+                        ActivePortsData,
+                        ActivePortsErrorThreshold,
+                        ActivePortsWarningThreshold,
                         timeToLiveWarning);
                 }
 
                 // Ports - Active Ephemeral TCP
-                if (this.EphemeralPortsData != null && (this.EphemeralPortsErrorThreshold > 0 || this.EphemeralPortsWarningThreshold > 0))
+                if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
-                        this.EphemeralPortsData,
-                        this.EphemeralPortsErrorThreshold,
-                        this.EphemeralPortsWarningThreshold,
+                        EphemeralPortsData,
+                        EphemeralPortsErrorThreshold,
+                        EphemeralPortsWarningThreshold,
                         timeToLiveWarning);
                 }
 
-                // File Handles (Linux) - Percent Allocated (in use) of configured Maximum File Handles.
+                // Total Open File Handles % (Linux-only) - Total Percentage Allocated (in use) of the configured Maximum number of File Handles the linux kernel will allocate.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    if (this.LinuxFileHandlesDataPercentAllocated != null && (this.LinuxFileHandlesErrorPercent > 0 || this.LinuxFileHandlesWarningPercent > 0))
+                    if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
                         ProcessResourceDataReportHealth(
-                            this.LinuxFileHandlesDataPercentAllocated,
-                            this.LinuxFileHandlesErrorPercent,
-                            this.LinuxFileHandlesWarningPercent,
+                            LinuxFileHandlesDataPercentAllocated,
+                            LinuxFileHandlesErrorPercent,
+                            LinuxFileHandlesWarningPercent,
                             timeToLiveWarning);
                     }
                 }
@@ -385,42 +387,42 @@ namespace FabricObserver.Observers
 
         private void InitializeDataContainers()
         {
-            if (this.CpuTimeData == null && (this.CpuErrorUsageThresholdPct > 0 || this.CpuWarningUsageThresholdPct > 0))
+            if (CpuTimeData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
             {
-                this.CpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
+                CpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", DataCapacity, UseCircularBuffer);
             }
 
-            if (this.MemDataCommittedBytes == null && (this.MemErrorUsageThresholdMb > 0 || this.MemWarningUsageThresholdMb > 0))
+            if (MemDataCommittedBytes == null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
             {
-                this.MemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", DataCapacity, UseCircularBuffer);
+                MemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", DataCapacity, UseCircularBuffer);
             }
 
-            if (this.MemDataPercentUsed == null && (this.MemoryErrorLimitPercent > 0 || this.MemoryWarningLimitPercent > 0))
+            if (MemDataPercentUsed == null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
             {
-                this.MemDataPercentUsed = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataCapacity, UseCircularBuffer);
+                MemDataPercentUsed = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", DataCapacity, UseCircularBuffer);
             }
 
-            if (this.FirewallData == null && (this.FirewallRulesErrorThreshold > 0 || this.FirewallRulesWarningThreshold > 0))
+            if (FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
             {
-                this.FirewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActiveFirewallRules, "ActiveFirewallRules", 1);
+                FirewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActiveFirewallRules, "ActiveFirewallRules", 1);
             }
 
-            if (this.ActivePortsData == null && (this.ActivePortsErrorThreshold > 0 || this.ActivePortsWarningThreshold > 0))
+            if (ActivePortsData == null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
             {
-                this.ActivePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, "AllPortsInUse", 1);
+                ActivePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, "AllPortsInUse", 1);
             }
 
-            if (this.EphemeralPortsData == null && (this.EphemeralPortsErrorThreshold > 0 || this.EphemeralPortsWarningThreshold > 0))
+            if (EphemeralPortsData == null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
             {
-                this.EphemeralPortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUse", 1);
+                EphemeralPortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUse", 1);
             }
 
             // This only makes sense for Linux.
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                if (this.LinuxFileHandlesDataPercentAllocated == null && (this.LinuxFileHandlesErrorPercent > 0 || this.LinuxFileHandlesWarningPercent > 0))
+                if (LinuxFileHandlesDataPercentAllocated == null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                 {
-                    this.LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalFileHandlesPct, "TotalFileHandlesPercentage", 1);
+                    LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalFileHandlesPct, "TotalFileHandlesPercentage", 1);
                 }
             }
         }
@@ -439,7 +441,7 @@ namespace FabricObserver.Observers
             {
                 if (cpuErrorUsageThresholdPct > 0 && cpuErrorUsageThresholdPct <= 100)
                 {
-                    this.CpuErrorUsageThresholdPct = cpuErrorUsageThresholdPct;
+                    CpuErrorUsageThresholdPct = cpuErrorUsageThresholdPct;
                 }
             }
 
@@ -449,7 +451,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(memError) && int.TryParse(memError, out int memErrorUsageThresholdMb))
             {
-                this.MemErrorUsageThresholdMb = memErrorUsageThresholdMb;
+                MemErrorUsageThresholdMb = memErrorUsageThresholdMb;
             }
 
             var portsErr = GetSettingParameterValue(
@@ -458,7 +460,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(portsErr) && !int.TryParse(portsErr, out int activePortsErrorThreshold))
             {
-                this.ActivePortsErrorThreshold = activePortsErrorThreshold;
+                ActivePortsErrorThreshold = activePortsErrorThreshold;
             }
 
             var ephemeralPortsErr = GetSettingParameterValue(
@@ -467,7 +469,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(portsErr) && int.TryParse(ephemeralPortsErr, out int ephemeralPortsErrorThreshold))
             {
-                this.EphemeralPortsErrorThreshold = ephemeralPortsErrorThreshold;
+                EphemeralPortsErrorThreshold = ephemeralPortsErrorThreshold;
             }
 
             var errFirewallRules = GetSettingParameterValue(
@@ -476,7 +478,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(errFirewallRules) && int.TryParse(errFirewallRules, out int firewallRulesErrorThreshold))
             {
-                this.FirewallRulesErrorThreshold = firewallRulesErrorThreshold;
+                FirewallRulesErrorThreshold = firewallRulesErrorThreshold;
             }
 
             var errMemPercentUsed = GetSettingParameterValue(
@@ -487,7 +489,7 @@ namespace FabricObserver.Observers
             {
                 if (memoryPercentUsedErrorThreshold > 0 && memoryPercentUsedErrorThreshold <= 100)
                 {
-                    this.MemoryErrorLimitPercent = memoryPercentUsedErrorThreshold;
+                    MemoryErrorLimitPercent = memoryPercentUsedErrorThreshold;
                 }
             }
 
@@ -502,7 +504,7 @@ namespace FabricObserver.Observers
                 {
                     if (fileDescriptorsPercentUsedErrorThreshold > 0 && fileDescriptorsPercentUsedErrorThreshold <= 100)
                     {
-                        this.LinuxFileHandlesErrorPercent = fileDescriptorsPercentUsedErrorThreshold;
+                        LinuxFileHandlesErrorPercent = fileDescriptorsPercentUsedErrorThreshold;
                     }
                 }
             }
@@ -519,7 +521,7 @@ namespace FabricObserver.Observers
             {
                 if (cpuWarningUsageThresholdPct > 0 && cpuWarningUsageThresholdPct <= 100)
                 {
-                    this.CpuWarningUsageThresholdPct = cpuWarningUsageThresholdPct;
+                    CpuWarningUsageThresholdPct = cpuWarningUsageThresholdPct;
                 }
             }
 
@@ -529,7 +531,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(memWarn) && int.TryParse(memWarn, out int memWarningUsageThresholdMb))
             {
-                this.MemWarningUsageThresholdMb = memWarningUsageThresholdMb;
+                MemWarningUsageThresholdMb = memWarningUsageThresholdMb;
             }
 
             var portsWarn = GetSettingParameterValue(
@@ -538,7 +540,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(portsWarn) && int.TryParse(portsWarn, out int activePortsWarningThreshold))
             {
-                this.ActivePortsWarningThreshold = activePortsWarningThreshold;
+                ActivePortsWarningThreshold = activePortsWarningThreshold;
             }
 
             var ephemeralPortsWarn = GetSettingParameterValue(
@@ -547,7 +549,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(ephemeralPortsWarn) && int.TryParse(ephemeralPortsWarn, out int ephemeralPortsWarningThreshold))
             {
-                this.EphemeralPortsWarningThreshold = ephemeralPortsWarningThreshold;
+                EphemeralPortsWarningThreshold = ephemeralPortsWarningThreshold;
             }
 
             var warnFirewallRules = GetSettingParameterValue(
@@ -556,7 +558,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(warnFirewallRules) && int.TryParse(warnFirewallRules, out int firewallRulesWarningThreshold))
             {
-                this.FirewallRulesWarningThreshold = firewallRulesWarningThreshold;
+                FirewallRulesWarningThreshold = firewallRulesWarningThreshold;
             }
 
             var warnMemPercentUsed = GetSettingParameterValue(
@@ -567,7 +569,7 @@ namespace FabricObserver.Observers
             {
                 if (memoryPercentUsedWarningThreshold > 0 && memoryPercentUsedWarningThreshold <= 100)
                 {
-                    this.MemoryWarningLimitPercent = memoryPercentUsedWarningThreshold;
+                    MemoryWarningLimitPercent = memoryPercentUsedWarningThreshold;
                 }
             }
 
@@ -582,7 +584,7 @@ namespace FabricObserver.Observers
                 {
                     if (fileDescriptorsPercentUsedWarningThreshold > 0 && fileDescriptorsPercentUsedWarningThreshold <= 100)
                     {
-                        this.LinuxFileHandlesWarningPercent = fileDescriptorsPercentUsedWarningThreshold;
+                        LinuxFileHandlesWarningPercent = fileDescriptorsPercentUsedWarningThreshold;
                     }
                 }
             }
@@ -597,33 +599,33 @@ namespace FabricObserver.Observers
             try
             {
                 // Ports.
-                if (this.ActivePortsData != null && (this.ActivePortsErrorThreshold > 0 || this.ActivePortsWarningThreshold > 0))
+                if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                 {
                     int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActivePortCount();
-                    this.ActivePortsData.Data.Add(activePortCountTotal);
+                    ActivePortsData.Data.Add(activePortCountTotal);
                 }
 
-                if (this.EphemeralPortsData != null && (this.EphemeralPortsErrorThreshold > 0 || this.EphemeralPortsWarningThreshold > 0))
+                if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
                 {
                     int ephemeralPortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
-                    this.EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
+                    EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
                 }
 
                 // Firewall rules.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && this.FirewallData != null)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && FirewallData != null)
                 {
                     int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
-                    this.FirewallData.Data.Add(firewalls);
+                    FirewallData.Data.Add(firewalls);
                 }
 
                 TimeSpan duration = TimeSpan.FromSeconds(10);
 
-                if (this.MonitorDuration > TimeSpan.MinValue)
+                if (MonitorDuration > TimeSpan.MinValue)
                 {
                     duration = MonitorDuration;
                 }
 
-                /* CPU, Memory, File Descriptors (Linux)
+                /* CPU, Memory, File Handles/FDs (Linux)
                  
                    Note: Please make sure you understand the normal state of your nodes
                    with respect to the machine resource use and/or abuse by your service(s).
@@ -631,7 +633,7 @@ namespace FabricObserver.Observers
                    as part of the work they perform under normal traffic flow, then it doesn't make sense to warn or
                    error on these conditions. */
 
-                if (this.CpuTimeData != null && (this.CpuErrorUsageThresholdPct > 0 || this.CpuWarningUsageThresholdPct > 0))
+                if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                 {
                     cpuUtilizationProvider = CpuUtilizationProvider.Create();
 
@@ -639,12 +641,12 @@ namespace FabricObserver.Observers
                     _ = await cpuUtilizationProvider.NextValueAsync();
                 }
 
-                // VM-level file handle monitoring only makes sense for Linux, where Maximum number of handles is a configuration setting.
+                // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
                 // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
                 // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    if (this.LinuxFileHandlesDataPercentAllocated != null && (this.LinuxFileHandlesErrorPercent > 0 || this.LinuxFileHandlesWarningPercent > 0))
+                    if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
                         float totalOpenFileHandles = OperatingSystemInfoProvider.Instance.GetTotalAllocatedFileHandlesCount();
 
@@ -655,30 +657,30 @@ namespace FabricObserver.Observers
                             if (maximumConfiguredFDCount > 0)
                             {
                                 double usedPct = totalOpenFileHandles / maximumConfiguredFDCount * 100;
-                                this.LinuxFileHandlesDataPercentAllocated.Data.Add(Math.Round(usedPct, 2));
+                                LinuxFileHandlesDataPercentAllocated.Data.Add(Math.Round(usedPct, 2));
                             }
                         }
                     } 
                 }
 
-                while (this.stopwatch.Elapsed <= duration)
+                while (stopwatch.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    if (this.CpuTimeData != null && (this.CpuErrorUsageThresholdPct > 0 || this.CpuWarningUsageThresholdPct > 0))
+                    if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
-                        this.CpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
+                        CpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
                     }
 
-                    if (this.MemDataCommittedBytes != null && (this.MemErrorUsageThresholdMb > 0 || this.MemWarningUsageThresholdMb > 0))
+                    if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                     {
                         float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
-                        this.MemDataCommittedBytes.Data.Add(committedMegaBytes);
+                        MemDataCommittedBytes.Data.Add(committedMegaBytes);
                     }
 
-                    if (this.MemDataPercentUsed != null && (this.MemoryErrorLimitPercent > 0 || this.MemoryWarningLimitPercent > 0))
+                    if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                     {
-                        this.MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
+                        MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                     }
 
                     await Task.Delay(250).ConfigureAwait(false);

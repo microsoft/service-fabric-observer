@@ -78,8 +78,8 @@ namespace FabricObserver.Observers
             : base(fabricClient, context)
         {
             configSettings = new MachineInfoModel.ConfigSettings(FabricServiceContext);
-            this.dataPackagePath = configSettings.ConfigPackagePath;
-            this.stopwatch = new Stopwatch();
+            dataPackagePath = configSettings.ConfigPackagePath;
+            stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -94,14 +94,14 @@ namespace FabricObserver.Observers
 
             if (!await InitializeAsync() || token.IsCancellationRequested)
             {
-                this.stopwatch.Stop();
-                this.stopwatch.Reset();
+                stopwatch.Stop();
+                stopwatch.Reset();
 
                 return;
             }
 
-            this.cancellationToken = token;
-            this.stopwatch.Start();
+            cancellationToken = token;
+            stopwatch.Start();
 
             // Run conn tests.
             Retry.Do(
@@ -109,14 +109,14 @@ namespace FabricObserver.Observers
                 TimeSpan.FromSeconds(10),
                 token);
 
-            this.stopwatch.Stop();
-            RunDuration = this.stopwatch.Elapsed;
-            this.stopwatch.Reset();
+            stopwatch.Stop();
+            RunDuration = stopwatch.Elapsed;
+            stopwatch.Reset();
 
             await ReportAsync(token).ConfigureAwait(true);
 
             LastRunDateTime = DateTime.Now;
-            this.hasRun = true;
+            hasRun = true;
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -124,11 +124,11 @@ namespace FabricObserver.Observers
             var timeToLiveWarning = SetHealthReportTimeToLive();
 
             // Report on connection state.
-            foreach (var config in this.userConfig)
+            foreach (var config in userConfig)
             {
                 token.ThrowIfCancellationRequested();
 
-                foreach (var conn in this.connectionStatus.Where(cs => cs.TargetApp == config.TargetApp))
+                foreach (var conn in connectionStatus.Where(cs => cs.TargetApp == config.TargetApp))
                 {
                     token.ThrowIfCancellationRequested();
 
@@ -136,7 +136,7 @@ namespace FabricObserver.Observers
 
                     if (!connState.Connected)
                     {
-                        this.healthState = HealthState.Warning;
+                        healthState = HealthState.Warning;
                         var healthMessage = $"Outbound Internet connection failure detected for endpoint {connState.HostName}{Environment.NewLine}";
 
                         // Send Health Telemetry (perhaps it signals an Alert in AppInsights or LogAnalytics).
@@ -166,7 +166,7 @@ namespace FabricObserver.Observers
                             HealthData = telemetryData,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = timeToLiveWarning,
-                            State = this.healthState,
+                            State = healthState,
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
@@ -205,7 +205,7 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        this.healthState = HealthState.Ok;
+                        healthState = HealthState.Ok;
                         var healthMessage = $"Outbound Internet connection successful for {connState?.HostName} from node {NodeName}.";
 
                         // Clear existing Health Warning.
@@ -268,9 +268,9 @@ namespace FabricObserver.Observers
             }
 
             // Clear
-            _ = this.connectionStatus.RemoveAll(conn => conn.Connected);
-            this.connectionStatus.TrimExcess();
-            this.connEndpointTestResults.Clear();
+            _ = connectionStatus.RemoveAll(conn => conn.Connected);
+            connectionStatus.TrimExcess();
+            connEndpointTestResults.Clear();
 
             return Task.CompletedTask;
         }
@@ -333,17 +333,17 @@ namespace FabricObserver.Observers
                 $"Initializing {ObserverName} for network monitoring. | {NodeName}",
                 LogLevel.Information);
 
-            this.cancellationToken.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // This only needs to be logged once.
             // This file is used by the ObserverWebApi application.
-            if (ObserverManager.ObserverWebAppDeployed && !this.hasRun)
+            if (ObserverManager.ObserverWebAppDeployed && !hasRun)
             {
                 var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "NetInfo.txt");
 
                 Console.WriteLine($"logPath: {logPath}");
 
-                if (!ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(this.cancellationToken)))
+                if (!ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(cancellationToken)))
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
                         FabricServiceContext.ServiceName.OriginalString,
@@ -363,13 +363,13 @@ namespace FabricObserver.Observers
                 FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                     ObserverConstants.ObserverConfigurationPackageName)?.Settings;
 
-            this.configSettings.Initialize(
+            configSettings.Initialize(
                 settings,
                 ConfigurationSectionName,
                 "NetworkObserverDataFileName");
 
             var networkObserverConfigFileName =
-                Path.Combine(this.dataPackagePath, this.configSettings.NetworkObserverConfigFileName);
+                Path.Combine(dataPackagePath, configSettings.NetworkObserverConfigFileName);
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {
@@ -389,7 +389,7 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            if (this.userConfig.Count == 0)
+            if (userConfig.Count == 0)
             {
                 using (Stream stream = new FileStream(
                         networkObserverConfigFileName,
@@ -410,11 +410,11 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        this.userConfig.Add(netConfig);
+                        userConfig.Add(netConfig);
                     }
                 }
 
-                if (this.userConfig.Count == 0)
+                if (userConfig.Count == 0)
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
                         FabricServiceContext.ServiceName.ToString(),
@@ -431,16 +431,16 @@ namespace FabricObserver.Observers
 
         private void InternetConnectionStateIsConnected()
         {
-            var configList = this.defaultConfig;
+            var configList = defaultConfig;
 
-            if (this.userConfig.Count > 0)
+            if (userConfig.Count > 0)
             {
-                configList = this.userConfig;
+                configList = userConfig;
             }
 
             foreach (var config in configList)
             {
-                this.cancellationToken.ThrowIfCancellationRequested();
+                cancellationToken.ThrowIfCancellationRequested();
 
                 foreach (var endpoint in config.Endpoints)
                 {
@@ -450,14 +450,14 @@ namespace FabricObserver.Observers
                     }
 
                     // Don't re-test endpoint if it has already been tested for a different targetApp.
-                    if (this.connEndpointTestResults.ContainsKey(endpoint.HostName))
+                    if (connEndpointTestResults.ContainsKey(endpoint.HostName))
                     {
-                        SetHealthState(endpoint, config.TargetApp, this.connEndpointTestResults[endpoint.HostName]);
+                        SetHealthState(endpoint, config.TargetApp, connEndpointTestResults[endpoint.HostName]);
                         continue;
                     }
 
                     bool passed = false;
-                    this.cancellationToken.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     // SQL Azure, other database services that are addressable over direct TCP.
                     if (endpoint.Protocol == DirectInternetProtocol.Tcp)
@@ -473,7 +473,7 @@ namespace FabricObserver.Observers
                         // E.g., REST enpoints, etc.
                         try
                         {
-                            this.cancellationToken.ThrowIfCancellationRequested();
+                            cancellationToken.ThrowIfCancellationRequested();
 
                             ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
                             string prefix =
@@ -547,9 +547,9 @@ namespace FabricObserver.Observers
 
                     SetHealthState(endpoint, config.TargetApp, passed);
 
-                    if (!this.connEndpointTestResults.ContainsKey(endpoint.HostName))
+                    if (!connEndpointTestResults.ContainsKey(endpoint.HostName))
                     {
-                        this.connEndpointTestResults.Add(endpoint.HostName, passed);
+                        connEndpointTestResults.Add(endpoint.HostName, passed);
                     }
                 }
             }
@@ -578,7 +578,7 @@ namespace FabricObserver.Observers
                     if (tcpClient.Client.Poll(1000, SelectMode.SelectWrite))
                     {
                         tcpClient.Client.Send(sendBuffer);
-                        this.tcpConnTestRetried = 0;
+                        tcpConnTestRetried = 0;
 
                         return true;
                     }
@@ -593,15 +593,15 @@ namespace FabricObserver.Observers
                     if (se.SocketErrorCode == SocketError.ConnectionRefused
                         || se.SocketErrorCode == SocketError.ConnectionReset)
                     {
-                        if (this.tcpConnTestRetried <= MaxTcpConnTestRetries)
+                        if (tcpConnTestRetried <= MaxTcpConnTestRetries)
                         {
-                            this.tcpConnTestRetried++;
+                            tcpConnTestRetried++;
                             Thread.Sleep(1000);
                             _ = TcpEndpointDoConnectionTest(hostName, port);
                         }
                         else
                         {
-                            this.tcpConnTestRetried = 0;
+                            tcpConnTestRetried = 0;
                         }
                     }
                 }
@@ -611,15 +611,15 @@ namespace FabricObserver.Observers
                 if (se.SocketErrorCode == SocketError.ConnectionRefused
                     || se.SocketErrorCode == SocketError.ConnectionReset)
                 {
-                    if (this.tcpConnTestRetried < MaxTcpConnTestRetries)
+                    if (tcpConnTestRetried < MaxTcpConnTestRetries)
                     {
-                        this.tcpConnTestRetried++;
+                        tcpConnTestRetried++;
                         Thread.Sleep(1000);
                         _ = TcpEndpointDoConnectionTest(hostName, port);
                     }
                     else
                     {
-                        this.tcpConnTestRetried = 0;
+                        tcpConnTestRetried = 0;
                     }
                 }
 
@@ -637,13 +637,13 @@ namespace FabricObserver.Observers
         {
             if (passed)
             {
-                if (this.healthState == HealthState.Warning &&
-                    this.connectionStatus.Any(conn => conn.HostName == endpoint.HostName &&
+                if (healthState == HealthState.Warning &&
+                    connectionStatus.Any(conn => conn.HostName == endpoint.HostName &&
                                                       conn.Health == HealthState.Warning))
                 {
-                    _ = this.connectionStatus.RemoveAll(conn => conn.HostName == endpoint.HostName);
+                    _ = connectionStatus.RemoveAll(conn => conn.HostName == endpoint.HostName);
 
-                    this.connectionStatus.Add(
+                    connectionStatus.Add(
                         new ConnectionState
                         {
                             HostName = endpoint.HostName,
@@ -654,7 +654,7 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    this.connectionStatus.Add(
+                    connectionStatus.Add(
                         new ConnectionState
                         {
                             HostName = endpoint.HostName,
@@ -666,11 +666,11 @@ namespace FabricObserver.Observers
             }
             else
             {
-                if (!this.connectionStatus.Any(conn => conn.HostName == endpoint.HostName &&
+                if (!connectionStatus.Any(conn => conn.HostName == endpoint.HostName &&
                                                conn.TargetApp == targetApp &&
                                                conn.Health == HealthState.Warning))
                 {
-                    this.connectionStatus.Add(
+                    connectionStatus.Add(
                         new ConnectionState
                         {
                             HostName = endpoint.HostName,
@@ -689,7 +689,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            var errWarnHealthStates = this.connectionStatus.Where(
+            var errWarnHealthStates = connectionStatus.Where(
                 conn => conn.Health == HealthState.Error || conn.Health == HealthState.Warning);
 
             foreach (var state in errWarnHealthStates)

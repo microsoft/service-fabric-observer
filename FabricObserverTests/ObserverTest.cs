@@ -136,7 +136,1517 @@ namespace FabricObserverTests
             {
                 return;
             }
+        }
 
+        [TestMethod]
+        public void AppObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new AppObserver(fabricClient, context);
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.AppObserverName);
+
+            obs.Dispose(); 
+        }
+
+        [TestMethod]
+        public void CertificateObserver_Constructor_test()
+        {
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new CertificateObserver(fabricClient, context);
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.CertificateObserverName);
+
+            obs.Dispose();
+        }
+
+        [TestMethod]
+        public void DiskObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+
+            var obs = new DiskObserver(fabricClient, context);
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.DiskObserverName);
+        }
+
+        [TestMethod]
+        public void FabricSystemObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new FabricSystemObserver(fabricClient, context);
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.FabricSystemObserverName);
+
+            obs.Dispose();
+            
+        }
+
+        [TestMethod]
+        public void NetworkObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+            FabricObserver.Observers.ObserverBase.IsTestRun = true;
+
+            var obs = new NetworkObserver(fabricClient, context);
+            Assert.IsTrue(obs.ObserverLogger != null); 
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.NetworkObserverName);
+
+            obs.Dispose(); 
+        }
+
+        [TestMethod]
+        public void NodeObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new NodeObserver(fabricClient, context);
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.NodeObserverName);
+
+            obs.Dispose();
+            
+        }
+
+        [TestMethod]
+        public void OSObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new OSObserver(fabricClient, context);
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
+
+            obs.Dispose();
+            
+        }
+
+        [TestMethod]
+        public void SFConfigurationObserver_Constructor_Test()
+        {
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+
+            var obs = new SFConfigurationObserver(fabricClient, context);
+
+            // These are set in derived ObserverBase.
+            Assert.IsTrue(obs.ObserverLogger != null);
+            
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.SFConfigurationObserverName);
+
+            obs.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new AppObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
+            };
+
+            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
+            {
+                ApplicationName = new Uri("fabric:/TestApp"),
+                PartitionId = Guid.NewGuid(),
+                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
+                ReplicaOrInstanceId = default(long),
+            });
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new AppObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
+            };
+
+            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
+            {
+                ApplicationName = new Uri("fabric:/TestApp"),
+                ApplicationTypeName = "TestAppType",
+                PartitionId = Guid.NewGuid(),
+                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
+                ReplicaOrInstanceId = default(long),
+            });
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+        }
+
+        [TestMethod]
+        public async Task ClusterObserverMgr_ClusterObserver_Start_Run_Stop_Successful()
+        {
+            ClusterObserverManager.FabricClientInstance = fabricClient;
+            ClusterObserverManager.FabricServiceContext = context;
+            ClusterObserverManager.EtwEnabled = true;
+
+            var obsMgr = new ClusterObserverManager();
+
+            _ = Task.Run(async () =>
+            {
+                await obsMgr.StartAsync();
+            });
+
+            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
+            await obsMgr.StopAsync();
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+            obsMgr.Dispose();
+        }
+
+        [TestMethod]
+        public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        {
+            var startDateTime = DateTime.Now;
+            ClusterObserverManager.FabricServiceContext = context;
+            ClusterObserverManager.FabricClientInstance = fabricClient;
+            
+            var obs = new ClusterObserver.ClusterObserver();
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+        }
+
+        // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
+        // NOTE: It is best to run these together as part of a single test run (so, not part of a Run All Tests run), otherwise, the results are flaky (false negatives).
+        // In general, regardless, these tests are flaky (VS Test issue?). So re-run failed runs to ensure they pass (they will).
+        [TestMethod]
+        public async Task Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new CertificateObserver(fabricClient, context);
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            _ = Task.Run(async () =>
+            {
+                await obsMgr.StartObserversAsync();
+            });
+
+            await WaitAsync(() => obsMgr.IsObserverRunning, 15);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        /* NOTE: Run the Run Cancellation tests below one by one, not as part of a Run All test or grouping. These can be flaky due to the Test infra. */
+
+        [TestMethod]
+        public async Task Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new AppObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(15),
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
+            };
+
+            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
+            {
+                ApplicationName = new Uri("fabric:/TestApp"),
+                PartitionId = Guid.NewGuid(),
+                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
+                ReplicaOrInstanceId = default(long),
+            });
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            _ = Task.Run(async () =>
+            {
+                await obsMgr.StartObserversAsync();
+            });
+
+            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
+            _ = obsMgr.StopObserversAsync();
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        [TestMethod]
+        public async Task Successful_DiskObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new DiskObserver(fabricClient, context)
+            {
+                IsEnabled = true,
+                NodeName = "_Test_0",
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            _ = Task.Run(async () =>
+            {
+                await obsMgr.StartObserversAsync();
+            });
+
+            await WaitAsync(() => obsMgr.IsObserverRunning, 15);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
+            _ = obsMgr.StopObserversAsync();
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        [TestMethod]
+        public async Task Successful_FabricSystemObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new FabricSystemObserver(fabricClient, context)
+            {
+                IsEnabled = true,
+                NodeName = "_Test_0",
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            _ = Task.Run(async () =>
+            {
+                await obsMgr.StartObserversAsync();
+            });
+
+            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
+            _ = obsMgr.StopObserversAsync();
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        [TestMethod]
+        public async Task Successful_NetworkObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new NetworkObserver(fabricClient, context)
+            {
+                IsEnabled = true,
+                NodeName = "_Test_0",
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            _ = Task.Run(async () =>
+            {
+                await obsMgr.StartObserversAsync();
+            });
+
+            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
+            _ = obsMgr.StopObserversAsync();
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        [TestMethod]
+        public async Task Successful_NodeObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new NodeObserver(fabricClient, context)
+            {
+                IsEnabled = true,
+                NodeName = "_Test_0",
+                CpuErrorUsageThresholdPct = 10,
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            _ = Task.Run(async () =>
+            {
+                await obsMgr.StartObserversAsync();
+            });
+
+            await WaitAsync(() => obsMgr.IsObserverRunning, 15);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
+            _ = obsMgr.StopObserversAsync();
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        [TestMethod]
+        public async Task Successful_OSObserver_Run_Cancellation_Via_ObserverManager()
+        {
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+
+            var obs = new OSObserver(fabricClient, context)
+            {
+                IsEnabled = true,
+                NodeName = "_Test_0",
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            _ = Task.Run(async () =>
+            {
+                await obsMgr.StartObserversAsync();
+            });
+
+            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
+            Assert.IsTrue(obsMgr.IsObserverRunning);
+            _ = obsMgr.StopObserversAsync();
+            Assert.IsFalse(obsMgr.IsObserverRunning);
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        /* End Run Cancellation Tests */
+
+        
+        /****** NOTE: These tests below do NOT work without a running local SF cluster
+                or in an Azure DevOps VSTest Pipeline ******/
+
+        [TestMethod]
+        public async Task CertificateObserver_validCerts()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            if (!InstallCerts())
+            {
+                Assert.Inconclusive("This test can only be run on Windows as an admin.");
+            }
+
+            CertificateObserver obs = null;
+
+            try
+            {
+                var startDateTime = DateTime.Now;
+                ObserverManager.FabricServiceContext = context;
+    
+                ObserverManager.TelemetryEnabled = false;
+                ObserverManager.EtwEnabled = false;
+
+                obs = new CertificateObserver(fabricClient, context);
+
+                var commonNamesToObserve = new List<string>
+                {
+                    "MyValidCert", // Common name of valid cert
+                };
+
+                var thumbprintsToObserve = new List<string>
+                {
+                    "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
+                };
+
+                obs.DaysUntilAppExpireWarningThreshold = 14;
+                obs.DaysUntilClusterExpireWarningThreshold = 14;
+                obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
+                obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
+                obs.SecurityConfiguration = new SecurityConfiguration
+                {
+                    SecurityType = SecurityType.None,
+                    ClusterCertThumbprintOrCommonName = string.Empty,
+                    ClusterCertSecondaryThumbprint = string.Empty,
+                };
+
+                await obs.ObserveAsync(token).ConfigureAwait(true);
+
+                // observer ran to completion with no errors.
+                Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+                // observer detected no error conditions.
+                Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+                // observer did not have any internal errors during run.
+                Assert.IsFalse(obs.IsUnhealthy);
+            }
+            finally
+            {
+                UnInstallCerts();
+
+                obs?.Dispose();
+                ObserverManager.FabricClientInstance?.Dispose();
+            }
+        }
+
+        [TestMethod]
+        public async Task CertificateObserver_expiredAndexpiringCerts()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new CertificateObserver(fabricClient, context);
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            var commonNamesToObserve = new List<string>
+            {
+                "MyExpiredCert", // common name of expired cert
+            };
+
+            var thumbprintsToObserve = new List<string>
+            {
+                "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert, but warning threshold causes expiring
+            };
+
+            obs.DaysUntilAppExpireWarningThreshold = int.MaxValue;
+            obs.DaysUntilClusterExpireWarningThreshold = 14;
+            obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
+            obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
+            obs.SecurityConfiguration = new SecurityConfiguration
+            {
+                SecurityType = SecurityType.None,
+                ClusterCertThumbprintOrCommonName = string.Empty,
+                ClusterCertSecondaryThumbprint = string.Empty,
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected error conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync();
+            await Task.Delay(1000).ConfigureAwait(false);
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+        }
+
+        /// <summary>
+        /// NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new NodeObserver(fabricClient, context)
+            {
+                DataCapacity = 2,
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuWarningUsageThresholdPct = 10000,
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // Verify that a data container instance was created for the supplied metric.
+            Assert.IsTrue(obs.CpuTimeData != null);
+
+            // Verify that the type of data structure is the default type, IList<T>.
+            Assert.IsTrue(obs.CpuTimeData.Data.GetType() == typeof(List<float>));
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions (so, it ignored meaningless percentage value).
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task NodeObserver_Negative_Integer_CPU_Mem_Ports_Firewalls_Values_No_Exceptions_In_Intialize()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new NodeObserver(fabricClient, context)
+            {
+                DataCapacity = 2,
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuWarningUsageThresholdPct = -1000,
+                MemWarningUsageThresholdMb = -2500,
+                EphemeralPortsErrorThreshold = -42,
+                FirewallRulesWarningThreshold = -1,
+                ActivePortsWarningThreshold = -100,
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // Bad values don't crash Initialize.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            // It ran (crashing in Initialize would not set LastRunDate, which is MinValue until set.)
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            obs.Dispose();
+            
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task NodeObserver_Negative_Integer_Thresholds_CPU_Mem_Ports_Firewalls_All_Data_Containers_Are_Null()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new NodeObserver(fabricClient, context)
+            {
+                DataCapacity = 2,
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuWarningUsageThresholdPct = -1000,
+                MemWarningUsageThresholdMb = -2500,
+                EphemeralPortsErrorThreshold = -42,
+                FirewallRulesWarningThreshold = -1,
+                ActivePortsWarningThreshold = -100,
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // Bad values don't crash Initialize.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            // Data containers are null.
+            Assert.IsTrue(obs.CpuTimeData == null);
+            Assert.IsTrue(obs.MemDataCommittedBytes == null);
+            Assert.IsTrue(obs.MemDataPercentUsed == null);
+            Assert.IsTrue(obs.ActivePortsData == null);
+            Assert.IsTrue(obs.EphemeralPortsData == null);
+
+            // It ran (crashing in Initialize would not set LastRunDate, which is MinValue until set.)
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            obs.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+
+            var obs = new OSObserver(fabricClient, context)
+            {
+                TestManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "SysInfo.txt");
+
+            // Output log file was created successfully during test.
+            Assert.IsTrue(File.Exists(outputFilePath)
+                          && File.GetLastWriteTime(outputFilePath) > startDateTime
+                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
+
+            // Output file is not empty.
+            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
+
+            obs.Dispose();  
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+
+            var obs = new DiskObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "disks.txt");
+
+            // Output log file was created successfully during test.
+            Assert.IsTrue(File.Exists(outputFilePath)
+                          && File.GetLastWriteTime(outputFilePath) > startDateTime
+                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
+
+            // Output file is not empty.
+            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
+
+            obs.Dispose(); 
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+
+            var obs = new DiskObserver(fabricClient, context)
+            {
+                // This should cause a Warning on most dev machines.
+                DiskSpacePercentWarningThreshold = 10,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected error or warning disk health conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "disks.txt");
+
+            // Output log file was created successfully during test.
+            Assert.IsTrue(File.Exists(outputFilePath)
+                          && File.GetLastWriteTime(outputFilePath) > startDateTime
+                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
+
+            // Output file is not empty.
+            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
+
+            await obsMgr.StopObserversAsync();
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+
+            CleanupTestHealthReports();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task NetworkObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new NetworkObserver(fabricClient, context);
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // Observer ran to completion with no errors.
+            // The supplied config does not include deployed app network configs, so
+            // ObserveAsync will return in milliseconds.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task NetworkObserver_ObserveAsync_Successful_Observer_WritesLocalFile_ObsWebDeployed()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+
+            var obs = new NetworkObserver(fabricClient, context);
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // Observer ran to completion with no errors.
+            // The supplied config does not include deployed app network configs, so
+            // ObserveAsync will return in milliseconds.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "NetInfo.txt");
+
+            Console.WriteLine($"outputFilePath: {outputFilePath}");
+
+            // Output log file was created successfully during test.
+            Assert.IsTrue(File.Exists(outputFilePath)
+                          && File.GetLastWriteTime(outputFilePath) > startDateTime
+                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
+
+            // Output file is not empty.
+            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
+
+            obs.Dispose();
+            
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            var obs = new NodeObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(10),
+                DataCapacity = 5,
+                UseCircularBuffer = true,
+                CpuWarningUsageThresholdPct = 10,
+                MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient);
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Verify that the type of data structure is CircularBufferCollection.
+            Assert.IsTrue(obs.CpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
+
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync();
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+
+            CleanupTestHealthReports();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task SFConfigurationObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.ObserverWebAppDeployed = true;
+
+            var obs = new SFConfigurationObserver(fabricClient, context)
+            {
+                IsEnabled = true,
+                IsObserverTelemetryEnabled = false,
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "SFInfraInfo.txt");
+
+            // Output log file was created successfully during test.
+            Assert.IsTrue(File.Exists(outputFilePath)
+                          && File.GetLastWriteTime(outputFilePath) > startDateTime
+                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
+
+            // Output file is not empty.
+            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
+
+            obs.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = fabricClient;
+
+            var obs = new FabricSystemObserver(fabricClient, context)
+            {
+                IsEnabled = true,
+                DataCapacity = 5,
+                MonitorDuration = TimeSpan.FromSeconds(1),
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Adjust defaults in FabricObserver project's Observers/FabricSystemObserver.cs
+            // file to experiment with err/warn detection/reporting behavior.
+            // observer did not detect any errors or warnings for supplied thresholds.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = fabricClient;
+
+            var obs = new FabricSystemObserver(fabricClient, context)
+            {
+                IsEnabled = true,
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                MemWarnUsageThresholdMb = 5, // This will definitely cause Warning alerts.
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Experiment with err/warn detection/reporting behavior.
+            // observer detected errors or warnings for supplied threshold(s).
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+
+            CleanupTestHealthReports();
+        }
+
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = fabricClient;
+
+            var obs = new FabricSystemObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                ActiveTcpPortCountWarning = 5, // This will definitely cause Warning.
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Experiment with err/warn detection/reporting behavior.
+            // observer detected errors or warnings for supplied threshold(s).
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+
+            CleanupTestHealthReports();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = fabricClient;
+
+            var obs = new FabricSystemObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                ActiveEphemeralPortCountWarning = 1, // This will definitely cause Warning.
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Experiment with err/warn detection/reporting behavior.
+            // observer detected errors or warnings for supplied threshold(s).
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync();
+            await Task.Delay(1000).ConfigureAwait(false);
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+
+            CleanupTestHealthReports();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_HandlesWarningsOrErrorsDetected()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = fabricClient;
+
+            var obs = new FabricSystemObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                AllocatedHandlesWarning = 100, // This will definitely cause Warning.
+            };
+
+            var obsMgr = new ObserverManager(obs, fabricClient)
+            {
+                ApplicationName = "fabric:/TestApp0",
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // Experiment with err/warn detection/reporting behavior.
+            // observer detected errors or warnings for supplied threshold(s).
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+            await obsMgr.StopObserversAsync();
+            await Task.Delay(1000).ConfigureAwait(false);
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            obs.Dispose();
+            obsMgr.Dispose();
+
+            CleanupTestHealthReports();
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = fabricClient;
+
+            var obs = new FabricSystemObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuWarnUsageThresholdPct = -42,
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task FabricSystemObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Unhandled_Exception()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            if (nodeList?.Count > 1)
+            {
+                return;
+            }
+
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.FabricClientInstance = fabricClient;
+
+            var obs = new FabricSystemObserver(fabricClient, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuWarnUsageThresholdPct = 420,
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            obs.Dispose();
+            
+        }
+
+        /***** End Tests that require a currently running SF Cluster. *****/
+
+        private static bool IsLocalSFRuntimePresent()
+        {
+            try
+            {
+                var ps = Process.GetProcessesByName("Fabric");
+                return ps?.Length != 0;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+
+        private async Task WaitAsync(Func<bool> predicate, int timeoutInSeconds)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            while (stopwatch.Elapsed < TimeSpan.FromSeconds(timeoutInSeconds) && !predicate())
+            {
+                await Task.Delay(5).ConfigureAwait(false); // sleep 5 ms
+            }
+        }
+
+        private void CleanupTestHealthReports()
+        {
             // Clear any existing node or fabric:/System app Test Health Reports.
             try
             {
@@ -206,1495 +1716,6 @@ namespace FabricObserverTests
             }
             catch (FabricException)
             {
-            }
-        }
-
-        [TestMethod]
-        public void AppObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new AppObserver(this.fabricClient, this.context);
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.AppObserverName);
-
-            obs.Dispose(); 
-        }
-
-        [TestMethod]
-        public void CertificateObserver_Constructor_test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new CertificateObserver(this.fabricClient, this.context);
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.CertificateObserverName);
-
-            obs.Dispose();
-        }
-
-        [TestMethod]
-        public void DiskObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            var obs = new DiskObserver(this.fabricClient, this.context);
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.DiskObserverName);
-        }
-
-        [TestMethod]
-        public void FabricSystemObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context);
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.FabricSystemObserverName);
-
-            obs.Dispose();
-            
-        }
-
-        [TestMethod]
-        public void NetworkObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
-            FabricObserver.Observers.ObserverBase.IsTestRun = true;
-
-            var obs = new NetworkObserver(this.fabricClient, this.context);
-            Assert.IsTrue(obs.ObserverLogger != null); 
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.NetworkObserverName);
-
-            obs.Dispose(); 
-        }
-
-        [TestMethod]
-        public void NodeObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new NodeObserver(this.fabricClient, this.context);
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.NodeObserverName);
-
-            obs.Dispose();
-            
-        }
-
-        [TestMethod]
-        public void OSObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new OSObserver(this.fabricClient, this.context);
-
-            Assert.IsTrue(obs.ObserverLogger != null);
-            
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
-
-            obs.Dispose();
-            
-        }
-
-        [TestMethod]
-        public void SFConfigurationObserver_Constructor_Test()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            var obs = new SFConfigurationObserver(this.fabricClient, this.context);
-
-            // These are set in derived ObserverBase.
-            Assert.IsTrue(obs.ObserverLogger != null);
-            
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.SFConfigurationObserverName);
-
-            obs.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new AppObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(5),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
-                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
-            };
-
-            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
-            {
-                ApplicationName = new Uri("fabric:/TestApp"),
-                PartitionId = Guid.NewGuid(),
-                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
-                ReplicaOrInstanceId = default(long),
-            });
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-            
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new AppObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(5),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
-                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
-            };
-
-            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
-            {
-                ApplicationName = new Uri("fabric:/TestApp"),
-                ApplicationTypeName = "TestAppType",
-                PartitionId = Guid.NewGuid(),
-                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
-                ReplicaOrInstanceId = default(long),
-            });
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-        }
-
-        [TestMethod]
-        public async Task ClusterObserverMgr_ClusterObserver_Start_Run_Stop_Successful()
-        {
-            ClusterObserverManager.FabricClientInstance = this.fabricClient;
-            ClusterObserverManager.FabricServiceContext = this.context;
-
-            var clusterObsMgr = new ClusterObserverManager();
-            _ = Task.Run(() => clusterObsMgr.Start()).ConfigureAwait(false);
-            await WaitAsync(() => clusterObsMgr.IsObserverRunning, 1);
-            Assert.IsTrue(clusterObsMgr.IsObserverRunning);
-            clusterObsMgr.Stop();
-            Assert.IsFalse(clusterObsMgr.IsObserverRunning);
-        }
-
-        [TestMethod]
-        public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
-        {
-            var startDateTime = DateTime.Now;
-            ClusterObserverManager.FabricServiceContext = this.context;
-            ClusterObserverManager.FabricClientInstance = this.fabricClient;
-            ClusterObserverManager.TelemetryEnabled = false;
-
-            var obs = new ClusterObserver.ClusterObserver();
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-        }
-
-        // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
-        // NOTE: It is best to run these together as part of a single test run (so, not part of a Run All Tests run), otherwise, the results are flaky (false negatives).
-        // In general, regardless, these tests are flaky (VS Test issue?). So re-run failed runs to ensure they pass (they will).
-        [TestMethod]
-        public async Task Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new CertificateObserver(this.fabricClient, this.context);
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            _ = Task.Run(async () =>
-            {
-                await obsMgr.StartObserversAsync();
-            });
-
-            await WaitAsync(() => obsMgr.IsObserverRunning, 15);
-            Assert.IsTrue(obsMgr.IsObserverRunning);
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        /* NOTE: Run the Run Cancellation tests below one by one, not as part of a Run All test or grouping. These can be flaky due to the Test infra. */
-
-        [TestMethod]
-        public async Task Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new AppObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(15),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
-                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
-            };
-
-            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
-            {
-                ApplicationName = new Uri("fabric:/TestApp"),
-                PartitionId = Guid.NewGuid(),
-                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
-                ReplicaOrInstanceId = default(long),
-            });
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            _ = Task.Run(async () =>
-            {
-                await obsMgr.StartObserversAsync();
-            });
-
-            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
-            Assert.IsTrue(obsMgr.IsObserverRunning);
-            _ = obsMgr.StopObserversAsync();
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        [TestMethod]
-        public async Task Successful_DiskObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new DiskObserver(this.fabricClient, this.context)
-            {
-                IsEnabled = true,
-                NodeName = "_Test_0",
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            _ = Task.Run(async () =>
-            {
-                await obsMgr.StartObserversAsync();
-            });
-
-            await WaitAsync(() => obsMgr.IsObserverRunning, 15);
-            Assert.IsTrue(obsMgr.IsObserverRunning);
-            _ = obsMgr.StopObserversAsync();
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        [TestMethod]
-        public async Task Successful_FabricSystemObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context)
-            {
-                IsEnabled = true,
-                NodeName = "_Test_0",
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            _ = Task.Run(async () =>
-            {
-                await obsMgr.StartObserversAsync();
-            });
-
-            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
-            Assert.IsTrue(obsMgr.IsObserverRunning);
-            _ = obsMgr.StopObserversAsync();
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        [TestMethod]
-        public async Task Successful_NetworkObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new NetworkObserver(this.fabricClient, this.context)
-            {
-                IsEnabled = true,
-                NodeName = "_Test_0",
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            _ = Task.Run(async () =>
-            {
-                await obsMgr.StartObserversAsync();
-            });
-
-            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
-            Assert.IsTrue(obsMgr.IsObserverRunning);
-            _ = obsMgr.StopObserversAsync();
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        [TestMethod]
-        public async Task Successful_NodeObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new NodeObserver(this.fabricClient, this.context)
-            {
-                IsEnabled = true,
-                NodeName = "_Test_0",
-                CpuErrorUsageThresholdPct = 10,
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            _ = Task.Run(async () =>
-            {
-                await obsMgr.StartObserversAsync();
-            });
-
-            await WaitAsync(() => obsMgr.IsObserverRunning, 15);
-            Assert.IsTrue(obsMgr.IsObserverRunning);
-            _ = obsMgr.StopObserversAsync();
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        [TestMethod]
-        public async Task Successful_OSObserver_Run_Cancellation_Via_ObserverManager()
-        {
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-
-            var obs = new OSObserver(this.fabricClient, this.context)
-            {
-                IsEnabled = true,
-                NodeName = "_Test_0",
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            _ = Task.Run(async () =>
-            {
-                await obsMgr.StartObserversAsync();
-            });
-
-            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
-            Assert.IsTrue(obsMgr.IsObserverRunning);
-            _ = obsMgr.StopObserversAsync();
-            Assert.IsFalse(obsMgr.IsObserverRunning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        /* End Run Cancellation Tests */
-
-        
-        /****** NOTE: These tests below do NOT work without a running local SF cluster
-                or in an Azure DevOps VSTest Pipeline ******/
-
-        [TestMethod]
-        public async Task CertificateObserver_validCerts()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            if (!InstallCerts())
-            {
-                Assert.Inconclusive("This test can only be run on Windows as an admin.");
-            }
-
-            CertificateObserver obs = null;
-
-            try
-            {
-                var startDateTime = DateTime.Now;
-                ObserverManager.FabricServiceContext = this.context;
-    
-                ObserverManager.TelemetryEnabled = false;
-                ObserverManager.EtwEnabled = false;
-
-                obs = new CertificateObserver(this.fabricClient, this.context);
-
-                var commonNamesToObserve = new List<string>
-                {
-                    "MyValidCert", // Common name of valid cert
-                };
-
-                var thumbprintsToObserve = new List<string>
-                {
-                    "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert
-                };
-
-                obs.DaysUntilAppExpireWarningThreshold = 14;
-                obs.DaysUntilClusterExpireWarningThreshold = 14;
-                obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
-                obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
-                obs.SecurityConfiguration = new SecurityConfiguration
-                {
-                    SecurityType = SecurityType.None,
-                    ClusterCertThumbprintOrCommonName = string.Empty,
-                    ClusterCertSecondaryThumbprint = string.Empty,
-                };
-
-                await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-                // observer ran to completion with no errors.
-                Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-                // observer detected no error conditions.
-                Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-                // observer did not have any internal errors during run.
-                Assert.IsFalse(obs.IsUnhealthy);
-            }
-            finally
-            {
-                UnInstallCerts();
-
-                obs?.Dispose();
-                ObserverManager.FabricClientInstance?.Dispose();
-            }
-        }
-
-        [TestMethod]
-        public async Task CertificateObserver_expiredAndexpiringCerts()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new CertificateObserver(this.fabricClient, this.context);
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            var commonNamesToObserve = new List<string>
-            {
-                "MyExpiredCert", // common name of expired cert
-            };
-
-            var thumbprintsToObserve = new List<string>
-            {
-                "1fda27a2923505e47de37db48ff685b049642c25", // thumbprint of valid cert, but warning threshold causes expiring
-            };
-
-            obs.DaysUntilAppExpireWarningThreshold = int.MaxValue;
-            obs.DaysUntilClusterExpireWarningThreshold = 14;
-            obs.AppCertificateCommonNamesToObserve = commonNamesToObserve;
-            obs.AppCertificateThumbprintsToObserve = thumbprintsToObserve;
-            obs.SecurityConfiguration = new SecurityConfiguration
-            {
-                SecurityType = SecurityType.None,
-                ClusterCertThumbprintOrCommonName = string.Empty,
-                ClusterCertSecondaryThumbprint = string.Empty,
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected error conditions.
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync();
-            await Task.Delay(1000).ConfigureAwait(false);
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        /// <summary>
-        /// NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail.
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new NodeObserver(this.fabricClient, this.context)
-            {
-                DataCapacity = 2,
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarningUsageThresholdPct = 10000,
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // Verify that a data container instance was created for the supplied metric.
-            Assert.IsTrue(obs.CpuTimeData != null);
-
-            // Verify that the type of data structure is the default type, IList<T>.
-            Assert.IsTrue(obs.CpuTimeData.Data.GetType() == typeof(List<float>));
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions (so, it ignored meaningless percentage value).
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task NodeObserver_Negative_Integer_CPU_Mem_Ports_Firewalls_Values_No_Exceptions_In_Intialize()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new NodeObserver(this.fabricClient, this.context)
-            {
-                DataCapacity = 2,
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarningUsageThresholdPct = -1000,
-                MemWarningUsageThresholdMb = -2500,
-                EphemeralPortsErrorThreshold = -42,
-                FirewallRulesWarningThreshold = -1,
-                ActivePortsWarningThreshold = -100,
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // Bad values don't crash Initialize.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            // It ran (crashing in Initialize would not set LastRunDate, which is MinValue until set.)
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            obs.Dispose();
-            
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task NodeObserver_Negative_Integer_Thresholds_CPU_Mem_Ports_Firewalls_All_Data_Containers_Are_Null()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new NodeObserver(this.fabricClient, this.context)
-            {
-                DataCapacity = 2,
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarningUsageThresholdPct = -1000,
-                MemWarningUsageThresholdMb = -2500,
-                EphemeralPortsErrorThreshold = -42,
-                FirewallRulesWarningThreshold = -1,
-                ActivePortsWarningThreshold = -100,
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // Bad values don't crash Initialize.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            // Data containers are null.
-            Assert.IsTrue(obs.CpuTimeData == null);
-            Assert.IsTrue(obs.MemDataCommittedBytes == null);
-            Assert.IsTrue(obs.MemDataPercentUsed == null);
-            Assert.IsTrue(obs.ActivePortsData == null);
-            Assert.IsTrue(obs.EphemeralPortsData == null);
-
-            // It ran (crashing in Initialize would not set LastRunDate, which is MinValue until set.)
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            obs.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            var obs = new OSObserver(this.fabricClient, this.context)
-            {
-                TestManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "SysInfo.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
-
-            obs.Dispose();  
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            var obs = new DiskObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "disks.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
-
-            obs.Dispose(); 
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            var obs = new DiskObserver(this.fabricClient, this.context)
-            {
-                // This should cause a Warning on most dev machines.
-                DiskSpacePercentWarningThreshold = 10,
-                MonitorDuration = TimeSpan.FromSeconds(5),
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected error or warning disk health conditions.
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "disks.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
-
-            await obsMgr.StopObserversAsync();
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new NetworkObserver(this.fabricClient, this.context);
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // Observer ran to completion with no errors.
-            // The supplied config does not include deployed app network configs, so
-            // ObserveAsync will return in milliseconds.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-            
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_Observer_WritesLocalFile_ObsWebDeployed()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            var obs = new NetworkObserver(this.fabricClient, this.context);
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // Observer ran to completion with no errors.
-            // The supplied config does not include deployed app network configs, so
-            // ObserveAsync will return in milliseconds.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "NetInfo.txt");
-
-            Console.WriteLine($"outputFilePath: {outputFilePath}");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
-
-            obs.Dispose();
-            
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new NodeObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(10),
-                DataCapacity = 5,
-                UseCircularBuffer = true,
-                CpuWarningUsageThresholdPct = 10,
-                MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient);
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // Verify that the type of data structure is CircularBufferCollection.
-            Assert.IsTrue(obs.CpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
-
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync();
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-            obs.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task SFConfigurationObserver_ObserveAsync_Successful_Observer_IsHealthy()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            var obs = new SFConfigurationObserver(this.fabricClient, this.context)
-            {
-                IsEnabled = true,
-                IsObserverTelemetryEnabled = false,
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "SFInfraInfo.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue(File.ReadAllLines(outputFilePath).Length > 0);
-
-            obs.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var nodeList = await this.fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context)
-            {
-                IsEnabled = true,
-                DataCapacity = 5,
-                MonitorDuration = TimeSpan.FromSeconds(1),
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // Adjust defaults in FabricObserver project's Observers/FabricSystemObserver.cs
-            // file to experiment with err/warn detection/reporting behavior.
-            // observer did not detect any errors or warnings for supplied thresholds.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var nodeList = await this.fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context)
-            {
-                IsEnabled = true,
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                MemWarnUsageThresholdMb = 5, // This will definitely cause Warning alerts.
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // Experiment with err/warn detection/reporting behavior.
-            // observer detected errors or warnings for supplied threshold(s).
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var nodeList = await this.fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                ActiveTcpPortCountWarning = 5, // This will definitely cause Warning.
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // Experiment with err/warn detection/reporting behavior.
-            // observer detected errors or warnings for supplied threshold(s).
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var nodeList = await this.fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                ActiveEphemeralPortCountWarning = 1, // This will definitely cause Warning.
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // Experiment with err/warn detection/reporting behavior.
-            // observer detected errors or warnings for supplied threshold(s).
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync();
-            await Task.Delay(1000).ConfigureAwait(false);
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_HandlesWarningsOrErrorsDetected()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var nodeList = await this.fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                AllocatedHandlesWarning = 100, // This will definitely cause Warning.
-            };
-
-            var obsMgr = new ObserverManager(obs, this.fabricClient)
-            {
-                ApplicationName = "fabric:/TestApp0",
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // Experiment with err/warn detection/reporting behavior.
-            // observer detected errors or warnings for supplied threshold(s).
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync();
-            await Task.Delay(1000).ConfigureAwait(false);
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-            obs.Dispose();
-            obsMgr.Dispose();
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var nodeList = await this.fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarnUsageThresholdPct = -42,
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-            
-        }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task FabricSystemObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Unhandled_Exception()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var nodeList = await this.fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(true);
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = this.context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = this.fabricClient;
-
-            var obs = new FabricSystemObserver(this.fabricClient, this.context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarnUsageThresholdPct = 420,
-            };
-
-            await obs.ObserveAsync(this.token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
-            
-        }
-
-        /***** End Tests that require a currently running SF Cluster. *****/
-
-        private static bool IsLocalSFRuntimePresent()
-        {
-            try
-            {
-                var ps = Process.GetProcessesByName("Fabric");
-                return ps?.Length != 0;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
-        }
-
-        private async Task WaitAsync(Func<bool> predicate, int timeoutInSeconds)
-        {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            while (stopwatch.Elapsed < TimeSpan.FromSeconds(timeoutInSeconds) && !predicate())
-            {
-                await Task.Delay(5).ConfigureAwait(false); // sleep 5 ms
             }
         }
     }

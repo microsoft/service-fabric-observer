@@ -73,7 +73,7 @@ namespace FabricObserverWeb.Controllers
 
             try
             {
-                System.Fabric.Description.ConfigurationSettings configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+                System.Fabric.Description.ConfigurationSettings configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
                 logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
 
                 if (!Directory.Exists(logFolder))
@@ -192,7 +192,7 @@ namespace FabricObserverWeb.Controllers
         {
             try
             {
-                System.Fabric.Query.NodeList node = this.fabricClient.QueryManager.GetNodeListAsync(nodename).Result;
+                System.Fabric.Query.NodeList node = fabricClient.QueryManager.GetNodeListAsync(nodename).Result;
 
                 if (node.Count > 0)
                 {
@@ -244,8 +244,8 @@ namespace FabricObserverWeb.Controllers
         {
             string html = string.Empty;
             string logFolder;
-            string nodeName = this.serviceContext.NodeContext.NodeName;
-            System.Fabric.Description.ConfigurationSettings configSettings = this.serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+            string nodeName = serviceContext.NodeContext.NodeName;
+            System.Fabric.Description.ConfigurationSettings configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
             string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
             logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
 
@@ -309,7 +309,7 @@ namespace FabricObserverWeb.Controllers
                         host = Request.Query["fqdn"];
 
                         // Node links.
-                        System.Fabric.Query.NodeList nodeList = this.fabricClient.QueryManager.GetNodeListAsync().Result;
+                        System.Fabric.Query.NodeList nodeList = fabricClient.QueryManager.GetNodeListAsync().Result;
                         IOrderedEnumerable<System.Fabric.Query.Node> ordered = nodeList.OrderBy(node => node.NodeName);
 
                         foreach (System.Fabric.Query.Node node in ordered)
@@ -318,12 +318,12 @@ namespace FabricObserverWeb.Controllers
                         }
                     }
 
-                    this.sb = new StringBuilder();
+                    sb = new StringBuilder();
 
-                    _ = this.sb.AppendLine("<html>\n\t<head>");
-                    _ = this.sb.AppendLine("\n\t\t<title>FabricObserver Observer Report: Errors and Warnings</title>");
-                    _ = this.sb.AppendLine("\n\t\t" + this.script);
-                    _ = this.sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
+                    _ = sb.AppendLine("<html>\n\t<head>");
+                    _ = sb.AppendLine("\n\t\t<title>FabricObserver Observer Report: Errors and Warnings</title>");
+                    _ = sb.AppendLine("\n\t\t" + script);
+                    _ = sb.AppendLine("\n\t\t<style type=\"text/css\">\n" +
                                    "\t\t\t.container {\n" +
                                    "\t\t\t\tfont-family: Consolas; font-size: 14px; background-color: lightblue; padding: 5px; border: 1px solid grey; " +
                                    "width: 98%;\n" +
@@ -337,65 +337,65 @@ namespace FabricObserverWeb.Controllers
                                    "\t\t\t}\n" +
                                    "\t\t\t a:link { text-decoration: none; }" +
                                    "\n\t\t</style>");
-                    _ = this.sb.AppendLine("\n\t</head>");
-                    _ = this.sb.AppendLine("\n\t<body>");
-                    _ = this.sb.AppendLine("\n\t\t\t <br/>");
-                    _ = this.sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\"><br/><strong>Errors and Warnings for " + name + " on " + nodeName + "</strong><br/><br/>" + nodeLinks);
+                    _ = sb.AppendLine("\n\t</head>");
+                    _ = sb.AppendLine("\n\t<body>");
+                    _ = sb.AppendLine("\n\t\t\t <br/>");
+                    _ = sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\"><br/><strong>Errors and Warnings for " + name + " on " + nodeName + "</strong><br/><br/>" + nodeLinks);
 
                     switch (name.ToLower())
                     {
                         case "appobserver":
                             if (!string.IsNullOrEmpty(appObserverLogText))
                             {
-                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + appObserverLogText + "<br/><br/>");
+                                _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + appObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "diskobserver":
                             if (!string.IsNullOrEmpty(diskObserverLogText))
                             {
-                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + diskObserverLogText + "<br/><br/>");
+                                _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + diskObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "fabricsystemobserver":
                             if (!string.IsNullOrEmpty(fabricSystemObserverLogText))
                             {
-                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + fabricSystemObserverLogText + "<br/><br/>");
+                                _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + fabricSystemObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "networkobserver":
                             if (!string.IsNullOrEmpty(networkObserverLogText))
                             {
-                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + networkObserverLogText + "<br/><br/>");
+                                _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + networkObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "nodeobserver":
                             if (!string.IsNullOrEmpty(nodeObserverLogText))
                             {
-                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + nodeObserverLogText + "<br/><br/>");
+                                _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + nodeObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "osobserver":
                             if (!string.IsNullOrEmpty(osObserverLogText))
                             {
-                                _ = this.sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + osObserverLogText + "<br/><br/>");
+                                _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + osObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         default:
-                            _ = this.sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist.");
+                            _ = sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist.");
                             break;
                     }
 
-                    _ = this.sb.AppendLine("\n\t\t\t</div>");
-                    _ = this.sb.AppendLine("\n\t</body>");
-                    _ = this.sb.AppendLine("</html>");
-                    html = this.sb.ToString();
-                    _ = this.sb.Clear();
+                    _ = sb.AppendLine("\n\t\t\t</div>");
+                    _ = sb.AppendLine("\n\t</body>");
+                    _ = sb.AppendLine("</html>");
+                    html = sb.ToString();
+                    _ = sb.Clear();
                     break;
                 }
                 catch (IOException ie)

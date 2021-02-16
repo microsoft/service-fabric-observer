@@ -16,35 +16,35 @@ namespace FabricObserver.Observers.Utilities
 
         public override async Task<float> NextValueAsync()
         {
-            if (this.uptimeInSeconds == -1)
+            if (uptimeInSeconds == -1)
             {
                 throw new ObjectDisposedException(nameof(LinuxCpuUtilizationProvider));
             }
 
             (float ut, float it) = await LinuxProcFS.ReadUptimeAsync();
 
-            if (ut == this.uptimeInSeconds)
+            if (ut == uptimeInSeconds)
             {
-                return this.cpuUtilization;
+                return cpuUtilization;
             }
 
-            this.cpuUtilization = 100 - ((it - this.idleTimeInSeconds) / (ut - this.uptimeInSeconds) / Environment.ProcessorCount * 100);
+            cpuUtilization = 100 - ((it - idleTimeInSeconds) / (ut - uptimeInSeconds) / Environment.ProcessorCount * 100);
 
-            if (this.cpuUtilization < 0)
+            if (cpuUtilization < 0)
             {
-                this.cpuUtilization = 0;
+                cpuUtilization = 0;
             }
 
-            this.uptimeInSeconds = ut;
-            this.idleTimeInSeconds = it;
+            uptimeInSeconds = ut;
+            idleTimeInSeconds = it;
 
-            return this.cpuUtilization;
+            return cpuUtilization;
         }
 
         protected override void Dispose(bool disposing)
         {
             // Nothing to do.
-            this.uptimeInSeconds = -1;
+            uptimeInSeconds = -1;
         }
     }
 }

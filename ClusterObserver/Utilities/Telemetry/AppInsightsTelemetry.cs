@@ -37,10 +37,10 @@ namespace ClusterObserver.Utilities.Telemetry
                 throw new ArgumentException("Argument is empty", nameof(key));
             }
 
-            this.logger = new Logger("TelemetryLog");
+            logger = new Logger("TelemetryLog");
 
             TelemetryConfiguration configuration = new TelemetryConfiguration() { InstrumentationKey = key };
-            this.telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
+            telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
 #if DEBUG
             // Expedites the flow of data through the pipeline.
             configuration.TelemetryChannel.DeveloperMode = true;
@@ -50,7 +50,7 @@ namespace ClusterObserver.Utilities.Telemetry
         /// <summary>
         /// Gets an indicator if the telemetry is enabled or not.
         /// </summary>
-        public bool IsEnabled => this.telemetryClient.IsEnabled() && ClusterObserverManager.TelemetryEnabled;
+        public bool IsEnabled => telemetryClient.IsEnabled() && ClusterObserverManager.TelemetryEnabled;
 
         /// <summary>
         /// Gets or sets the key.
@@ -59,11 +59,11 @@ namespace ClusterObserver.Utilities.Telemetry
         {
             get
             {
-                return this.telemetryClient?.InstrumentationKey;
+                return telemetryClient?.InstrumentationKey;
             }
             set
             {
-                this.telemetryClient.InstrumentationKey = value;
+                telemetryClient.InstrumentationKey = value;
             }
         }
 
@@ -101,7 +101,7 @@ namespace ClusterObserver.Utilities.Telemetry
             at.Properties.Add("Service", serviceName?.OriginalString);
             at.Properties.Add("Instance", instance);
 
-            this.telemetryClient.TrackAvailability(at);
+            telemetryClient.TrackAvailability(at);
 
             return Task.FromResult(0);
         }
@@ -150,11 +150,11 @@ namespace ClusterObserver.Utilities.Telemetry
                     { "Value", value ?? string.Empty },
                 };
 
-                this.telemetryClient.TrackEvent(ObserverConstants.ClusterObserverETWEventName, properties);
+                telemetryClient.TrackEvent(ObserverConstants.ClusterObserverETWEventName, properties);
             }
             catch (Exception e)
             {
-                this.logger.LogWarning(
+                logger.LogWarning(
                     $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
                     $"{Environment.NewLine}{e}");
 
@@ -209,11 +209,11 @@ namespace ClusterObserver.Utilities.Telemetry
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
 
-                this.telemetryClient.TrackTrace(tt);
+                telemetryClient.TrackTrace(tt);
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
                 throw;
             }
 
@@ -227,9 +227,12 @@ namespace ClusterObserver.Utilities.Telemetry
         /// <param name="value">Value of the property.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>Task of bool.</returns>
-        public Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken)
+        public Task<bool> ReportMetricAsync<T>(
+            string name,
+            T value,
+            CancellationToken cancellationToken)
         {
-            if (!IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested || string.IsNullOrEmpty(name))
             {
                 return Task.FromResult(false);
             }
@@ -240,7 +243,7 @@ namespace ClusterObserver.Utilities.Telemetry
                 Sum = Convert.ToDouble(value),
             };
 
-            this.telemetryClient.TrackMetric(metricTelemetry);
+            telemetryClient?.TrackMetric(metricTelemetry);
 
             return Task.FromResult(true);
         }
@@ -260,7 +263,7 @@ namespace ClusterObserver.Utilities.Telemetry
                 return Task.FromResult(1);
             }
 
-            _ = this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
+            _ = telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
 
             return Task.FromResult(0);
         }
@@ -347,7 +350,7 @@ namespace ClusterObserver.Utilities.Telemetry
             }
 
             // Track the telemetry.
-            this.telemetryClient.TrackMetric(mt);
+            telemetryClient.TrackMetric(mt);
 
             return Task.FromResult(0);
         }
@@ -356,13 +359,13 @@ namespace ClusterObserver.Utilities.Telemetry
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposedValue)
+            if (!disposedValue)
             {
                 if (disposing)
                 {
                 }
 
-                this.disposedValue = true;
+                disposedValue = true;
             }
         }
 

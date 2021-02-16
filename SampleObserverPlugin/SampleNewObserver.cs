@@ -23,7 +23,7 @@ namespace FabricObserver.Observers
         public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            this.message = new StringBuilder();
+            message = new StringBuilder();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -84,20 +84,20 @@ namespace FabricObserver.Observers
                 }
             }
 
-            this.message.AppendLine($"Total number of Applications: {totalNumberOfDeployedSFApps}");
-            this.message.AppendLine($"Total number of Applications in Warning or Error: {appsInWarningError}");
-            this.message.AppendLine($"Total number of Services: {totalNumberOfDeployedServices}");
-            this.message.AppendLine($"Total number of Services in Warning or Error: {servicesInWarningError}");
-            this.message.AppendLine($"Total number of Partitions: {totalNumberOfPartitions}");
-            this.message.AppendLine($"Total number of Partitions in Warning or Error: {partitionsInWarningError}");
-            this.message.AppendLine($"Total number of Replicas: {totalNumberOfReplicas}");
-            this.message.AppendLine($"Total number of Replicas in Warning or Error: {replicasInWarningError}");
+            message.AppendLine($"Total number of Applications: {totalNumberOfDeployedSFApps}");
+            message.AppendLine($"Total number of Applications in Warning or Error: {appsInWarningError}");
+            message.AppendLine($"Total number of Services: {totalNumberOfDeployedServices}");
+            message.AppendLine($"Total number of Services in Warning or Error: {servicesInWarningError}");
+            message.AppendLine($"Total number of Partitions: {totalNumberOfPartitions}");
+            message.AppendLine($"Total number of Partitions in Warning or Error: {partitionsInWarningError}");
+            message.AppendLine($"Total number of Replicas: {totalNumberOfReplicas}");
+            message.AppendLine($"Total number of Replicas in Warning or Error: {replicasInWarningError}");
 
             // The time it took to run ObserveAsync; for use in computing HealthReport TTL.
             stopwatch.Stop();
             RunDuration = stopwatch.Elapsed;
 
-            this.message.AppendLine($"Time it took to run {base.ObserverName}.ObserveAsync: {RunDuration}");
+            message.AppendLine($"Time it took to run {base.ObserverName}.ObserveAsync: {RunDuration}");
 
             await ReportAsync(token);
             LastRunDateTime = DateTime.Now;
@@ -121,7 +121,7 @@ namespace FabricObserver.Observers
             var healthReport = new Utilities.HealthReport
             {
                 Code = FOErrorWarningCodes.Ok,
-                HealthMessage = this.message.ToString(),
+                HealthMessage = message.ToString(),
                 NodeName = NodeName,
                 Observer = ObserverName,
                 Property = HealthReportProperties[HealthReportProperties.Count - 1],
@@ -135,7 +135,7 @@ namespace FabricObserver.Observers
             var telemetryData = new TelemetryData(FabricClientInstance, Token)
             {
                 Code = FOErrorWarningCodes.Ok,
-                HealthEventDescription = this.message.ToString(),
+                HealthEventDescription = message.ToString(),
                 HealthState = "Ok",
                 NodeName = NodeName,
                 ObserverName = ObserverName,
@@ -157,7 +157,7 @@ namespace FabricObserver.Observers
                     new
                     {
                         Code = FOErrorWarningCodes.Ok,
-                        HealthEventDescription = this.message.ToString(),
+                        HealthEventDescription = message.ToString(),
                         HealthState = "Ok",
                         NodeName,
                         ObserverName,
@@ -165,7 +165,7 @@ namespace FabricObserver.Observers
                     });
             }
 
-            this.message.Clear();
+            message.Clear();
 
             return Task.CompletedTask;
         }

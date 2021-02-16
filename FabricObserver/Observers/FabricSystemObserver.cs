@@ -22,11 +22,11 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    // When enabled, FabricSystemObserver monitors all Fabric system service processes across various resource usage metrics (CPU Time, Workingset, Ephemeral and all Active TCP ports).
+    // When enabled, FabricSystemObserver monitors all Fabric system service processes across various resource usage metrics (CPU Time, Private Workingset, Ephemeral and Total Active TCP ports, File Handles).
     // It will signal Warnings or Errors based on settings supplied in ApplicationManifest.xml (Like many observers, most of it's settings are overridable and can be reset with application parameter updates).
-    // If the FabricObserverWebApi service (DEPRECATED - it will not evolve...) is deployed: The output (a local file) is created for and used by the API service (http://localhost:5000/api/ObserverManager).
+    // If the FabricObserverWebApi service is deployed: The output (a local file) is created for and used by the API service (http://localhost:5000/api/ObserverManager).
     // SF Health Report processor will also emit ETW telemetry if configured in ApplicationManifest.xml.
-    // As with all observers, you should first determine the happy (normal) states across resource usage before you set thresholds for the unhappy ones.
+    // As with all observers, you should first determine the good (normal) states across resource usage before you set thresholds for the bad ones.
     public class FabricSystemObserver : ObserverBase
     {
         private readonly List<string> processWatchList;
@@ -229,14 +229,16 @@ namespace FabricObserver.Observers
             {
                 Observer = ObserverName,
                 NodeName = NodeName,
-                HealthMessage = $"Number of TCP ports in use by Service Fabric services: {TotalActivePortCountAllSystemServices}{Environment.NewLine}" +
-                                $"Number of ephemeral TCP ports in use by Service Fabric services: {TotalActiveEphemeralPortCountAllSystemServices}{Environment.NewLine}" +
-                                $"Number of allocated handles in use by Service Fabric services: {TotalAllocatedHandlesAllSystemServices}{Environment.NewLine}" +
+                HealthMessage = $"TCP ports in use by Service Fabric services: {TotalActivePortCountAllSystemServices}{Environment.NewLine}" +
+                                $"Ephemeral TCP ports in use by Service Fabric services: {TotalActiveEphemeralPortCountAllSystemServices}{Environment.NewLine}" +
+                                $"File handles in use by Service Fabric services: {TotalAllocatedHandlesAllSystemServices}{Environment.NewLine}" +
                                     (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                    $"Fabric memory use MB: {allMemData?.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" +
-                                    $"FabricGateway memory use MB: {allMemData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" +
-                                    $"FabricGateway allocated file handles: {allHandlesData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.MaxDataValue}{Environment.NewLine}" +
-                                    $"FabricHost memory use MB: {allMemData?.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue}{Environment.NewLine}" : string.Empty),
+                                    $"Fabric memory: {allMemData?.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                                    $"Fabric file handles: {(int)(allHandlesData?.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
+                                    $"FabricGateway memory: {allMemData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                                    $"FabricGateway file handles: {(int)(allHandlesData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
+                                    $"FabricHost memory: {allMemData?.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                                    $"FabricHost file handles: {(int)(allHandlesData?.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" : string.Empty),
 
                 State = HealthState.Ok,
                 HealthReportTimeToLive = timeToLiveWarning,
@@ -881,11 +883,12 @@ namespace FabricObserver.Observers
                 }
                 catch (Win32Exception)
                 {
-                    // This will always be the case if FabricObserver.exe is not running as Admin or LocalSystem.
-                    // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed.
+                    // This will always be the case if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
+                    // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
+                    // It is generally not worth running FO process as a Windows elevated user just for this scenario.
                     WriteToLogWithLevel(
                         ObserverName,
-                        $"Can't observe {process.ProcessName} due to it's privilege level. FabricObserver must be running as System or Admin for this specific task.",
+                        $"Can't observe {procName} due to it's privilege level. FabricObserver must be running as System or Admin on Windows for this specific task.",
                         LogLevel.Information);
 
                     break;

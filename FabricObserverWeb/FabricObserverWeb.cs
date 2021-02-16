@@ -31,7 +31,7 @@ namespace FabricObserverWeb
         public FabricObserverWeb(StatelessServiceContext context)
             : base(context)
         {
-            this.fabricClient = new FabricClient();
+            fabricClient = new FabricClient();
         }
 
         public void Dispose()
@@ -60,7 +60,7 @@ namespace FabricObserverWeb
                                         opt.Listen(IPAddress.Loopback, port);
                                     })
                                     .ConfigureServices(services => services.AddSingleton(serviceContext))
-                                    .ConfigureServices(services => services.AddSingleton(this.fabricClient))
+                                    .ConfigureServices(services => services.AddSingleton(fabricClient))
                                     .UseContentRoot(Directory.GetCurrentDirectory())
                                     .UseStartup<Startup>()
                                     .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
@@ -72,18 +72,18 @@ namespace FabricObserverWeb
 
         private void Dispose(bool disposing)
         {
-            if (!this.disposed)
+            if (!disposed)
             {
                 if (disposing)
                 {
-                    if (this.fabricClient != null)
+                    if (fabricClient != null)
                     {
-                        this.fabricClient.Dispose();
-                        this.fabricClient = null;
+                        fabricClient.Dispose();
+                        fabricClient = null;
                     }
                 }
 
-                this.disposed = true;
+                disposed = true;
             }
         }
     }

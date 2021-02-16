@@ -166,7 +166,7 @@ namespace FabricObserverTests
 
         protected virtual void Dispose(bool disposing)
         {
-            if (this.disposedValue)
+            if (disposedValue)
             {
                 return;
             }
@@ -176,7 +176,7 @@ namespace FabricObserverTests
                 // TODO: dispose managed state (managed objects).
             }
 
-            this.disposedValue = true;
+            disposedValue = true;
         }
 
         public void Dispose()

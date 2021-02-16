@@ -28,19 +28,19 @@ namespace FabricObserver.Observers.Utilities
                 return 0;
             }
 
-            if (this.prevTime == DateTime.MinValue)
+            if (prevTime == DateTime.MinValue)
             {
-                this.prevTime = DateTime.Now;
-                this.prevTotalProcessorTime = p.TotalProcessorTime;
+                prevTime = DateTime.Now;
+                prevTotalProcessorTime = p.TotalProcessorTime;
             }
             else
             {
-                this.currentTimeTime = DateTime.Now;
-                this.currentTotalProcessorTime = p.TotalProcessorTime;
-                double currentUsage = (this.currentTotalProcessorTime.TotalMilliseconds - this.prevTotalProcessorTime.TotalMilliseconds) / this.currentTimeTime.Subtract(this.prevTime).TotalMilliseconds;
+                currentTimeTime = DateTime.Now;
+                currentTotalProcessorTime = p.TotalProcessorTime;
+                double currentUsage = (currentTotalProcessorTime.TotalMilliseconds - prevTotalProcessorTime.TotalMilliseconds) / currentTimeTime.Subtract(prevTime).TotalMilliseconds;
                 double cpuUsage = currentUsage / Environment.ProcessorCount;
-                this.prevTime = this.currentTimeTime;
-                this.prevTotalProcessorTime = this.currentTotalProcessorTime;
+                prevTime = currentTimeTime;
+                prevTotalProcessorTime = currentTotalProcessorTime;
 
                 return cpuUsage * 100.0;
             }

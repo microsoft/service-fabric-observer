@@ -5,8 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Fabric;
-using System.Fabric.Health;
 using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
@@ -152,11 +150,11 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public bool ActiveErrorOrWarning
         {
-            get => this.isInWarningState;
+            get => isInWarningState;
 
             set
             {
-                this.isInWarningState = value;
+                isInWarningState = value;
 
                 if (value)
                 {

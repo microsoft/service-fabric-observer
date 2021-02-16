@@ -17,12 +17,13 @@ using ClusterObserver.Utilities.Telemetry;
 using ClusterObserver.Interfaces;
 using Newtonsoft.Json;
 using System.Fabric.Description;
+using System.Reflection.Metadata.Ecma335;
 
 namespace ClusterObserver
 {
     public class ClusterObserver
     {
-        private readonly bool etwEnabled;
+        private bool etwEnabled;
         private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
         private readonly Uri fabricSystemAppUri = new Uri("fabric:/System");
         private bool disposedValue;
@@ -49,13 +50,21 @@ namespace ClusterObserver
                     return ConfigSettings.TelemetryEnabled;
                 }
 
-                return true;
+                return false;
             }
         }
 
         protected ITelemetryProvider ObserverTelemetryClient
         {
-            get; set;
+            get
+            {
+                if (ConfigSettings != null)
+                {
+                    return ConfigSettings.TelemetryClient;
+                }
+
+                return null;
+            }
         }
 
         protected FabricClient FabricClientInstance
@@ -139,16 +148,22 @@ namespace ClusterObserver
             }
         }
 
+        public bool EtwEnabled
+        {
+            get => etwEnabled;
+
+            set => etwEnabled = value;
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
         /// This observer is a singleton (one partition) stateless service that runs on one node in an SF cluster.
-        /// ClusterObserver and FabricObserver are completely independent service processes.
         /// </summary>
         public ClusterObserver(ConfigurationSettings settings = null)
         {
-            etwEnabled = ClusterObserverManager.EtwEnabled;
             FabricClientInstance = ClusterObserverManager.FabricClientInstance;
             ObserverName = ObserverConstants.ClusterObserverName;
+            etwEnabled = ClusterObserverManager.EtwEnabled;
             FabricServiceContext = ClusterObserverManager.FabricServiceContext;
             NodeName = FabricServiceContext.NodeContext.NodeName;
             NodeType = FabricServiceContext.NodeContext.NodeType;
@@ -158,12 +173,7 @@ namespace ClusterObserver
                 settings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings;
             }
 
-            ConfigSettings = new ConfigSettings(settings, ObserverConstants.ClusterObserverConfigurationSectionName);
-
-            if (TelemetryEnabled)
-            {
-                ObserverTelemetryClient = ClusterObserverManager.TelemetryClient;
-            }
+            ConfigSettings = new ConfigSettings(settings, ObserverConstants.ClusterObserverConfigurationSectionName, FabricClientInstance, Token);
 
             // Observer Logger setup.
             ObserverLogger = new Logger(ObserverName, ClusterObserverManager.LogPath)
@@ -174,7 +184,7 @@ namespace ClusterObserver
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposedValue)
+            if (!disposedValue)
             {
                 if (disposing)
                 {
@@ -185,7 +195,7 @@ namespace ClusterObserver
                     }
                 }
 
-                this.disposedValue = true;
+                disposedValue = true;
             }
         }
 
@@ -199,7 +209,7 @@ namespace ClusterObserver
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml
-            if (!this.IsEnabled || (RunInterval > TimeSpan.MinValue
+            if (!IsEnabled || (RunInterval > TimeSpan.MinValue
                 && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
@@ -222,9 +232,9 @@ namespace ClusterObserver
         private async Task ReportClusterHealthAsync(CancellationToken token)
         {
             // The point of this service is to emit SF Health telemetry to your external log analytics service, so
-            // if telemetry is not enabled or you don't provide an AppInsights instrumentation key or LogAnalytic settings, for example, 
+            // if telemetry is not enabled or you don't provide an AppInsights instrumentation key or LogAnalytics identity settings, for example, 
             // then querying HM for health info isn't useful.
-            if (!IsTestRun && (!this.etwEnabled && (!TelemetryEnabled || ObserverTelemetryClient == null)))
+            if (!EtwEnabled && (!TelemetryEnabled || ObserverTelemetryClient == null))
             {
                 return;
             }
@@ -236,7 +246,11 @@ namespace ClusterObserver
                 string telemetryDescription = string.Empty;
 
                 // Start monitoring node status.
-                await MonitorNodeStatusAsync().ConfigureAwait(false);
+                var nodeList = await FabricClientInstance.QueryManager.GetNodeListAsync();
+                if (nodeList.Count > 1)
+                {
+                    await MonitorNodeStatusAsync().ConfigureAwait(false);
+                }
 
                 // Check for active repairs in the cluster.
                 var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
@@ -270,7 +284,7 @@ namespace ClusterObserver
                     LastKnownClusterHealthState = HealthState.Ok;
 
                     // Telemetry.
-                    if (TelemetryEnabled)
+                    if (TelemetryEnabled && ObserverTelemetryClient != null)
                     {
                         var telemetry = new TelemetryData(FabricClientInstance, Token)
                         {
@@ -281,11 +295,11 @@ namespace ClusterObserver
                             Source = ObserverName,
                         };
 
-                        await ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
+                        await ObserverTelemetryClient.ReportHealthAsync(telemetry, Token);
                     }
 
                     // ETW.
-                    if (this.etwEnabled)
+                    if (etwEnabled)
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.ClusterObserverETWEventName,
@@ -327,7 +341,7 @@ namespace ClusterObserver
                         // Warn when System applications are in warning, but no need to dig in deeper.
                         if (evaluation.Kind == HealthEvaluationKind.SystemApplication)
                         {
-                            if (TelemetryEnabled)
+                            if (TelemetryEnabled && ObserverTelemetryClient != null)
                             {
                                 var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                 {
@@ -339,10 +353,10 @@ namespace ClusterObserver
                                 };
 
                                 // Telemetry.
-                                await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
+                                await ObserverTelemetryClient.ReportHealthAsync(telemetryData, Token);
                             }
 
-                            if (this.etwEnabled)
+                            if (etwEnabled)
                             {
                                 Logger.EtwLogger?.Write(
                                     ObserverConstants.ClusterObserverETWEventName,
@@ -448,7 +462,7 @@ namespace ClusterObserver
                                         }
 
                                         // Telemetry.
-                                        if (TelemetryEnabled)
+                                        if (TelemetryEnabled && ObserverTelemetryClient != null)
                                         {
                                             var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                             {
@@ -464,11 +478,11 @@ namespace ClusterObserver
                                                 Value = double.TryParse(value, out double val) != false ? val : 0,
                                             };
 
-                                            await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
+                                            await ObserverTelemetryClient.ReportHealthAsync(telemetryData, Token);
                                         }
 
                                         // ETW.
-                                        if (this.etwEnabled)
+                                        if (etwEnabled)
                                         {
                                              Logger.EtwLogger?.Write(
                                                 ObserverConstants.ClusterObserverETWEventName,
@@ -562,7 +576,7 @@ namespace ClusterObserver
                                             targetNode = targetNodeList[0];
                                         }
 
-                                        if (TelemetryEnabled)
+                                        if (TelemetryEnabled && ObserverTelemetryClient != null)
                                         {
                                             var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                             {
@@ -578,11 +592,11 @@ namespace ClusterObserver
                                             };
 
                                             // Telemetry.
-                                            await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);
+                                            await ObserverTelemetryClient.ReportHealthAsync(telemetryData, Token);
                                         }
 
                                         // ETW.
-                                        if (this.etwEnabled)
+                                        if (etwEnabled)
                                         {
                                             Logger.EtwLogger?.Write(
                                                 ObserverConstants.ClusterObserverETWEventName,
@@ -625,7 +639,7 @@ namespace ClusterObserver
                    $"ProbeClusterHealthAsync threw {e.Message}{Environment.NewLine}" +
                     "Probing will continue.");
 #if DEBUG
-                if (TelemetryEnabled)
+                if (TelemetryEnabled && ObserverTelemetryClient != null)
                 {
                     var telemetryData = new TelemetryData(FabricClientInstance, Token)
                     {
@@ -637,7 +651,7 @@ namespace ClusterObserver
                         Source = ObserverName,
                     };
 
-                    await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, Token);        
+                    await ObserverTelemetryClient.ReportHealthAsync(telemetryData, Token);        
                 }
 #endif  
             }
@@ -666,7 +680,7 @@ namespace ClusterObserver
                     }
 
                     // Telemetry.
-                    if (TelemetryEnabled)
+                    if (TelemetryEnabled && ObserverTelemetryClient != null)
                     {
                         var telemetry = new TelemetryData(FabricClientInstance, Token)
                         {
@@ -679,11 +693,11 @@ namespace ClusterObserver
                             Source = ObserverName,
                         };
 
-                        await ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
+                        await ObserverTelemetryClient.ReportHealthAsync(telemetry, Token);
                     }
 
                     // ETW.
-                    if (this.etwEnabled)
+                    if (etwEnabled)
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.ClusterObserverETWEventName,
@@ -746,7 +760,7 @@ namespace ClusterObserver
                             $"for {Math.Round(kvp.Value.LastDetectedTime.Subtract(kvp.Value.FirstDetectedTime).TotalHours, 2)} hours.{Environment.NewLine}";
 
                         // Telemetry.
-                        if (TelemetryEnabled)
+                        if (TelemetryEnabled && ObserverTelemetryClient != null)
                         {
                             var telemetry = new TelemetryData(FabricClientInstance, Token)
                             {
@@ -759,11 +773,11 @@ namespace ClusterObserver
                                 Source = ObserverName,
                             };
 
-                            await ObserverTelemetryClient?.ReportHealthAsync(telemetry, Token);
+                            await ObserverTelemetryClient.ReportHealthAsync(telemetry, Token);
                         }
 
                         // ETW.
-                        if (this.etwEnabled)
+                        if (etwEnabled)
                         {
                             Logger.EtwLogger?.Write(
                                 ObserverConstants.ClusterObserverETWEventName,
@@ -825,8 +839,8 @@ namespace ClusterObserver
             try
             {
                 var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(
-                                      this.fabricSystemAppUri,
-                                      this.repairManagerServiceUri,
+                                      fabricSystemAppUri,
+                                      repairManagerServiceUri,
                                       ConfigSettings.AsyncTimeout,
                                       cancellationToken).ConfigureAwait(true);
 

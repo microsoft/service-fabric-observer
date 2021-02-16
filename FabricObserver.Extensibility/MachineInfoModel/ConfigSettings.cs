@@ -12,7 +12,7 @@ namespace FabricObserver.Observers.MachineInfoModel
     public class ConfigSettings
     {
         public string ConfigPackagePath =>
-            this.serviceContext.CodePackageActivationContext.
+            serviceContext.CodePackageActivationContext.
                 GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
 
         public string AppObserverConfigFileName
@@ -27,7 +27,7 @@ namespace FabricObserver.Observers.MachineInfoModel
 
         public ConfigSettings(StatelessServiceContext context)
         {
-            this.serviceContext = context;
+            serviceContext = context;
         }
 
         public void Initialize(

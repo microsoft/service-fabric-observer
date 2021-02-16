@@ -58,11 +58,11 @@ namespace FabricObserver.Observers
         public DiskObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            this.DiskSpaceUsagePercentageData = new List<FabricResourceUsageData<double>>();
-            this.DiskSpaceAvailableMbData = new List<FabricResourceUsageData<double>>();
-            this.DiskSpaceTotalMbData = new List<FabricResourceUsageData<double>>();
-            this.DiskAverageQueueLengthData = new List<FabricResourceUsageData<float>>();
-            this.stopWatch = new Stopwatch();
+            DiskSpaceUsagePercentageData = new List<FabricResourceUsageData<double>>();
+            DiskSpaceAvailableMbData = new List<FabricResourceUsageData<double>>();
+            DiskSpaceTotalMbData = new List<FabricResourceUsageData<double>>();
+            DiskAverageQueueLengthData = new List<FabricResourceUsageData<float>>();
+            stopWatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -81,7 +81,7 @@ namespace FabricObserver.Observers
 
             if (ObserverManager.ObserverWebAppDeployed)
             {
-                this.diskInfo = new StringBuilder();
+                diskInfo = new StringBuilder();
             }
 
             foreach (var d in allDrives)
@@ -96,17 +96,17 @@ namespace FabricObserver.Observers
                 // This section only needs to run if you have the FabricObserverWebApi app installed.
                 if (ObserverManager.ObserverWebAppDeployed)
                 {
-                    _ = this.diskInfo.AppendFormat("\n\nDrive Name: {0}\n", d.Name);
+                    _ = diskInfo.AppendFormat("\n\nDrive Name: {0}\n", d.Name);
 
                     // Logging.
-                    _ = this.diskInfo.AppendFormat("Drive Type: {0}\n", d.DriveType);
-                    _ = this.diskInfo.AppendFormat("  Volume Label   : {0}\n", d.VolumeLabel);
-                    _ = this.diskInfo.AppendFormat("  Filesystem     : {0}\n", d.DriveFormat);
-                    _ = this.diskInfo.AppendFormat("  Total Disk Size: {0} GB\n", d.TotalSize / 1024 / 1024 / 1024);
-                    _ = this.diskInfo.AppendFormat("  Root Directory : {0}\n", d.RootDirectory);
-                    _ = this.diskInfo.AppendFormat("  Free User : {0} GB\n", d.AvailableFreeSpace / 1024 / 1024 / 1024);
-                    _ = this.diskInfo.AppendFormat("  Free Total: {0} GB\n", d.TotalFreeSpace / 1024 / 1024 / 1024);
-                    _ = this.diskInfo.AppendFormat("  % Used    : {0}%\n", DiskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
+                    _ = diskInfo.AppendFormat("Drive Type: {0}\n", d.DriveType);
+                    _ = diskInfo.AppendFormat("  Volume Label   : {0}\n", d.VolumeLabel);
+                    _ = diskInfo.AppendFormat("  Filesystem     : {0}\n", d.DriveFormat);
+                    _ = diskInfo.AppendFormat("  Total Disk Size: {0} GB\n", d.TotalSize / 1024 / 1024 / 1024);
+                    _ = diskInfo.AppendFormat("  Root Directory : {0}\n", d.RootDirectory);
+                    _ = diskInfo.AppendFormat("  Free User : {0} GB\n", d.AvailableFreeSpace / 1024 / 1024 / 1024);
+                    _ = diskInfo.AppendFormat("  Free Total: {0} GB\n", d.TotalFreeSpace / 1024 / 1024 / 1024);
+                    _ = diskInfo.AppendFormat("  % Used    : {0}%\n", DiskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
                 }
 
                 // Setup monitoring data structures.
@@ -114,62 +114,62 @@ namespace FabricObserver.Observers
 
                 // Since these live across iterations, do not duplicate them in the containing list.
                 // Disk space %.
-                if (this.DiskSpaceUsagePercentageData.All(data => data.Id != id) && (this.DiskSpacePercentErrorThreshold > 0 || this.DiskSpacePercentWarningThreshold > 0))
+                if (DiskSpaceUsagePercentageData.All(data => data.Id != id) && (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0))
                 {
-                    this.DiskSpaceUsagePercentageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id, DataCapacity));
+                    DiskSpaceUsagePercentageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id, DataCapacity));
                 }
 
                 // Current disk queue length.
-                if (this.DiskAverageQueueLengthData.All(data => data.Id != id) && (this.AverageQueueLengthErrorThreshold > 0 || this.AverageQueueLengthWarningThreshold > 0))
+                if (DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                 {
-                    this.DiskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, DataCapacity));
+                    DiskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, DataCapacity));
                 }
 
                 // This data is just used for Telemetry today.
-                if (this.DiskSpaceAvailableMbData.All(data => data.Id != id))
+                if (DiskSpaceAvailableMbData.All(data => data.Id != id))
                 {
-                    this.DiskSpaceAvailableMbData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMb, id, DataCapacity));
+                    DiskSpaceAvailableMbData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMb, id, DataCapacity));
                 }
 
                 // This data is just used for Telemetry today.
-                if (this.DiskSpaceTotalMbData.All(data => data.Id != id))
+                if (DiskSpaceTotalMbData.All(data => data.Id != id))
                 {
-                    this.DiskSpaceTotalMbData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMb, id, DataCapacity));
+                    DiskSpaceTotalMbData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMb, id, DataCapacity));
                 }
 
                 // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    if (this.AverageQueueLengthErrorThreshold > 0 || this.AverageQueueLengthWarningThreshold > 0)
+                    if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
                     {
                         // Warm up counter.
                         _ = DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2));
 
-                        this.DiskAverageQueueLengthData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2)));
+                        DiskAverageQueueLengthData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2)));
                     }
                 }
 
-                if (this.DiskSpacePercentErrorThreshold > 0 || this.DiskSpacePercentWarningThreshold > 0)
+                if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
                 {
-                    this.DiskSpaceUsagePercentageData.Single(x => x.Id == id).Data.Add(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
+                    DiskSpaceUsagePercentageData.Single(x => x.Id == id).Data.Add(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
                 }
 
-                this.DiskSpaceAvailableMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
-                this.DiskSpaceTotalMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
+                DiskSpaceAvailableMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
+                DiskSpaceTotalMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
 
                 // This section only needs to run if you have the FabricObserverWebApi app installed.
                 if (ObserverManager.ObserverWebAppDeployed && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    _ = this.diskInfo.AppendFormat(
+                    _ = diskInfo.AppendFormat(
                         "{0}",
                         GetWindowsPerfCounterDetailsText(
-                            this.DiskAverageQueueLengthData.FirstOrDefault(
+                            DiskAverageQueueLengthData.FirstOrDefault(
                                 x => x.Id == d.Name.Substring(0, 1))
                                 ?.Data,
                             "Avg. Disk Queue Length"));
                 }
 
-                RunDuration = this.stopWatch.Elapsed;
+                RunDuration = stopWatch.Elapsed;
             }
 
             await ReportAsync(token).ConfigureAwait(true);
@@ -183,7 +183,7 @@ namespace FabricObserver.Observers
                 var timeToLiveWarning = SetHealthReportTimeToLive();
 
                 // User-supplied Disk Space Usage % thresholds from Settings.xml.
-                foreach (var data in this.DiskSpaceUsagePercentageData)
+                foreach (var data in DiskSpaceUsagePercentageData)
                 {
                     token.ThrowIfCancellationRequested();
                     ProcessResourceDataReportHealth(
@@ -194,7 +194,7 @@ namespace FabricObserver.Observers
                 }
 
                 // User-supplied Average disk queue length thresholds from Settings.xml.
-                foreach (var data in this.DiskAverageQueueLengthData)
+                foreach (var data in DiskAverageQueueLengthData)
                 {
                     token.ThrowIfCancellationRequested();
                     ProcessResourceDataReportHealth(
@@ -208,7 +208,7 @@ namespace FabricObserver.Observers
                 if (IsEtwEnabled)
                 {
                     // Disk Space Available
-                    foreach (var data in this.DiskSpaceAvailableMbData)
+                    foreach (var data in DiskSpaceAvailableMbData)
                     {
                         token.ThrowIfCancellationRequested();
                         ProcessResourceDataReportHealth(
@@ -219,7 +219,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Disk Space Total
-                    foreach (var data in this.DiskSpaceTotalMbData)
+                    foreach (var data in DiskSpaceTotalMbData)
                     {
                         token.ThrowIfCancellationRequested();
                         ProcessResourceDataReportHealth(
@@ -240,9 +240,9 @@ namespace FabricObserver.Observers
 
                 var diskInfoPath = Path.Combine(ObserverLogger.LogFolderBasePath, "disks.txt");
 
-                _ = ObserverLogger.TryWriteLogFile(diskInfoPath, this.diskInfo.ToString());
+                _ = ObserverLogger.TryWriteLogFile(diskInfoPath, diskInfo.ToString());
 
-                _ = this.diskInfo.Clear();
+                _ = diskInfo.Clear();
 
                 return Task.CompletedTask;
             }

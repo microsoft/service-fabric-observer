@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
@@ -35,10 +34,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 throw new ArgumentException("Argument is empty", nameof(key));
             }
 
-            this.logger = new Logger("TelemetryLog");
+            logger = new Logger("TelemetryLog");
 
             TelemetryConfiguration configuration = new TelemetryConfiguration() { InstrumentationKey = key };
-            this.telemetryClient = new TelemetryClient(configuration);
+            telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
             configuration.TelemetryChannel.DeveloperMode = true;
@@ -48,15 +47,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <summary>
         /// Gets a value indicating whether telemetry is enabled or not.
         /// </summary>
-        public bool IsEnabled => this.telemetryClient.IsEnabled();
+        public bool IsEnabled => telemetryClient.IsEnabled();
 
         /// <summary>
         /// Gets or sets the key.
         /// </summary>
         public string Key
         {
-            get => this.telemetryClient?.InstrumentationKey;
-            set => this.telemetryClient.InstrumentationKey = value;
+            get => telemetryClient?.InstrumentationKey;
+            set => telemetryClient.InstrumentationKey = value;
         }
 
         /// <summary>
@@ -93,7 +92,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             at.Properties.Add("Service", serviceName?.OriginalString);
             at.Properties.Add("Instance", instance);
 
-            this.telemetryClient.TrackAvailability(at);
+            telemetryClient.TrackAvailability(at);
 
             return Task.CompletedTask;
         }
@@ -143,11 +142,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
 
-                this.telemetryClient.TrackTrace(tt);
+                telemetryClient.TrackTrace(tt);
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
                 throw;
             }
 
@@ -198,13 +197,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "Value", value ?? string.Empty },
                 };
 
-                this.telemetryClient.TrackEvent(
+                telemetryClient.TrackEvent(
                     $"{telemetryData.ObserverName ?? "ClusterObserver"}DataEvent",
                     properties);
             }
             catch (Exception e)
             {
-                this.logger.LogWarning(
+                logger.LogWarning(
                     $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
                     $"{Environment.NewLine}{e}");
 
@@ -215,31 +214,29 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         /// <summary>
-        /// Sends metrics to a telemetry service.
+        /// Sends a metric to AppInsights telemetry service with supplied value of type T.
         /// </summary>
-        /// <typeparam name="T">type of data.</typeparam>
-        /// <param name="name">name of metric.</param>
+        /// <param name="metric">name of metric.</param>
         /// <param name="value">value of metric.</param>
         /// <param name="source">source of event.</param>
         /// <param name="cancellationToken">cancellation token.</param>
         /// <returns>A Task of bool.</returns>
-        public async Task<bool> ReportMetricAsync<T>(
-            string name,
+        public Task<bool> ReportMetricAsync<T>(
+            string metric,
             T value,
             string source,
             CancellationToken cancellationToken)
         {
-            if (!IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || string.IsNullOrEmpty(metric) || cancellationToken.IsCancellationRequested)
             {
-                return false;
+                return Task.FromResult(false);
             }
 
-            TraceTelemetry tt = new TraceTelemetry(name, SeverityLevel.Information);
+            telemetryClient?.TrackEvent(
+                string.IsNullOrEmpty(source) ? ObserverConstants.FabricObserverETWEventName : source,
+                new Dictionary<string, string> { { metric, value?.ToString() } });
 
-            // TODO...
-            this.telemetryClient?.TrackTrace(tt);
-
-            return await Task.FromResult(true).ConfigureAwait(false);
+            return Task.FromResult(true);
         }
 
         /// <summary>
@@ -274,7 +271,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 { "Value", telemetryData.Value?.ToString() ?? string.Empty },
             };
 
-            this.telemetryClient.TrackEvent(
+            telemetryClient.TrackEvent(
                 $"{telemetryData.ObserverName ?? "FabricObserver"}DataEvent",
                 properties);
 
@@ -320,7 +317,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 { "WindowsDynamicPortRange", telemetryData.WindowsDynamicPortRange },
             };
 
-            this.telemetryClient.TrackEvent(
+            telemetryClient.TrackEvent(
                 $"{telemetryData.Observer ?? "FabricObserver"}DataEvent",
                 properties);
 
@@ -346,7 +343,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.FromResult(1);
             }
 
-            _ = this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
+            _ = telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
 
             return Task.CompletedTask;
         }
@@ -443,7 +440,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             // Track the telemetry.
-            this.telemetryClient.TrackMetric(mt);
+            telemetryClient.TrackMetric(mt);
 
             return Task.CompletedTask;
         }
@@ -458,7 +455,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         protected virtual void Dispose(bool disposing)
         {
-            if (this.disposedValue)
+            if (disposedValue)
             {
                 return;
             }
@@ -467,7 +464,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
             }
 
-            this.disposedValue = true;
+            disposedValue = true;
         }
     }
 }

@@ -56,13 +56,13 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
 
-        // File Handles / File Descriptors - Linux (File Descriptors) and Windows (File Handles)
+        // Process owned File Handles / File Descriptors - Linux (File Descriptors) and Windows (File Handles)
         public const string AppErrorTooManyOpenFileHandles = "FO033";
         public const string AppWarningTooManyOpenFileHandles = "FO034";
 
-        // Linux only. Windows does not have the same type of max handles configuration to monitor all-up use.
-        public const string NodeErrorAllocatedFileDescriptorsPercent = "FO035";
-        public const string NodeWarningAllocatedFileDescriptorsPercent = "FO036";
+        // System-wide open File Handles / File Descriptors - Linux only.
+        public const string NodeErrorTotalOpenFileHandlesPercent = "FO035";
+        public const string NodeWarningTotalOpenFileHandlesPercent = "FO036";
 
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
@@ -112,8 +112,8 @@ namespace FabricObserver.Observers.Utilities
             { WarningTooManyFirewallRules, "NodeWarningTooManyFirewallRules" },
             { NodeErrorTooManyActiveEphemeralPorts, "NodeErrorTooManyActiveEphemeralPorts" },
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
-            { NodeErrorAllocatedFileDescriptorsPercent, "NodeErrorAllocatedFileDescriptorsPercent" },
-            { NodeWarningAllocatedFileDescriptorsPercent, "NodeWarningAllocatedFileDescriptorsPercent" },
+            { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
+            { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
         };
 
         public static string GetErrorWarningNameFromFOCode(string id)

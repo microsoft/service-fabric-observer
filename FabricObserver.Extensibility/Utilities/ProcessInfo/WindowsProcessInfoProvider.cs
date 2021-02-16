@@ -7,8 +7,6 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -43,15 +41,15 @@ namespace FabricObserver.Observers.Utilities
                 return 0F;
             }
 
-            lock (this.memPerfCounterLock)
+            lock (memPerfCounterLock)
             {
                 try
                 {
-                    this.memProcessPrivateWorkingSetCounter.CategoryName = CategoryName;
-                    this.memProcessPrivateWorkingSetCounter.CounterName = WorkingSetCounterName;
-                    this.memProcessPrivateWorkingSetCounter.InstanceName = processName;
+                    memProcessPrivateWorkingSetCounter.CategoryName = CategoryName;
+                    memProcessPrivateWorkingSetCounter.CounterName = WorkingSetCounterName;
+                    memProcessPrivateWorkingSetCounter.InstanceName = processName;
 
-                    return this.memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
+                    return memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
                 }
                 catch (Exception e) when (e is ArgumentNullException || e is PlatformNotSupportedException ||
                                           e is Win32Exception || e is UnauthorizedAccessException)
@@ -95,15 +93,15 @@ namespace FabricObserver.Observers.Utilities
                 return -1F;
             }
 
-            lock (this.fileHandlesPerfCounterLock)
+            lock (fileHandlesPerfCounterLock)
             {
                 try
                 {
-                    this.processFileHandleCounter.CategoryName = CategoryName;
-                    this.processFileHandleCounter.CounterName = FileHandlesCounterName;
-                    this.processFileHandleCounter.InstanceName = processName;
+                    processFileHandleCounter.CategoryName = CategoryName;
+                    processFileHandleCounter.CounterName = FileHandlesCounterName;
+                    processFileHandleCounter.InstanceName = processName;
 
-                    return this.processFileHandleCounter.NextValue();
+                    return processFileHandleCounter.NextValue();
                 }
                 catch (Exception e) when (e is ArgumentNullException || e is PlatformNotSupportedException ||
                                           e is Win32Exception || e is UnauthorizedAccessException)
