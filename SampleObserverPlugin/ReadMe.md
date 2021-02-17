@@ -126,7 +126,7 @@ You can deploy using the contents of your build out directory - just remove the 
 * Create new instance of FO, which will contain your observer plugin
 ```Powershell
 $path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os platform, e.g., win-x64 or linux-x64]"
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV312 -TimeoutSec 1800
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV312
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.2
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV314 -TimeoutSec 1800
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV314
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.4
 ```
