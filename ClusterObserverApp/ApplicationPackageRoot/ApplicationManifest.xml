@@ -4,7 +4,6 @@
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserver_InstanceCount" DefaultValue="1" />
     <Parameter Name="Enabled" DefaultValue="true" />
-    <Parameter Name="EnableTelemetry" DefaultValue="true" />
     <Parameter Name="EnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
@@ -26,7 +25,6 @@
             <Parameter Name="MaxTimeNodeStatusNotOk" Value="[MaxTimeNodeStatusNotOk]" />
             <Parameter Name="RunInterval" Value="[RunInterval]" />
             <Parameter Name="AsyncOperationTimeoutSeconds" Value="[AsyncOperationTimeoutSeconds]" />
-            <Parameter Name="EnableTelemetry" Value="[EnableTelemetry]" />
           </Section>
         </Settings>
       </ConfigOverride>

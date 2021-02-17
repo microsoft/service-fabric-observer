@@ -17,7 +17,6 @@ using ClusterObserver.Utilities.Telemetry;
 using ClusterObserver.Interfaces;
 using Newtonsoft.Json;
 using System.Fabric.Description;
-using System.Reflection.Metadata.Ecma335;
 
 namespace ClusterObserver
 {
@@ -26,7 +25,6 @@ namespace ClusterObserver
         private bool etwEnabled;
         private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
         private readonly Uri fabricSystemAppUri = new Uri("fabric:/System");
-        private bool disposedValue;
 
         private HealthState LastKnownClusterHealthState
         {
@@ -41,36 +39,11 @@ namespace ClusterObserver
             get;
         } = new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
 
-        protected bool TelemetryEnabled 
-        { 
-            get
-            {
-                if (ConfigSettings != null)
-                {
-                    return ConfigSettings.TelemetryEnabled;
-                }
+        protected bool TelemetryEnabled =>  ClusterObserverManager.TelemetryEnabled;
 
-                return false;
-            }
-        }
+        protected ITelemetryProvider ObserverTelemetryClient => ClusterObserverManager.TelemetryClient;
 
-        protected ITelemetryProvider ObserverTelemetryClient
-        {
-            get
-            {
-                if (ConfigSettings != null)
-                {
-                    return ConfigSettings.TelemetryClient;
-                }
-
-                return null;
-            }
-        }
-
-        protected FabricClient FabricClientInstance
-        {
-            get; set;
-        }
+        protected FabricClient FabricClientInstance => ClusterObserverManager.FabricClientInstance;
 
         public ConfigSettings ConfigSettings
         {
@@ -161,7 +134,6 @@ namespace ClusterObserver
         /// </summary>
         public ClusterObserver(ConfigurationSettings settings = null)
         {
-            FabricClientInstance = ClusterObserverManager.FabricClientInstance;
             ObserverName = ObserverConstants.ClusterObserverName;
             etwEnabled = ClusterObserverManager.EtwEnabled;
             FabricServiceContext = ClusterObserverManager.FabricServiceContext;
@@ -173,36 +145,13 @@ namespace ClusterObserver
                 settings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings;
             }
 
-            ConfigSettings = new ConfigSettings(settings, ObserverConstants.ClusterObserverConfigurationSectionName, FabricClientInstance, Token);
+            ConfigSettings = new ConfigSettings(settings, ObserverConstants.ClusterObserverConfigurationSectionName);
 
             // Observer Logger setup.
             ObserverLogger = new Logger(ObserverName, ClusterObserverManager.LogPath)
             {
                 EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
             };
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    if (FabricClientInstance != null)
-                    {
-                        FabricClientInstance.Dispose();
-                        FabricClientInstance = null;
-                    }
-                }
-
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
         }
 
         public async Task ObserveAsync(CancellationToken token)
@@ -245,13 +194,9 @@ namespace ClusterObserver
             {
                 string telemetryDescription = string.Empty;
 
-                // Start monitoring node status.
-                var nodeList = await FabricClientInstance.QueryManager.GetNodeListAsync();
-                if (nodeList.Count > 1)
-                {
-                    await MonitorNodeStatusAsync().ConfigureAwait(false);
-                }
-
+                // Monitor node status.
+                await MonitorNodeStatusAsync().ConfigureAwait(false);
+                
                 // Check for active repairs in the cluster.
                 var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
 
@@ -449,8 +394,7 @@ namespace ClusterObserver
                                             sourceObserver = foStats.ObserverName;
                                             partitionId = foStats.PartitionId;
                                             replicaId = foStats.ReplicaId;
-                                            metric = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
-                                                 appHealthEvent.HealthInformation.SourceId);
+                                            metric = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(appHealthEvent.HealthInformation.SourceId);
 
                                             value = foStats.Value.ToString();
                                         }

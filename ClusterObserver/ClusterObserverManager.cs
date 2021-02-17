@@ -488,8 +488,7 @@ namespace ClusterObserver
             catch (AggregateException ex) when (
                 ex.InnerException is OperationCanceledException ||
                 ex.InnerException is TaskCanceledException ||
-                ex.InnerException is TimeoutException || 
-                ex.InnerException is ObjectDisposedException)
+                ex.InnerException is TimeoutException)
             {
                 IsObserverRunning = false;
                 _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{ex.InnerException}");
