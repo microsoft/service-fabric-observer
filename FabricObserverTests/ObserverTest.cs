@@ -418,8 +418,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            obs.Dispose();
         }
 
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
