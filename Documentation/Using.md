@@ -95,10 +95,10 @@ So, based on the above configuration, when the number of open file handles held 
 
 DiskObserver's Threshold setting values are required to be overriden and are set in FO's ApplicationManifest.xml file.
 
-Add this to DiskObserver's configuration section in FO's ApplicationManifest.xml file and it will warn you when disk space consumption reaches 80%:
+Set the DiskSpacePercentUsageWarningThreshold parameter in DiskObserver's configuration section located in FO's ***ApplicationManifest.xml*** file and it will warn you when disk space consumption reaches 80%:
 
 ```XML
- <!-- Disk Observer Warning/Error Thresholds -->
+    <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="80" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" DefaultValue="" />
@@ -207,12 +207,6 @@ NodeObserver doesn't speak JSON (can you believe it!!??....). So, you simply set
     <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="85" />
-    <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
-    <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
-    <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="8000" />
 ```  
 
 Example Output in SFX: 
