@@ -2,8 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>2.1.2</version>
-    <releaseNotes>Minor bug fixes. Support for new error/warning reports from FabricObserver: Allocated file handles per service process (AppObserver - Windows and Linux) and percentage of Maximum number of configured File Handles allocated (Node Observer - Linux only).</releaseNotes>
+    <version>2.1.3</version>
+    <releaseNotes>Minor bug fixes (Telemetry). Support for new error/warning reports from FabricObserver: Allocated file handles per service process (AppObserver - Windows and Linux) and percentage of Maximum number of configured File Handles allocated (Node Observer - Linux only).</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
