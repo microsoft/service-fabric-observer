@@ -210,7 +210,6 @@ namespace ClusterObserver.Utilities.Telemetry
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
-            return;
         }
 
         // TODO - Implement functions below as you need them.
