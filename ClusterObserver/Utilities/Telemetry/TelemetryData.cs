@@ -3,11 +3,10 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using Newtonsoft.Json;
-using System;
 using System.Fabric;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace ClusterObserver.Utilities.Telemetry
 {
@@ -38,11 +37,6 @@ namespace ClusterObserver.Utilities.Telemetry
             get; set;
         }
 
-        public string HealthScope
-        {
-            get; set;
-        } = "Cluster";
-
         public string HealthState
         {
             get; set;
@@ -58,11 +52,6 @@ namespace ClusterObserver.Utilities.Telemetry
             get; set;
         }
 
-        public string NodeStatus
-        {
-            get; set;
-        }
-
         public string ObserverName
         {
             get; set;
@@ -73,19 +62,15 @@ namespace ClusterObserver.Utilities.Telemetry
             get; set;
         } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
 
-        public Guid PartitionId
+        public string PartitionId
         {
             get; set;
         }
 
-        = Guid.Empty;
-
-        public long ReplicaId
+        public string ReplicaId
         {
             get; set;
         }
-
-        = 0;
 
         public string ServiceName
         {
@@ -95,7 +80,12 @@ namespace ClusterObserver.Utilities.Telemetry
         public string Source
         {
             get; set;
-        } = "ClusterObserver";
+        }
+
+        public string SystemServiceProcessName
+        {
+            get; set;
+        }
 
         public object Value
         {

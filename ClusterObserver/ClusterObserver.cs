@@ -233,7 +233,7 @@ namespace ClusterObserver
                     {
                         var telemetry = new TelemetryData(FabricClientInstance, Token)
                         {
-                            HealthScope = "Cluster",
+                            //HealthScope = "Cluster",
                             HealthState = "Ok",
                             HealthEventDescription = "Cluster has recovered from previous Error/Warning state.",
                             Metric = "AggregatedClusterHealth",
@@ -283,36 +283,100 @@ namespace ClusterObserver
                     {
                         token.ThrowIfCancellationRequested();
 
-                        // Warn when System applications are in warning, but no need to dig in deeper.
+                        // System service health.
                         if (evaluation.Kind == HealthEvaluationKind.SystemApplication)
                         {
-                            if (TelemetryEnabled && ObserverTelemetryClient != null)
+                            var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
+                                       new Uri("fabric:/System"),
+                                       ConfigSettings.AsyncTimeout,
+                                       token);
+
+                            var appHealthEvents = appHealth.HealthEvents;
+
+                            // From FO?
+                            foreach (var appHealthEvent in appHealthEvents.Where(
+                                        ev => ev.HealthInformation.HealthState != HealthState.Ok))
                             {
-                                var telemetryData = new TelemetryData(FabricClientInstance, Token)
+                                Token.ThrowIfCancellationRequested();
+
+                                // FabricObservers health event details need to be formatted correctly.
+                                // If FO did not emit this event, then foStats will be null.
+                                var foStats = TryGetFOHealthStateEventData(appHealthEvent, HealthScope.Application);
+                                string sourceObserver = null;
+                                string metric = null;
+                                string systemServiceName = null;
+                                string partitionId = null;
+                                string replicaId = null;
+
+                                if (foStats != null)
                                 {
-                                    HealthScope = "SystemApplication",
-                                    HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
-                                    HealthEventDescription = $"{evaluation.AggregatedHealthState}: {evaluation.Description}",
-                                    Metric = "AggregatedClusterHealth",
-                                    Source = ObserverName,
-                                };
+                                    telemetryDescription += foStats.HealthEventDescription;
+                                    sourceObserver = foStats.ObserverName;
+                                    partitionId = foStats.PartitionId;
+                                    replicaId = foStats.ReplicaId;
+                                    metric = foStats.Metric;
+
+                                    if (!string.IsNullOrWhiteSpace(foStats.SystemServiceProcessName))
+                                    {
+                                        systemServiceName = foStats.SystemServiceProcessName;
+                                    }
+                                }
+                                else if (!string.IsNullOrEmpty(appHealthEvent.HealthInformation.Description))
+                                {
+                                    // This wil be whatever is provided in the health event description set by the emitter, which
+                                    // was not FO.
+                                    telemetryDescription += $"{appHealthEvent.HealthInformation.Description}{Environment.NewLine}";
+                                }
 
                                 // Telemetry.
-                                await ObserverTelemetryClient.ReportHealthAsync(telemetryData, Token);
-                            }
-
-                            if (etwEnabled)
-                            {
-                                Logger.EtwLogger?.Write(
-                                    ObserverConstants.ClusterObserverETWEventName,
-                                    new
+                                if (TelemetryEnabled && ObserverTelemetryClient != null)
+                                {
+                                    var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                     {
-                                        HealthScope = "SystemApplication",
+                                        ApplicationName = appHealth.ApplicationName.OriginalString,
                                         HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
-                                        HealthEventDescription = $"{evaluation.AggregatedHealthState}: {evaluation.Description}",
-                                        Metric = "AggregatedClusterHealth",
+                                        HealthEventDescription = telemetryDescription,
+                                        Metric = metric ?? "AggregatedClusterHealth",
+                                        ObserverName = sourceObserver ?? string.Empty,
                                         Source = ObserverName,
-                                    });
+                                        PartitionId = partitionId,
+                                        ReplicaId = replicaId,
+                                        SystemServiceProcessName = systemServiceName ?? string.Empty,
+                                        Value = foStats != null ? foStats.Value : string.Empty,
+                                    };
+
+                                    await ObserverTelemetryClient.ReportHealthAsync(telemetryData, Token);
+                                }
+
+                                // ETW.
+                                if (etwEnabled)
+                                {
+                                    double value = 0;
+                                    if (foStats != null)
+                                    {
+                                        value = double.TryParse(foStats.Value.ToString(), out double val) ? val : 0;
+                                    }
+
+                                    Logger.EtwLogger?.Write(
+                                       ObserverConstants.ClusterObserverETWEventName,
+                                       new
+                                       {
+                                           ApplicationName = appHealth.ApplicationName.OriginalString,
+                                           HealthScope = "Application",
+                                           HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
+                                           HealthEventDescription = telemetryDescription,
+                                           Metric = metric ?? "AggregatedClusterHealth",
+                                           ObserverName = sourceObserver ?? string.Empty,
+                                           Source = ObserverName,
+                                           PartitionId = partitionId,
+                                           ReplicaId = replicaId,
+                                           SystemServiceProcessName = systemServiceName ?? string.Empty,
+                                           Value = value,
+                                       });
+                                }
+
+                                // Reset 
+                                telemetryDescription = string.Empty;
                             }
 
                             continue;
@@ -384,9 +448,9 @@ namespace ClusterObserver
                                         var foStats = TryGetFOHealthStateEventData(appHealthEvent, HealthScope.Application);
                                         string sourceObserver = null;
                                         string metric = null;
-                                        string value = null;
-                                        Guid partitionId = Guid.Empty;
-                                        long replicaId = 0;
+                                        string systemServiceName = null;
+                                        string partitionId = null;
+                                        string replicaId = null;
 
                                         if (foStats != null)
                                         {
@@ -394,9 +458,12 @@ namespace ClusterObserver
                                             sourceObserver = foStats.ObserverName;
                                             partitionId = foStats.PartitionId;
                                             replicaId = foStats.ReplicaId;
-                                            metric = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(appHealthEvent.HealthInformation.SourceId);
+                                            metric = foStats.Metric;
 
-                                            value = foStats.Value.ToString();
+                                            if (!string.IsNullOrWhiteSpace(foStats.SystemServiceProcessName))
+                                            {
+                                                systemServiceName = foStats.SystemServiceProcessName;
+                                            }
                                         }
                                         else if (!string.IsNullOrEmpty(appHealthEvent.HealthInformation.Description))
                                         {
@@ -411,7 +478,6 @@ namespace ClusterObserver
                                             var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                             {
                                                 ApplicationName = appHealth.ApplicationName.OriginalString,
-                                                HealthScope = "Application",
                                                 HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
                                                 HealthEventDescription = telemetryDescription,
                                                 Metric = metric ?? "AggregatedClusterHealth",
@@ -419,7 +485,8 @@ namespace ClusterObserver
                                                 Source = ObserverName,
                                                 PartitionId = partitionId,
                                                 ReplicaId = replicaId,
-                                                Value = double.TryParse(value, out double val) != false ? val : 0,
+                                                SystemServiceProcessName = systemServiceName ?? string.Empty,
+                                                Value = foStats != null ? foStats.Value : string.Empty,
                                             };
 
                                             await ObserverTelemetryClient.ReportHealthAsync(telemetryData, Token);
@@ -428,7 +495,13 @@ namespace ClusterObserver
                                         // ETW.
                                         if (etwEnabled)
                                         {
-                                             Logger.EtwLogger?.Write(
+                                            double value = 0;
+                                            if (foStats != null)
+                                            {
+                                                value = double.TryParse(foStats.Value.ToString(), out double val) ? val : 0;
+                                            }
+
+                                            Logger.EtwLogger?.Write(
                                                 ObserverConstants.ClusterObserverETWEventName,
                                                 new
                                                 {
@@ -441,7 +514,8 @@ namespace ClusterObserver
                                                     Source = ObserverName,
                                                     PartitionId = partitionId,
                                                     ReplicaId = replicaId,
-                                                    Value = double.TryParse(value, out double val) != false ? val : 0,
+                                                    SystemServiceProcessName = systemServiceName ?? string.Empty,
+                                                    Value = value,
                                                 });
                                         }
 
@@ -490,15 +564,12 @@ namespace ClusterObserver
                                         var foStats = TryGetFOHealthStateEventData(nodeHealthEvent, HealthScope.Node);
                                         string sourceObserver = null;
                                         string metric = null;
-                                        string value = null;
 
                                         if (foStats != null)
                                         {
                                             telemetryDescription += foStats.HealthEventDescription;
                                             sourceObserver = foStats.ObserverName;
-                                            metric = FoErrorWarningCodes.GetErrorWarningNameFromFOCode(
-                                                 nodeHealthEvent.HealthInformation.SourceId);
-                                            value = foStats.Value.ToString();
+                                            metric = foStats.Metric;
                                         }
                                         else if (!string.IsNullOrEmpty(nodeHealthEvent.HealthInformation.Description))
                                         {
@@ -525,14 +596,12 @@ namespace ClusterObserver
                                             var telemetryData = new TelemetryData(FabricClientInstance, Token)
                                             {
                                                 NodeName = node.NodeName,
-                                                NodeStatus = targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty,
-                                                HealthScope = "Node",
                                                 HealthState = Enum.GetName(typeof(HealthState), clusterHealth.AggregatedHealthState),
-                                                HealthEventDescription = telemetryDescription,
+                                                HealthEventDescription = $"{telemetryDescription}{Environment.NewLine}Node Status: {(targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty)}",
                                                 Metric = metric ?? "AggregatedClusterHealth",
                                                 ObserverName = sourceObserver ?? string.Empty,
                                                 Source = ObserverName,
-                                                Value = double.TryParse(value, out double val) != false ? val : 0,
+                                                Value = foStats != null ? foStats.Value : string.Empty,
                                             };
 
                                             // Telemetry.
@@ -542,6 +611,12 @@ namespace ClusterObserver
                                         // ETW.
                                         if (etwEnabled)
                                         {
+                                            double value = 0;
+                                            if (foStats != null)
+                                            {
+                                                value = double.TryParse(foStats.Value.ToString(), out double val) ? val : 0;
+                                            }
+
                                             Logger.EtwLogger?.Write(
                                                 ObserverConstants.ClusterObserverETWEventName,
                                                 new
@@ -554,7 +629,7 @@ namespace ClusterObserver
                                                     Metric = metric ?? "AggregatedClusterHealth",
                                                     ObserverName = sourceObserver ?? string.Empty,
                                                     Source = ObserverName,
-                                                    Value = double.TryParse(value, out double val) != false ? val : 0,
+                                                    Value = value,
                                                 });
                                             ;
                                         }
@@ -587,7 +662,6 @@ namespace ClusterObserver
                 {
                     var telemetryData = new TelemetryData(FabricClientInstance, Token)
                     {
-                        HealthScope = "Cluster",
                         HealthState = "Warning",
                         HealthEventDescription = $"ProbeClusterHealthAsync threw {e.Message}{Environment.NewLine}" +
                                                   "Probing will continue.",
@@ -628,12 +702,11 @@ namespace ClusterObserver
                     {
                         var telemetry = new TelemetryData(FabricClientInstance, Token)
                         {
-                            HealthScope = "Node",
                             HealthState = "Ok",
                             HealthEventDescription = $"{nodeDictItem.Key} is now Up.",
                             Metric = "NodeStatus",
                             NodeName = nodeDictItem.Key,
-                            NodeStatus = "Up",
+                            Value = "Up",
                             Source = ObserverName,
                         };
 
@@ -708,12 +781,11 @@ namespace ClusterObserver
                         {
                             var telemetry = new TelemetryData(FabricClientInstance, Token)
                             {
-                                HealthScope = "Node",
                                 HealthState = "Warning",
                                 HealthEventDescription = message,
                                 Metric = "NodeStatus",
                                 NodeName = kvp.Key,
-                                NodeStatus = $"{kvp.Value.NodeStatus}",
+                                Value = $"{kvp.Value.NodeStatus}",
                                 Source = ObserverName,
                             };
 

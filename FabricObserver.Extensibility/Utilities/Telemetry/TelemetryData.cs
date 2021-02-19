@@ -83,6 +83,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string SystemServiceProcessName
+        {
+            get; set;
+        }
+
         public object Value
         {
             get; set;

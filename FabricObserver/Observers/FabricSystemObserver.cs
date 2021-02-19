@@ -470,6 +470,7 @@ namespace FabricObserver.Observers
             for (int i = 0; i < processes.Length; ++i)
             {
                 Process p = processes[i];
+
                 try
                 {
                     string cmdline = File.ReadAllText($"/proc/{p.Id}/cmdline");

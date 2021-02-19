@@ -19,6 +19,7 @@ using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using Microsoft.ApplicationInsights;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -652,13 +653,13 @@ namespace FabricObserver.Observers
                     serviceName = replicaOrInstance.ServiceName;
                     name = appName.OriginalString.Replace("fabric:/", string.Empty);
                 }
-                else
+                else // System service report from FabricSystemObserver.
                 {
                     appName = new Uri("fabric:/System");
                     name = data.Id;
                 }
 
-                id = name + "_" + data.Property.Replace(" ", string.Empty);
+                id = $"{NodeName}_{name}_{data.Property.Replace(" ", string.Empty)}";
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
@@ -671,12 +672,18 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     ObserverName = ObserverName,
                     Metric = data.Property,
-                    Value = Math.Round(data.AverageDataValue, 1),
+                    Value = Math.Round(data.AverageDataValue, 0),
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
                     ServiceName = serviceName?.OriginalString ?? string.Empty,
                     Source = ObserverConstants.FabricObserverName,
                 };
+
+                // If the source issue is from FSO, then set the SystemServiceProcessName on TD instance.
+                if (appName != null && appName.OriginalString == "fabric:/System")
+                {
+                    telemetryData.SystemServiceProcessName = data.Id;
+                }
 
                 try
                 {
@@ -714,7 +721,7 @@ namespace FabricObserver.Observers
                                 NodeName,
                                 ObserverName,
                                 Metric = data.Property,
-                                Value = Math.Round(data.AverageDataValue, 1),
+                                Value = Math.Round(data.AverageDataValue, 0),
                                 PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                 ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
                                 ServiceName = procName,
@@ -756,7 +763,7 @@ namespace FabricObserver.Observers
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
                     Source = ObserverConstants.FabricObserverName,
-                    Value = Math.Round(data.AverageDataValue, 1),
+                    Value = Math.Round(data.AverageDataValue, 0),
                 };
 
                 if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
@@ -778,7 +785,7 @@ namespace FabricObserver.Observers
                             ObserverName,
                             Metric = $"{drive}{data.Property}",
                             Source = ObserverConstants.FabricObserverName,
-                            Value = Math.Round(data.AverageDataValue, 1),
+                            Value = Math.Round(data.AverageDataValue, 0),
                         });
                 }
             }
@@ -934,7 +941,7 @@ namespace FabricObserver.Observers
                 }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.Append($" - {data.Property}: {data.AverageDataValue}{data.Units}");
+                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 0)}{data.Units}");
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
@@ -952,7 +959,7 @@ namespace FabricObserver.Observers
                 telemetryData.Metric = $"{drive}{data.Property}";
                 telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
                 telemetryData.Source = ObserverConstants.FabricObserverName;
-                telemetryData.Value = Math.Round(data.AverageDataValue, 1);
+                telemetryData.Value = Math.Round(data.AverageDataValue, 0);
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
@@ -978,7 +985,7 @@ namespace FabricObserver.Observers
                             Node = NodeName,
                             ServiceName = serviceName?.OriginalString ?? string.Empty,
                             Source = ObserverConstants.FabricObserverName,
-                            Value = Math.Round(data.AverageDataValue, 1),
+                            Value = Math.Round(data.AverageDataValue, 0),
                         });
                 }
 
@@ -1082,7 +1089,7 @@ namespace FabricObserver.Observers
                     telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
                     telemetryData.Source = ObserverConstants.FabricObserverName;
-                    telemetryData.Value = Math.Round(data.AverageDataValue, 1);
+                    telemetryData.Value = Math.Round(data.AverageDataValue, 0);
 
                     // Telemetry
                     if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
@@ -1108,7 +1115,7 @@ namespace FabricObserver.Observers
                                 Node = NodeName,
                                 ServiceName = name ?? string.Empty,
                                 Source = ObserverConstants.FabricObserverName,
-                                Value = Math.Round(data.AverageDataValue, 1),
+                                Value = Math.Round(data.AverageDataValue, 0),
                             });
                     }
 

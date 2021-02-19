@@ -2,8 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.4</version>
-    <releaseNotes>Updated 3 observers (AppObserver, FabricSystemObserver, NodeObserver) to monitor allocated (in use) file handles for service processes (AppObserver/FabricSystemObserver - Windows and Linux) and percent allocated of configured Maximum number of File Handles (NodeObserver - Linux only).</releaseNotes>
+    <version>3.1.5</version>
+    <releaseNotes>Updated TelemetryData type with new member. Updated ObserverBase's ProcessDataReportHealth function with support for new TD member in health report output.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
