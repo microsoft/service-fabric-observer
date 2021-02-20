@@ -1614,8 +1614,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            obs.Dispose();
-            
+            obs.Dispose(); 
         }
 
         /***** End Tests that require a currently running SF Cluster. *****/
