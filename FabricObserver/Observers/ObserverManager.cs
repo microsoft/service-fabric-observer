@@ -247,12 +247,16 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception e) when (e is TaskCanceledException || e is OperationCanceledException)
+            {
+            
+            }
+            catch (Exception e)
             {
                 var message =
                     $"Unhanded Exception in {ObserverConstants.ObserverManagerName} on node " +
                     $"{nodeName}. Taking down FO process. " +
-                    $"Error info:{Environment.NewLine}{ex}";
+                    $"Error info:{Environment.NewLine}{e}";
 
                 Logger.LogError(message);
 
