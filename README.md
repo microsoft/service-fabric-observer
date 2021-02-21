@@ -98,7 +98,7 @@ Since observers live in their own application, they monitor other applications t
 | CPU/Memory/File Handles(Linux)/Firewalls(Windows)/Ports usage at machine level | NodeObserver |
 | OS properties (install date, health status, list of hot fixes, hardware configuration, etc., ephemeral port range and real-time OS health status) | OSObserver |
 | Service Fabric Configuration information | SFConfigurationObserver |
-| **Another resource you find important** | **Observer that you [implement](./Documentation/Plugins.md)** |
+| **Another resource you find important** | **Observer [that you implement](./Documentation/Plugins.md)** |
 
 To learn more about the current Observers and their configuration, please see the [Observers readme](./Documentation/Observers.md).  
     
