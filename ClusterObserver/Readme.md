@@ -38,9 +38,9 @@ Example Configuration:
 <?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observers run loop. 
-         0 means run continuously with no pausing. We recommend at least 60 seconds for ClusterObserver. -->
-    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="60" />
+    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observer run loop. 
+         0 means run continuously with no pausing. We recommend at least 30 seconds for ClusterObserver. -->
+    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 30 minutes. -->
@@ -72,17 +72,20 @@ Example Configuration:
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="3" />
   </Section>
-  <!-- ClusterObserver Configuration Settings. These are overridable and can be set as part of an application parameter update. See ApplicationManifest.xml. -->
+  <!-- ClusterObserver Configuration Settings. NOTE: These are overridable settings, see ApplicationManifest.xml. 
+       The Values for these will be overriden by ApplicationManifest Parameter settings. Set DefaultValue for each
+       overridable parameter in that file, not here, as the parameter DefaultValues in ApplicationManifest.xml will be used, by default. 
+       This design is to enable unversioned application-parameter-only updates. This means you will be able to change
+       any of the MustOverride parameters below at runtime by doing an ApplicationUpdate with ApplicationParameters flag. 
+       See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version -->
   <Section Name="ClusterObserverConfiguration">
     <!-- Maximum amount of time to wait for an async operation to complete (e.g., any of the SF API calls..) -->
     <Parameter Name="AsyncOperationTimeoutSeconds" Value="" MustOverride="true" />
     <!-- Required: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service provider in the ObseverManagerConfiguration section.
-         This setting will override the EnableTelemetry setting in the ObserverManagerConfiguration section, which enables turning this setting on and off in application parameter updates. -->
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. -->
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
