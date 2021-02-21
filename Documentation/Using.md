@@ -69,6 +69,25 @@ When you use this property, you can also use either serviceExcludeList or servic
 ]
 ```
 
+**File Handles**  
+
+***Problem***: I want to know how many file handles (total allocated/open) my App services are using and emit a warning when a specified threshold is reached.
+
+***Solution***: AppObserver is your friend. You can do exactly this.  
+
+For an app named MyApp, you would simply add this to PackageRoot/Config/AppObserver.config.json:  
+
+```JSON 
+[
+  {
+    "targetApp": "fabric:/MyApp",
+    "warningOpenFileHandles": "2000"
+  }
+]
+``` 
+
+So, based on the above configuration, when the number of open file handles held by any of the designated app's services reaches 2000 or higher, FO will emit a Health Warning.  
+
 **Disk Usage - Space**  
 
 ***Problem:*** I want to know when my local disks are filling up well before my cluster goes down, along with the VM.
