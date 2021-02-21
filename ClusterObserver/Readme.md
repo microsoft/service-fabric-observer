@@ -101,6 +101,6 @@ Example Configuration:
 ``` 
 Example LogAnalytics Query  
 
-![alt text](/Documentation/Images/COQueryAppCpu.png "") 
+![alt text](/Documentation/Images/COQueryFileHandles.png "") 
 
 You should configure FabricObserver to monitor ClusterObserver, of course. :)
