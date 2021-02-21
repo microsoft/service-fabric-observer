@@ -881,8 +881,7 @@ namespace ClusterObserver
         /// These could be custom repair tasks, Azure Tenant repair tasks (like Azure platform updates), etc.
         /// </summary>
         /// <returns>List of repair tasks in Active, Approved, or Executing State.</returns>
-        internal async Task<RepairTaskList> GetRepairTasksCurrentlyProcessingAsync(
-            CancellationToken cancellationToken)
+        internal async Task<RepairTaskList> GetRepairTasksCurrentlyProcessingAsync(CancellationToken cancellationToken)
         {
             if (!await IsRepairManagerDeployedAsync(cancellationToken))
             {
@@ -892,17 +891,17 @@ namespace ClusterObserver
             try
             {
                 var repairTasks = await FabricClientInstance.RepairManager.GetRepairTaskListAsync(
-                    null,
-                    RepairTaskStateFilter.Active |
-                    RepairTaskStateFilter.Approved |
-                    RepairTaskStateFilter.Executing,
-                    null,
-                    ConfigSettings.AsyncTimeout,
-                    cancellationToken);
+                                            null,
+                                            RepairTaskStateFilter.Active |
+                                            RepairTaskStateFilter.Approved |
+                                            RepairTaskStateFilter.Executing,
+                                            null,
+                                            ConfigSettings.AsyncTimeout,
+                                            cancellationToken);
 
                 return repairTasks;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
             {
 
             }
