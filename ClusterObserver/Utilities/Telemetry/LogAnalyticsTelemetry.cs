@@ -48,12 +48,12 @@ namespace ClusterObserver.Utilities.Telemetry
         }
 
         public LogAnalyticsTelemetry(
-            string workspaceId,
-            string sharedKey,
-            string logType,
-            FabricClient fabricClient,
-            CancellationToken token,
-            string apiVersion = "2016-04-01")
+                string workspaceId,
+                string sharedKey,
+                string logType,
+                FabricClient fabricClient,
+                CancellationToken token,
+                string apiVersion = "2016-04-01")
         {
             WorkspaceId = workspaceId;
             Key = sharedKey;
@@ -121,11 +121,13 @@ namespace ClusterObserver.Utilities.Telemetry
 
                 logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
             }
+#pragma warning disable CA1031 // Do not take down process due to unhandled exception during telemetry transmission. Log it, fix the bug.
             catch (Exception e)
             {
-                // An Exception during telemetry data submission should never take down CO process. Log it.
+                // An Exception during telemetry data submission should never take down CO process. Log it. Don't throw it. Fix it.
                 logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
             }
+#pragma warning restore CA1031 // It's ok here.
 
             if (retries < MaxRetries)
             {
@@ -147,11 +149,11 @@ namespace ClusterObserver.Utilities.Telemetry
         }
 
         private string GetSignature(
-            string method,
-            int contentLength,
-            string contentType,
-            string date,
-            string resource)
+                        string method,
+                        int contentLength,
+                        string contentType,
+                        string date,
+                        string resource)
         {
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);
@@ -162,19 +164,19 @@ namespace ClusterObserver.Utilities.Telemetry
             }
         }
 
-        // This is the only function impl that really makes sense for ClusterObserver 
+        // These two overloads of ReportHealthAsync are the only function impls that really makes sense for ClusterObserver 
         // with respect to ITelemetryProvider as CO does not monitor resources and generate data. 
         // It just reports AggregatedClusterHealth and related details surfaced by other Fabric services
         // running in the cluster.
         public async Task ReportHealthAsync(
-            HealthScope scope,
-            string propertyName,
-            HealthState state,
-            string unhealthyEvaluations,
-            string source,
-            CancellationToken cancellationToken,
-            string serviceName = null,
-            string instanceName = null)
+                            HealthScope scope,
+                            string propertyName,
+                            HealthState state,
+                            string unhealthyEvaluations,
+                            string source,
+                            CancellationToken cancellationToken,
+                            string serviceName = null,
+                            string instanceName = null)
         {
             var (clusterId, _) =
                 await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
@@ -198,11 +200,9 @@ namespace ClusterObserver.Utilities.Telemetry
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ReportHealthAsync(
-          TelemetryData telemetryData,
-          CancellationToken cancellationToken)
+        public async Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
-            if (telemetryData == null)
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
@@ -214,68 +214,68 @@ namespace ClusterObserver.Utilities.Telemetry
 
         // TODO - Implement functions below as you need them.
         public Task ReportAvailabilityAsync(
-            Uri serviceUri,
-            string instance,
-            string testName,
-            DateTimeOffset captured,
-            TimeSpan duration,
-            string location,
-            bool success,
-            CancellationToken cancellationToken,
-            string message = null)
+                        Uri serviceUri,
+                        string instance,
+                        string testName,
+                        DateTimeOffset captured,
+                        TimeSpan duration,
+                        string location,
+                        bool success,
+                        CancellationToken cancellationToken,
+                        string message = null)
         {
             return Task.CompletedTask;
         }
 
         public Task<bool> ReportMetricAsync<T>(
-            string name,
-            T value,
-            CancellationToken cancellationToken)
+                            string name,
+                            T value,
+                            CancellationToken cancellationToken)
         {
             return Task.FromResult(true);
         }
 
         public Task ReportMetricAsync(
-            string name,
-            long value,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string name,
+                        long value,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string service,
-            Guid partition,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                        string service,
+                        Guid partition,
+                        string name,
+                        long value,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string role,
-            long id,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                        string role,
+                        long id,
+                        string name,
+                        long value,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string roleName,
-            string instance,
-            string name,
-            long value,
-            int count,
-            long min,
-            long max,
-            long sum,
-            double deviation,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string roleName,
+                        string instance,
+                        string name,
+                        long value,
+                        int count,
+                        long min,
+                        long max,
+                        long sum,
+                        double deviation,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }

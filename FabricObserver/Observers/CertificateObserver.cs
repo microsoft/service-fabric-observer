@@ -90,11 +90,8 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!IsTestRun)
-            {
-                await Initialize(token).ConfigureAwait(true);
-            }
-
+            await Initialize(token).ConfigureAwait(true);
+            
             ExpiredWarnings = new List<string>();
             ExpiringWarnings = new List<string>();
             NotFoundWarnings = new List<string>();
@@ -116,17 +113,23 @@ namespace FabricObserver.Observers
                     CheckByThumbprint(store, SecurityConfiguration.ClusterCertThumbprintOrCommonName, DaysUntilClusterExpireWarningThreshold);
                 }
 
-                // App certificates
-                foreach (string commonName in AppCertificateCommonNamesToObserve)
+                if (AppCertificateCommonNamesToObserve != null)
                 {
-                    token.ThrowIfCancellationRequested();
-                    CheckLatestBySubjectName(store, commonName, DaysUntilAppExpireWarningThreshold);
+                    // App certificates
+                    foreach (string commonName in AppCertificateCommonNamesToObserve)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        CheckLatestBySubjectName(store, commonName, DaysUntilAppExpireWarningThreshold);
+                    }
                 }
 
-                foreach (string thumbprint in AppCertificateThumbprintsToObserve)
+                if (AppCertificateThumbprintsToObserve != null)
                 {
-                    token.ThrowIfCancellationRequested();
-                    CheckByThumbprint(store, thumbprint, DaysUntilAppExpireWarningThreshold);
+                    foreach (string thumbprint in AppCertificateThumbprintsToObserve)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        CheckByThumbprint(store, thumbprint, DaysUntilAppExpireWarningThreshold);
+                    }
                 }
 
                 await ReportAsync(token).ConfigureAwait(true);
@@ -149,6 +152,10 @@ namespace FabricObserver.Observers
             ExpiringWarnings = null;
             NotFoundWarnings?.Clear();
             NotFoundWarnings = null;
+            AppCertificateCommonNamesToObserve?.Clear();
+            AppCertificateCommonNamesToObserve = null;
+            AppCertificateThumbprintsToObserve?.Clear();
+            AppCertificateThumbprintsToObserve = null;
 
             LastRunDateTime = DateTime.Now;
         }
@@ -304,17 +311,23 @@ namespace FabricObserver.Observers
 
             DaysUntilAppExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilAppExpireWarningClusterThreshold) ? int.Parse(daysUntilAppExpireWarningClusterThreshold) : 14;
 
-            var appThumbprintsToObserve = GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.CertificateObserverAppCertificateThumbprints);
+            if (AppCertificateThumbprintsToObserve == null)
+            {
+                var appThumbprintsToObserve = GetSettingParameterValue(
+                        ConfigurationSectionName,
+                        ObserverConstants.CertificateObserverAppCertificateThumbprints);
 
-            AppCertificateThumbprintsToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve) : new List<string>();
+                AppCertificateThumbprintsToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve) : new List<string>();
+            }
 
-            var appCommonNamesToObserve = GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.CertificateObserverAppCertificateCommonNames);
+            if (AppCertificateCommonNamesToObserve == null)
+            {
+                var appCommonNamesToObserve = GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.CertificateObserverAppCertificateCommonNames);
 
-            AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();
+                AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appCommonNamesToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();
+            }
 
             await GetSecurityTypes(token).ConfigureAwait(true);
         }

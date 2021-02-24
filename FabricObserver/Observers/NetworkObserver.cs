@@ -96,6 +96,7 @@ namespace FabricObserver.Observers
             {
                 stopwatch.Stop();
                 stopwatch.Reset();
+                LastRunDateTime = DateTime.Now;
 
                 return;
             }
@@ -353,12 +354,6 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // Is this a unit test run?
-            if (IsTestRun)
-            {
-                return true;
-            }
-
             var settings =
                 FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                     ObserverConstants.ObserverConfigurationPackageName)?.Settings;
@@ -369,7 +364,7 @@ namespace FabricObserver.Observers
                 "NetworkObserverDataFileName");
 
             var networkObserverConfigFileName =
-                Path.Combine(dataPackagePath, configSettings.NetworkObserverConfigFileName);
+                Path.Combine(dataPackagePath ?? string.Empty, configSettings.NetworkObserverConfigFileName);
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {

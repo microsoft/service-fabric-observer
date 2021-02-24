@@ -19,7 +19,6 @@ using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using Microsoft.ApplicationInsights;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -117,13 +116,6 @@ namespace FabricObserver.Observers
         }
 
         public bool IsUnhealthy
-        {
-            get; set;
-        } = false;
-
-        // This static property is *only* used - and set to true - for local development unit test runs. 
-        // Do not set this to true otherwise.
-        public static bool IsTestRun
         {
             get; set;
         } = false;
@@ -918,6 +910,11 @@ namespace FabricObserver.Observers
                     case ErrorWarningProperty.TotalFileHandles when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyOpenFileHandles : FOErrorWarningCodes.AppWarningTooManyOpenFileHandles;
+                        break;
+
+                    case ErrorWarningProperty.TotalFileHandles:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorTooManyOpenFileHandles : FOErrorWarningCodes.NodeWarningTooManyOpenFileHandles;
                         break;
 
                     case ErrorWarningProperty.TotalFileHandlesPct:

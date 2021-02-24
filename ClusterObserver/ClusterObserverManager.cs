@@ -28,6 +28,7 @@ namespace ClusterObserver
         private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(30);
         private CancellationToken token;
         private CancellationTokenSource cts;
+        private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
         private bool hasDisposed;
         private bool appParamsUpdating;
         private static bool etwEnabled;
@@ -91,6 +92,7 @@ namespace ClusterObserver
         {
             this.token = token;
             cts = new CancellationTokenSource();
+            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
             _ = this.token.Register(() => { ShutdownHandler(this, null); });
             FabricClientInstance = new FabricClient();
             FabricServiceContext = context;
@@ -117,23 +119,6 @@ namespace ClusterObserver
             Logger = new Logger(ObserverConstants.ObserverManagerName, logFolderBasePath);
             SetPropertiesFromConfigurationParameters();
             observer = new ClusterObserver();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ClusterObserverManager"/> class.
-        /// **This constructor is for unit testing purposes only**.
-        /// </summary>
-        public ClusterObserverManager()
-        {
-            cts = new CancellationTokenSource();
-            token = cts.Token;
-  
-            Logger = new Logger("ClusterObserverUnitTestRun");
-
-            observer = new ClusterObserver
-            {
-                EtwEnabled = true,
-            };
         }
 
         private static string GetConfigSettingValue(string parameterName)
@@ -445,7 +430,8 @@ namespace ClusterObserver
                 IsObserverRunning = true;
 
                 // Synchronous call.
-                var isCompleted = observer.ObserveAsync(cts.Token).Wait(observerExecTimeout);
+                var isCompleted = observer.ObserveAsync(
+                    linkedSFRuntimeObserverTokenSource != null ? linkedSFRuntimeObserverTokenSource.Token : token).Wait(observerExecTimeout);
 
                 // The observer is taking too long (hung?)
                 if (!isCompleted)

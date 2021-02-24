@@ -106,6 +106,11 @@ namespace ClusterObserver.Utilities.Telemetry
             return Task.FromResult(0);
         }
 
+        // These two overloads of ReportHealthAsync are the only function impls that really makes sense for ClusterObserver 
+        // with respect to ITelemetryProvider as CO does not monitor resources and generate data. 
+        // It just reports AggregatedClusterHealth and related details surfaced by other Fabric services
+        // running in the cluster.
+
         /// <summary>
         /// Calls telemetry provider to report health.
         /// </summary>

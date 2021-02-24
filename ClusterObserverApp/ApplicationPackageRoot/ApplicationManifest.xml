@@ -7,7 +7,7 @@
     <Parameter Name="EnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
-    <Parameter Name="RunInterval" DefaultValue="00:02:00" />
+    <Parameter Name="RunInterval" DefaultValue="" />
     <Parameter Name="AsyncOperationTimeoutSeconds" DefaultValue="120" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 

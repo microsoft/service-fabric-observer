@@ -298,17 +298,13 @@ namespace FabricObserver.Observers
             {
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             }
-
-            if (!IsTestRun)
-            {
-                configSettings.Initialize(
-                    FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
-                        ObserverConstants.ObserverConfigurationPackageName)?.Settings,
+            
+            configSettings.Initialize(
+                FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
+                    ObserverConstants.ObserverConfigurationPackageName)?.Settings,
                     ConfigurationSectionName,
                     "AppObserverDataFileName");
-            }
-
-            // For unit tests, this path will be an empty string and not generate an exception.
+            
             var appObserverConfigFileName = Path.Combine(
                 ConfigPackagePath ?? string.Empty,
                 configSettings.AppObserverConfigFileName ?? string.Empty);

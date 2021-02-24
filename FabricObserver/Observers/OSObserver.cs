@@ -35,7 +35,7 @@ namespace FabricObserver.Observers
         private bool isWindowsUpdateAutoDownloadEnabled;
         private bool isWUADSettingEnabled;
 
-        public string TestManifestPath
+        public string ClusterManifestPath
         {
             get; set;
         }
@@ -355,9 +355,9 @@ namespace FabricObserver.Observers
                 string osEphemeralPortRange = string.Empty;
                 string fabricAppPortRange = string.Empty;
 
-                string clusterManifestXml = IsTestRun ? File.ReadAllText(
-                    TestManifestPath) : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                        AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
+                string clusterManifestXml = !string.IsNullOrWhiteSpace(ClusterManifestPath) ? File.ReadAllText(
+                        ClusterManifestPath) : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
+                            AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
 
                 (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(

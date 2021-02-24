@@ -37,7 +37,7 @@ namespace FabricObserver.Observers
         private CancellationToken token;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
-        private bool disposedValue;
+        private bool disposed;
         private IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgess;
 
@@ -409,7 +409,7 @@ namespace FabricObserver.Observers
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!disposed)
             {
                 if (disposing)
                 {
@@ -418,11 +418,21 @@ namespace FabricObserver.Observers
                         FabricClientInstance.Dispose();
                         FabricClientInstance = null;
                     }
+
+                    if (linkedSFRuntimeObserverTokenSource != null)
+                    {
+                        linkedSFRuntimeObserverTokenSource.Dispose();
+                    }
+
+                    if (cts != null)
+                    {
+                        cts.Dispose();
+                    }
+
+                    FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
                 }
 
-                FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-
-                disposedValue = true;
+                disposed = true;
             }
         }
 

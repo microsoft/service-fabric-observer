@@ -42,6 +42,11 @@ namespace FabricObserver.Observers
             get; private set;
         }
 
+        public string ClusterManifestPath
+        {
+            get; set;
+        }
+
         // Values.
         private string SFNodeLastBootTime;
 
@@ -196,22 +201,24 @@ namespace FabricObserver.Observers
             var sb = new StringBuilder();
             string clusterManifestXml = null;
 
-            if (IsTestRun)
+            try
             {
-                clusterManifestXml = File.ReadAllText(Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"));
-            }
-            else
-            {
-                try
+                appList = await FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
+                    
+                if (!string.IsNullOrWhiteSpace(ClusterManifestPath))
                 {
-                    appList = await FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
+                    clusterManifestXml = File.ReadAllText(ClusterManifestPath);
+                }
+                else
+                {
                     clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
                 }
-                catch (Exception e) when (e is FabricException || e is TimeoutException)
-                {
-                }
             }
-
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+            
+            }
+            
             token.ThrowIfCancellationRequested();
 
             XmlReader xreader = null;
@@ -278,15 +285,6 @@ namespace FabricObserver.Observers
                 if (!string.IsNullOrEmpty(SFNodeLastBootTime))
                 {
                     _ = sb.AppendLine("Last Rebooted: " + SFNodeLastBootTime);
-                }
-
-                // Stop here for unit testing.
-                if (IsTestRun)
-                {
-                    ret = sb.ToString();
-                    _ = sb.Clear();
-
-                    return ret;
                 }
 
                 // Application Info.
