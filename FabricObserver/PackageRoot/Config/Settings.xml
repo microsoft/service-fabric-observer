@@ -2,7 +2,7 @@
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
     <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observers run loop. 
-         0 means run continuously with no pausing. 
+         0 means run continuously with no pausing. ***NOTE: If you only enable one observer, you really should set this to a number greater than 0.***
          SF Error/Warning Reports have TTLs that are computed in part with this value. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="10" />
     <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
