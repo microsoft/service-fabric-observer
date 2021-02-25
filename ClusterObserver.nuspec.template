@@ -3,7 +3,7 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>2.1.4</version>
-    <releaseNotes>FO 3.1.5 support. Bug fixes.</releaseNotes>
+    <releaseNotes>FO 3.1.5 support. Bug fixes. Significant refactoring.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
