@@ -9,7 +9,7 @@ using System.Linq;
 namespace ClusterObserver.Utilities
 {
     // FabricObserver Error/Warning/Ok Codes.
-    public sealed class FoErrorWarningCodes
+    public sealed class FOErrorWarningCodes
     {
         // Ok
         public const string Ok = "FO000";
@@ -56,13 +56,15 @@ namespace ClusterObserver.Utilities
         public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
 
-        // File Handles / File Descriptors - Windowa (FHs) and Linux (FDs)
+        // Process owned File Handles / File Descriptors - Linux (File Descriptors) and Windows (File Handles)
         public const string AppErrorTooManyOpenFileHandles = "FO033";
         public const string AppWarningTooManyOpenFileHandles = "FO034";
 
-        // Linux only. Windows does not have the same type of max handles configuration to monitor all-up use as a percentage of max number configured.
-        public const string NodeErrorAllocatedFileDescriptorsPercent = "FO035";
-        public const string NodeWarningAllocatedFileDescriptorsPercent = "FO036";
+        // System-wide open File Handles / File Descriptors - Linux only.
+        public const string NodeErrorTotalOpenFileHandlesPercent = "FO035";
+        public const string NodeWarningTotalOpenFileHandlesPercent = "FO036";
+        public const string NodeErrorTooManyOpenFileHandles = "FO037";
+        public const string NodeWarningTooManyOpenFileHandles = "FO038";
 
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
@@ -112,8 +114,10 @@ namespace ClusterObserver.Utilities
             { WarningTooManyFirewallRules, "NodeWarningTooManyFirewallRules" },
             { NodeErrorTooManyActiveEphemeralPorts, "NodeErrorTooManyActiveEphemeralPorts" },
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
-            { NodeErrorAllocatedFileDescriptorsPercent, "NodeErrorAllocatedFileDescriptorsPercent" },
-            { NodeWarningAllocatedFileDescriptorsPercent, "NodeWarningAllocatedFileDescriptorsPercent" },
+            { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
+            { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
+            { NodeErrorTooManyOpenFileHandles, "NodeErrorTooManyOpenFileHandles" },
+            { NodeWarningTooManyOpenFileHandles, "NodeWarningTooManyOpenFileHandles" },
         };
 
         public static string GetErrorWarningNameFromFOCode(string id)

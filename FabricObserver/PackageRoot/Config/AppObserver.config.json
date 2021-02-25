@@ -34,6 +34,6 @@
     "memoryWarningLimitPercent": 50,
     "networkWarningActivePorts": 600,
     "networkWarningEphemeralPorts": 300,
-    "warningOpenFileHandles":  5000
+    "warningOpenFileHandles":  1500
   }
 ]

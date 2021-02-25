@@ -223,24 +223,39 @@ namespace FabricObserver.Observers
         {
             Token.ThrowIfCancellationRequested();
 
-            // Informational report. For now, Linux is where we pay close attention to memory use by Fabric system services as there are still a few issues in that realm..
+            string memHandlesInfo = string.Empty;
+
+            if (allMemData != null)
+            {
+                memHandlesInfo += $"Fabric memory: {allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                                  $"FabricDCA memory: {allMemData.Where(x => x.Id.Contains("FabricDCA"))?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                                  $"FabricGateway memory: {allMemData.Where(x => x.Id.Contains("FabricGateway"))?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                                  // FO runs as NetworkUser on Windows by default and thererfore can't monintor FabricHost process, which runs as System.
+                                  (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+                                      $"FabricHost memory: {allMemData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" : string.Empty);
+                                    
+            }
+
+            if (allHandlesData != null)
+            {
+                memHandlesInfo += $"Fabric file handles: {(int)(allHandlesData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
+                                  $"FabricDCA file handles: {(int)(allHandlesData.Where(x => x.Id.Contains("FabricDCA"))?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
+                                  $"FabricGateway file handles: {(int)(allHandlesData.Where(x => x.Id.Contains("FabricGateway"))?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
+                                   (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+                                        $"FabricHost file handles: {(int)(allHandlesData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue)}" : string.Empty);
+            }
+
+            // Informational report.
             TimeSpan timeToLiveWarning = SetHealthReportTimeToLive();
             HealthReport informationReport = new HealthReport
             {
                 Observer = ObserverName,
                 NodeName = NodeName,
-                HealthMessage = $"TCP ports in use by Service Fabric services: {TotalActivePortCountAllSystemServices}{Environment.NewLine}" +
-                                $"Ephemeral TCP ports in use by Service Fabric services: {TotalActiveEphemeralPortCountAllSystemServices}{Environment.NewLine}" +
-                                $"File handles in use by Service Fabric services: {TotalAllocatedHandlesAllSystemServices}{Environment.NewLine}" +
-                                    (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                    $"Fabric memory: {allMemData?.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
-                                    $"Fabric file handles: {(int)(allHandlesData?.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
-                                    $"FabricGateway memory: {allMemData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
-                                    $"FabricGateway file handles: {(int)(allHandlesData?.Where(x => x.Id == "FabricGateway.exe")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
-                                    $"FabricHost memory: {allMemData?.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
-                                    $"FabricHost file handles: {(int)(allHandlesData?.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" : string.Empty),
+                HealthMessage = $"TCP ports in use by Fabric System services: {TotalActivePortCountAllSystemServices}{Environment.NewLine}" +
+                                $"Ephemeral TCP ports in use by Fabric System services: {TotalActiveEphemeralPortCountAllSystemServices}{Environment.NewLine}" +
+                                $"File handles in use by Fabric System services: {TotalAllocatedHandlesAllSystemServices}{Environment.NewLine}{memHandlesInfo}",
 
-                State = HealthState.Ok,
+            State = HealthState.Ok,
                 HealthReportTimeToLive = timeToLiveWarning,
             };
 
@@ -470,6 +485,7 @@ namespace FabricObserver.Observers
             for (int i = 0; i < processes.Length; ++i)
             {
                 Process p = processes[i];
+
                 try
                 {
                     string cmdline = File.ReadAllText($"/proc/{p.Id}/cmdline");

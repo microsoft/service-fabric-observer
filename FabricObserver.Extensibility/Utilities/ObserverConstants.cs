@@ -108,6 +108,8 @@ namespace FabricObserver.Observers.Utilities
         // For use by Linux File Descriptors monitor.
         public const string NodeObserverLinuxFileHandlesErrorLimitPct = "LinuxFileHandlesErrorLimitPercent";
         public const string NodeObserverLinuxFileHandlesWarningLimitPct = "LinuxFileHandlesWarningLimitPercent";
+        public const string NodeObserverLinuxFileHandlesErrorTotalAllocated = "LinuxFileHandlesErrorLimitTotal";
+        public const string NodeObserverLinuxFileHandlesWarningTotalAllocated = "LinuxFileHandlesWarningLimitTotal";
 
         // OSObserver.
         public const string OSObserverName = "OSObserver";

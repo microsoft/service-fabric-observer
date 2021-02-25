@@ -37,7 +37,7 @@ namespace FabricObserver.Observers
         private CancellationToken token;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
-        private bool disposedValue;
+        private bool disposed;
         private IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgess;
 
@@ -247,12 +247,16 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception e) when (e is TaskCanceledException || e is OperationCanceledException)
+            {
+            
+            }
+            catch (Exception e)
             {
                 var message =
                     $"Unhanded Exception in {ObserverConstants.ObserverManagerName} on node " +
                     $"{nodeName}. Taking down FO process. " +
-                    $"Error info:{Environment.NewLine}{ex}";
+                    $"Error info:{Environment.NewLine}{e}";
 
                 Logger.LogError(message);
 
@@ -322,33 +326,31 @@ namespace FabricObserver.Observers
                         {
                             try
                             {
-                                var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(app)).ConfigureAwait(false);
-
+                                Uri appName = new Uri(app);
+                                var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
                                 int? unhealthyEventsCount = appHealth.HealthEvents?.Count(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
-                                if (unhealthyEventsCount == null || unhealthyEventsCount == 0)
+                                if (unhealthyEventsCount != null && unhealthyEventsCount > 0)
                                 {
-                                    continue;
-                                }
-
-                                foreach (var evt in appHealth.HealthEvents)
-                                {
-                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName) || evt.HealthInformation.HealthState == HealthState.Ok)
+                                    foreach (var evt in appHealth.HealthEvents)
                                     {
-                                        continue;
+                                        if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName) || evt.HealthInformation.HealthState == HealthState.Ok)
+                                        {
+                                            continue;
+                                        }
+
+                                        healthReport.AppName = appName;
+                                        healthReport.Property = evt.HealthInformation.Property;
+                                        healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                                        var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                        healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                                        Thread.Sleep(250);
                                     }
-
-                                    healthReport.AppName = new Uri(app);
-                                    healthReport.Property = evt.HealthInformation.Property;
-                                    healthReport.SourceId = evt.HealthInformation.SourceId;
-
-                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-                                    healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                    await Task.Delay(250, token).ConfigureAwait(false);
                                 }
                             }
-                            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+                            catch (Exception)
                             {
                             }
 
@@ -380,11 +382,11 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(250, token).ConfigureAwait(false);
+                                    Thread.Sleep(250);
                                 }
                             }
                         }
-                        catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+                        catch (Exception)
                         {
                         }
                     }
@@ -407,7 +409,7 @@ namespace FabricObserver.Observers
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!disposed)
             {
                 if (disposing)
                 {
@@ -416,11 +418,21 @@ namespace FabricObserver.Observers
                         FabricClientInstance.Dispose();
                         FabricClientInstance = null;
                     }
+
+                    if (linkedSFRuntimeObserverTokenSource != null)
+                    {
+                        linkedSFRuntimeObserverTokenSource.Dispose();
+                    }
+
+                    if (cts != null)
+                    {
+                        cts.Dispose();
+                    }
+
+                    FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
                 }
 
-                FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-
-                disposedValue = true;
+                disposed = true;
             }
         }
 

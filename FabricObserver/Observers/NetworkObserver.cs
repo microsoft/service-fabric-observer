@@ -96,6 +96,7 @@ namespace FabricObserver.Observers
             {
                 stopwatch.Stop();
                 stopwatch.Reset();
+                LastRunDateTime = DateTime.Now;
 
                 return;
             }
@@ -353,12 +354,6 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // Is this a unit test run?
-            if (IsTestRun)
-            {
-                return true;
-            }
-
             var settings =
                 FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                     ObserverConstants.ObserverConfigurationPackageName)?.Settings;
@@ -369,22 +364,18 @@ namespace FabricObserver.Observers
                 "NetworkObserverDataFileName");
 
             var networkObserverConfigFileName =
-                Path.Combine(dataPackagePath, configSettings.NetworkObserverConfigFileName);
+                Path.Combine(dataPackagePath ?? string.Empty, configSettings.NetworkObserverConfigFileName);
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {
-                ObserverLogger.LogError(
-                    "Endpoint list file is not specified. " +
-                    "Please Add file containing endpoints that need to be monitored.");
+                ObserverLogger.LogWarning("NetworkObserver configuration file path not specified. Exiting.");
 
                 return false;
             }
 
             if (!File.Exists(networkObserverConfigFileName))
             {
-                ObserverLogger.LogError(
-                    "Endpoint list file is not specified. " +
-                    "Please Add file containing endpoints that need to be monitored.");
+                ObserverLogger.LogWarning("NetworkObserver configuration file not found. Exiting.");
 
                 return false;
             }
@@ -414,14 +405,9 @@ namespace FabricObserver.Observers
                     }
                 }
 
+                // No target apps, as specified in the NetworkObserver configuration file, are deployed.
                 if (userConfig.Count == 0)
                 {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                        FabricServiceContext.ServiceName.ToString(),
-                        ObserverName,
-                        HealthState.Warning,
-                        "Missing required configuration data: endpoints.");
-
                     return false;
                 }
             }

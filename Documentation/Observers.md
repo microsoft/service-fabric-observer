@@ -2,7 +2,7 @@
 
 Observers are low-impact, long-lived objects that perform specialied monitoring and reporting activities. Observers monitor and report, but they aren't designed to take action. Observers generally monitor appliations through their side effects on the node, like resource usage, but do not actually communicate with the applications. Observers report to SF Event Store (viewable through SFX) in warning and error states, and can use built-in AppInsights support to report there as well.  
 
-### Note: All of the observers that collect resource usage data also emit telemetry: EventSource ETW and either LogAnalytics or ApplicationInsights diagnostic service calls. 
+### Note: All of the observers that collect resource usage data can also emit telemetry: EventSource ETW and either LogAnalytics or ApplicationInsights diagnostic service calls. 
 
 > AppInsights or LogAnalytics telemetry can be enabled in `Settings.xml` by providing your related authorization/identity information (keys).
 
@@ -263,7 +263,7 @@ Again, it is best to Enable this observer only after you have done some experime
     <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
-    <Parameter Name="MemoryWarningLimitMb" Value ="" MustOverride="true" />
+    <Parameter Name="MemoryWarningLimitMb" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorActivePorts" Value="" MustOverride="true"  />
     <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true"  />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
@@ -374,7 +374,7 @@ until the observer runs again.
 
 **Input**:
 ```xml
-  <Section Name="NodeObserverConfiguration">
+ <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
@@ -399,6 +399,8 @@ until the observer runs again.
     <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
     <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
     <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
+    <Parameter Name="LinuxFileHandlesErrorLimitTotal" Value="" MustOverride="true"/>
+    <Parameter Name="LinuxFileHandlesWarningLimitTotal" Value="" MustOverride="true"/>
   </Section>
 ```  
 | Setting | Description |
@@ -422,6 +424,8 @@ until the observer runs again.
 | **ResourceUsageDataCapacity** | Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for the observer. | 
 | **LinuxFileHandlesErrorLimitPercent** | Maximum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux virtual machine that will generate an Error. | 
 | **LinuxFileHandlesWarningLimitPercent** | Minumum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux virtual machine that will generate a Warning. |
+| **LinuxFileHandlesErrorLimitTotal** | Total number of allocated file handles in use on Linux virtual machine that will generate an Error. | 
+| **LinuxFileHandlesWarningLimitTotal** | Total number of allocated file handles in use on Linux virtual machine that will generate a Warning. |
 
 **Output**:\
 SFX Warnings when min/max thresholds are reached. CSV file,

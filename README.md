@@ -1,4 +1,4 @@
-# FabricObserver 3.1.4
+# FabricObserver 3.1.5
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of resources that tend to be important to all Service Fabric applications, like disk, CPU, memory, networking, and cluster certificates out-of-the-box.
@@ -90,15 +90,15 @@ Since observers live in their own application, they monitor other applications t
 
 | Resource | Observer |
 | --- | --- |
-| Application (services) resource usage health monitoring across CPU, Memory, Ports (TCP) | AppObserver |
+| Application (services) resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | AppObserver |
 | Application (user) and cluster certificate health monitoring | CertificateObserver |
 | Disk (local storage disk health/availability, space usage, IO) | DiskObserver |
 | Service Fabric Sysytem Services resource usage health monitoring across CPU, Memory, Ports (TCP) | FabricSystemObserver |
 | Networking (general health and monitoring of availability of user-specified, per-app endpoints) | NetworkObserver |
-| CPU/Memory/Firewalls/Ports resource usage at machine level | NodeObserver |
+| CPU/Memory/File Handles(Linux)/Firewalls(Windows)/Ports usage at machine level | NodeObserver |
 | OS properties (install date, health status, list of hot fixes, hardware configuration, etc., ephemeral port range and real-time OS health status) | OSObserver |
 | Service Fabric Configuration information | SFConfigurationObserver |
-| **Another resource you find important** | **Observer you implement** |
+| **Another resource you find important** | **Observer [that you implement](./Documentation/Plugins.md)** |
 
 To learn more about the current Observers and their configuration, please see the [Observers readme](./Documentation/Observers.md).  
     

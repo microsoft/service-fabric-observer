@@ -1,9 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observers run loop. 
-         0 means run continuously with no pausing. We recommend at least 60 seconds for ClusterObserver. -->
-    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="60" />
+    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observer run loop. 0 means run continuously. -->
+    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 30 minutes. -->

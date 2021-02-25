@@ -61,7 +61,7 @@ namespace FabricObserver.Observers
         }
 
         // TODO: Holds raw number of allocated file descriptors.
-        public FabricResourceUsageData<int> LinuxFileDescriptorDataRawNumberAllocated
+        public FabricResourceUsageData<int> LinuxFileHandlesDataTotalAllocated
         {
             get; set;
         }
@@ -139,13 +139,13 @@ namespace FabricObserver.Observers
         }
 
         // TODO..
-        public int LinuxFileHandlesErrorCount
+        public int LinuxFileHandlesErrorTotalAllocated
         {
             get; set;
         }
 
         // TODO..
-        public int LinuxFileHandlesWarningCount
+        public int LinuxFileHandlesWarningTotalAllocated
         {
             get; set;
         }
@@ -239,7 +239,7 @@ namespace FabricObserver.Observers
                         NodeName,
                         "All Active Ports",
                         "Total",
-                        ActivePortsData.Data[0]);
+                        Math.Round(ActivePortsData.AverageDataValue));
                     }
 
                     if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
@@ -249,7 +249,7 @@ namespace FabricObserver.Observers
                         NodeName,
                         "Ephemeral Active Ports",
                         "Total",
-                        EphemeralPortsData.Data[0]);
+                        Math.Round(EphemeralPortsData.AverageDataValue));
                     }
 
                     if (FirewallData != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
@@ -259,7 +259,7 @@ namespace FabricObserver.Observers
                         NodeName,
                         "Firewall Rules",
                         "Total",
-                        FirewallData.Data[0]);
+                        Math.Round(FirewallData.AverageDataValue));
                     }
 
                     // Windows does not have a corresponding FD/FH limit which can be set by a user, nor does Windows have a reliable way of determing the total number of open handles in the system.
@@ -273,7 +273,17 @@ namespace FabricObserver.Observers
                                 NodeName,
                                 ErrorWarningProperty.TotalFileHandlesPct,
                                 "Percent In Use",
-                                LinuxFileHandlesDataPercentAllocated.Data[0]);
+                                LinuxFileHandlesDataPercentAllocated.AverageDataValue);
+                        }
+
+                        if (LinuxFileHandlesDataTotalAllocated != null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
+                        {
+                            CsvFileLogger.LogData(
+                                fileName,
+                                NodeName,
+                                ErrorWarningProperty.TotalFileHandles,
+                                "Total Allocated",
+                                LinuxFileHandlesDataTotalAllocated.AverageDataValue);
                         }
                     }
 
@@ -355,6 +365,15 @@ namespace FabricObserver.Observers
                             LinuxFileHandlesWarningPercent,
                             timeToLiveWarning);
                     }
+
+                    if (LinuxFileHandlesDataTotalAllocated != null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
+                    {
+                        ProcessResourceDataReportHealth(
+                            LinuxFileHandlesDataTotalAllocated,
+                            LinuxFileHandlesErrorTotalAllocated,
+                            LinuxFileHandlesWarningTotalAllocated,
+                            timeToLiveWarning);
+                    }
                 }
 
                 return Task.CompletedTask;
@@ -377,11 +396,7 @@ namespace FabricObserver.Observers
 
         private void Initialize()
         {
-            if (!IsTestRun)
-            {
-                SetThresholdSFromConfiguration();
-            }
-
+            SetThresholdSFromConfiguration();
             InitializeDataContainers();
         }
 
@@ -423,6 +438,11 @@ namespace FabricObserver.Observers
                 if (LinuxFileHandlesDataPercentAllocated == null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                 {
                     LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalFileHandlesPct, "TotalFileHandlesPercentage", 1);
+                }
+
+                if (LinuxFileHandlesDataTotalAllocated == null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
+                {
+                    LinuxFileHandlesDataTotalAllocated = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalFileHandles, "TotalFileHandlesCount", 1);
                 }
             }
         }
@@ -467,7 +487,7 @@ namespace FabricObserver.Observers
                 ConfigurationSectionName,
                 ObserverConstants.NodeObserverNetworkErrorEphemeralPorts);
 
-            if (!string.IsNullOrEmpty(portsErr) && int.TryParse(ephemeralPortsErr, out int ephemeralPortsErrorThreshold))
+            if (!string.IsNullOrEmpty(ephemeralPortsErr) && int.TryParse(ephemeralPortsErr, out int ephemeralPortsErrorThreshold))
             {
                 EphemeralPortsErrorThreshold = ephemeralPortsErrorThreshold;
             }
@@ -500,11 +520,23 @@ namespace FabricObserver.Observers
                     ConfigurationSectionName,
                     ObserverConstants.NodeObserverLinuxFileHandlesErrorLimitPct);
 
-                if (!string.IsNullOrEmpty(errFileHandlesPercentUsed) && double.TryParse(errFileHandlesPercentUsed, out double fileDescriptorsPercentUsedErrorThreshold))
+                if (!string.IsNullOrEmpty(errFileHandlesPercentUsed) && double.TryParse(errFileHandlesPercentUsed, out double fdsPercentUsedErrorThreshold))
                 {
-                    if (fileDescriptorsPercentUsedErrorThreshold > 0 && fileDescriptorsPercentUsedErrorThreshold <= 100)
+                    if (fdsPercentUsedErrorThreshold > 0 && fdsPercentUsedErrorThreshold <= 100)
                     {
-                        LinuxFileHandlesErrorPercent = fileDescriptorsPercentUsedErrorThreshold;
+                        LinuxFileHandlesErrorPercent = fdsPercentUsedErrorThreshold;
+                    }
+                }
+
+                var errFileHandlesCount = GetSettingParameterValue(
+                    ConfigurationSectionName,
+                    ObserverConstants.NodeObserverLinuxFileHandlesErrorTotalAllocated);
+
+                if (!string.IsNullOrEmpty(errFileHandlesCount) && int.TryParse(errFileHandlesCount, out int fdsErrorCountThreshold))
+                {
+                    if (fdsErrorCountThreshold > 0)
+                    {
+                        LinuxFileHandlesErrorTotalAllocated = fdsErrorCountThreshold;
                     }
                 }
             }
@@ -580,11 +612,23 @@ namespace FabricObserver.Observers
                     ConfigurationSectionName,
                     ObserverConstants.NodeObserverLinuxFileHandlesWarningLimitPct);
 
-                if (!string.IsNullOrEmpty(warnFileHandlesPercentUsed) && double.TryParse(warnFileHandlesPercentUsed, out double fileDescriptorsPercentUsedWarningThreshold))
+                if (!string.IsNullOrEmpty(warnFileHandlesPercentUsed) && double.TryParse(warnFileHandlesPercentUsed, out double fdsPercentUsedWarningThreshold))
                 {
-                    if (fileDescriptorsPercentUsedWarningThreshold > 0 && fileDescriptorsPercentUsedWarningThreshold <= 100)
+                    if (fdsPercentUsedWarningThreshold > 0 && fdsPercentUsedWarningThreshold <= 100)
                     {
-                        LinuxFileHandlesWarningPercent = fileDescriptorsPercentUsedWarningThreshold;
+                        LinuxFileHandlesWarningPercent = fdsPercentUsedWarningThreshold;
+                    }
+                }
+
+                var warnFileHandlesCount = GetSettingParameterValue(
+                    ConfigurationSectionName,
+                    ObserverConstants.NodeObserverLinuxFileHandlesWarningTotalAllocated);
+
+                if (!string.IsNullOrEmpty(warnFileHandlesCount) && int.TryParse(warnFileHandlesCount, out int fdsWarningCountThreshold))
+                {
+                    if (fdsWarningCountThreshold > 0)
+                    {
+                        LinuxFileHandlesWarningTotalAllocated = fdsWarningCountThreshold;
                     }
                 }
             }
@@ -660,7 +704,17 @@ namespace FabricObserver.Observers
                                 LinuxFileHandlesDataPercentAllocated.Data.Add(Math.Round(usedPct, 2));
                             }
                         }
-                    } 
+                    }
+
+                    if (LinuxFileHandlesDataTotalAllocated != null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
+                    {
+                        int totalOpenFileHandles = OperatingSystemInfoProvider.Instance.GetTotalAllocatedFileHandlesCount();
+
+                        if (totalOpenFileHandles > 0)
+                        {
+                            LinuxFileHandlesDataTotalAllocated.Data.Add(totalOpenFileHandles);
+                        }
+                    }
                 }
 
                 while (stopwatch.Elapsed <= duration)

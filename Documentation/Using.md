@@ -85,6 +85,7 @@ For an app named MyApp, you would simply add this to PackageRoot/Config/AppObser
   }
 ]
 ``` 
+
 So, based on the above configuration, when the number of open file handles held by any of the designated app's services reaches 2000 or higher, FO will emit a Health Warning.  
 
 **Disk Usage - Space**  
