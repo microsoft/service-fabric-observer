@@ -5,39 +5,14 @@
 
 namespace FabricObserver.Observers.Utilities
 {
-    /// <summary>
-    /// The health scope.
-    /// </summary>
     public enum HealthScope
     {
-        /// <summary>
-        /// Application scope.
-        /// </summary>
         Application,
-
-        /// <summary>
-        /// Cluster scope.
-        /// </summary>
         Cluster,
-
-        /// <summary>
-        /// Instance scope.
-        /// </summary>
-        Instance,
-
-        /// <summary>
-        /// Node scope.
-        /// </summary>
         Node,
-
-        /// <summary>
-        /// Paritition scope.
-        /// </summary>
         Partition,
-
-        /// <summary>
-        /// Replica scope.
-        /// </summary>
         Replica,
+        Service,
+        SystemApplication,
     }
 }

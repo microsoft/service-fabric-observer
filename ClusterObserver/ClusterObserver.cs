@@ -268,7 +268,7 @@ namespace ClusterObserver
                     {
                         token.ThrowIfCancellationRequested();
 
-                        if (evaluation.Kind == HealthEvaluationKind.Node)
+                        if (evaluation.Kind == HealthEvaluationKind.Node || evaluation.Kind == HealthEvaluationKind.Nodes)
                         {
                             try
                             {
@@ -282,7 +282,9 @@ namespace ClusterObserver
                                 ObserverLogger.LogWarning($"Handled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}");
                             }
                         }
-                        else if (evaluation.Kind == HealthEvaluationKind.Application || evaluation.Kind == HealthEvaluationKind.SystemApplication)
+                        else if (evaluation.Kind == HealthEvaluationKind.Application
+                                 || evaluation.Kind == HealthEvaluationKind.Applications
+                                 || evaluation.Kind == HealthEvaluationKind.SystemApplication)
                         {
                             try
                             {
@@ -671,7 +673,7 @@ namespace ClusterObserver
             string telemetryDescription = evaluation.Description;
             string healthState = Enum.GetName(typeof(HealthState), evaluation.AggregatedHealthState);
 
-            var telemetryData = new TelemetryData
+            var telemetryData = new TelemetryData(FabricClientInstance, token)
             {
                 HealthEventDescription = telemetryDescription,
                 HealthState = healthState,
