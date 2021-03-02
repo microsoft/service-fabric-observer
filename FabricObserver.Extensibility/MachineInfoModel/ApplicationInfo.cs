@@ -19,6 +19,16 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public string AppExcludeList
+        {
+            get; set;
+        }
+
+        public string AppIncludeList
+        {
+            get; set;
+        }
+
         public string ServiceExcludeList
         {
             get; set;
@@ -84,11 +94,6 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public int NetworkWarningFirewallRules
-        {
-            get; set;
-        }
-
         public bool DumpProcessOnError
         {
             get; set;
@@ -106,6 +111,8 @@ namespace FabricObserver.Observers.MachineInfoModel
 
         public override string ToString() => $"ApplicationName: {TargetApp ?? string.Empty}{Environment.NewLine}" +
                                              $"ApplicationTypeName: {TargetAppType ?? string.Empty}{Environment.NewLine}" +
+                                             $"AppExcludeList: {AppExcludeList ?? string.Empty}{Environment.NewLine}" +
+                                             $"AppIncludeList: {AppIncludeList ?? string.Empty}{Environment.NewLine}" +
                                              $"ServiceExcludeList: {ServiceExcludeList ?? string.Empty}{Environment.NewLine}" +
                                              $"ServiceIncludeList: {ServiceIncludeList ?? string.Empty}{Environment.NewLine}" +
                                              $"MemoryWarningLimitMB: {MemoryWarningLimitMb}{Environment.NewLine}" +
@@ -118,8 +125,6 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"NetworkWarningActivePorts: {NetworkWarningActivePorts}{Environment.NewLine}" +
                                              $"NetworkErrorEphemeralPorts: {NetworkErrorEphemeralPorts}{Environment.NewLine}" +
                                              $"NetworkWarningEphemeralPorts: {NetworkWarningEphemeralPorts}{Environment.NewLine}" +
-                                             $"NetworkErrorFirewallRules: {NetworkErrorFirewallRules}{Environment.NewLine}" +
-                                             $"NetworkWarningFirewallRules: {NetworkWarningFirewallRules}{Environment.NewLine}" +
                                              $"DumpProcessOnError: {DumpProcessOnError}{Environment.NewLine}" +
                                              $"ErrorOpenFileHandles: {ErrorOpenFileHandles}{Environment.NewLine}" +
                                              $"WarningOpenFileHandles: {WarningOpenFileHandles}{Environment.NewLine}";

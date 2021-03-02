@@ -8,15 +8,16 @@
     "targetApp": "fabric:/MyApp",
     "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 30,
-    "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40,
     "warningOpenFileHandles": 10
   },
   {
-    "targetApp": "fabric:/MyApp42",
-    "cpuWarningLimitPercent": 60,
-    "memoryWarningLimitPercent": 50,
-    "networkWarningActivePorts": 600,
-    "networkWarningEphemeralPorts": 300
+    "targetApp": "fabric:/CpuStress",
+    "cpuWarningLimitPercent": 10,
+  },
+  {
+    "targetApp": "*",
+    "networkWarningActivePorts": 800,
+    "networkWarningEphemeralPorts": 400,
+    "warningOpenFileHandles": 500
   }
 ]

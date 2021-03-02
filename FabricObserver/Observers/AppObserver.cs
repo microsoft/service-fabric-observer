@@ -109,6 +109,7 @@ namespace FabricObserver.Observers
             stopwatch.Reset();
 
             await ReportAsync(token).ConfigureAwait(true);
+
             LastRunDateTime = DateTime.Now;
         }
 
@@ -135,7 +136,7 @@ namespace FabricObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
 
-                        if (!string.IsNullOrEmpty(app.TargetAppType)
+                        if (!string.IsNullOrWhiteSpace(app.TargetAppType)
                             && !string.Equals(
                                 repOrInst.ApplicationTypeName,
                                 app.TargetAppType,
@@ -144,7 +145,7 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        if (!string.IsNullOrEmpty(app.TargetApp)
+                        if (!string.IsNullOrWhiteSpace(app.TargetApp)
                             && !string.Equals(
                                 repOrInst.ApplicationName.OriginalString,
                                 app.TargetApp,
@@ -355,6 +356,83 @@ namespace FabricObserver.Observers
                 return false;
             }
 
+            // Support for specifying single configuration item for any or all or * applications.
+            if (userTargetList != null && userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp?.ToLower() == "any" || app.TargetApp == "*"))
+            {
+                ApplicationInfo application = userTargetList.Find(app => app.TargetApp?.ToLower() == "all" || app.TargetApp?.ToLower() == "any" || app.TargetApp == "*");
+
+                var appList = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
+                                        NodeName,
+                                        null,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token).ConfigureAwait(false);
+
+                foreach (var app in appList)
+                {
+                    // App filtering: AppExludeList, AppIncludeList. This is only useful when you are observing All/Any/* applications for a range of thresholds.
+                    if (!string.IsNullOrWhiteSpace(application.AppExcludeList) && application.AppExcludeList.Contains(app.ApplicationName.OriginalString))
+                    {
+                        continue;
+                    }
+                    else if(!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString))
+                    {
+                        continue;
+                    }
+
+                    // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance.
+                    if (userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName))
+                    {
+                        var existingAppConfig = userTargetList.Find(a => a.TargetApp == app.ApplicationName.OriginalString);
+
+                        existingAppConfig.ServiceExcludeList = !string.IsNullOrWhiteSpace(application.ServiceExcludeList) ? application.ServiceExcludeList : existingAppConfig.ServiceExcludeList;
+                        existingAppConfig.ServiceIncludeList = !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig.ServiceIncludeList;
+                        existingAppConfig.MemoryWarningLimitMb = application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig.MemoryWarningLimitMb;
+                        existingAppConfig.MemoryErrorLimitMb = application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig.MemoryErrorLimitMb;
+                        existingAppConfig.MemoryWarningLimitPercent = application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig.MemoryWarningLimitPercent;
+                        existingAppConfig.MemoryErrorLimitPercent = application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig.MemoryErrorLimitPercent;
+                        existingAppConfig.CpuErrorLimitPercent = application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig.CpuErrorLimitPercent;
+                        existingAppConfig.CpuWarningLimitPercent = application.CpuWarningLimitPercent > 0 ? application.CpuWarningLimitPercent : existingAppConfig.CpuWarningLimitPercent;
+                        existingAppConfig.NetworkErrorActivePorts = application.NetworkErrorActivePorts > 0 ? application.NetworkErrorActivePorts : existingAppConfig.NetworkErrorActivePorts;
+                        existingAppConfig.NetworkWarningActivePorts = application.NetworkWarningActivePorts > 0 ? application.NetworkWarningActivePorts : existingAppConfig.NetworkWarningActivePorts;
+                        existingAppConfig.NetworkErrorEphemeralPorts = application.NetworkErrorEphemeralPorts > 0 ? application.NetworkErrorEphemeralPorts : existingAppConfig.NetworkErrorEphemeralPorts;
+                        existingAppConfig.NetworkWarningEphemeralPorts = application.NetworkWarningEphemeralPorts > 0 ? application.NetworkWarningEphemeralPorts : existingAppConfig.NetworkWarningEphemeralPorts;
+                        existingAppConfig.DumpProcessOnError = application.DumpProcessOnError != existingAppConfig.DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig.DumpProcessOnError;
+                        existingAppConfig.ErrorOpenFileHandles = application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig.ErrorOpenFileHandles;
+                        existingAppConfig.WarningOpenFileHandles = application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig.WarningOpenFileHandles;
+                    }
+                    else
+                    {
+                        ApplicationInfo appConfig = new ApplicationInfo
+                        {
+                            TargetApp = app.ApplicationName.OriginalString,
+                            TargetAppType = null,
+                            AppExcludeList = application.AppExcludeList,
+                            AppIncludeList = application.AppIncludeList,
+                            ServiceExcludeList = application.ServiceExcludeList,
+                            ServiceIncludeList = application.ServiceIncludeList,
+                            MemoryWarningLimitMb = application.MemoryWarningLimitMb,
+                            MemoryErrorLimitMb = application.MemoryErrorLimitMb,
+                            MemoryWarningLimitPercent = application.MemoryWarningLimitPercent,
+                            MemoryErrorLimitPercent = application.MemoryErrorLimitPercent,
+                            CpuErrorLimitPercent = application.CpuErrorLimitPercent,
+                            CpuWarningLimitPercent = application.CpuWarningLimitPercent,
+                            NetworkErrorActivePorts = application.NetworkErrorActivePorts,
+                            NetworkWarningActivePorts = application.NetworkWarningActivePorts,
+                            NetworkErrorEphemeralPorts = application.NetworkErrorEphemeralPorts,
+                            NetworkWarningEphemeralPorts = application.NetworkWarningEphemeralPorts,
+                            DumpProcessOnError = application.DumpProcessOnError,
+                            ErrorOpenFileHandles = application.ErrorOpenFileHandles,
+                            WarningOpenFileHandles = application.WarningOpenFileHandles,
+                        };
+
+                        userTargetList.Add(appConfig);
+                    }
+                }
+
+                // Remove the All, Any, * config item.
+                userTargetList.Remove(application);
+            }
+
             int settingSFail = 0;
 
             foreach (var application in userTargetList)
@@ -379,7 +457,7 @@ namespace FabricObserver.Observers
                     return false;
                 }
 
-                if (!string.IsNullOrEmpty(application.TargetAppType))
+                if (!string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
                     await SetDeployedApplicationReplicaOrInstanceListAsync(
                         null,
@@ -387,8 +465,7 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    await SetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.TargetApp))
-                        .ConfigureAwait(false);
+                    await SetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.TargetApp)).ConfigureAwait(false);
                 }
             }
 
@@ -414,7 +491,7 @@ namespace FabricObserver.Observers
                 int processId = (int)repOrInst.HostProcessId;
                 var cpuUsage = new CpuUsage();
                 bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false;
-                var application = deployedTargetList?.FirstOrDefault(
+                var application = deployedTargetList?.Find(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString?.ToLower() ||
                                     app?.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
                 
@@ -657,7 +734,7 @@ namespace FabricObserver.Observers
             {
                 deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName).ConfigureAwait(true);
 
-                if (deployedApps.Count > 0 && !string.IsNullOrEmpty(applicationType))
+                if (deployedApps.Count > 0 && !string.IsNullOrWhiteSpace(applicationType))
                 {
                     for (int i = 0; i < deployedApps.Count; i++)
                     {
@@ -678,48 +755,50 @@ namespace FabricObserver.Observers
             {
                 List<string> filteredServiceList = null;
 
-                var appFilter = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
-                                                           && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                               || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
-                                                           && (!string.IsNullOrEmpty(x.ServiceExcludeList)
-                                                               || !string.IsNullOrEmpty(x.ServiceIncludeList)))?.FirstOrDefault();
+                // Filter service list if ServiceExcludeList/ServiceIncludeList config setting is non-empty.
+                var serviceFilter = userTargetList.Find(x => (x.TargetApp != null || x.TargetAppType != null)
+                                                        && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
+                                                            || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
+                                                        && (!string.IsNullOrWhiteSpace(x.ServiceExcludeList) || !string.IsNullOrWhiteSpace(x.ServiceIncludeList)));
 
-                // Filter service list if include/exclude service(s) config setting is supplied.
-                var filterType = ServiceFilterType.None;
-
-                if (appFilter != null)
+                FilterType filterType = FilterType.None;
+                
+                if (serviceFilter != null)
                 {
-                    if (!string.IsNullOrEmpty(appFilter.ServiceExcludeList))
+                    if (!string.IsNullOrWhiteSpace(serviceFilter.ServiceExcludeList))
                     {
-                        filteredServiceList = appFilter.ServiceExcludeList.Split(',').ToList();
-                        filterType = ServiceFilterType.Exclude;
+                        filteredServiceList = serviceFilter.ServiceExcludeList.Split(',').ToList();
+                        filterType = FilterType.Exclude;
                     }
-                    else if (!string.IsNullOrEmpty(appFilter.ServiceIncludeList))
+                    else if (!string.IsNullOrWhiteSpace(serviceFilter.ServiceIncludeList))
                     {
-                        filteredServiceList = appFilter.ServiceIncludeList.Split(',').ToList();
-                        filterType = ServiceFilterType.Include;
+                        filteredServiceList = serviceFilter.ServiceIncludeList.Split(',').ToList();
+                        filterType = FilterType.Include;
                     }
                 }
 
                 var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
-                    deployedApp.ApplicationName,
-                    filteredServiceList,
-                    filterType,
-                    applicationType).ConfigureAwait(true);
+                                                    deployedApp.ApplicationName,
+                                                    filteredServiceList,
+                                                    filterType,
+                                                    applicationType).ConfigureAwait(true);
 
                 ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
                 deployedTargetList.AddRange(userTargetList.Where(
-                    x => (x.TargetApp != null || x.TargetAppType != null)
-                            && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())));
+                                            x =>
+                                            {
+                                                return (x.TargetApp != null || x.TargetAppType != null)
+                                                        && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
+                                                        || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower());
+                                            }));
             }
         }
 
         private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedPrimaryReplicaAsync(
             Uri appName,
             List<string> serviceFilterList = null,
-            ServiceFilterType filterType = ServiceFilterType.None,
+            FilterType filterType = FilterType.None,
             string appTypeName = null)
         {
             var deployedReplicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName).ConfigureAwait(true);
@@ -738,8 +817,8 @@ namespace FabricObserver.Observers
 
         private void SetInstanceOrReplicaMonitoringList(
             Uri appName,
-            List<string> serviceFilterList,
-            ServiceFilterType filterType,
+            List<string> filterList,
+            FilterType filterType,
             string appTypeName,
             DeployedServiceReplicaList deployedReplicaList,
             ref List<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
@@ -761,15 +840,15 @@ namespace FabricObserver.Observers
                         ServiceName = statefulReplica.ServiceName,
                     };
 
-                    if (serviceFilterList != null
-                        && filterType != ServiceFilterType.None)
+                    if (filterList != null
+                        && filterType != FilterType.None)
                     {
-                        bool isInFilterList = serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                        bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
                         switch (filterType)
                         {
-                            case ServiceFilterType.Include when !isInFilterList:
-                            case ServiceFilterType.Exclude when isInFilterList:
+                            case FilterType.Include when !isInFilterList:
+                            case FilterType.Exclude when isInFilterList:
                                 continue;
                         }
                     }
@@ -786,15 +865,15 @@ namespace FabricObserver.Observers
                         ServiceName = statelessInstance.ServiceName,
                     };
 
-                    if (serviceFilterList != null
-                        && filterType != ServiceFilterType.None)
+                    if (filterList != null
+                        && filterType != FilterType.None)
                     {
-                        bool isInFilterList = serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                        bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
                         switch (filterType)
                         {
-                            case ServiceFilterType.Include when !isInFilterList:
-                            case ServiceFilterType.Exclude when isInFilterList:
+                            case FilterType.Include when !isInFilterList:
+                            case FilterType.Exclude when isInFilterList:
                                 continue;
                         }
                     }

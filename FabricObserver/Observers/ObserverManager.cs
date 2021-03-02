@@ -328,33 +328,26 @@ namespace FabricObserver.Observers
                             {
                                 Uri appName = new Uri(app);
                                 var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
-                                int? unhealthyEventsCount = appHealth.HealthEvents?.Count(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+                                var unhealthyEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                            && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning));
 
-                                if (unhealthyEventsCount != null && unhealthyEventsCount > 0)
+                                foreach (var evt in unhealthyEvents)
                                 {
-                                    foreach (var evt in appHealth.HealthEvents)
-                                    {
-                                        if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName) || evt.HealthInformation.HealthState == HealthState.Ok)
-                                        {
-                                            continue;
-                                        }
+                                    healthReport.AppName = appName;
+                                    healthReport.Property = evt.HealthInformation.Property;
+                                    healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                        healthReport.AppName = appName;
-                                        healthReport.Property = evt.HealthInformation.Property;
-                                        healthReport.SourceId = evt.HealthInformation.SourceId;
+                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                    healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                        var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-                                        healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                        Thread.Sleep(250);
-                                    }
+                                    await Task.Delay(250).ConfigureAwait(false);
                                 }
                             }
                             catch (Exception)
                             {
                             }
 
-                            await Task.Delay(250, token).ConfigureAwait(false);
+                            await Task.Delay(250).ConfigureAwait(false);
                         }
                     }
                     else
@@ -363,32 +356,28 @@ namespace FabricObserver.Observers
                         {
                             var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
 
-                            int? unhealthyEventsCount = nodeHealth.HealthEvents?.Count(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+                            var unhealthyEventsCount = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                        && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning));
 
                             healthReport.ReportType = HealthReportType.Node;
 
-                            if (unhealthyEventsCount != null && unhealthyEventsCount > 0)
+                            foreach (var evt in nodeHealth.HealthEvents)
                             {
-                                foreach (var evt in nodeHealth.HealthEvents)
-                                {
-                                    if (!evt.HealthInformation.SourceId.Contains(obs.ObserverName) || evt.HealthInformation.HealthState == HealthState.Ok)
-                                    {
-                                        continue;
-                                    }
+                                healthReport.Property = evt.HealthInformation.Property;
+                                healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                    healthReport.Property = evt.HealthInformation.Property;
-                                    healthReport.SourceId = evt.HealthInformation.SourceId;
+                                var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-                                    healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                    Thread.Sleep(250);
-                                }
+                                await Task.Delay(250).ConfigureAwait(false);
                             }
+                            
                         }
                         catch (Exception)
                         {
                         }
+
+                        await Task.Delay(250).ConfigureAwait(false);
                     }
 
                     obs.HasActiveFabricErrorOrWarning = false;

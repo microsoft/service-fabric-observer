@@ -266,7 +266,7 @@ namespace FabricObserverTests
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy_Has_Warnings()
         {
             if (!isSFRuntimePresentOnTestMachine)
             {
@@ -285,24 +285,18 @@ namespace FabricObserverTests
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
 
-            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
-            {
-                ApplicationName = new Uri("fabric:/TestApp"),
-                PartitionId = Guid.NewGuid(),
-                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
-                ReplicaOrInstanceId = default(long),
-            });
-
             await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
+            
+            CleanupTestHealthReports(obs);
 
             obs.Dispose();
             
@@ -313,7 +307,7 @@ namespace FabricObserverTests
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy()
+        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy_Warning()
         {
             if (!isSFRuntimePresentOnTestMachine)
             {
@@ -332,25 +326,18 @@ namespace FabricObserverTests
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
 
-            obs.ReplicaOrInstanceList.Add(new ReplicaOrInstanceMonitoringInfo
-            {
-                ApplicationName = new Uri("fabric:/TestApp"),
-                ApplicationTypeName = "TestAppType",
-                PartitionId = Guid.NewGuid(),
-                HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
-                ReplicaOrInstanceId = default(long),
-            });
-
             await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+            // observer detected warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
+            
+            CleanupTestHealthReports(obs);
 
             obs.Dispose();
         }
@@ -1622,7 +1609,7 @@ namespace FabricObserverTests
             }
         }
 
-        private void CleanupTestHealthReports()
+        private void CleanupTestHealthReports(ObserverBase obs = null)
         {
             // Clear any existing node or fabric:/System app Test Health Reports.
             try
@@ -1637,13 +1624,46 @@ namespace FabricObserverTests
                 };
 
                 var logger = new Logger("TestCleanUp");
-
                 var fabricClient = new FabricClient(FabricClientRole.Admin);
 
-                // System apps reports
-                var appHealth = fabricClient.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System")).GetAwaiter().GetResult();
+                // App reports
+                if (obs != null && obs.HasActiveFabricErrorOrWarning &&
+                    obs.ObserverName != ObserverConstants.NetworkObserverName)
+                { 
+                    if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrEmpty(a) && a.Contains("fabric:/")))
+                    {
+                        foreach (var app in obs.AppNames)
+                        {
+                            try
+                            {
+                                Uri appName = new Uri(app);
+                                var appHealth = fabricClient.HealthManager.GetApplicationHealthAsync(appName).GetAwaiter().GetResult();
+                                var unhealthyEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                            && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning));
 
-                foreach (var evt in appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains("FabricSystemObserver")))
+                                foreach (var evt in unhealthyEvents)
+                                {
+                                    healthReport.AppName = appName;
+                                    healthReport.Property = evt.HealthInformation.Property;
+                                    healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                                    var healthReporter = new ObserverHealthReporter(logger, fabricClient);
+                                    healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                                    Thread.Sleep(250);
+                                }
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        }
+                    }
+                }
+
+                // System apps reports
+                var sysAppHealth = fabricClient.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System")).GetAwaiter().GetResult();
+
+                foreach (var evt in sysAppHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains("FabricSystemObserver")))
                 {
                     if (evt.HealthInformation.HealthState == HealthState.Ok)
                     {
@@ -1658,8 +1678,7 @@ namespace FabricObserverTests
                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
                     Thread.Sleep(250);
-                   }
-                
+                }
 
                 // Node reports
                 var nodeHealth = fabricClient.HealthManager.GetNodeHealthAsync("_Node_0").GetAwaiter().GetResult();

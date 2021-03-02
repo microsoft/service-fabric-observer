@@ -2,8 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.5</version>
-    <releaseNotes>Updated TelemetryData type with new member, SystemServiceProcessName. Updated ObserverBase's ProcessDataReportHealth function with support for new TD member in health report output.</releaseNotes>
+    <version>3.1.6</version>
+    <releaseNotes>AppObserver can now monitor All (or Any or *) applications for specified resource thresholds when you supply "All" or "Any" or "*" for targetApp setting in AppObserver's configuration file. See project site for details. Fixed minor bug in ObserverManager's StopObserversAsync function. Modified related unit tests.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

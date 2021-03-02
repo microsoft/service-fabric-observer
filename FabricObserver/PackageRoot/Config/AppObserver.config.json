@@ -1,39 +1,13 @@
 ﻿[
   {
-    "targetApp": "fabric:/ClusterObserver",
-    "cpuWarningLimitPercent": 30,
-    "memoryWarningLimitPercent": 30,
+    "targetApp": "*",
+    "appExcludeList": "fabric:/FabricObserver",
     "networkWarningActivePorts": 80,
     "networkWarningEphemeralPorts": 40,
-    "warningOpenFileHandles": 2000
+    "warningOpenFileHandles": 400
   },
   {
-    "targetApp": "fabric:/FabricObserver",
-    "cpuWarningLimitPercent": 35,
-    "memoryWarningLimitPercent": 35,
-    "networkWarningActivePorts": 50,
-    "networkWarningEphemeralPorts": 40,
-    "warningOpenFileHandles": 2000
-  },
-  {
-    "targetAppType": "CpuStressType",
-    "cpuWarningLimitPercent": 20.75,
-    "memoryWarningLimitMb": 150,
-    "warningOpenFileHandles": 2000
-  },
-  {
-    "targetAppType": "PatchOrchestrationApplicationType",
-    "cpuWarningLimitPercent": 45,
-    "memoryWarningLimitPercent": 30,
-    "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40
-  },
-  {
-    "targetApp": "fabric:/MyApp42",
-    "cpuWarningLimitPercent": 60,
-    "memoryWarningLimitPercent": 50,
-    "networkWarningActivePorts": 600,
-    "networkWarningEphemeralPorts": 300,
-    "warningOpenFileHandles":  1500
+    "targetApp": "fabric:/CpuStress",
+    "cpuWarningLimitPercent": 10
   }
 ]
