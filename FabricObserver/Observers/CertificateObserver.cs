@@ -231,7 +231,7 @@ namespace FabricObserver.Observers
                         Token);
                 }
 
-                if (IsEtwEnabled)
+                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
                         ObserverConstants.FabricObserverETWEventName,

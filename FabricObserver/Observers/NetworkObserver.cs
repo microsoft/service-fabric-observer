@@ -182,7 +182,7 @@ namespace FabricObserver.Observers
                         HasActiveFabricErrorOrWarning = true;
 
                         // ETW.
-                        if (IsEtwEnabled)
+                        if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                         {
                             Logger.EtwLogger?.Write(
                                 ObserverConstants.FabricObserverETWEventName,
@@ -246,7 +246,7 @@ namespace FabricObserver.Observers
                         }
 
                         // ETW.
-                        if (IsEtwEnabled)
+                        if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                         {
                             Logger.EtwLogger?.Write(
                                 ObserverConstants.FabricObserverETWEventName,

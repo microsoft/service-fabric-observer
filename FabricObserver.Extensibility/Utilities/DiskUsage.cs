@@ -14,9 +14,6 @@ namespace FabricObserver.Observers.Utilities
 {
     public static class DiskUsage
     {
-        private static PerformanceCounter diskAverageQueueLengthCounter =
-            new PerformanceCounter(categoryName: "LogicalDisk", counterName: "Avg. Disk Queue Length", readOnly: true);
-
         public static bool ShouldCheckDrive(DriveInfo driveInfo)
         {
             if (!driveInfo.IsReady)
@@ -99,33 +96,49 @@ namespace FabricObserver.Observers.Utilities
 
         public static float GetAverageDiskQueueLength(string instance)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            // We do not support this on Linux for now.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                try
-                {
-                    DiskUsage.diskAverageQueueLengthCounter.InstanceName = instance;
-                    return DiskUsage.diskAverageQueueLengthCounter.NextValue();
-                }
-                catch (Exception e)
-                {
-                    Logger logger = new Logger("Utilities");
-
-                    if (e is ArgumentNullException || e is PlatformNotSupportedException
-                        || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
-                    {
-                        logger.LogError($"{DiskUsage.diskAverageQueueLengthCounter.CategoryName} {DiskUsage.diskAverageQueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
-
-                        // Don't throw.
-                        return 0F;
-                    }
-
-                    logger.LogError($"{DiskUsage.diskAverageQueueLengthCounter.CategoryName} {DiskUsage.diskAverageQueueLengthCounter.CounterName} PerfCounter unhandled exception: " + e);
-                    throw;
-                }
+                return 0F;
             }
 
-            // We do not support this on Linux for now
-            return 0F;
+            PerformanceCounter diskAverageQueueLengthCounter = null;
+
+            try
+            {
+                diskAverageQueueLengthCounter = new PerformanceCounter()
+                {
+                    InstanceName = instance,
+                    CategoryName = "LogicalDisk",
+                    CounterName = "Avg. Disk Queue Length",
+                    ReadOnly = true,
+                };
+
+                // Warm up counter
+                _ = diskAverageQueueLengthCounter.NextValue();
+
+                return diskAverageQueueLengthCounter.NextValue();
+            }
+            catch (Exception e)
+            {
+                Logger logger = new Logger("Utilities");
+
+                if (e is ArgumentNullException || e is PlatformNotSupportedException
+                    || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
+                {
+                    logger.LogError($"{diskAverageQueueLengthCounter.CategoryName} {diskAverageQueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
+
+                    // Don't throw.
+                    return 0F;
+                }
+
+                logger.LogError($"{diskAverageQueueLengthCounter.CategoryName} {diskAverageQueueLengthCounter.CounterName} PerfCounter unhandled exception: " + e);
+                throw;
+            }
+            finally
+            {
+                diskAverageQueueLengthCounter?.Dispose();
+            }
         }
 
         private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)

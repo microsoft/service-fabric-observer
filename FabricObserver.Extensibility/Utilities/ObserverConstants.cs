@@ -42,6 +42,7 @@ namespace FabricObserver.Observers.Utilities
         public const string ObserverRunIntervalParameter = "RunInterval";
         public const string ObserverEnabledParameter = "Enabled";
         public const string ObserverTelemetryEnabledParameter = "EnableTelemetry";
+        public const string ObserverEtwEnabledParameter = "EnableEtw";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string DataCapacityParameter = "ResourceUsageDataCapacity";
         public const string UseCircularBufferParameter = "UseCircularBuffer";

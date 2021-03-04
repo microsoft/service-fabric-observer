@@ -31,7 +31,6 @@ namespace FabricObserver.Observers
     {
         private readonly List<string> processWatchList;
         private Stopwatch stopwatch;
-        private bool disposed;
 
         // Health Report data container - For use in analysis to determine health state.
         private List<FabricResourceUsageData<int>> allCpuData;
@@ -461,19 +460,6 @@ namespace FabricObserver.Observers
                     Token.ThrowIfCancellationRequested();
                     evtRecordList.Add(eventInstance);
                 }
-            }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-                disposed = true;
             }
         }
 

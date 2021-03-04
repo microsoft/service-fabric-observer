@@ -4,7 +4,7 @@
     <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observers run loop. 
          0 means run continuously with no pausing. ***NOTE: If you only enable one observer, you really should set this to a number greater than 0.***
          SF Error/Warning Reports have TTLs that are computed in part with this value. -->
-    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="10" />
+    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 30 minutes. If you are monitoring several services, you should increase this if necessary.
@@ -71,6 +71,8 @@
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
          These files will be written to the DataLogPath supplied above.-->
     <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
@@ -102,6 +104,8 @@
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
          below, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter.
@@ -118,6 +122,7 @@
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
@@ -136,6 +141,7 @@
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
@@ -166,6 +172,7 @@
   <Section Name="NetworkObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
@@ -176,6 +183,7 @@
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
@@ -204,6 +212,7 @@
   <Section Name="OSObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="EnableWindowsAutoUpdateCheck" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
@@ -212,6 +221,7 @@
   <Section Name="SFConfigurationObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
@@ -230,6 +240,7 @@
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
   </Section> -->

@@ -290,8 +290,8 @@ namespace FabricObserverTests
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions.
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+            // observer detected no warning conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
@@ -299,7 +299,6 @@ namespace FabricObserverTests
             CleanupTestHealthReports(obs);
 
             obs.Dispose();
-            
         }
 
         /// <summary>
@@ -331,8 +330,8 @@ namespace FabricObserverTests
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected warning conditions.
-            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+            // observer detected no warning conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);

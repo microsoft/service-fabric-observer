@@ -41,6 +41,71 @@ namespace FabricObserver.Observers
         private IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgess;
 
+        public static FabricClient FabricClientInstance
+        {
+            get; set;
+        }
+
+        public static int ObserverExecutionLoopSleepSeconds
+        {
+            get; private set;
+        } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
+
+        public static StatelessServiceContext FabricServiceContext
+        {
+            get; set;
+        }
+
+        public static ITelemetryProvider TelemetryClient
+        {
+            get; set;
+        }
+
+        public static bool TelemetryEnabled
+        {
+            get; set;
+        }
+
+        public static bool FabricObserverInternalTelemetryEnabled
+        { get; set; } = true;
+
+        public static bool ObserverWebAppDeployed
+        {
+            get; set;
+        }
+
+        public static bool EtwEnabled
+        {
+            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
+
+            set => etwEnabled = value;
+        }
+
+        public string ApplicationName
+        {
+            get; set;
+        }
+
+        public bool IsObserverRunning
+        {
+            get; set;
+        }
+
+        private ObserverHealthReporter HealthReporter
+        {
+            get; set;
+        }
+
+        private string Fqdn
+        {
+            get; set;
+        }
+
+        private Logger Logger
+        {
+            get; set;
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// This is used for unit testing.
@@ -142,71 +207,6 @@ namespace FabricObserver.Observers
             }
         }
 
-        public static FabricClient FabricClientInstance
-        {
-            get; set;
-        }
-
-        public static int ObserverExecutionLoopSleepSeconds 
-        { 
-            get; private set; 
-        } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
-
-        public static StatelessServiceContext FabricServiceContext
-        {
-            get; set;
-        }
-
-        public static ITelemetryProvider TelemetryClient
-        {
-            get; set;
-        }
-
-        public static bool TelemetryEnabled
-        {
-            get; set;
-        }
-
-        public static bool FabricObserverInternalTelemetryEnabled 
-        { get; set; } = true;
-
-        public static bool ObserverWebAppDeployed
-        {
-            get; set;
-        }
-
-        public static bool EtwEnabled
-        {
-            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
-
-            set => etwEnabled = value;
-        }
-
-        public string ApplicationName
-        {
-            get; set;
-        }
-
-        public bool IsObserverRunning
-        {
-            get; set;
-        }
-
-        private ObserverHealthReporter HealthReporter
-        {
-            get; set;
-        }
-
-        private string Fqdn
-        {
-            get; set;
-        }
-
-        private Logger Logger
-        {
-            get; set;
-        }
-
         public async Task StartObserversAsync()
         {
             try
@@ -276,7 +276,7 @@ namespace FabricObserver.Observers
                 if (EtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
-                        $"FabricObserverServiceCriticalHealthEvent",
+                        ObserverConstants.FabricObserverETWEventName,
                         new
                         {
                             Level = 2, // Error
@@ -328,10 +328,10 @@ namespace FabricObserver.Observers
                             {
                                 Uri appName = new Uri(app);
                                 var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
-                                var unhealthyEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                var unhealthyFOAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
                                                             && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning));
 
-                                foreach (var evt in unhealthyEvents)
+                                foreach (var evt in unhealthyFOAppEvents)
                                 {
                                     healthReport.AppName = appName;
                                     healthReport.Property = evt.HealthInformation.Property;
@@ -356,12 +356,12 @@ namespace FabricObserver.Observers
                         {
                             var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
 
-                            var unhealthyEventsCount = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                            var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
                                                         && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning));
 
                             healthReport.ReportType = HealthReportType.Node;
 
-                            foreach (var evt in nodeHealth.HealthEvents)
+                            foreach (var evt in unhealthyFONodeEvents)
                             {
                                 healthReport.Property = evt.HealthInformation.Property;
                                 healthReport.SourceId = evt.HealthInformation.SourceId;
@@ -416,6 +416,11 @@ namespace FabricObserver.Observers
                     if (cts != null)
                     {
                         cts.Dispose();
+                    }
+
+                    if (Logger.EtwLogger != null)
+                    {
+                        Logger.EtwLogger.Dispose();
                     }
 
                     FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
@@ -738,7 +743,16 @@ namespace FabricObserver.Observers
         private void SignalAbortToRunningObserver()
         {
             Logger.LogInfo("Signalling task cancellation to currently running Observer.");
-            cts?.Cancel();
+            
+            try
+            {
+                cts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+
+            }
+          
             Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
         }
 
@@ -907,6 +921,12 @@ namespace FabricObserver.Observers
                 }
 
                 _ = exceptionBuilder.Clear();
+            }
+
+            if (Logger.EtwLogger != null)
+            {
+                Logger.EtwLogger.Dispose();
+                Logger.EtwLogger = null;
             }
 
             return allExecuted;

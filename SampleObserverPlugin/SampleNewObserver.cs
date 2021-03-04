@@ -150,7 +150,7 @@ namespace FabricObserver.Observers
             }
 
             // ETW.
-            if (IsEtwEnabled)
+            if (IsEtwEnabled && IsObserverTelemetryEnabled)
             {
                 Logger.EtwLogger?.Write(
                     ObserverConstants.FabricObserverETWEventName,

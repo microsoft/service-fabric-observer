@@ -31,6 +31,8 @@ namespace FabricObserver.Observers
         private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
         private string SFLogRoot;
         private string dumpsPath;
+        private bool etwProviderEnabled;
+        private bool disposedValue;
 
         public string ObserverName
         {
@@ -111,6 +113,27 @@ namespace FabricObserver.Observers
                 if (ConfigurationSettings != null)
                 {
                     ConfigurationSettings.IsObserverTelemetryEnabled = value;
+                }
+            }
+        }
+
+        public bool IsObserverEtwEnabled
+        {
+            get
+            {
+                if (ConfigurationSettings != null)
+                {
+                    return ConfigurationSettings.IsObserverEtwEnabled;
+                }
+
+                return false;
+            }
+
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.IsObserverEtwEnabled = value;
                 }
             }
         }
@@ -276,11 +299,12 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        protected bool IsEtwEnabled
+        // TODO: This needs to be enabled on Observer instance. Add a new setting, IsObserverEtwEnabled..
+        protected bool IsEtwProviderEnabled
         {
-            get => bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
+            get => bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableEventSourceProvider), out etwProviderEnabled) && etwProviderEnabled;
 
-            set => etwEnabled = value;
+            set => etwProviderEnabled = value;
         }
 
         protected FabricClient FabricClientInstance
@@ -701,7 +725,7 @@ namespace FabricObserver.Observers
                             Token).ConfigureAwait(false);
                     }
 
-                    if (IsEtwEnabled)
+                    if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
@@ -765,7 +789,7 @@ namespace FabricObserver.Observers
                         Token);
                 }
 
-                if (IsEtwEnabled)
+                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
                         ObserverConstants.FabricObserverETWEventName,
@@ -967,7 +991,7 @@ namespace FabricObserver.Observers
                 }
 
                 // ETW.
-                if (IsEtwEnabled)
+                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
                         ObserverConstants.FabricObserverETWEventName,
@@ -1047,12 +1071,12 @@ namespace FabricObserver.Observers
 
                 healthReport.Property = HealthReportProperties.Last();
 
-                if (HealthReportSourceIds.Count == 0)
+                if (!HealthReportSourceIds.Any(s => s == $"{ObserverName}({errorWarningCode})"))
                 {
                     HealthReportSourceIds.Add($"{ObserverName}({errorWarningCode})");
                 }
 
-                healthReport.SourceId = HealthReportSourceIds.Last();
+                healthReport.SourceId = $"{ObserverName}({errorWarningCode})";
 
                 // Generate a Service Fabric Health Report.
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -1097,7 +1121,7 @@ namespace FabricObserver.Observers
                     }
 
                     // ETW.
-                    if (IsEtwEnabled)
+                    if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
@@ -1177,12 +1201,12 @@ namespace FabricObserver.Observers
 
                     healthReport.Property = HealthReportProperties.Last();
 
-                    if (HealthReportSourceIds.Count == 0)
+                    if (!HealthReportSourceIds.Any(s => s == $"{ObserverName}({data.ActiveErrorOrWarningCode})"))
                     {
                         HealthReportSourceIds.Add($"{ObserverName}({data.ActiveErrorOrWarningCode})");
                     }
 
-                    healthReport.SourceId = HealthReportSourceIds.Last();
+                    healthReport.SourceId = $"{ObserverName}({data.ActiveErrorOrWarningCode})";
 
                     // Emit an Ok Health Report to clear Fabric Health warning.
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -1235,24 +1259,11 @@ namespace FabricObserver.Observers
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.
-        // If an Observer needs to dispose, then override this non-impl.
-        private bool disposedValue;
-        private bool etwEnabled;
-
         protected virtual void Dispose(bool disposing)
         {
             if (disposedValue)
             {
                 return;
-            }
-
-            if (disposing)
-            {
-                if (FabricClientInstance != null)
-                {
-                    FabricClientInstance.Dispose();
-                    FabricClientInstance = null;
-                }
             }
 
             disposedValue = true;

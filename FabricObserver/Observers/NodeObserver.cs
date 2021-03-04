@@ -680,9 +680,6 @@ namespace FabricObserver.Observers
                 if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                 {
                     cpuUtilizationProvider = CpuUtilizationProvider.Create();
-
-                    // Warm up the counter.
-                    _ = await cpuUtilizationProvider.NextValueAsync();
                 }
 
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.

@@ -19,16 +19,26 @@
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
     <!-- Telemetry -->
     <!--Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />-->
-    <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="NetworkObserverEnableTelemetry" DefaultValue="false" />
-    <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- Verbose Logging -->
+    <!-- ETW -->
     <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
+    <!-- Verbose Logging -->
+    <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" /> -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
@@ -58,8 +68,8 @@
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <!-- CertificateObserver-->
+    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['mythumb1', 'mythumb2', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
@@ -127,6 +137,7 @@
           <Section Name="AppObserverConfiguration">
             <Parameter Name="Enabled" Value="[AppObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[AppObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[AppObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[AppObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[AppObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[AppObserverRunInterval]" />
@@ -139,6 +150,7 @@
           <Section Name="CertificateObserverConfiguration">
             <Parameter Name="Enabled" Value="[CertificateObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[CertificateObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[CertificateObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[CertificateObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[CertificateObserverRunInterval]" />
             <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="[DaysUntilClusterExpiryWarningThreshold]" />
@@ -150,6 +162,7 @@
           <Section Name="DiskObserverConfiguration">
             <Parameter Name="Enabled" Value="[DiskObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[DiskObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[DiskObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[DiskObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[DiskObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[DiskObserverRunInterval]" />
@@ -161,6 +174,7 @@
           <Section Name="FabricSystemObserverConfiguration">
             <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[FabricSystemObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[FabricSystemObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[FabricSystemObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[FabricSystemObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[FabricSystemObserverRunInterval]" />
@@ -185,6 +199,7 @@
           <Section Name="NetworkObserverConfiguration">
             <Parameter Name="Enabled" Value="[NetworkObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[NetworkObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[NetworkObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[NetworkObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[NetworkObserverRunInterval]" />
             <Parameter Name="NetworkObserverDataFileName" Value="[NetworkObserverConfigurationFile]" />
@@ -192,6 +207,7 @@
           <Section Name="NodeObserverConfiguration">
             <Parameter Name="Enabled" Value="[NodeObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[NodeObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[NodeObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[NodeObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[NodeObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[NodeObserverRunInterval]" />
@@ -218,6 +234,7 @@
           <Section Name="OSObserverConfiguration">
             <Parameter Name="Enabled" Value="[OSObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[OSObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[OSObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[OSObserverEnableVerboseLogging]" />
             <Parameter Name="EnableWindowsAutoUpdateCheck" Value="[OSObserverEnableWindowsAutoUpdateCheck]" />
             <Parameter Name="RunInterval" Value="[OSObserverRunInterval]" />
@@ -225,12 +242,14 @@
           <Section Name="SFConfigurationObserverConfiguration">
             <Parameter Name="Enabled" Value="[SFConfigurationObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[SFConfigurationObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[SFConfigurationObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[SFConfigurationObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[SFConfigurationObserverRunInterval]" />
           </Section>
           <!--<Section Name="SampleNewObserverConfiguration">
             <Parameter Name="Enabled" Value="[SampleNewObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[SampleNewObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[SampleNewObserverConfiguration]" />
             <Parameter Name="EnableVerboseLogging" Value="[SampleNewObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[SampleNewObserverRunInterval]" />
           </Section>-->

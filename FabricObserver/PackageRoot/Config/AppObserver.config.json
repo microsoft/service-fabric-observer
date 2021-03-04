@@ -1,13 +1,14 @@
 ﻿[
   {
     "targetApp": "*",
-    "appExcludeList": "fabric:/FabricObserver",
-    "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40,
-    "warningOpenFileHandles": 400
+    "appExcludeList": "fabric:/FabricObserver, fabric:/ClusterObserver",
+    "cpuWarningLimitPercent": 75,
+    "networkWarningActivePorts": 1800,
+    "networkWarningEphemeralPorts": 1400,
+    "warningOpenFileHandles": 1000
   },
   {
     "targetApp": "fabric:/CpuStress",
-    "cpuWarningLimitPercent": 10
+    "cpuWarningLimitPercent": 25
   }
 ]

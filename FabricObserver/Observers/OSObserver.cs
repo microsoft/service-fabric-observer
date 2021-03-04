@@ -214,7 +214,7 @@ namespace FabricObserver.Observers
                     }
 
                     // ETW.
-                    if (IsEtwEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (IsEtwProviderEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         Logger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
@@ -453,6 +453,8 @@ namespace FabricObserver.Observers
 
                 foreach (var (driveName, diskSize, percentConsumed) in drivesInformationTuple)
                 {
+                    Token.ThrowIfCancellationRequested();
+
                     string drvSize;
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -496,7 +498,7 @@ namespace FabricObserver.Observers
                 string hotFixes = string.Empty;
 
                 // ETW.
-                if (IsEtwEnabled)
+                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {

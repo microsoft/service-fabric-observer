@@ -61,7 +61,12 @@ namespace FabricObserver.Observers
             DiskSpaceUsagePercentageData = new List<FabricResourceUsageData<double>>();
             DiskSpaceAvailableMbData = new List<FabricResourceUsageData<double>>();
             DiskSpaceTotalMbData = new List<FabricResourceUsageData<double>>();
-            DiskAverageQueueLengthData = new List<FabricResourceUsageData<float>>();
+            
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                DiskAverageQueueLengthData = new List<FabricResourceUsageData<float>>();
+            }
+
             stopWatch = new Stopwatch();
         }
 
@@ -119,8 +124,8 @@ namespace FabricObserver.Observers
                     DiskSpaceUsagePercentageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id, DataCapacity));
                 }
 
-                // Current disk queue length.
-                if (DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
+                // Current disk queue length. Windows only.
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                 {
                     DiskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, DataCapacity));
                 }
@@ -193,19 +198,22 @@ namespace FabricObserver.Observers
                         timeToLiveWarning);
                 }
 
-                // User-supplied Average disk queue length thresholds from Settings.xml.
-                foreach (var data in DiskAverageQueueLengthData)
+                // User-supplied Average disk queue length thresholds from Settings.xml. Windows only.
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    token.ThrowIfCancellationRequested();
-                    ProcessResourceDataReportHealth(
-                        data,
-                        AverageQueueLengthErrorThreshold,
-                        AverageQueueLengthWarningThreshold,
-                        timeToLiveWarning);
+                    foreach (var data in DiskAverageQueueLengthData)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        ProcessResourceDataReportHealth(
+                            data,
+                            AverageQueueLengthErrorThreshold,
+                            AverageQueueLengthWarningThreshold,
+                            timeToLiveWarning);
+                    }
                 }
 
                 /* For ETW Only - These calls will just produce ETW (note the thresholds). */
-                if (IsEtwEnabled)
+                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                 {
                     // Disk Space Available
                     foreach (var data in DiskSpaceAvailableMbData)
