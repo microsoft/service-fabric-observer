@@ -8,8 +8,11 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="C:\Users\ctorre\source\repos\service-fabric-observer\packages\microsoft.servicefabricapps.fabricobserver.windows.selfcontained\3.1.4\contentFiles\any\any\ApplicationManifest.xml" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.1.4" />
+    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.1.6" />
   </ItemGroup>
 </Project>
