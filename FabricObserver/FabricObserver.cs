@@ -23,8 +23,7 @@ namespace FabricObserver
     /// </summary>
     internal sealed class FabricObserver : StatelessService
     {
-        private ObserverManager observerManager;
-        private FabricClient fabricClient;
+        private readonly FabricClient fabricClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserver"/> class.
@@ -47,7 +46,8 @@ namespace FabricObserver
             ConfigureServices(services);
 
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
+            using ObserverManager observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
+
             await observerManager.StartObserversAsync().ConfigureAwait(false);
         }
 

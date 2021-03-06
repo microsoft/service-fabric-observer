@@ -245,7 +245,7 @@ namespace FabricObserver.Observers
             }
 
             // Informational report.
-            TimeSpan timeToLiveWarning = SetHealthReportTimeToLive();
+            TimeSpan timeToLiveWarning = GetHealthReportTimeToLive();
             HealthReport informationReport = new HealthReport
             {
                 Observer = ObserverName,
@@ -470,6 +470,8 @@ namespace FabricObserver.Observers
 
             for (int i = 0; i < processes.Length; ++i)
             {
+                Token.ThrowIfCancellationRequested();
+
                 Process p = processes[i];
 
                 try
@@ -960,7 +962,7 @@ namespace FabricObserver.Observers
                     dataItem,
                     thresholdError,
                     thresholdWarning,
-                    SetHealthReportTimeToLive(),
+                    GetHealthReportTimeToLive(),
                     HealthReportType.Application);
             }
         }

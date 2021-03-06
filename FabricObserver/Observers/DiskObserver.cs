@@ -185,7 +185,7 @@ namespace FabricObserver.Observers
         {
             try
             {
-                var timeToLiveWarning = SetHealthReportTimeToLive();
+                var timeToLiveWarning = GetHealthReportTimeToLive();
 
                 // User-supplied Disk Space Usage % thresholds from Settings.xml.
                 foreach (var data in DiskSpaceUsagePercentageData)

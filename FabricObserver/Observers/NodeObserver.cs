@@ -292,7 +292,7 @@ namespace FabricObserver.Observers
 
                 // Report on the global health state (system-wide (node) metrics).
                 // User-configurable in NodeObserver.config.json
-                var timeToLiveWarning = SetHealthReportTimeToLive();
+                var timeToLiveWarning = GetHealthReportTimeToLive();
 
                 // CPU
                 if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))

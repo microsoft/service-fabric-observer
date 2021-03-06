@@ -123,7 +123,7 @@ namespace FabricObserver.Observers
                     return Task.CompletedTask;
                 }
 
-                var healthReportTimeToLive = SetHealthReportTimeToLive();
+                var healthReportTimeToLive = GetHealthReportTimeToLive();
 
                 // App-specific reporting.
                 foreach (var app in deployedTargetList)
@@ -694,7 +694,7 @@ namespace FabricObserver.Observers
                     {
                         WriteToLogWithLevel(
                             ObserverName,
-                            $"MonitorAsync failed to find current service process for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
+                            $"MonitorDeployedAppsAsync: failed to find current service process or target process is running at a higher privilege than FO for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
                             LogLevel.Information);
                     }
                     else
@@ -703,7 +703,7 @@ namespace FabricObserver.Observers
                         {
                             WriteToLogWithLevel(
                                 ObserverName,
-                                $"Unhandled exception in MonitorAsync:{Environment.NewLine}{e}",
+                                $"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}",
                                 LogLevel.Warning);
                         }
 

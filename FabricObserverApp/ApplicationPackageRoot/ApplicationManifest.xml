@@ -17,8 +17,8 @@
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <!-- Telemetry -->
     <!--Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />-->
+    <!-- Telemetry -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="true" />
@@ -27,8 +27,8 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- ETW -->
     <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
+    <!-- ETW -->
     <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
@@ -37,8 +37,8 @@
     <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
-    <!-- Verbose Logging -->
     <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" /> -->
+    <!-- Verbose Logging -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
@@ -47,29 +47,29 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
     <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
-    <Parameter Name="AppObserverRunInterval" DefaultValue="" />
+    <Parameter Name="AppObserverRunInterval" DefaultValue="00:01:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:30:00" />
     <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
-    <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
-    <Parameter Name="OSObserverRunInterval" DefaultValue="" />
+    <Parameter Name="NodeObserverRunInterval" DefaultValue="00:05:00" />
+    <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!-- AppObserver -->
     <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
+    <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- CertificateObserver-->
     <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
+    <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['mythumb1', 'mythumb2', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->

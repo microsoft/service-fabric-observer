@@ -438,8 +438,6 @@ namespace FabricObserver.Observers
                 case LogLevel.Error:
                     ObserverLogger.LogError("{0} logged at level {1}: {2}", property, level, description);
                     break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(level), level, null);
             }
 
             Logger.Flush();
@@ -745,12 +743,9 @@ namespace FabricObserver.Observers
                             });
                     }
                 }
-                catch (ArgumentException)
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
                 {
-                    return;
-                }
-                catch (InvalidOperationException)
-                {
+                    // Process no longer exists. Do not report on it.
                     return;
                 }
             }
@@ -1235,27 +1230,30 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Sets TTL for observer health reports based on how long it takes an observer to run, 
-        /// plus more time to guarantee a health report will remain active until the next time the observer runs.
+        /// Computes TTL for an observer's health reports based on how long it takes an observer to run, time differential between runs,
+        /// observer loop sleep time, plus a little more time to guarantee that a health report will remain active until the next time the observer runs.
+        /// Note that if you set a RunInterval on an observer, that will be reflected here and the Warning will last for that amount of time at least.
         /// </summary>
         /// <returns>TimeSpan that contains the TTL value.</returns>
-        public TimeSpan SetHealthReportTimeToLive()
+        public TimeSpan GetHealthReportTimeToLive()
         {
-            int obsSleepTime = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
+            _ = int.TryParse(
+                    GetSettingParameterValue(
+                        ObserverConstants.ObserverManagerConfigurationSectionName,
+                        ObserverConstants.ObserverLoopSleepTimeSeconds),
+                    out int obsSleepTime);
 
             // First run.
             if (LastRunDateTime == DateTime.MinValue)
             {
-                _ = int.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.ObserverLoopSleepTimeSeconds), out obsSleepTime);
-
                 return TimeSpan.FromSeconds(obsSleepTime)
-                       .Add(TimeSpan.FromMinutes(TtlAddMinutes));
+                        .Add(TimeSpan.FromMinutes(TtlAddMinutes))
+                        .Add(RunInterval > TimeSpan.MinValue ? RunInterval : TimeSpan.Zero);
             }
 
             return DateTime.Now.Subtract(LastRunDateTime)
-                .Add(TimeSpan.FromSeconds(RunDuration > TimeSpan.MinValue ? RunDuration.TotalSeconds : 0))
-                .Add(TimeSpan.FromSeconds(obsSleepTime))
-                .Add(RunInterval > TimeSpan.MinValue ? RunInterval : TimeSpan.Zero);
+                    .Add(TimeSpan.FromSeconds(RunDuration > TimeSpan.MinValue ? RunDuration.TotalSeconds : 0))
+                    .Add(TimeSpan.FromSeconds(obsSleepTime));
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.

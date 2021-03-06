@@ -122,7 +122,7 @@ namespace FabricObserver.Observers
 
         public override Task ReportAsync(CancellationToken token)
         {
-            var timeToLiveWarning = SetHealthReportTimeToLive();
+            var timeToLiveWarning = GetHealthReportTimeToLive();
 
             // Report on connection state.
             foreach (var config in userConfig)

@@ -31,7 +31,6 @@ namespace FabricObserver.Observers
         public readonly string nodeName;
         private readonly TelemetryEvents telemetryEvents;
         private List<ObserverBase> observers;
-        private EventWaitHandle globalShutdownEventHandle;
         private volatile bool shutdownSignaled;
         private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(30);
         private CancellationToken token;
@@ -217,9 +216,6 @@ namespace FabricObserver.Observers
                     return;
                 }
 
-                // Create Global Shutdown event handler
-                globalShutdownEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
-
                 // Continue running until a shutdown signal is sent
                 Logger.LogInfo("Starting Observers loop.");
 
@@ -228,10 +224,7 @@ namespace FabricObserver.Observers
                 {
                     if (!isConfigurationUpdateInProgess && (shutdownSignaled || token.IsCancellationRequested))
                     {
-                        _ = globalShutdownEventHandle.Set();
-                        Logger.LogWarning("Shutdown signaled. Stopping.");
                         await ShutDownAsync().ConfigureAwait(false);
-
                         break;
                     }
 
@@ -242,8 +235,7 @@ namespace FabricObserver.Observers
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
-                        Logger.LogInfo($"Sleeping for {ObserverExecutionLoopSleepSeconds} seconds before running again.");
-                        ThreadSleep(globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds));
+                        await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
                     }
                 }
             }
@@ -279,10 +271,11 @@ namespace FabricObserver.Observers
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
-                            Level = 2, // Error
+                            HealthScope = "Application",
+                            HealthState = "Warning",
                             Node = nodeName,
                             Observer = ObserverConstants.ObserverManagerName,
-                            Value = message,
+                            Description = message,
                         });
                 }
 
@@ -471,8 +464,6 @@ namespace FabricObserver.Observers
                 cts = null;
             }
 
-            globalShutdownEventHandle?.Dispose();
-
             // Flush and Dispose all NLog targets. No more logging.
             Logger.Flush();
             DataTableFileLogger.Flush();
@@ -496,40 +487,6 @@ namespace FabricObserver.Observers
             return ret;
         }
 
-        // This impl is to ensure FO exits if shutdown is requested while the over loop is sleeping
-        // So, instead of blocking with a Thread.Sleep, for example, ThreadSleep is used to ensure
-        // we can receive signals and act accordingly during thread sleep state.
-        private void ThreadSleep(WaitHandle ewh, TimeSpan timeout)
-        {
-            // if timeout is <= 0, return. 0 is infinite, and negative is not valid
-            if (timeout.TotalMilliseconds <= 0)
-            {
-                return;
-            }
-
-            var elapsedTime = new TimeSpan(0, 0, 0);
-            var stopwatch = new Stopwatch();
-
-            while (!shutdownSignaled &&
-                   !token.IsCancellationRequested &&
-                   timeout > elapsedTime)
-            {
-                stopwatch.Start();
-
-                // the event can be signaled by CtrlC,
-                // Exit ASAP when the program terminates (i.e., shutdown/abort is signalled.)
-                _ = ewh.WaitOne(timeout.Subtract(elapsedTime));
-                stopwatch.Stop();
-
-                elapsedTime = stopwatch.Elapsed;
-            }
-
-            if (stopwatch.IsRunning)
-            {
-                stopwatch.Stop();
-            }
-        }
-
         /// <summary>
         /// Event handler for application parameter updates (Un-versioned application parameter-only Application Upgrades).
         /// </summary>
@@ -537,7 +494,7 @@ namespace FabricObserver.Observers
         /// <param name="e">Contains the information necessary for setting new config params from updated package.</param>
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            Logger.LogInfo("Application Parameter upgrade started...");
+            Logger.LogWarning("Application Parameter upgrade started...");
 
             try
             {
@@ -561,16 +518,21 @@ namespace FabricObserver.Observers
 
                 foreach (var observer in serviceCollection)
                 {
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     observer.ConfigurationSettings = new ConfigSettings(e.NewPackage.Settings, $"{observer.ObserverName}Configuration");
 
                     if (observer.ConfigurationSettings.IsEnabled)
                     {
                         // The ObserverLogger instance (member of each observer type) checks its EnableVerboseLogging setting before writing Info events (it won't write if this setting is false, thus non-verbose).
                         // So, we set it here in case the parameter update includes a change to this config setting. 
-                        // This is the only update-able setting that requires we do this as part of the config update event handling.
-                        string oldVerboseLoggingSetting = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
-                        string newVerboseLoggingSetting = e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
-                        
+                        // This is the only updatable setting that requires we do this as part of the config update event handling.
+                        string newVerboseLoggingSetting = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
+                        string oldVerboseLoggingSetting = e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
+
                         if (newVerboseLoggingSetting != oldVerboseLoggingSetting)
                         {
                             observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;

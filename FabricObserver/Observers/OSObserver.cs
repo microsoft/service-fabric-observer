@@ -102,7 +102,7 @@ namespace FabricObserver.Observers
                         NodeName = NodeName,
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
-                        HealthReportTimeToLive = SetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -163,7 +163,7 @@ namespace FabricObserver.Observers
                     HealthMessage = osReport,
                     State = HealthState.Ok,
                     NodeName = NodeName,
-                    HealthReportTimeToLive = SetHealthReportTimeToLive(),
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
                 };
 
                 HealthReporter.ReportHealthToServiceFabric(report);
@@ -187,7 +187,7 @@ namespace FabricObserver.Observers
                         HealthMessage = auServiceEnabledMessage,
                         State = HealthState.Warning,
                         NodeName = NodeName,
-                        HealthReportTimeToLive = SetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(report);
