@@ -3,7 +3,7 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>3.1.6</version>
-    <releaseNotes>AppObserver can now monitor All (or Any or *) applications for specified resource thresholds when you supply "All" or "Any" or "*" for targetApp setting in AppObserver's configuration file. See project site for details. Fixed minor bug in ObserverManager's StopObserversAsync function. Modified related unit tests.</releaseNotes>
+    <releaseNotes>AppObserver can now monitor All (or Any or *) applications for specified resource thresholds when you supply "All" or "Any" or "*" for targetApp setting in AppObserver's configuration file. See project site for details. Fixed minor bug in ObserverManager's StopObserversAsync function. Modified related unit tests. Memory optimizations (FO eats less working set). If you are using ETW in your plugin impl, you will need to change your code: if (IsEtwEnabled)... must be changed. See Documentation for details. It is a simple change. Why? Each observer can now be configured to emit ETW. Note the changes in configuration files Settings.xml and ApplicationManifest.xml. A few important bug fixes. Please upgrade.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
