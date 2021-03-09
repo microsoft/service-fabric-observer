@@ -42,8 +42,8 @@
     <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
-    <!-- Optional: EventSource Tracing. This will create an EventSource static object on Logger instances that will emit FabricObserverDataEvent data from ETW provider named FabricObserverETWProvider. -->
-    <Parameter Name="EnableEventSourceProvider" Value="true" />
+    <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object on Logger instances that will emit FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
+    <Parameter Name="EnableETWProvider" Value="false" />
     <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII. 
          Please enable so we can learn how FO is being used. Nothing more.
          True by default as this is how the authors of FO can see how it's doing

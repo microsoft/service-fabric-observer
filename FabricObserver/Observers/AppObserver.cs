@@ -496,7 +496,8 @@ namespace FabricObserver.Observers
                 bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false;
                 var application = deployedTargetList?.Find(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString?.ToLower() ||
-                                    app?.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
+                                    !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
+                                    app.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
                 
                 if (application?.TargetApp == null && application?.TargetAppType == null)
                 {

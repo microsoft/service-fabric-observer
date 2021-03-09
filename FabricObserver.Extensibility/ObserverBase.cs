@@ -31,7 +31,6 @@ namespace FabricObserver.Observers
         private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
         private string SFLogRoot;
         private string dumpsPath;
-        private bool etwProviderEnabled;
         private bool disposedValue;
 
         public string ObserverName
@@ -299,12 +298,9 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        // TODO: This needs to be enabled on Observer instance. Add a new setting, IsObserverEtwEnabled..
         protected bool IsEtwProviderEnabled
         {
-            get => bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableEventSourceProvider), out etwProviderEnabled) && etwProviderEnabled;
-
-            set => etwProviderEnabled = value;
+            get; set;
         }
 
         protected FabricClient FabricClientInstance
@@ -330,7 +326,6 @@ namespace FabricObserver.Observers
             FabricServiceContext = statelessServiceContext;
             NodeName = FabricServiceContext.NodeContext.NodeName;
             NodeType = FabricServiceContext.NodeContext.NodeType;
-            ConfigurationSectionName = ObserverName + "Configuration";
             SetConfiguration();
 
             // Observer Logger setup.
@@ -349,7 +344,10 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            ObserverLogger = new Logger(ObserverName, logFolderBasePath);
+            ObserverLogger = new Logger(ObserverName, logFolderBasePath)
+            {
+                EnableETWLogging = IsEtwProviderEnabled,
+            };
 
             if (string.IsNullOrEmpty(dumpsPath))
             {
@@ -725,7 +723,7 @@ namespace FabricObserver.Observers
 
                     if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                     {
-                        Logger.EtwLogger?.Write(
+                        ObserverLogger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
@@ -786,7 +784,7 @@ namespace FabricObserver.Observers
 
                 if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
+                    ObserverLogger.EtwLogger?.Write(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
@@ -988,7 +986,7 @@ namespace FabricObserver.Observers
                 // ETW.
                 if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
+                    ObserverLogger.EtwLogger?.Write(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
@@ -1032,30 +1030,31 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
+                    // No custom prop from a plugin.
                     if (HealthReportProperties.Count == 0)
                     {
-                        switch(ObserverName)
+                        switch (ObserverName)
                         {
                             case ObserverConstants.AppObserverName:
-                                HealthReportProperties.Add("ApplicationHealth");
+                                HealthReportProperties.Add($"ServiceHealth_{serviceName?.OriginalString}");
                                 break;
                             case ObserverConstants.CertificateObserverName:
                                 HealthReportProperties.Add("SecurityHealth");
                                 break;
                             case ObserverConstants.DiskObserverName:
-                                HealthReportProperties.Add("DiskHealth");
+                                HealthReportProperties.Add($"DiskHealth_{NodeName}");
                                 break;
                             case ObserverConstants.FabricSystemObserverName:
-                                HealthReportProperties.Add("FabricSystemServiceHealth");
+                                HealthReportProperties.Add("$FabricSystemServiceHealth_{NodeName}");
                                 break;
                             case ObserverConstants.NetworkObserverName:
-                                HealthReportProperties.Add("NetworkHealth");
+                                HealthReportProperties.Add($"NetworkHealth_{appName?.OriginalString}");
                                 break;
                             case ObserverConstants.OSObserverName:
-                                HealthReportProperties.Add("MachineInformation");
+                                HealthReportProperties.Add($"MachineInformation_{NodeName}");
                                 break;
                             case ObserverConstants.NodeObserverName:
-                                HealthReportProperties.Add("MachineResourceHealth");
+                                HealthReportProperties.Add($"MachineResourceHealth_{NodeName}");
                                 break;
                             default:
                                 HealthReportProperties.Add($"{data.Property}");
@@ -1085,6 +1084,8 @@ namespace FabricObserver.Observers
 
                 // Clean up sb.
                 _ = healthMessage.Clear();
+                HealthReportProperties.Clear();
+                HealthReportSourceIds.Clear();
             }
             else
             {
@@ -1118,7 +1119,7 @@ namespace FabricObserver.Observers
                     // ETW.
                     if (IsEtwProviderEnabled && IsObserverEtwEnabled)
                     {
-                        Logger.EtwLogger?.Write(
+                        ObserverLogger.EtwLogger?.Write(
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
@@ -1162,30 +1163,31 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
+                        // No custom prop from a plugin.
                         if (HealthReportProperties.Count == 0)
                         {
                             switch (ObserverName)
                             {
                                 case ObserverConstants.AppObserverName:
-                                    HealthReportProperties.Add("ApplicationHealth");
+                                    HealthReportProperties.Add($"ServiceHealth_{serviceName?.OriginalString}");
                                     break;
                                 case ObserverConstants.CertificateObserverName:
                                     HealthReportProperties.Add("SecurityHealth");
                                     break;
                                 case ObserverConstants.DiskObserverName:
-                                    HealthReportProperties.Add("DiskHealth");
+                                    HealthReportProperties.Add($"DiskHealth_{NodeName}");
                                     break;
                                 case ObserverConstants.FabricSystemObserverName:
-                                    HealthReportProperties.Add("FabricSystemServiceHealth");
+                                    HealthReportProperties.Add("$FabricSystemServiceHealth_{NodeName}");
                                     break;
                                 case ObserverConstants.NetworkObserverName:
-                                    HealthReportProperties.Add("NetworkHealth");
+                                    HealthReportProperties.Add($"NetworkHealth_{appName?.OriginalString}");
                                     break;
                                 case ObserverConstants.OSObserverName:
-                                    HealthReportProperties.Add("MachineInformation");
+                                    HealthReportProperties.Add($"MachineInformation_{NodeName}");
                                     break;
                                 case ObserverConstants.NodeObserverName:
-                                    HealthReportProperties.Add("MachineResourceHealth");
+                                    HealthReportProperties.Add($"MachineResourceHealth_{NodeName}");
                                     break;
                                 default:
                                     HealthReportProperties.Add($"{data.Property}");
@@ -1307,6 +1309,12 @@ namespace FabricObserver.Observers
             if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
                 IsTelemetryProviderEnabled = telemEnabled;
+            }
+
+            // ETW
+            if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableETWProvider), out bool etwProviderEnabled))
+            {
+                IsEtwProviderEnabled = etwProviderEnabled;
             }
 
             if (IsTelemetryProviderEnabled)

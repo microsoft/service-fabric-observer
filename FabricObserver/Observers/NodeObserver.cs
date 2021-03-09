@@ -138,13 +138,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        // TODO..
         public int LinuxFileHandlesErrorTotalAllocated
         {
             get; set;
         }
 
-        // TODO..
         public int LinuxFileHandlesWarningTotalAllocated
         {
             get; set;

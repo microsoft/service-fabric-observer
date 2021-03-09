@@ -32,23 +32,23 @@ namespace FabricObserver.Observers.Utilities
 
         private readonly string loggerName;
 
-        public static EventSource EtwLogger
+        public EventSource EtwLogger
         {
             get
             {
-                if (etwLogger == null)
+                if (EnableETWLogging && etwLogger == null)
                 {
                     etwLogger = new EventSource(ObserverConstants.EventSourceProviderName);
                 }
 
                 return etwLogger;
             }
-
-            set
-            {
-                etwLogger = value;
-            }
         }
+
+        public bool EnableETWLogging
+        {
+            get; set;
+        } = false;
 
         public bool EnableVerboseLogging
         {
@@ -73,14 +73,6 @@ namespace FabricObserver.Observers.Utilities
         public string Filename
         {
             get;
-        }
-
-        static Logger()
-        {
-            if (EtwLogger == null)
-            {
-                EtwLogger = new EventSource(ObserverConstants.EventSourceProviderName);
-            }
         }
 
         /// <summary>

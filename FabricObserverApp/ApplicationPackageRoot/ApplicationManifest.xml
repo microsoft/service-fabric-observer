@@ -12,19 +12,19 @@
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
     <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
     <!--Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />-->
     <!-- Telemetry -->
-    <Parameter Name="AppObserverEnableTelemetry" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
-    <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="true" />
+    <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="NetworkObserverEnableTelemetry" DefaultValue="false" />
-    <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="true" />
+    <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
     <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
@@ -54,22 +54,22 @@
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
-    <Parameter Name="AppObserverRunInterval" DefaultValue="00:01:00" />
+    <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="00:15:00" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:30:00" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
     <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
-    <Parameter Name="NodeObserverRunInterval" DefaultValue="00:05:00" />
-    <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
+    <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
+    <Parameter Name="OSObserverRunInterval" DefaultValue="" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <!-- AppObserver -->
+    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <!-- CertificateObserver-->
+    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['mythumb1', 'mythumb2', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
@@ -94,7 +94,7 @@
     <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverAllocatedHandlesErrorLimit" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="4000" />
+    <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="" />
     <!-- Whether to monitor Windows Event Log. -->
     <Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
     <!-- NodeObserver -->

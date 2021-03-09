@@ -75,7 +75,7 @@ namespace FabricObserver.Observers
 
         public static bool EtwEnabled
         {
-            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
+            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider), out etwEnabled) && etwEnabled;
 
             set => etwEnabled = value;
         }
@@ -237,6 +237,10 @@ namespace FabricObserver.Observers
                     {
                         await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
                     }
+                    else if (observers.Count == 1)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(15), token);
+                    }
                 }
             }
             catch (Exception e) when (e is TaskCanceledException || e is OperationCanceledException)
@@ -313,7 +317,7 @@ namespace FabricObserver.Observers
                         NodeName = obs.NodeName,
                     };
 
-                    if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrEmpty(a) && a.Contains("fabric:/")))
+                    if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
                     {
                         foreach (var app in obs.AppNames)
                         {
@@ -349,8 +353,9 @@ namespace FabricObserver.Observers
                         {
                             var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
 
-                            var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                        && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning));
+                            var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(
+                                                        s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                          && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning));
 
                             healthReport.ReportType = HealthReportType.Node;
 
@@ -366,7 +371,7 @@ namespace FabricObserver.Observers
                             }
                             
                         }
-                        catch (Exception)
+                        catch (FabricException)
                         {
                         }
 
@@ -883,12 +888,6 @@ namespace FabricObserver.Observers
                 }
 
                 _ = exceptionBuilder.Clear();
-            }
-
-            if (Logger.EtwLogger != null)
-            {
-                Logger.EtwLogger.Dispose();
-                Logger.EtwLogger = null;
             }
 
             return allExecuted;
