@@ -219,7 +219,7 @@ namespace ClusterObserver
                         var telemetry = new TelemetryData(FabricClientInstance, token)
                         {
                             HealthState = "Ok",
-                            HealthEventDescription = "Cluster has recovered from previous Error/Warning state.",
+                            Description = "Cluster has recovered from previous Error/Warning state.",
                             Metric = "AggregatedClusterHealth",
                             Source = ObserverName,
                         };
@@ -335,7 +335,7 @@ namespace ClusterObserver
                     var telemetryData = new TelemetryData(FabricClientInstance, token)
                     {
                         HealthState = "Warning",
-                        HealthEventDescription = msg,
+                        Description = msg,
                     };
 
                     await ObserverTelemetryClient.ReportHealthAsync(telemetryData, token);
@@ -435,7 +435,7 @@ namespace ClusterObserver
                         {
                             ApplicationName = appName.OriginalString,
                             HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
-                            HealthEventDescription = telemetryDescription,
+                            Description = telemetryDescription,
                             Source = ObserverName,
                         };
 
@@ -486,7 +486,7 @@ namespace ClusterObserver
                                     {
                                         foTelemetryData.ApplicationName,
                                         foTelemetryData.HealthState,
-                                        foTelemetryData.HealthEventDescription,
+                                        foTelemetryData.Description,
                                         foTelemetryData.Metric,
                                         foTelemetryData.ObserverName,
                                         foTelemetryData.NodeName,
@@ -519,7 +519,7 @@ namespace ClusterObserver
                                 {
                                     ApplicationName = appName.OriginalString,
                                     HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
-                                    HealthEventDescription = telemetryDescription,
+                                    Description = telemetryDescription,
                                     Source = ObserverName,
                                 };
 
@@ -596,7 +596,7 @@ namespace ClusterObserver
                     // From FO?
                     if (foStats != null)
                     {
-                        telemetryDescription += foStats.HealthEventDescription;
+                        telemetryDescription += foStats.Description;
                         sourceObserver = foStats.ObserverName;
                         metric = foStats.Metric;
                     }
@@ -626,7 +626,7 @@ namespace ClusterObserver
                         {
                             NodeName = node.NodeName,
                             HealthState = Enum.GetName(typeof(HealthState), node.AggregatedHealthState),
-                            HealthEventDescription = $"{telemetryDescription}{Environment.NewLine}Node Status: {(targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty)}",
+                            Description = $"{telemetryDescription}{Environment.NewLine}Node Status: {(targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty)}",
                             Metric = metric ?? "AggregatedClusterHealth",
                             ObserverName = sourceObserver ?? string.Empty,
                             Source = ObserverName,
@@ -675,7 +675,7 @@ namespace ClusterObserver
 
             var telemetryData = new TelemetryData(FabricClientInstance, token)
             {
-                HealthEventDescription = telemetryDescription,
+                Description = telemetryDescription,
                 HealthState = healthState,
                 Source = ObserverName,
             };
@@ -728,7 +728,7 @@ namespace ClusterObserver
                         var telemetry = new TelemetryData(FabricClientInstance, token)
                         {
                             HealthState = "Ok",
-                            HealthEventDescription = $"{nodeDictItem.Key} is now Up.",
+                            Description = $"{nodeDictItem.Key} is now Up.",
                             Metric = "NodeStatus",
                             NodeName = nodeDictItem.Key,
                             Value = "Up",
@@ -807,7 +807,7 @@ namespace ClusterObserver
                             var telemetry = new TelemetryData(FabricClientInstance, token)
                             {
                                 HealthState = "Warning",
-                                HealthEventDescription = message,
+                                Description = message,
                                 Metric = "NodeStatus",
                                 NodeName = kvp.Key,
                                 Value = $"{kvp.Value.NodeStatus}",

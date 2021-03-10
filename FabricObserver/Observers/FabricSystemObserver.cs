@@ -31,7 +31,6 @@ namespace FabricObserver.Observers
     {
         private readonly List<string> processWatchList;
         private Stopwatch stopwatch;
-        private bool disposed;
 
         // Health Report data container - For use in analysis to determine health state.
         private List<FabricResourceUsageData<int>> allCpuData;
@@ -246,7 +245,7 @@ namespace FabricObserver.Observers
             }
 
             // Informational report.
-            TimeSpan timeToLiveWarning = SetHealthReportTimeToLive();
+            TimeSpan timeToLiveWarning = GetHealthReportTimeToLive();
             HealthReport informationReport = new HealthReport
             {
                 Observer = ObserverName,
@@ -464,19 +463,6 @@ namespace FabricObserver.Observers
             }
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-                disposed = true;
-            }
-        }
-
         private Process[] GetDotnetProcessesByFirstArgument(string argument)
         {
             List<Process> result = new List<Process>();
@@ -484,6 +470,8 @@ namespace FabricObserver.Observers
 
             for (int i = 0; i < processes.Length; ++i)
             {
+                Token.ThrowIfCancellationRequested();
+
                 Process p = processes[i];
 
                 try
@@ -974,7 +962,7 @@ namespace FabricObserver.Observers
                     dataItem,
                     thresholdError,
                     thresholdWarning,
-                    SetHealthReportTimeToLive(),
+                    GetHealthReportTimeToLive(),
                     HealthReportType.Application);
             }
         }

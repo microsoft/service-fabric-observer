@@ -111,7 +111,7 @@ Example Output in SFX:
 ![alt text](/Documentation/Images/DiskWarnDescriptionNode.jpg "Logo Title Text 1")  
 
 
-**Memory Usage** 
+**Memory Usage - Private Working Set as Percentage of Total Physical Memory** 
 
 ***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful percent-used thresold.  
 
@@ -134,6 +134,32 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
     "targetApp": "fabric:/SomeOtherApp",
     "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42",
     "memoryWarningLimitPercent": 40
+  }
+```   
+
+**Memory Usage - Private Working Set - MB in Use** 
+
+***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful Megabytes in use thresold.  
+
+***Solution:*** AppObserver is your friend.  
+
+The first two JSON objects below tell AppObserver to warn when any of the services under MyApp app reach 30% memory use (as a percentage of total memory). 
+ 
+The third one scopes to all services _but_ 3 and asks AppObserver to warn when any of them hit 40% memory use on the machine (virtual or not).
+
+```JSON
+  {
+    "targetApp": "fabric:/MyApp",
+    "memoryWarningLimitMb": 300
+  },
+  {
+    "targetApp": "fabric:/AnotherApp",
+    "memoryWarningLimitMb": 500
+  },
+  {
+    "targetApp": "fabric:/SomeOtherApp",
+    "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42",
+    "memoryWarningLimitMb": 600
   }
 ```   
 
@@ -185,6 +211,70 @@ The following configuration tells AppObserver to monitor and report Warnings for
     "networkWarningActivePorts": 800,
     "networkWarningEphemeralPorts": 400
   }
+``` 
+
+**All App Monitoring** 
+
+***Problem:*** I don't care what the app is, I just want to monitor all app services deployed to any node.  
+
+***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All" (case doesn't matter). 
+The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services belong to any app that is deployed to the node.  
+Note that AppObserver does not (and will not) monitor fabric:/System app services. Also, individual targetApp configuration items will override the global configuration when there the same metrics are supplied. 
+So, in the example below, the setting for cpuWarningLimitPercent for fabric:/MyApp will override the same setting specified in the all inclusive config item. fabric:/MyApp will still be monitored for the other global metrics.
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 75,
+    "memoryWarningLimitMb" : 500,
+    "networkWarningActivePorts": 2000,
+    "networkWarningEphemeralPorts": 1500
+  },
+  {
+    "targetApp": "fabric:/MyApp",
+    "cpuWarningLimitPercent": 50
+  }
+]
+```   
+***Problem:*** I don't care what the app is, I just want to monitor all app services deployed to any node, except for fabric:/MyApp, where I only care about raw memory use (MB) by any of its services. 
+
+***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*", "All", or "Any" (case doesn't matter). 
+The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services belong to any app that is deployed to the node, except for fabric:/MyApp.  
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "appExcludeList": "fabric:/MyApp",
+    "cpuWarningLimitPercent": 75,
+    "memoryWarningLimitPerceent" : 40,
+    "networkWarningActivePorts": 2000,
+    "networkWarningEphemeralPorts": 1500
+  },
+  {
+    "targetApp": "fabric:/MyApp",
+    "memoryWarningLimitMb": 600
+  }
+]
+```   
+***Problem:*** I want to monitor the same resource metrics used by 3 apps and I don't like writing JSON.
+
+***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*", "All", or "Any" (case doesn't matter). 
+The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services that belong to the apps supplied in appIncludeList.  
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "appIncludeList": "fabric:/MyApp, fabric:/MyApp2, fabric:/MyApp3",
+    "cpuWarningLimitPercent": 75,
+    "memoryWarningLimitPerceent" : 40,
+    "networkWarningActivePorts": 2000,
+    "networkWarningEphemeralPorts": 1500
+  }
+]
+
 ``` 
 
 > You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md). 

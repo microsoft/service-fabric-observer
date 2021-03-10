@@ -10,15 +10,9 @@ using System.Fabric;
 
 namespace FabricObserver.Observers.Utilities
 {
-    // Since we only create a single instance of WindowsProcessInfoProvider, it is OK
-    // to not dispose counters.
-#pragma warning disable CA1001 // Types that own disposable fields should be disposable
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
         const string CategoryName = "Process";
-
-        private readonly PerformanceCounter memProcessPrivateWorkingSetCounter = new PerformanceCounter();
-        private readonly PerformanceCounter processFileHandleCounter = new PerformanceCounter();
         private readonly object memPerfCounterLock = new object();
         private readonly object fileHandlesPerfCounterLock = new object();
 
@@ -43,11 +37,19 @@ namespace FabricObserver.Observers.Utilities
 
             lock (memPerfCounterLock)
             {
+                PerformanceCounter memProcessPrivateWorkingSetCounter = null;
+
                 try
                 {
-                    memProcessPrivateWorkingSetCounter.CategoryName = CategoryName;
-                    memProcessPrivateWorkingSetCounter.CounterName = WorkingSetCounterName;
-                    memProcessPrivateWorkingSetCounter.InstanceName = processName;
+                    memProcessPrivateWorkingSetCounter = new PerformanceCounter
+                    {
+                        CategoryName = CategoryName,
+                        CounterName = WorkingSetCounterName,
+                        InstanceName = processName
+                    };
+
+                    // warm up counter.
+                    _ = memProcessPrivateWorkingSetCounter.NextValue();
 
                     return memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
                 }
@@ -64,6 +66,11 @@ namespace FabricObserver.Observers.Utilities
                     Logger.LogError($"{CategoryName} {WorkingSetCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
 
                     throw;
+                }
+                finally
+                {
+                    memProcessPrivateWorkingSetCounter?.Dispose();
+                    memProcessPrivateWorkingSetCounter = null;
                 }
             }
         }
@@ -95,11 +102,19 @@ namespace FabricObserver.Observers.Utilities
 
             lock (fileHandlesPerfCounterLock)
             {
+                PerformanceCounter processFileHandleCounter = null;
+
                 try
                 {
-                    processFileHandleCounter.CategoryName = CategoryName;
-                    processFileHandleCounter.CounterName = FileHandlesCounterName;
-                    processFileHandleCounter.InstanceName = processName;
+                    processFileHandleCounter = new PerformanceCounter
+                    {
+                        CategoryName = CategoryName,
+                        CounterName = FileHandlesCounterName,
+                        InstanceName = processName
+                    };
+
+                    // warm up counter.
+                    _ = processFileHandleCounter.NextValue();
 
                     return processFileHandleCounter.NextValue();
                 }
@@ -116,6 +131,11 @@ namespace FabricObserver.Observers.Utilities
                     Logger.LogError($"{CategoryName} {FileHandlesCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
 
                     throw;
+                }
+                finally
+                {
+                    processFileHandleCounter?.Dispose();
+                    processFileHandleCounter = null;
                 }
             }
         }

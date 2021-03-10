@@ -22,6 +22,7 @@ namespace FabricObserver.Observers.Utilities
     public sealed class Logger : IObserverLogger<ILogger>
     {
         private const int Retries = 5;
+        private EventSource etwLogger = null;
 
         // Text file logger for observers - info/warn/error.
         private ILogger OLogger
@@ -31,10 +32,23 @@ namespace FabricObserver.Observers.Utilities
 
         private readonly string loggerName;
 
-        public static EventSource EtwLogger
+        private EventSource EtwLogger
         {
-            get; private set;
+            get
+            {
+                if (EnableETWLogging && etwLogger == null)
+                {
+                    etwLogger = new EventSource(ObserverConstants.EventSourceProviderName);
+                }
+
+                return etwLogger;
+            }
         }
+
+        public bool EnableETWLogging
+        {
+            get; set;
+        } = false;
 
         public bool EnableVerboseLogging
         {
@@ -59,14 +73,6 @@ namespace FabricObserver.Observers.Utilities
         public string Filename
         {
             get;
-        }
-
-        static Logger()
-        {
-            if (EtwLogger == null)
-            {
-                EtwLogger = new EventSource(ObserverConstants.EventSourceProviderName);
-            }
         }
 
         /// <summary>
@@ -121,6 +127,11 @@ namespace FabricObserver.Observers.Utilities
         public void LogWarning(string format, params object[] parameters)
         {
             OLogger.Warn(format, parameters);
+        }
+
+        public void LogEtw<T>(string eventName, T data)
+        {
+            EtwLogger?.Write(eventName, data);
         }
 
         public bool TryWriteLogFile(string path, string content)

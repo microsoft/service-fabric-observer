@@ -2,8 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.5</version>
-    <releaseNotes>Updated TelemetryData type with new member, SystemServiceProcessName. Updated ObserverBase's ProcessDataReportHealth function with support for new TD member in health report output. Minor bug fixes.</releaseNotes>
+    <version>3.1.6</version>
+    <releaseNotes>A few *important* bug fixes in AppObserver and Observerbase. Changes to Logger (ETW). Naming changes. **Please upgrade as soon as you can**. Changes: AppObserver will now monitor All applications for specified metric thresholds when you supply "All" or "*" for the targetApp setting in AppObserver's configuration file. See project site for details. Fixed minor bug in ObserverManager's StopObserversAsync function. BREAKING CHANGES: You have to now enable/disable ETW on each observer that you want to generate EventSource traces. Also, in your plugins or forked observers, you will need to replace Logger.EtwLogger.Write() calls with ObserverLogger.LogEtw(). ObserverBase's HealthReportProperties and HealthReportSourceIds are gone. Just supply string values for sourceid/property if you generate your own health events.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

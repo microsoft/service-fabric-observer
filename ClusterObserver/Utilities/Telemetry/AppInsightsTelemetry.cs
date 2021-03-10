@@ -144,7 +144,7 @@ namespace ClusterObserver.Utilities.Telemetry
                     { "Application", telemetryData.ApplicationName ?? string.Empty },
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
-                    { "HealthEventDescription", telemetryData.HealthEventDescription ?? string.Empty },
+                    { "Description", telemetryData.Description ?? string.Empty },
                     { "HealthState", telemetryData.HealthState ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },

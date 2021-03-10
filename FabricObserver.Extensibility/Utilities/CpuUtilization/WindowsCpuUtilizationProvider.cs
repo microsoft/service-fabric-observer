@@ -11,11 +11,13 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsCpuUtilizationProvider : CpuUtilizationProvider
     {
-        private PerformanceCounter performanceCounter = new PerformanceCounter(
-            categoryName: "Processor",
-            counterName: "% Processor Time",
-            instanceName: "_Total",
-            readOnly: true);
+        private PerformanceCounter performanceCounter = new PerformanceCounter()
+        {
+            CategoryName = "Processor",
+            CounterName = "% Processor Time",
+            InstanceName = "_Total",
+            ReadOnly = true,
+        };
 
         public override Task<float> NextValueAsync()
         {
@@ -26,7 +28,11 @@ namespace FabricObserver.Observers.Utilities
                 throw new ObjectDisposedException(nameof(WindowsCpuUtilizationProvider));
             }
 
+            // warm up counter.
+            _ = perfCounter.NextValue();
+
             float result = perfCounter.NextValue();
+
             return Task.FromResult(result);
         }
 

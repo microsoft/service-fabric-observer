@@ -360,7 +360,7 @@ namespace FabricObserver.Observers
                                 // ETW.
                                 if (IsEtwEnabled)
                                 {
-                                    Logger.EtwLogger?.Write(
+                                    ObserverLogger.LogEtw(
                                         ObserverConstants.FabricObserverETWEventName,
                                         new
                                         {

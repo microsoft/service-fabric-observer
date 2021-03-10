@@ -211,7 +211,7 @@ namespace FabricObserver.Observers
 
                 HasActiveFabricErrorOrWarning = true;
 
-                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                if (IsTelemetryEnabled)
                 {
                     TelemetryData telemetryData = new TelemetryData(FabricClientInstance, token)
                     {
@@ -219,7 +219,7 @@ namespace FabricObserver.Observers
                         HealthState = "Warning",
                         NodeName = NodeName,
                         Metric = ErrorWarningProperty.CertificateExpiration,
-                        HealthEventDescription = healthMessage,
+                        Description = healthMessage,
                         ObserverName = ObserverName,
                         OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                         Source = ObserverConstants.FabricObserverName,
@@ -233,7 +233,7 @@ namespace FabricObserver.Observers
 
                 if (IsEtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
+                    ObserverLogger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {

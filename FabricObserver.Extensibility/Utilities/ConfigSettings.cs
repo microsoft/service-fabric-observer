@@ -64,6 +64,11 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
+        public bool IsObserverEtwEnabled
+        {
+            get; set;
+        }
+
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
             Settings = settings;
@@ -72,8 +77,7 @@ namespace FabricObserver.Observers.Utilities
             UpdateConfigSettings();
         }
 
-        public void UpdateConfigSettings(
-            ConfigurationSettings settings = null)
+        public void UpdateConfigSettings(ConfigurationSettings settings = null)
         {
             if (settings != null)
             {
@@ -82,72 +86,82 @@ namespace FabricObserver.Observers.Utilities
 
             // Observer enabled?
             if (bool.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.ObserverEnabledParameter),
-                out bool enabled))
+                    GetConfigSettingValue(
+                    ObserverConstants.ObserverEnabledParameter),
+                    out bool enabled))
             {
                 IsEnabled = enabled;
             }
 
             // Observer telemetry enabled?
             if (bool.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.ObserverTelemetryEnabledParameter),
-                out bool telemetryEnabled))
+                    GetConfigSettingValue(
+                    ObserverConstants.ObserverTelemetryEnabledParameter),
+                    out bool telemetryEnabled))
             {
                 IsObserverTelemetryEnabled = telemetryEnabled;
             }
 
+
+            // Observer etw enabled?
+            if (bool.TryParse(
+                    GetConfigSettingValue(
+                    ObserverConstants.ObserverEtwEnabledParameter),
+                    out bool etwEnabled))
+            {
+                IsObserverEtwEnabled = etwEnabled;
+            }
+
             // Verbose logging?
             if (bool.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.EnableVerboseLoggingParameter),
-                out bool enableVerboseLogging))
+                    GetConfigSettingValue(
+                    ObserverConstants.EnableVerboseLoggingParameter),
+                    out bool enableVerboseLogging))
             {
                 EnableVerboseLogging = enableVerboseLogging;
             }
 
             // RunInterval?
             if (TimeSpan.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.ObserverRunIntervalParameter),
-                out TimeSpan runInterval))
+                    GetConfigSettingValue(
+                    ObserverConstants.ObserverRunIntervalParameter),
+                    out TimeSpan runInterval))
             {
                 RunInterval = runInterval;
             }
 
             // Monitor duration.
             if (TimeSpan.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.MonitorDurationParameter),
-                out TimeSpan monitorDuration))
+                    GetConfigSettingValue(
+                    ObserverConstants.MonitorDurationParameter),
+                    out TimeSpan monitorDuration))
             {
                 MonitorDuration = monitorDuration;
             }
 
             // Async cluster operation timeout setting..
             if (int.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.AsyncClusterOperationTimeoutSeconds),
-                out int asyncOpTimeoutSeconds))
+                    GetConfigSettingValue(
+                    ObserverConstants.AsyncClusterOperationTimeoutSeconds),
+                    out int asyncOpTimeoutSeconds))
             {
                 AsyncTimeout = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
             }
 
             // Resource usage data collection item capacity.
             if (int.TryParse(
-               GetConfigSettingValue(
-               ObserverConstants.DataCapacityParameter),
-               out int dataCapacity))
+                   GetConfigSettingValue(
+                   ObserverConstants.DataCapacityParameter),
+                   out int dataCapacity))
             {
                 DataCapacity = dataCapacity;
             }
 
             // Resource usage data collection type.
             if (bool.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.UseCircularBufferParameter),
-                out bool useCircularBuffer))
+                    GetConfigSettingValue(
+                    ObserverConstants.UseCircularBufferParameter),
+                    out bool useCircularBuffer))
             {
                 UseCircularBuffer = useCircularBuffer;
             }

@@ -1,22 +1,19 @@
 ﻿[
   {
-    "targetAppType": "AppTestType",
-    "cpuWarningLimitPercent": 20,
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 60,
+    "networkWarningActivePorts": 1800,
+    "networkWarningEphemeralPorts": 1400,
     "warningOpenFileHandles": 5000
   },
   {
-    "targetApp": "fabric:/MyApp",
+    "targetAppType": "MyAppType",
     "cpuWarningLimitPercent": 30,
-    "memoryWarningLimitPercent": 30,
-    "networkWarningActivePorts": 80,
-    "networkWarningEphemeralPorts": 40,
-    "warningOpenFileHandles": 10
+    "memoryWarningLimitPercent": 20
   },
   {
-    "targetApp": "fabric:/MyApp42",
-    "cpuWarningLimitPercent": 60,
-    "memoryWarningLimitPercent": 50,
-    "networkWarningActivePorts": 600,
-    "networkWarningEphemeralPorts": 300
+    "targetApp": "fabric:/MyHardWorkingApp42",
+    "cpuWarningLimitPercent": 90,
+    "memoryWarningLimitPercent": 60
   }
 ]

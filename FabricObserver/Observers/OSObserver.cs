@@ -4,9 +4,11 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Fabric;
 using System.Fabric.Health;
+using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -32,8 +34,12 @@ namespace FabricObserver.Observers
         private string osReport;
         private string osStatus;
         private bool auStateUnknown;
-        private bool isWindowsUpdateAutoDownloadEnabled;
-        private bool isWUADSettingEnabled;
+        private bool isAUAutomaticDownloadEnabled;
+
+        public bool IsAUCheckSettingEnabled
+        {
+            get; set;
+        }
 
         public string ClusterManifestPath
         {
@@ -62,27 +68,17 @@ namespace FabricObserver.Observers
             // This only makes sense for Windows and only for non-dev clusters.
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var nodes = FabricClientInstance.QueryManager.GetNodeListAsync(
-                                null,
-                                AsyncClusterOperationTimeoutSeconds,
-                                Token).GetAwaiter().GetResult();
+                await InitializeAUCheckAsync();
 
-                if (nodes.Count > 1 && bool.TryParse(
-                                        GetSettingParameterValue(
-                                            ConfigurationSectionName,
-                                            ObserverConstants.EnableWindowsAutoUpdateCheck),
-                                         out isWUADSettingEnabled))
+                if (IsAUCheckSettingEnabled)
                 {
-                    if (isWUADSettingEnabled)
-                    {
-                        await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);
-                    }
+                    await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);  
                 }
             }
 
             await GetComputerInfoAsync(token).ConfigureAwait(false);
-
             await ReportAsync(token).ConfigureAwait(false);
+
             LastRunDateTime = DateTime.Now;
         }
 
@@ -102,7 +98,7 @@ namespace FabricObserver.Observers
                         NodeName = NodeName,
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
-                        HealthReportTimeToLive = SetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -111,7 +107,7 @@ namespace FabricObserver.Observers
                     HasActiveFabricErrorOrWarning = true;
 
                     // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                    if (IsTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportHealthAsync(
                             HealthScope.Application,
@@ -163,13 +159,13 @@ namespace FabricObserver.Observers
                     HealthMessage = osReport,
                     State = HealthState.Ok,
                     NodeName = NodeName,
-                    HealthReportTimeToLive = SetHealthReportTimeToLive(),
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
                 };
 
                 HealthReporter.ReportHealthToServiceFabric(report);
 
                 // Windows Update automatic download enabled?
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && isWindowsUpdateAutoDownloadEnabled)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && isAUAutomaticDownloadEnabled)
                 {
                     string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
@@ -187,22 +183,22 @@ namespace FabricObserver.Observers
                         HealthMessage = auServiceEnabledMessage,
                         State = HealthState.Warning,
                         NodeName = NodeName,
-                        HealthReportTimeToLive = SetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(report);
 
                     if (IsTelemetryProviderEnabled
-                        && IsObserverTelemetryEnabled
+                        && IsTelemetryEnabled
                         && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
                         var telemetryData = new TelemetryData(FabricClientInstance, token)
                         {
-                            HealthEventDescription = auServiceEnabledMessage,
+                            Description = auServiceEnabledMessage,
                             HealthState = "Warning",
                             Metric = "WUAutoDownloadEnabled",
-                            Value = isWindowsUpdateAutoDownloadEnabled,
+                            Value = isAUAutomaticDownloadEnabled,
                             NodeName = NodeName,
                             ObserverName = ObserverName,
                             Source = ObserverConstants.FabricObserverName,
@@ -214,9 +210,9 @@ namespace FabricObserver.Observers
                     }
 
                     // ETW.
-                    if (IsEtwEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (IsEtwProviderEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        Logger.EtwLogger?.Write(
+                        ObserverLogger.LogEtw(
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
@@ -224,18 +220,10 @@ namespace FabricObserver.Observers
                                 HealthEventDescription = auServiceEnabledMessage,
                                 ObserverName,
                                 Metric = "WUAutoDownloadEnabled",
-                                Value = isWindowsUpdateAutoDownloadEnabled,
+                                Value = isAUAutomaticDownloadEnabled,
                                 NodeName,
                             });
                     }
-                }
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    // reset au globals for fresh detection during next observer run.
-                    isWindowsUpdateAutoDownloadEnabled = false;
-                    auStateUnknown = false;
-                    isWUADSettingEnabled = false;
                 }
 
                 return Task.CompletedTask;
@@ -250,6 +238,42 @@ namespace FabricObserver.Observers
 
                 throw;
             }
+        }
+
+        private async Task InitializeAUCheckAsync()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return;
+            }
+
+            var checkAU = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableWindowsAutoUpdateCheck);
+            var infraServices = await GetInfrastructureServiceInstancesAsync().ConfigureAwait(false);
+
+            if (!string.IsNullOrEmpty(checkAU) && bool.TryParse(checkAU, out bool auChk) && infraServices?.Count() > 0)
+            {
+                IsAUCheckSettingEnabled = auChk;
+            }
+        }
+
+        private async Task<IEnumerable<Service>> GetInfrastructureServiceInstancesAsync()
+        {
+            var allSystemServices =
+                await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                () =>
+                    FabricClientInstance.QueryManager.GetServiceListAsync(
+                        new Uri("fabric:/System"),
+                        null,
+                        ConfigurationSettings.AsyncTimeout,
+                        Token),
+                Token).ConfigureAwait(false);
+
+            var infraInstances = allSystemServices.Where(
+                i => i.ServiceTypeName.Equals(
+                    "InfrastructureServiceType",
+                    StringComparison.InvariantCultureIgnoreCase));
+
+            return infraInstances;
         }
 
         private static string GetWindowsHotFixes(CancellationToken token, bool generateUrl = true)
@@ -317,7 +341,7 @@ namespace FabricObserver.Observers
             try
             {
                 var wuLibAutoUpdates = new AutomaticUpdatesClass();
-                isWindowsUpdateAutoDownloadEnabled =
+                isAUAutomaticDownloadEnabled =
                     wuLibAutoUpdates.ServiceEnabled &&
                     wuLibAutoUpdates.Settings.NotificationLevel == AutomaticUpdatesNotificationLevel.aunlScheduledInstallation;
             }
@@ -380,9 +404,8 @@ namespace FabricObserver.Observers
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    // WU AutoUpdate - Download enabled.
-                    // If the config setting EnableWindowsAutoUpdateCheck is set to false, then don't add this info to sb.
-                    if (isWUADSettingEnabled)
+                    // WU AutoUpdate - Automatic Download enabled.
+                    if (IsAUCheckSettingEnabled)
                     {
                         string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
 
@@ -392,7 +415,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            auMessage += isWindowsUpdateAutoDownloadEnabled;
+                            auMessage += isAUAutomaticDownloadEnabled;
                         }
                         _ = sb.AppendLine(auMessage);
                     }
@@ -453,6 +476,8 @@ namespace FabricObserver.Observers
 
                 foreach (var (driveName, diskSize, percentConsumed) in drivesInformationTuple)
                 {
+                    Token.ThrowIfCancellationRequested();
+
                     string drvSize;
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -503,7 +528,7 @@ namespace FabricObserver.Observers
                         hotFixes = GetWindowsHotFixes(token, generateUrl: false).Replace("\r\n", ", ").TrimEnd(',');
                     }
 
-                    Logger.EtwLogger?.Write(
+                    ObserverLogger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
@@ -513,9 +538,9 @@ namespace FabricObserver.Observers
                             OS = osInfo.Name,
                             OSVersion = osInfo.Version,
                             OSInstallDate = osInfo.InstallDate,
-                            AutoUpdateEnabled = auStateUnknown ? "Unknown" : isWindowsUpdateAutoDownloadEnabled.ToString(),
+                            AutoUpdateEnabled = auStateUnknown ? "Unknown" : isAUAutomaticDownloadEnabled.ToString(),
                             osInfo.LastBootUpTime,
-                            WindowsAutoUpdateEnabled = isWindowsUpdateAutoDownloadEnabled,
+                            WindowsAutoUpdateEnabled = isAUAutomaticDownloadEnabled,
                             TotalMemorySizeGB = (int)(osInfo.TotalVisibleMemorySizeKB / 1048576),
                             AvailablePhysicalMemoryGB = Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
                             AvailableVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
@@ -533,7 +558,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Telemetry
-                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                if (IsTelemetryEnabled)
                 {
                     if (string.IsNullOrEmpty(hotFixes) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
@@ -550,7 +575,7 @@ namespace FabricObserver.Observers
                             OSVersion = osInfo.Version,
                             OSInstallDate = osInfo.InstallDate,
                             LastBootUpTime = osInfo.LastBootUpTime,
-                            WindowsUpdateAutoDownloadEnabled = isWindowsUpdateAutoDownloadEnabled,
+                            WindowsUpdateAutoDownloadEnabled = isAUAutomaticDownloadEnabled,
                             TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
                             AvailablePhysicalMemoryGB = Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
                             AvailableVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),

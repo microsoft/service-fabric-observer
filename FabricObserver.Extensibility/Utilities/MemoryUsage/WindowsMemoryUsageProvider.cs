@@ -9,14 +9,28 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsMemoryUsageProvider : MemoryUsageProvider
     {
-        private static readonly PerformanceCounter MemCommittedBytesPerfCounter = new PerformanceCounter(
-                                    categoryName: "Memory",
-                                    counterName: "Committed Bytes",
-                                    readOnly: true);
-
         public override ulong GetCommittedBytes()
         {
-            return (ulong)MemCommittedBytesPerfCounter.NextValue();
+            PerformanceCounter memCommittedBytesPerfCounter = null;
+
+            try
+            {
+                memCommittedBytesPerfCounter = new PerformanceCounter()
+                {
+                    CategoryName = "Memory",
+                    CounterName = "Committed Bytes",
+                    ReadOnly = true,
+                };
+
+                // warm up counter.
+                _ = memCommittedBytesPerfCounter.NextValue();
+
+                return (ulong)memCommittedBytesPerfCounter.NextValue();
+            }
+            finally
+            {
+                memCommittedBytesPerfCounter?.Dispose();
+            }
         }
     }
 }

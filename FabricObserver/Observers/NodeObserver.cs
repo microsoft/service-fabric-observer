@@ -138,13 +138,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        // TODO..
         public int LinuxFileHandlesErrorTotalAllocated
         {
             get; set;
         }
 
-        // TODO..
         public int LinuxFileHandlesWarningTotalAllocated
         {
             get; set;
@@ -292,7 +290,7 @@ namespace FabricObserver.Observers
 
                 // Report on the global health state (system-wide (node) metrics).
                 // User-configurable in NodeObserver.config.json
-                var timeToLiveWarning = SetHealthReportTimeToLive();
+                var timeToLiveWarning = GetHealthReportTimeToLive();
 
                 // CPU
                 if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
@@ -680,9 +678,6 @@ namespace FabricObserver.Observers
                 if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                 {
                     cpuUtilizationProvider = CpuUtilizationProvider.Create();
-
-                    // Warm up the counter.
-                    _ = await cpuUtilizationProvider.NextValueAsync();
                 }
 
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.

@@ -122,7 +122,7 @@ namespace FabricObserver.Observers
 
         public override Task ReportAsync(CancellationToken token)
         {
-            var timeToLiveWarning = SetHealthReportTimeToLive();
+            var timeToLiveWarning = GetHealthReportTimeToLive();
 
             // Report on connection state.
             foreach (var config in userConfig)
@@ -147,13 +147,13 @@ namespace FabricObserver.Observers
                             ApplicationName = conn.TargetApp,
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             HealthState = "Warning",
-                            HealthEventDescription = healthMessage,
+                            Description = healthMessage,
                             ObserverName = ObserverName,
                             Metric = ErrorWarningProperty.InternetConnectionFailure,
                             NodeName = NodeName,
                         };
 
-                        if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                        if (IsTelemetryEnabled)
                         {
                             _ = TelemetryClient?.ReportMetricAsync(
                                     telemetryData,
@@ -184,7 +184,7 @@ namespace FabricObserver.Observers
                         // ETW.
                         if (IsEtwEnabled)
                         {
-                            Logger.EtwLogger?.Write(
+                            ObserverLogger.LogEtw(
                                 ObserverConstants.FabricObserverETWEventName,
                                 new
                                 {
@@ -227,14 +227,14 @@ namespace FabricObserver.Observers
                         HealthReporter.ReportHealthToServiceFabric(report);
 
                         // Telemetry.
-                        if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                        if (IsTelemetryEnabled)
                         {
                             var telemetryData = new TelemetryData(FabricClientInstance, token)
                             {
                                 ApplicationName = conn.TargetApp,
                                 Code = FOErrorWarningCodes.Ok,
                                 HealthState = "Ok",
-                                HealthEventDescription = healthMessage,
+                                Description = healthMessage,
                                 ObserverName = ObserverName,
                                 Metric = "Internet Connection State",
                                 NodeName = NodeName,
@@ -248,7 +248,7 @@ namespace FabricObserver.Observers
                         // ETW.
                         if (IsEtwEnabled)
                         {
-                            Logger.EtwLogger?.Write(
+                            ObserverLogger.LogEtw(
                                 ObserverConstants.FabricObserverETWEventName,
                                 new
                                 {

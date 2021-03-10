@@ -12,7 +12,7 @@ namespace FabricObserver.Observers.Utilities
         public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
         public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
         public const string Fqdn = "FQDN";
-        public const string EnableEventSourceProvider = "EnableEventSourceProvider";
+        public const string EnableETWProvider = "EnableETWProvider";
         public const string EventSourceProviderName = "FabricObserverETWProvider";
         public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
@@ -42,6 +42,7 @@ namespace FabricObserver.Observers.Utilities
         public const string ObserverRunIntervalParameter = "RunInterval";
         public const string ObserverEnabledParameter = "Enabled";
         public const string ObserverTelemetryEnabledParameter = "EnableTelemetry";
+        public const string ObserverEtwEnabledParameter = "EnableEtw";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string DataCapacityParameter = "ResourceUsageDataCapacity";
         public const string UseCircularBufferParameter = "UseCircularBuffer";
