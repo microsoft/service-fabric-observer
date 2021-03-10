@@ -266,7 +266,7 @@ namespace FabricObserverTests
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy_Has_Warnings()
+        public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
             if (!isSFRuntimePresentOnTestMachine)
             {
@@ -306,7 +306,7 @@ namespace FabricObserverTests
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy_Warning()
+        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy()
         {
             if (!isSFRuntimePresentOnTestMachine)
             {

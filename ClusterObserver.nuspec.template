@@ -2,8 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>2.1.4</version>
-    <releaseNotes>FO 3.1.5 support. Bug fixes.</releaseNotes>
+    <version>2.1.5</version>
+    <releaseNotes>FO 3.1.6 support.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

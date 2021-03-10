@@ -17,8 +17,8 @@
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />-->
     <!-- Telemetry - AppInsights or LogAnalytics -->
+    <!--Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />-->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="false" />
@@ -27,9 +27,9 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
+    <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />
@@ -37,8 +37,8 @@
     <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" /> -->
     <!-- Verbose Logging -->
+    <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" /> -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
@@ -47,8 +47,8 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
+    <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
@@ -62,8 +62,8 @@
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <!-- AppObserver -->
+    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
@@ -76,7 +76,7 @@
     <Parameter Name="AppCertThumbprintsToObserve" DefaultValue="[]" />
     <Parameter Name="AppCertCommonNamesToObserve" DefaultValue="[]" />
     <!-- Disk Observer Warning/Error Thresholds -->
-    <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="80" />
+    <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="85" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthWarningThreshold" DefaultValue="15" />
@@ -94,7 +94,7 @@
     <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverAllocatedHandlesErrorLimit" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="5000" />
     <!-- Whether to monitor Windows Event Log. -->
     <Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
     <!-- NodeObserver -->
@@ -107,7 +107,7 @@
     <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="85" />
+    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="95" />
     <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
     <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
@@ -249,7 +249,7 @@
           <!--<Section Name="SampleNewObserverConfiguration">
             <Parameter Name="Enabled" Value="[SampleNewObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[SampleNewObserverEnableTelemetry]" />
-            <Parameter Name="EnableEtw" Value="[SampleNewObserverConfiguration]" />
+            <Parameter Name="EnableEtw" Value="[SampleNewObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[SampleNewObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[SampleNewObserverRunInterval]" />
           </Section>-->
