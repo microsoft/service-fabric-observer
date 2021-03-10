@@ -96,10 +96,10 @@ So, based on the above configuration, when the number of open file handles held 
 
 DiskObserver's Threshold setting values are required to be overriden and are set in FO's ApplicationManifest.xml file.
 
-Add this to DiskObserver's configuration section in FO's ApplicationManifest.xml file and it will warn you when disk space consumption reaches 80%:
+Set the DiskSpacePercentUsageWarningThreshold parameter in DiskObserver's configuration section located in FO's ***ApplicationManifest.xml*** file and it will warn you when disk space consumption reaches 80%:
 
 ```XML
- <!-- Disk Observer Warning/Error Thresholds -->
+    <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="80" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" DefaultValue="" />
@@ -298,12 +298,6 @@ NodeObserver doesn't speak JSON (can you believe it!!??....). So, you simply set
     <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="85" />
-    <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
-    <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
-    <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="8000" />
 ```  
 
 Example Output in SFX: 
@@ -459,7 +453,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.3 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.4 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 Note: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to get the Capabilities in place. For Windows, FO processes will NOT be restarted.
