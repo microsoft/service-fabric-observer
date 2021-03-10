@@ -211,7 +211,7 @@ namespace FabricObserver.Observers
 
                 HasActiveFabricErrorOrWarning = true;
 
-                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                if (IsObserverTelemetryEnabled)
                 {
                     TelemetryData telemetryData = new TelemetryData(FabricClientInstance, token)
                     {
@@ -231,9 +231,9 @@ namespace FabricObserver.Observers
                         Token);
                 }
 
-                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                if (IsObserverEtwEnabled)
                 {
-                    ObserverLogger.EtwLogger?.Write(
+                    ObserverLogger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {

@@ -110,13 +110,6 @@ namespace FabricObserver.Observers
 
             /* Report to Fabric */
 
-            // These values will be preserved across observer runs and are useful for clearing warnings 
-            // by reporting Ok health state health events with the same property and sourceid values 
-            // as the error/warning health events when FO is safely taken down (e.g., app is being uninstalled, 
-            // safe restart of fabric node it's running on, etc.).
-            HealthReportProperties.Add("SomePropertyName");
-            HealthReportSourceIds.Add($"{ObserverName}_SomethingUniqueToThisReport");
-
             var healthReporter = new ObserverHealthReporter(ObserverLogger, FabricClientInstance);
             var healthReport = new Utilities.HealthReport
             {
@@ -124,7 +117,7 @@ namespace FabricObserver.Observers
                 HealthMessage = message.ToString(),
                 NodeName = NodeName,
                 Observer = ObserverName,
-                Property = HealthReportProperties[HealthReportProperties.Count - 1],
+                Property = "SomeUniquePropertyForMyHealthEvent",
                 ReportType = HealthReportType.Node,
                 State = HealthState.Ok,
             };
@@ -142,7 +135,7 @@ namespace FabricObserver.Observers
                 Source = ObserverConstants.FabricObserverName,
             };
 
-            if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+            if (IsObserverTelemetryEnabled)
             {
                 _ = TelemetryClient?.ReportHealthAsync(
                         telemetryData,
@@ -150,9 +143,9 @@ namespace FabricObserver.Observers
             }
 
             // ETW.
-            if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+            if (IsObserverEtwEnabled)
             {
-                ObserverLogger.EtwLogger?.Write(
+                ObserverLogger.LogEtw(
                     ObserverConstants.FabricObserverETWEventName,
                     new
                     {

@@ -271,7 +271,7 @@ namespace FabricObserver.Observers
                 // ETW.
                 if (EtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
+                    Logger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
@@ -414,11 +414,6 @@ namespace FabricObserver.Observers
                     if (cts != null)
                     {
                         cts.Dispose();
-                    }
-
-                    if (Logger.EtwLogger != null)
-                    {
-                        Logger.EtwLogger.Dispose();
                     }
 
                     FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
@@ -745,8 +740,8 @@ namespace FabricObserver.Observers
                 {
                     // Shutdown/cancellation signaled, so stop.
                     bool taskCancelled = linkedSFRuntimeObserverTokenSource != null ? 
-                        linkedSFRuntimeObserverTokenSource.Token.IsCancellationRequested : 
-                        token.IsCancellationRequested;
+                                            linkedSFRuntimeObserverTokenSource.Token.IsCancellationRequested : 
+                                            token.IsCancellationRequested;
 
                     if (taskCancelled || shutdownSignaled)
                     {
@@ -771,12 +766,13 @@ namespace FabricObserver.Observers
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
                     if (!isCompleted)
                     {
-                        string observerHealthWarning = observer.ObserverName + $" has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. " +
+                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. " +
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it.";
 
                         Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
 
+                        // Telemetry.
                         if (TelemetryEnabled)
                         {
                             await (TelemetryClient?.ReportHealthAsync(
@@ -786,6 +782,20 @@ namespace FabricObserver.Observers
                                     observerHealthWarning,
                                     ObserverConstants.ObserverManagerName,
                                     token)).ConfigureAwait(false);
+                        }
+
+                        // ETW.
+                        if (EtwEnabled)
+                        {
+                            Logger.LogEtw(
+                                ObserverConstants.FabricObserverETWEventName,
+                                new
+                                {
+                                    Scope = HealthScope.Application,
+                                    Source = ObserverConstants.ObserverManagerName,
+                                    HealthState = "Error",
+                                    Message = observerHealthWarning,
+                                });
                         }
 
                         continue;

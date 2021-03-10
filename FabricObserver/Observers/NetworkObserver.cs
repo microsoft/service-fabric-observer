@@ -153,7 +153,7 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                         };
 
-                        if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                        if (IsObserverTelemetryEnabled)
                         {
                             _ = TelemetryClient?.ReportMetricAsync(
                                     telemetryData,
@@ -182,9 +182,9 @@ namespace FabricObserver.Observers
                         HasActiveFabricErrorOrWarning = true;
 
                         // ETW.
-                        if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                        if (IsObserverEtwEnabled)
                         {
-                            ObserverLogger.EtwLogger?.Write(
+                            ObserverLogger.LogEtw(
                                 ObserverConstants.FabricObserverETWEventName,
                                 new
                                 {
@@ -227,7 +227,7 @@ namespace FabricObserver.Observers
                         HealthReporter.ReportHealthToServiceFabric(report);
 
                         // Telemetry.
-                        if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                        if (IsObserverTelemetryEnabled)
                         {
                             var telemetryData = new TelemetryData(FabricClientInstance, token)
                             {
@@ -246,9 +246,9 @@ namespace FabricObserver.Observers
                         }
 
                         // ETW.
-                        if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                        if (IsObserverEtwEnabled)
                         {
-                            ObserverLogger.EtwLogger?.Write(
+                            ObserverLogger.LogEtw(
                                 ObserverConstants.FabricObserverETWEventName,
                                 new
                                 {

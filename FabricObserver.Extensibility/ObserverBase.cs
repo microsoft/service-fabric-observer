@@ -101,18 +101,10 @@ namespace FabricObserver.Observers
             {
                 if (ConfigurationSettings != null)
                 {
-                    return ConfigurationSettings.IsObserverTelemetryEnabled;
+                    return IsTelemetryProviderEnabled && ConfigurationSettings.IsObserverTelemetryEnabled;
                 }
 
                 return false;
-            }
-
-            set
-            {
-                if (ConfigurationSettings != null)
-                {
-                    ConfigurationSettings.IsObserverTelemetryEnabled = value;
-                }
             }
         }
 
@@ -122,18 +114,10 @@ namespace FabricObserver.Observers
             {
                 if (ConfigurationSettings != null)
                 {
-                    return ConfigurationSettings.IsObserverEtwEnabled;
+                    return ObserverLogger.EnableETWLogging && ConfigurationSettings.IsObserverEtwEnabled;
                 }
 
                 return false;
-            }
-
-            set
-            {
-                if (ConfigurationSettings != null)
-                {
-                    ConfigurationSettings.IsObserverEtwEnabled = value;
-                }
             }
         }
 
@@ -183,16 +167,6 @@ namespace FabricObserver.Observers
         {
             get; set;
         }
-
-        public List<string> HealthReportSourceIds
-        {
-            get; set;
-        } = new List<string>();
-
-        public List<string> HealthReportProperties
-        {
-            get; set;
-        } = new List<string>();
 
         public List<string> AppNames
         {
@@ -646,7 +620,7 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Minimum";
             bool warningOrError = false;
-            string repPartitionId = null, repOrInstanceId = null, name = null, id = null, procName = null;
+            string name = string.Empty, id = string.Empty, drive = string.Empty;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
             Uri appName = null;
@@ -657,13 +631,10 @@ namespace FabricObserver.Observers
             {
                 if (replicaOrInstance != null)
                 {
-                    repPartitionId = $"Partition: {replicaOrInstance.PartitionId}";
-                    repOrInstanceId = $"Replica: {replicaOrInstance.ReplicaOrInstanceId}";
-
                     // Create a unique id which will be used for health Warnings and OKs (clears).
                     appName = replicaOrInstance.ApplicationName;
                     serviceName = replicaOrInstance.ServiceName;
-                    name = appName.OriginalString.Replace("fabric:/", string.Empty);
+                    name = serviceName.OriginalString.Replace($"{appName.OriginalString}/", string.Empty);
                 }
                 else // System service report from FabricSystemObserver.
                 {
@@ -679,9 +650,9 @@ namespace FabricObserver.Observers
                 telemetryData = new TelemetryData(FabricClientInstance, Token)
                 {
                     ApplicationName = appName?.OriginalString ?? string.Empty,
-                    Code = FOErrorWarningCodes.Ok,
-                    HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                     NodeName = NodeName,
+                    Code = string.Empty,
+                    HealthState = string.Empty,
                     ObserverName = ObserverName,
                     Metric = data.Property,
                     Value = Math.Round(data.AverageDataValue, 0),
@@ -694,50 +665,42 @@ namespace FabricObserver.Observers
                 // If the source issue is from FSO, then set the SystemServiceProcessName on TD instance.
                 if (appName != null && appName.OriginalString == "fabric:/System")
                 {
-                    telemetryData.SystemServiceProcessName = data.Id;
+                    telemetryData.SystemServiceProcessName = name;
+                }
+
+                // Container
+                if (!string.IsNullOrEmpty(replicaOrInstance?.ContainerId))
+                {
+                    telemetryData.ContainerId = replicaOrInstance.ContainerId;
                 }
 
                 try
                 {
-                    if (replicaOrInstance != null && replicaOrInstance.HostProcessId > 0)
-                    {
-                        using (Process process = Process.GetProcessById((int)replicaOrInstance.HostProcessId))
-                        {
-                            procName = process.ProcessName;
-                        }
-                    }
-                    else
-                    {
-                        // The name of the target service process is always the id for data containers coming from FSO.
-                        procName = data.Id;
-                    }
-
-                    telemetryData.ServiceName = procName;
-
-                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                    // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here.
+                    if (IsObserverTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportMetricAsync(
                             telemetryData,
                             Token).ConfigureAwait(false);
                     }
 
-                    if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                    // ETW - This is informational, per reading telemetry, healthstate is irrelevant here.
+                    if (IsObserverEtwEnabled)
                     {
-                        ObserverLogger.EtwLogger?.Write(
+                        ObserverLogger.LogEtw(
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
                                 ApplicationName = appName?.OriginalString ?? string.Empty,
-                                Code = FOErrorWarningCodes.Ok,
-                                HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
                                 NodeName,
                                 ObserverName,
                                 Metric = data.Property,
                                 Value = Math.Round(data.AverageDataValue, 0),
                                 PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                 ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
-                                ServiceName = procName,
+                                ServiceName = serviceName?.OriginalString ?? string.Empty,
                                 Source = ObserverConstants.FabricObserverName,
+                                SystemServiceProcessName = appName?.OriginalString == "fabric:/system" ? name : string.Empty,
                             });
                     }
                 }
@@ -749,15 +712,16 @@ namespace FabricObserver.Observers
             }
             else
             {
-                string drive = string.Empty;
+                drive = string.Empty;
+                id = data.Id;
 
                 if (ObserverName == ObserverConstants.DiskObserverName)
                 {
-                    drive = $"{data.Id}: ";
+                    drive = $"{id}: ";
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        drive = $"{data.Id.Remove(1, 2)}: ";
+                        drive = $"{id.Remove(1, 2)}: ";
                     }
                 }
 
@@ -766,8 +730,8 @@ namespace FabricObserver.Observers
                 // of user telemetry settings.
                 telemetryData = new TelemetryData(FabricClientInstance, Token)
                 {
-                    Code = FOErrorWarningCodes.Ok,
-                    HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
+                    Code = string.Empty,
+                    HealthState = string.Empty,
                     NodeName = NodeName,
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
@@ -775,21 +739,21 @@ namespace FabricObserver.Observers
                     Value = Math.Round(data.AverageDataValue, 0),
                 };
 
-                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                if (IsObserverTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportMetricAsync(
                         telemetryData,
                         Token);
                 }
 
-                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                if (IsObserverEtwEnabled)
                 {
-                    ObserverLogger.EtwLogger?.Write(
+                    ObserverLogger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
-                            Code = FOErrorWarningCodes.Ok,
-                            HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
+                            Code = string.Empty,
+                            HealthState = string.Empty,
                             NodeName,
                             ObserverName,
                             Metric = $"{drive}{data.Property}",
@@ -815,27 +779,32 @@ namespace FabricObserver.Observers
                     {
                         int procId = (int)replicaOrInstance.HostProcessId;
 
-                        if (!serviceDumpCountDictionary.ContainsKey(procName))
+                        using (var proc = Process.GetProcessById(procId))
                         {
-                            serviceDumpCountDictionary.Add(procName, 0);
-                        }
+                            string procName = proc?.ProcessName;
 
-                        if (serviceDumpCountDictionary[procName] < maxDumps)
-                        {
-                            // DumpServiceProcess defaults to a Full dump with
-                            // process memory, handles and thread data.
-                            bool success = DumpServiceProcessWindows(procId);
-
-                            if (success)
+                            if (!serviceDumpCountDictionary.ContainsKey(procName))
                             {
-                                serviceDumpCountDictionary[procName]++;
+                                serviceDumpCountDictionary.Add(procName, 0);
+                            }
+
+                            if (serviceDumpCountDictionary[procName] < maxDumps)
+                            {
+                                // DumpServiceProcess defaults to a Full dump with
+                                // process memory, handles and thread data.
+                                bool success = DumpServiceProcessWindows(procId);
+
+                                if (success)
+                                {
+                                    serviceDumpCountDictionary[procName]++;
+                                }
                             }
                         }
                     }
 
                     // Ignore these, it just means no dmp will be created.This is not
                     // critical to FO. Log as info, not warning.
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
                         ObserverLogger.LogInfo($"Unable to generate dmp file:{Environment.NewLine}{e}");
                     }
@@ -942,18 +911,6 @@ namespace FabricObserver.Observers
 
                 StringBuilder healthMessage = new StringBuilder();
 
-                string drive = string.Empty;
-
-                if (ObserverName == ObserverConstants.DiskObserverName)
-                {
-                    drive = $"{data.Id}: ";
-
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        drive = $"{data.Id.Remove(1, 2)}: ";
-                    }
-                }
-
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
                 _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 0)}{data.Units}");
 
@@ -970,13 +927,9 @@ namespace FabricObserver.Observers
 
                 telemetryData.HealthState = Enum.GetName(typeof(HealthState), healthState);
                 telemetryData.HealthEventDescription = healthMessage.ToString();
-                telemetryData.Metric = $"{drive}{data.Property}";
-                telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
-                telemetryData.Source = ObserverConstants.FabricObserverName;
-                telemetryData.Value = Math.Round(data.AverageDataValue, 0);
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                if (IsObserverTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
                             telemetryData,
@@ -984,9 +937,9 @@ namespace FabricObserver.Observers
                 }
 
                 // ETW.
-                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                if (IsObserverEtwEnabled)
                 {
-                    ObserverLogger.EtwLogger?.Write(
+                    ObserverLogger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
@@ -1000,6 +953,7 @@ namespace FabricObserver.Observers
                             ServiceName = serviceName?.OriginalString ?? string.Empty,
                             Source = ObserverConstants.FabricObserverName,
                             Value = Math.Round(data.AverageDataValue, 0),
+                            SystemServiceProcessName = appName?.OriginalString == "fabric:/system" ? name : string.Empty,
                         });
                 }
 
@@ -1023,53 +977,7 @@ namespace FabricObserver.Observers
                     AppNames.Add(appName?.OriginalString);
                 }
 
-                // From FSO.
-                if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
-                {
-                    HealthReportProperties.Add(id);
-                }
-                else
-                {
-                    // No custom prop from a plugin.
-                    if (HealthReportProperties.Count == 0)
-                    {
-                        switch (ObserverName)
-                        {
-                            case ObserverConstants.AppObserverName:
-                                HealthReportProperties.Add($"ServiceHealth_{serviceName?.OriginalString}");
-                                break;
-                            case ObserverConstants.CertificateObserverName:
-                                HealthReportProperties.Add("SecurityHealth");
-                                break;
-                            case ObserverConstants.DiskObserverName:
-                                HealthReportProperties.Add($"DiskHealth_{NodeName}");
-                                break;
-                            case ObserverConstants.FabricSystemObserverName:
-                                HealthReportProperties.Add("$FabricSystemServiceHealth_{NodeName}");
-                                break;
-                            case ObserverConstants.NetworkObserverName:
-                                HealthReportProperties.Add($"NetworkHealth_{appName?.OriginalString}");
-                                break;
-                            case ObserverConstants.OSObserverName:
-                                HealthReportProperties.Add($"MachineInformation_{NodeName}");
-                                break;
-                            case ObserverConstants.NodeObserverName:
-                                HealthReportProperties.Add($"MachineResourceHealth_{NodeName}");
-                                break;
-                            default:
-                                HealthReportProperties.Add($"{data.Property}");
-                                break;
-                        }
-                    }
-                }
-
-                healthReport.Property = HealthReportProperties.Last();
-
-                if (!HealthReportSourceIds.Any(s => s == $"{ObserverName}({errorWarningCode})"))
-                {
-                    HealthReportSourceIds.Add($"{ObserverName}({errorWarningCode})");
-                }
-
+                healthReport.Property = id;
                 healthReport.SourceId = $"{ObserverName}({errorWarningCode})";
 
                 // Generate a Service Fabric Health Report.
@@ -1084,8 +992,6 @@ namespace FabricObserver.Observers
 
                 // Clean up sb.
                 _ = healthMessage.Clear();
-                HealthReportProperties.Clear();
-                HealthReportSourceIds.Clear();
             }
             else
             {
@@ -1109,7 +1015,7 @@ namespace FabricObserver.Observers
                     telemetryData.Value = Math.Round(data.AverageDataValue, 0);
 
                     // Telemetry
-                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                    if (IsObserverTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportMetricAsync(
                                 telemetryData,
@@ -1117,9 +1023,9 @@ namespace FabricObserver.Observers
                     }
 
                     // ETW.
-                    if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                    if (IsObserverEtwEnabled)
                     {
-                        ObserverLogger.EtwLogger?.Write(
+                        ObserverLogger.LogEtw(
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
@@ -1133,6 +1039,7 @@ namespace FabricObserver.Observers
                                 ServiceName = name ?? string.Empty,
                                 Source = ObserverConstants.FabricObserverName,
                                 Value = Math.Round(data.AverageDataValue, 0),
+                                SystemServiceProcessName = appName?.OriginalString == "fabric:/system" ? name : string.Empty,
                             });
                     }
 
@@ -1151,58 +1058,7 @@ namespace FabricObserver.Observers
                         ResourceUsageDataProperty = data.Property,
                     };
 
-                    if (!AppNames.Any(a => a == appName?.OriginalString))
-                    {
-                        AppNames.Add(appName?.OriginalString);
-                    }
-
-                    // From FSO.
-                    if (replicaOrInstance == null && healthReportType == HealthReportType.Application)
-                    {
-                        HealthReportProperties.Add(id);
-                    }
-                    else
-                    {
-                        // No custom prop from a plugin.
-                        if (HealthReportProperties.Count == 0)
-                        {
-                            switch (ObserverName)
-                            {
-                                case ObserverConstants.AppObserverName:
-                                    HealthReportProperties.Add($"ServiceHealth_{serviceName?.OriginalString}");
-                                    break;
-                                case ObserverConstants.CertificateObserverName:
-                                    HealthReportProperties.Add("SecurityHealth");
-                                    break;
-                                case ObserverConstants.DiskObserverName:
-                                    HealthReportProperties.Add($"DiskHealth_{NodeName}");
-                                    break;
-                                case ObserverConstants.FabricSystemObserverName:
-                                    HealthReportProperties.Add("$FabricSystemServiceHealth_{NodeName}");
-                                    break;
-                                case ObserverConstants.NetworkObserverName:
-                                    HealthReportProperties.Add($"NetworkHealth_{appName?.OriginalString}");
-                                    break;
-                                case ObserverConstants.OSObserverName:
-                                    HealthReportProperties.Add($"MachineInformation_{NodeName}");
-                                    break;
-                                case ObserverConstants.NodeObserverName:
-                                    HealthReportProperties.Add($"MachineResourceHealth_{NodeName}");
-                                    break;
-                                default:
-                                    HealthReportProperties.Add($"{data.Property}");
-                                    break;
-                            }
-                        }
-                    }
-
-                    healthReport.Property = HealthReportProperties.Last();
-
-                    if (!HealthReportSourceIds.Any(s => s == $"{ObserverName}({data.ActiveErrorOrWarningCode})"))
-                    {
-                        HealthReportSourceIds.Add($"{ObserverName}({data.ActiveErrorOrWarningCode})");
-                    }
-
+                    healthReport.Property = id;
                     healthReport.SourceId = $"{ObserverName}({data.ActiveErrorOrWarningCode})";
 
                     // Emit an Ok Health Report to clear Fabric Health warning.
@@ -1211,8 +1067,6 @@ namespace FabricObserver.Observers
                     // Reset health states.
                     data.ActiveErrorOrWarning = false;
                     data.ActiveErrorOrWarningCode = FOErrorWarningCodes.Ok;
-                    HealthReportProperties.Clear();
-                    HealthReportSourceIds.Clear();
                     HasActiveFabricErrorOrWarning = false;
                 }
             }

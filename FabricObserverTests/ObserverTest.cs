@@ -1187,7 +1187,6 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
-                IsObserverTelemetryEnabled = false,
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);

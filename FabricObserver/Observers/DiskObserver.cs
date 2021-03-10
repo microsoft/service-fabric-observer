@@ -213,7 +213,7 @@ namespace FabricObserver.Observers
                 }
 
                 /* For ETW Only - These calls will just produce ETW (note the thresholds). */
-                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                if (IsObserverEtwEnabled)
                 {
                     // Disk Space Available
                     foreach (var data in DiskSpaceAvailableMbData)

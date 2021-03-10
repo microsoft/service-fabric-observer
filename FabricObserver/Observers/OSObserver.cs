@@ -107,7 +107,7 @@ namespace FabricObserver.Observers
                     HasActiveFabricErrorOrWarning = true;
 
                     // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                    if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                    if (IsObserverTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportHealthAsync(
                             HealthScope.Application,
@@ -212,7 +212,7 @@ namespace FabricObserver.Observers
                     // ETW.
                     if (IsEtwProviderEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        ObserverLogger.EtwLogger?.Write(
+                        ObserverLogger.LogEtw(
                             ObserverConstants.FabricObserverETWEventName,
                             new
                             {
@@ -521,14 +521,14 @@ namespace FabricObserver.Observers
                 string hotFixes = string.Empty;
 
                 // ETW.
-                if (IsEtwProviderEnabled && IsObserverEtwEnabled)
+                if (IsObserverEtwEnabled)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         hotFixes = GetWindowsHotFixes(token, generateUrl: false).Replace("\r\n", ", ").TrimEnd(',');
                     }
 
-                    ObserverLogger.EtwLogger?.Write(
+                    ObserverLogger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
@@ -558,7 +558,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Telemetry
-                if (IsTelemetryProviderEnabled && IsObserverTelemetryEnabled)
+                if (IsObserverTelemetryEnabled)
                 {
                     if (string.IsNullOrEmpty(hotFixes) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
