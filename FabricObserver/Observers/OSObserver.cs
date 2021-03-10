@@ -107,7 +107,7 @@ namespace FabricObserver.Observers
                     HasActiveFabricErrorOrWarning = true;
 
                     // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                    if (IsObserverTelemetryEnabled)
+                    if (IsTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportHealthAsync(
                             HealthScope.Application,
@@ -189,13 +189,13 @@ namespace FabricObserver.Observers
                     HealthReporter.ReportHealthToServiceFabric(report);
 
                     if (IsTelemetryProviderEnabled
-                        && IsObserverTelemetryEnabled
+                        && IsTelemetryEnabled
                         && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
                         var telemetryData = new TelemetryData(FabricClientInstance, token)
                         {
-                            HealthEventDescription = auServiceEnabledMessage,
+                            Description = auServiceEnabledMessage,
                             HealthState = "Warning",
                             Metric = "WUAutoDownloadEnabled",
                             Value = isAUAutomaticDownloadEnabled,
@@ -521,7 +521,7 @@ namespace FabricObserver.Observers
                 string hotFixes = string.Empty;
 
                 // ETW.
-                if (IsObserverEtwEnabled)
+                if (IsEtwEnabled)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
@@ -558,7 +558,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Telemetry
-                if (IsObserverTelemetryEnabled)
+                if (IsTelemetryEnabled)
                 {
                     if (string.IsNullOrEmpty(hotFixes) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {

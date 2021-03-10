@@ -346,9 +346,9 @@ namespace FabricObserver.Observers
             }
 
             // Support for specifying single configuration item for any or all or * applications.
-            if (userTargetList != null && userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp?.ToLower() == "any" || app.TargetApp == "*"))
+            if (userTargetList != null && userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*"))
             {
-                ApplicationInfo application = userTargetList.Find(app => app.TargetApp?.ToLower() == "all" || app.TargetApp?.ToLower() == "any" || app.TargetApp == "*");
+                ApplicationInfo application = userTargetList.Find(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
 
                 var appList = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
                                         NodeName,
@@ -365,7 +365,7 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    // App filtering: AppExludeList, AppIncludeList. This is only useful when you are observing All/Any/* applications for a range of thresholds.
+                    // App filtering: AppExludeList, AppIncludeList. This is only useful when you are observing All/* applications for a range of thresholds.
                     if (!string.IsNullOrWhiteSpace(application.AppExcludeList) && application.AppExcludeList.Contains(app.ApplicationName.OriginalString))
                     {
                         continue;
@@ -375,7 +375,7 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance with data supplied in the All/Any/* apps config entry.
+                    // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance with data supplied in the All//* apps config entry.
                     // Note that if you supply a conflicting setting (where you specify a threshold for a specific app target config item and also in a global config item), then the target-specific setting will be used.
                     // E.g., if you supply a memoryWarningLimitMb threshold for an app named fabric:/MyApp and also supply a memoryWarningLimitMb threshold for all apps ("targetApp" : "All"),
                     // then the threshold specified for fabric:/MyApp will remain in place for that app target. So, target specificity overrides any global setting.

@@ -358,7 +358,7 @@ namespace FabricObserver.Observers
                                 _ = sb.AppendLine();
 
                                 // ETW.
-                                if (IsObserverEtwEnabled)
+                                if (IsEtwEnabled)
                                 {
                                     ObserverLogger.LogEtw(
                                         ObserverConstants.FabricObserverETWEventName,

@@ -33,7 +33,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public string HealthEventDescription
+        public string Description
         {
             get; set;
         }

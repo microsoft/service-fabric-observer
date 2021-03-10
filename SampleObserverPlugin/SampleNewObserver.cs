@@ -128,14 +128,14 @@ namespace FabricObserver.Observers
             var telemetryData = new TelemetryData(FabricClientInstance, Token)
             {
                 Code = FOErrorWarningCodes.Ok,
-                HealthEventDescription = message.ToString(),
+                Description = message.ToString(),
                 HealthState = "Ok",
                 NodeName = NodeName,
                 ObserverName = ObserverName,
                 Source = ObserverConstants.FabricObserverName,
             };
 
-            if (IsObserverTelemetryEnabled)
+            if (IsTelemetryEnabled)
             {
                 _ = TelemetryClient?.ReportHealthAsync(
                         telemetryData,
@@ -143,7 +143,7 @@ namespace FabricObserver.Observers
             }
 
             // ETW.
-            if (IsObserverEtwEnabled)
+            if (IsEtwEnabled)
             {
                 ObserverLogger.LogEtw(
                     ObserverConstants.FabricObserverETWEventName,

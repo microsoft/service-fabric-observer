@@ -147,13 +147,13 @@ namespace FabricObserver.Observers
                             ApplicationName = conn.TargetApp,
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             HealthState = "Warning",
-                            HealthEventDescription = healthMessage,
+                            Description = healthMessage,
                             ObserverName = ObserverName,
                             Metric = ErrorWarningProperty.InternetConnectionFailure,
                             NodeName = NodeName,
                         };
 
-                        if (IsObserverTelemetryEnabled)
+                        if (IsTelemetryEnabled)
                         {
                             _ = TelemetryClient?.ReportMetricAsync(
                                     telemetryData,
@@ -182,7 +182,7 @@ namespace FabricObserver.Observers
                         HasActiveFabricErrorOrWarning = true;
 
                         // ETW.
-                        if (IsObserverEtwEnabled)
+                        if (IsEtwEnabled)
                         {
                             ObserverLogger.LogEtw(
                                 ObserverConstants.FabricObserverETWEventName,
@@ -227,14 +227,14 @@ namespace FabricObserver.Observers
                         HealthReporter.ReportHealthToServiceFabric(report);
 
                         // Telemetry.
-                        if (IsObserverTelemetryEnabled)
+                        if (IsTelemetryEnabled)
                         {
                             var telemetryData = new TelemetryData(FabricClientInstance, token)
                             {
                                 ApplicationName = conn.TargetApp,
                                 Code = FOErrorWarningCodes.Ok,
                                 HealthState = "Ok",
-                                HealthEventDescription = healthMessage,
+                                Description = healthMessage,
                                 ObserverName = ObserverName,
                                 Metric = "Internet Connection State",
                                 NodeName = NodeName,
@@ -246,7 +246,7 @@ namespace FabricObserver.Observers
                         }
 
                         // ETW.
-                        if (IsObserverEtwEnabled)
+                        if (IsEtwEnabled)
                         {
                             ObserverLogger.LogEtw(
                                 ObserverConstants.FabricObserverETWEventName,

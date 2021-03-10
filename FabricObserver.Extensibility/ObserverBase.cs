@@ -95,7 +95,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        public bool IsObserverTelemetryEnabled
+        public bool IsTelemetryEnabled
         {
             get
             {
@@ -108,7 +108,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        public bool IsObserverEtwEnabled
+        public bool IsEtwEnabled
         {
             get
             {
@@ -677,15 +677,18 @@ namespace FabricObserver.Observers
                 try
                 {
                     // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here.
-                    if (IsObserverTelemetryEnabled)
+                    // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
+                    if (IsTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportMetricAsync(
                             telemetryData,
                             Token).ConfigureAwait(false);
                     }
 
-                    // ETW - This is informational, per reading telemetry, healthstate is irrelevant here.
-                    if (IsObserverEtwEnabled)
+                    // ETW - This is informational, per reading EventSource tracing, healthstate is irrelevant here.
+                    // Enable this for your observer if you want to log etw (which can then be read by some agent that will send it to some endpoint)
+                    // for each resource usage observation it makes per specified metric.
+                    if (IsEtwEnabled)
                     {
                         ObserverLogger.LogEtw(
                             ObserverConstants.FabricObserverETWEventName,
@@ -739,14 +742,14 @@ namespace FabricObserver.Observers
                     Value = Math.Round(data.AverageDataValue, 0),
                 };
 
-                if (IsObserverTelemetryEnabled)
+                if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportMetricAsync(
                         telemetryData,
                         Token);
                 }
 
-                if (IsObserverEtwEnabled)
+                if (IsEtwEnabled)
                 {
                     ObserverLogger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
@@ -926,10 +929,10 @@ namespace FabricObserver.Observers
                 }
 
                 telemetryData.HealthState = Enum.GetName(typeof(HealthState), healthState);
-                telemetryData.HealthEventDescription = healthMessage.ToString();
+                telemetryData.Description = healthMessage.ToString();
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                if (IsObserverTelemetryEnabled)
+                if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
                             telemetryData,
@@ -937,7 +940,7 @@ namespace FabricObserver.Observers
                 }
 
                 // ETW.
-                if (IsObserverEtwEnabled)
+                if (IsEtwEnabled)
                 {
                     ObserverLogger.LogEtw(
                         ObserverConstants.FabricObserverETWEventName,
@@ -947,7 +950,7 @@ namespace FabricObserver.Observers
                             Code = errorWarningCode,
                             ContainerId = replicaOrInstance != null ? replicaOrInstance.ContainerId ?? string.Empty : string.Empty,
                             HealthState = Enum.GetName(typeof(HealthState), healthState),
-                            HealthEventDescription = healthMessage.ToString(),
+                            Description = healthMessage.ToString(),
                             Metric = $"{drive}{data.Property}",
                             Node = NodeName,
                             ServiceName = serviceName?.OriginalString ?? string.Empty,
@@ -1009,13 +1012,13 @@ namespace FabricObserver.Observers
                     }
 
                     telemetryData.HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok);
-                    telemetryData.HealthEventDescription = $"{data.Property} is now within normal/expected range.";
+                    telemetryData.Description = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
                     telemetryData.Source = ObserverConstants.FabricObserverName;
                     telemetryData.Value = Math.Round(data.AverageDataValue, 0);
 
                     // Telemetry
-                    if (IsObserverTelemetryEnabled)
+                    if (IsTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportMetricAsync(
                                 telemetryData,
@@ -1023,7 +1026,7 @@ namespace FabricObserver.Observers
                     }
 
                     // ETW.
-                    if (IsObserverEtwEnabled)
+                    if (IsEtwEnabled)
                     {
                         ObserverLogger.LogEtw(
                             ObserverConstants.FabricObserverETWEventName,
@@ -1033,7 +1036,7 @@ namespace FabricObserver.Observers
                                 Code = data.ActiveErrorOrWarningCode,
                                 ContainerId = replicaOrInstance != null ? replicaOrInstance.ContainerId ?? string.Empty : string.Empty,
                                 HealthState = Enum.GetName(typeof(HealthState), HealthState.Ok),
-                                HealthEventDescription = $"{data.Property} is now within normal/expected range.",
+                                Description = $"{data.Property} is now within normal/expected range.",
                                 Metric = data.Property,
                                 Node = NodeName,
                                 ServiceName = name ?? string.Empty,

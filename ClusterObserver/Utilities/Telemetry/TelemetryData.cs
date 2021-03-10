@@ -32,7 +32,7 @@ namespace ClusterObserver.Utilities.Telemetry
             get; set;
         }
 
-        public string HealthEventDescription
+        public string Description
         {
             get; set;
         }

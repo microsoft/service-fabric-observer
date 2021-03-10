@@ -30,7 +30,7 @@
     <Parameter Name="FQDN" Value="" />
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="false" />
+    <Parameter Name="EnableTelemetryProvider" Value="true" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. 
@@ -43,7 +43,7 @@
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
     <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object on Logger instances that will emit FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
-    <Parameter Name="EnableETWProvider" Value="false" />
+    <Parameter Name="EnableETWProvider" Value="true" />
     <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII. 
          Please enable so we can learn how FO is being used. Nothing more.
          True by default as this is how the authors of FO can see how it's doing
