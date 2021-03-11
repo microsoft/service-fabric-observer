@@ -1,3 +1,16 @@
+function Install-Nuget {
+    # Path to Latest nuget.exe on nuget.org
+    $source = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
+
+    # Save file to top level directory in repo
+    $destination = "$scriptPath\nuget.exe"
+
+    if (-Not [System.IO.File]::Exists($destination)) {
+        #Download the file
+        Invoke-WebRequest -Uri $source -OutFile $destination
+    }
+}
+
 function Build-Nuget {
     param (
         [string]
@@ -19,7 +32,10 @@ function Build-Nuget {
 [string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 try {
+
     Push-Location $scriptPath
+
+    Install-Nuget
 
     Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained" "$scriptPath\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType"
     Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricObserver\linux-x64\framework-dependent\FabricObserverType"
@@ -28,5 +44,6 @@ try {
     Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType"
 }
 finally {
+
     Pop-Location
 }
