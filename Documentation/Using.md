@@ -220,7 +220,7 @@ The following configuration tells AppObserver to monitor and report Warnings for
 ***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All" (case doesn't matter). 
 The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services belong to any app that is deployed to the node.  
 
-Note that AppObserver does not (and will not) monitor fabric:/System app services. Also, individual targetApp configuration items will override the global configuration when there the same metrics are supplied. 
+Note that AppObserver does not (and will not) monitor fabric:/System app services. Also, individual targetApp configuration items will override the global configuration when the same thresholds are supplied. 
 
 In the example below, the setting for cpuWarningLimitPercent for fabric:/MyApp will override the same setting specified in the all inclusive config item. fabric:/MyApp will still be monitored for the other global metrics.
 
@@ -264,6 +264,7 @@ The configuration below specifies that AppObserver is to monitor and report thre
 ***Problem:*** I want to monitor the same resource metrics used by 3 apps and I don't like writing JSON.
 
 ***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*", "All", or "Any" (case doesn't matter). 
+
 The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services that belong to the apps supplied in appIncludeList.  
 
 ```JSON
