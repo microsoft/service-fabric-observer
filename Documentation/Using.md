@@ -218,9 +218,12 @@ The following configuration tells AppObserver to monitor and report Warnings for
 ***Problem:*** I don't care what the app is, I just want to monitor all app services deployed to any node.  
 
 ***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All" (case doesn't matter). 
+
 The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services belong to any app that is deployed to the node.  
-Note that AppObserver does not (and will not) monitor fabric:/System app services. Also, individual targetApp configuration items will override the global configuration when there the same metrics are supplied. 
-So, in the example below, the setting for cpuWarningLimitPercent for fabric:/MyApp will override the same setting specified in the all inclusive config item. fabric:/MyApp will still be monitored for the other global metrics.
+
+Note that AppObserver does not (and will not) monitor fabric:/System app services. Also, individual targetApp configuration items will override the global configuration when the same thresholds are supplied. 
+
+In the example below, the setting for cpuWarningLimitPercent for fabric:/MyApp will override the same setting specified in the all inclusive config item. fabric:/MyApp will still be monitored for the other global metrics.
 
 ```JSON
 [
@@ -239,8 +242,9 @@ So, in the example below, the setting for cpuWarningLimitPercent for fabric:/MyA
 ```   
 ***Problem:*** I don't care what the app is, I just want to monitor all app services deployed to any node, except for fabric:/MyApp, where I only care about raw memory use (MB) by any of its services. 
 
-***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*", "All", or "Any" (case doesn't matter). 
-The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services belong to any app that is deployed to the node, except for fabric:/MyApp.  
+***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All" (case doesn't matter). 
+
+The configuration below specifies that AppObserver is to monitor and report threshold breaches for a collection of metrics on all services that belong to any app that is deployed to the node, except for fabric:/MyApp.  
 
 ```JSON
 [
@@ -260,8 +264,9 @@ The configuration below specifies that AppObserver is to monitor and report thre
 ```   
 ***Problem:*** I want to monitor the same resource metrics used by 3 apps and I don't like writing JSON.
 
-***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*", "All", or "Any" (case doesn't matter). 
-The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services that belong to the apps supplied in appIncludeList.  
+***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All"(case doesn't matter). 
+
+The configuration below specifies that AppObserver is to monitor and report threshold breaches for a collection of metrics on all services that belong to the apps supplied in appIncludeList.  
 
 ```JSON
 [
@@ -453,7 +458,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.4 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.6 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 Note: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to get the Capabilities in place. For Windows, FO processes will NOT be restarted.
