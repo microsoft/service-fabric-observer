@@ -87,7 +87,7 @@ After you adjust configuration settings to meet to your needs (this means changi
 
 ```PowerShell
 
-#cd to top level repo directory where you cloned the 3.1.6 sources.
+#cd to the top level repo directory where you cloned FO sources.
 
 cd C:\Users\me\source\repos\service-fabric-observer
 
@@ -96,21 +96,19 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 
 #create a $path variable that points to the build output:
-#E.g., 
-
-#For Windows deployments:
+#E.g. for Windows deployments:
 
 $path = "C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType"
 
-#For Linux:
+#For Linux deployments:
 
 #$path = "C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType"
 
 #Connect to target cluster, for example:
 
-Connect-ServiceFabricCluster -ConnectionEndpoint @('my-sf-cluster.westus2.cloudapp.azure.com:19000') -X509Credential -FindType FindByThumbprint -FindValue '[thumbprint]' -StoreLocation LocalMachine -StoreName 'My'
+Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloudapp.azure.com:19000') -X509Credential -FindType FindByThumbprint -FindValue '[thumbprint]' -StoreLocation LocalMachine -StoreName 'My'
 
-#Copy $path contents (FO package) to server:
+#Copy $path contents (FO app package) to server:
 
 Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO316 -TimeoutSec 1800
 
@@ -118,7 +116,7 @@ Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPack
 
 Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO316 
 
-#Create instances of FO 3.1.6:
+#Create FO application:
 
 New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.6
 ```  
