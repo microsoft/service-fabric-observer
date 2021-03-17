@@ -81,6 +81,45 @@ the configs to make sense for your applications/services/nodes (store the sfpkg 
     },
 ```  
 
+### Deploy FO using PowerShell  
+
+After you adjust configuration settings to meet to your needs (this means changing settings in Settings.xml for ObserverManager (ObserverManagerConfiguration section) and in ApplicationManifest.xml for observers).
+
+```PowerShell
+
+#cd to the top level repo directory where you cloned FO sources.
+
+cd C:\Users\me\source\repos\service-fabric-observer
+
+#Build FO (Release)
+
+./Build-FabricObserver
+
+#create a $path variable that points to the build output:
+#E.g., for Windows deployments:
+
+$path = "C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType"
+
+#For Linux deployments:
+
+#$path = "C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType"
+
+#Connect to target cluster, for example:
+
+Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloudapp.azure.com:19000') -X509Credential -FindType FindByThumbprint -FindValue '[thumbprint]' -StoreLocation LocalMachine -StoreName 'My'
+
+#Copy $path contents (FO app package) to server:
+
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO316 -TimeoutSec 1800
+
+#Register FO ApplicationType:
+
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO316 
+
+#Create FO application:
+
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.6
+```  
 
 ## Observer Model
 
