@@ -96,7 +96,7 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 
 #create a $path variable that points to the build output:
-#E.g. for Windows deployments:
+#E.g., for Windows deployments:
 
 $path = "C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType"
 
