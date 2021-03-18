@@ -67,7 +67,50 @@ When you use this property, you can also use either serviceExcludeList or servic
     "serviceExcludeList": "someService42,someService53"
   }
 ]
+```  
+
+**Active TCP Ports**  
+
+***Problem***: I want to know when any of the services belonging to application fabric:/MyApp have opened more than 2000 TCP ports and generate a Health Warning.  
+
+***Solution***: AppObserver is your friend. This is simple.  
+
+```JSON
+[
+  {
+    "targetApp": "fabric:/MyApp",
+    "networkWarningActivePorts": "2000"
+  }
+]
 ```
+
+**Active Ephemeral TCP Ports**  
+
+***Problem***: I want to know when any of the services belonging to application fabric:/MyApp have opened more than 1500 Ephemeral (dynamic range) TCP ports and generate a Health Warning.  
+
+***Solution***: AppObserver is your friend. This is simple.  
+
+```JSON
+[
+  {
+    "targetApp": "fabric:/MyApp",
+    "networkWarningEphemeralPorts": "1500"
+  }
+]
+```  
+
+You should of course combine these into one:  
+
+```JSON
+[
+  {
+    "targetApp": "fabric:/MyApp",
+    "networkWarningActivePorts": "2000",
+    "networkWarningEphemeralPorts": "1500"
+  }
+]
+```
+
 
 **File Handles**  
 
@@ -122,6 +165,7 @@ The first two JSON objects below tell AppObserver to warn when any of the servic
 The third one scopes to all services _but_ 3 and asks AppObserver to warn when any of them hit 40% memory use on the machine (virtual or not).
 
 ```JSON
+[
   {
     "targetApp": "fabric:/MyApp",
     "memoryWarningLimitPercent": 30
@@ -135,6 +179,7 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
     "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42",
     "memoryWarningLimitPercent": 40
   }
+]
 ```   
 
 **Memory Usage - Private Working Set - MB in Use** 
@@ -148,6 +193,7 @@ The first two JSON objects below tell AppObserver to warn when any of the servic
 The third one scopes to all services _but_ 3 and asks AppObserver to warn when any of them hit 40% memory use on the machine (virtual or not).
 
 ```JSON
+[
   {
     "targetApp": "fabric:/MyApp",
     "memoryWarningLimitMb": 300
@@ -161,6 +207,7 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
     "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42",
     "memoryWarningLimitMb": 600
   }
+]
 ```   
 
 
@@ -173,6 +220,7 @@ for one app.
 regardless of target - there is no requirement for unique target properties in the object array. 
 
 ```JSON
+[
   {
     "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2",
@@ -183,6 +231,7 @@ regardless of target - there is no requirement for unique target properties in t
     "serviceIncludeList": "MemoryCrunchingService1, MemoryCrunchingService42",
     "memoryWarningLimitPercent": 30
   }
+]
 ```
 
 
@@ -190,19 +239,22 @@ If what you really want to do is monitor for different thresholds (like CPU and 
 just add the threshold properties to one object: 
 
 ```JSON
+[  
   {
     "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyCpuEatingService1, MyCpuEatingService2, MemoryCrunchingService1, MemoryCrunchingService42",
     "cpuWarningLimitPercent": 45,
     "memoryWarningLimitPercent": 30
   }
+]
 ```  
 
 The following configuration tells AppObserver to monitor and report Warnings for multiple resources for two services belonging to MyApp:  
  
 
 ```JSON
-{
+[
+  {
     "targetApp": "fabric:/MyApp",
     "serviceIncludeList": "MyService42, MyOtherService42",
     "cpuErrorLimitPercent": 90,
@@ -211,6 +263,7 @@ The following configuration tells AppObserver to monitor and report Warnings for
     "networkWarningActivePorts": 800,
     "networkWarningEphemeralPorts": 400
   }
+]
 ``` 
 
 **All App Monitoring** 
@@ -279,7 +332,6 @@ The configuration below specifies that AppObserver is to monitor and report thre
     "networkWarningEphemeralPorts": 1500
   }
 ]
-
 ``` 
 
 > You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md). 
