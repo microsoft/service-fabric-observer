@@ -389,7 +389,7 @@ namespace FabricObserver.Observers
                         }
 
                         existingAppConfig.ServiceExcludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceExcludeList) && !string.IsNullOrWhiteSpace(application.ServiceExcludeList) ? application.ServiceExcludeList : existingAppConfig.ServiceExcludeList;
-                        existingAppConfig.ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceExcludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig.ServiceIncludeList;
+                        existingAppConfig.ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig.ServiceIncludeList;
                         existingAppConfig.MemoryWarningLimitMb = existingAppConfig.MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig.MemoryWarningLimitMb;
                         existingAppConfig.MemoryErrorLimitMb = existingAppConfig.MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig.MemoryErrorLimitMb;
                         existingAppConfig.MemoryWarningLimitPercent = existingAppConfig.MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig.MemoryWarningLimitPercent;
@@ -433,7 +433,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // Remove the All, Any, * config item.
+                // Remove the All or * config item.
                 userTargetList.Remove(application);
             }
 
@@ -465,9 +465,7 @@ namespace FabricObserver.Observers
 
                 if (!string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
-                    await SetDeployedApplicationReplicaOrInstanceListAsync(
-                        null,
-                        application.TargetAppType).ConfigureAwait(false);
+                    await SetDeployedApplicationReplicaOrInstanceListAsync(null, application.TargetAppType).ConfigureAwait(false);
                 }
                 else
                 {
@@ -479,9 +477,10 @@ namespace FabricObserver.Observers
             {
                 Token.ThrowIfCancellationRequested();
 
-                ObserverLogger.LogInfo(
-                    $"Will observe resource consumption by {app.TargetApp} " +
-                    $"on Node {NodeName}.");
+                if (ReplicaOrInstanceList.Count > 0 && ReplicaOrInstanceList.Any(r => r.ApplicationName.OriginalString == app.TargetApp))
+                {
+                    ObserverLogger.LogInfo($"Will observe resource consumption by {app.TargetApp} on Node {NodeName}.");
+                }
             }
 
             return true;
@@ -775,12 +774,12 @@ namespace FabricObserver.Observers
                 {
                     if (!string.IsNullOrWhiteSpace(serviceFilter.ServiceExcludeList))
                     {
-                        filteredServiceList = serviceFilter.ServiceExcludeList.Split(',').ToList();
+                        filteredServiceList = serviceFilter.ServiceExcludeList.Replace(" ", string.Empty).Split(',').ToList();
                         filterType = ServiceFilterType.Exclude;
                     }
                     else if (!string.IsNullOrWhiteSpace(serviceFilter.ServiceIncludeList))
                     {
-                        filteredServiceList = serviceFilter.ServiceIncludeList.Split(',').ToList();
+                        filteredServiceList = serviceFilter.ServiceIncludeList.Replace(" ", string.Empty).Split(',').ToList();
                         filterType = ServiceFilterType.Include;
                     }
                 }
