@@ -272,7 +272,7 @@ The following configuration tells AppObserver to monitor and report Warnings for
 
 ***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All" (case doesn't matter). 
 
-The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services belong to any app that is deployed to the node.  
+The configuration below specifies that AppObserver is to monitor and report thresholds breaches for a collection of metrics on all services that belong to any app that is deployed to the node.  
 
 Note that AppObserver does not (and will not) monitor fabric:/System app services. Also, individual targetApp configuration items will override the global configuration when the same thresholds are supplied. 
 
