@@ -40,7 +40,7 @@ Node Level Machine Info:
 
 FabricObserver comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
 
-When a Warning threshold is reached or exceeded, an observer will send a Health Report to Service Fabric's Health management system (either as a Node or App Health Report, depending on the observer). This Warning state and related reports are viewable in SFX, the Service Fabric EventStore, and Azure's Application Insights, if enabled.
+When a Warning threshold is reached or exceeded, an observer will send a Health Report to Service Fabric's Health management system (either as a Node or App Health Report, depending on the observer). This Warning state and related reports are viewable in SFX, the Service Fabric EventStore, and Azure's Application Insights/LogAnalytics/ETW, if enabled.
 
 Most observers will remove the Warning state in cases where the issue is transient, but others will maintain a long-running Warning for applications/services/nodes/security problems observed in the cluster. For example, high CPU usage above the user-assigned threshold for a VM or App/Service will put a Node into Warning State (NodeObserver) or Application Warning state (AppObserver), for example, but will soon go back to Healthy if it is a transient spike or after you mitigate the specific problem :-). An expiring certificate Warning from CertificateObsever, however, will remain until you update your application's certificates (Cluster certificates are already monitored by the SF runtime. This is not the case for Application certificates, so use CertificateObserver for this, if necessary).
 
@@ -58,9 +58,8 @@ For more information about **the design of FabricObserver**, please see the [Des
 
 Note: There is no need to run FO as system on Windows or root on Linux. 
 
-For Linux deployments, we have ensured that FO will work as expected as normal user. In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on a proxy binary which can run netstat -tnap elevated. 
-If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section). You 
-will also need to do the same with ApplicationManifest.xml (see FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.linux.xml for required changes). If you use our build scripts, they will take care of these modifications automatically for linux build output.
+For Linux deployments, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on a proxy binary which can run netstat -tnap elevated. 
+If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section). You will also need to do the same with ApplicationManifest.xml (see FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.linux.xml for required changes). If you use our build scripts, they will take care of these modifications automatically for linux build output.
 Just run Build-FabricObserver.ps1
 
 You can also run the build scripts from a Powershell console. These include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
@@ -132,10 +131,10 @@ Here are the current observers and what they monitor:
 | Application (services) resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | AppObserver |
 | Application (user) and cluster certificate health monitoring | CertificateObserver |
 | Disk (local storage disk health/availability, space usage, IO) | DiskObserver |
-| Service Fabric Sysytem Services resource usage health monitoring across CPU, Memory, Ports (TCP) | FabricSystemObserver |
-| Networking (general health and monitoring of availability of user-specified, per-app endpoints) | NetworkObserver |
-| CPU/Memory/File Handles(Linux)/Firewalls(Windows)/Ports usage at machine level | NodeObserver |
-| OS properties (install date, health status, list of hot fixes, hardware configuration, etc., ephemeral port range and real-time OS health status) | OSObserver |
+| SF System Services resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | FabricSystemObserver |
+| Networking - general health and monitoring of availability of user-specified, per-app endpoints | NetworkObserver |
+| CPU/Memory/File Handles(Linux)/Firewalls(Windows)/TCP Ports usage at machine level | NodeObserver |
+| OS/Hardware - OS install date, OS health status, list of hot fixes, hardware configuration, AutoUpdate configuration, TCP port range) | OSObserver |
 | Service Fabric Configuration information | SFConfigurationObserver |
 | **Another resource you find important** | **Observer [that you implement](./Documentation/Plugins.md)** |
 
