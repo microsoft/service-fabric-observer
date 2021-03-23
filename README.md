@@ -134,7 +134,7 @@ Here are the current observers and what they monitor:
 | SF System Services resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | FabricSystemObserver |
 | Networking - general health and monitoring of availability of user-specified, per-app endpoints | NetworkObserver |
 | CPU/Memory/File Handles(Linux)/Firewalls(Windows)/TCP Ports usage at machine level | NodeObserver |
-| OS/Hardware - OS install date, OS health status, list of hot fixes, hardware configuration, AutoUpdate configuration, TCP port range) | OSObserver |
+| OS/Hardware - OS install date, OS health status, list of hot fixes, hardware configuration, AutoUpdate configuration, Ephemeral TCP port range, TCP ports in use, memory and disk space usage | OSObserver |
 | Service Fabric Configuration information | SFConfigurationObserver |
 | **Another resource you find important** | **Observer [that you implement](./Documentation/Plugins.md)** |
 
