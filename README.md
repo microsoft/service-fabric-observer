@@ -123,9 +123,9 @@ New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -Applicatio
 
 ## Observer Model
 
-FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows VM (node) of a Service Fabric cluster. It is an isolated, node-only service. 
+FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows or Linux (Ubuntu) VM hosting a Service Fabric node.
 
-Since observers live in their own application, they monitor other applications through the resource side effects of those applications. Here are the current observers and what they monitor:
+Here are the current observers and what they monitor:  
 
 | Resource | Observer |
 | --- | --- |
