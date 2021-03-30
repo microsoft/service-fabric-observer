@@ -67,6 +67,11 @@ namespace ClusterObserver.Utilities.Telemetry
             get; set;
         }
 
+        public string ProcessId
+        {
+            get; set;
+        }
+
         public string ReplicaId
         {
             get; set;
@@ -97,13 +102,9 @@ namespace ClusterObserver.Utilities.Telemetry
         {
         }
 
-        public TelemetryData(
-            FabricClient fabricClient,
-            CancellationToken cancellationToken)
+        public TelemetryData( FabricClient fabricClient, CancellationToken cancellationToken)
         {
-            var (clusterId, _) =
-              ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
-
+            var (clusterId, _) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
             ClusterId = clusterId;
         }
     }

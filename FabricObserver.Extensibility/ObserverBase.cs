@@ -657,6 +657,7 @@ namespace FabricObserver.Observers
                     Metric = data.Property,
                     Value = Math.Round(data.AverageDataValue, 0),
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
+                    ProcessId = replicaOrInstance?.HostProcessId.ToString(),
                     ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
                     ServiceName = serviceName?.OriginalString ?? string.Empty,
                     Source = ObserverConstants.FabricObserverName,
@@ -674,43 +675,36 @@ namespace FabricObserver.Observers
                     telemetryData.ContainerId = replicaOrInstance.ContainerId;
                 }
 
-                try
+                // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here.
+                // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
+                if (IsTelemetryEnabled)
                 {
-                    // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here.
-                    // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
-                    if (IsTelemetryEnabled)
-                    {
-                        _ = TelemetryClient?.ReportMetricAsync(
-                            telemetryData,
-                            Token).ConfigureAwait(false);
-                    }
-
-                    // ETW - This is informational, per reading EventSource tracing, healthstate is irrelevant here.
-                    // Enable this for your observer if you want to log etw (which can then be read by some agent that will send it to some endpoint)
-                    // for each resource usage observation it makes per specified metric.
-                    if (IsEtwEnabled)
-                    {
-                        ObserverLogger.LogEtw(
-                            ObserverConstants.FabricObserverETWEventName,
-                            new
-                            {
-                                ApplicationName = appName?.OriginalString ?? string.Empty,
-                                NodeName,
-                                ObserverName,
-                                Metric = data.Property,
-                                Value = Math.Round(data.AverageDataValue, 0),
-                                PartitionId = replicaOrInstance?.PartitionId.ToString(),
-                                ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
-                                ServiceName = serviceName?.OriginalString ?? string.Empty,
-                                Source = ObserverConstants.FabricObserverName,
-                                SystemServiceProcessName = appName?.OriginalString == "fabric:/system" ? name : string.Empty,
-                            });
-                    }
+                    _ = TelemetryClient?.ReportMetricAsync(
+                        telemetryData,
+                        Token).ConfigureAwait(false);
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
+
+                // ETW - This is informational, per reading EventSource tracing, healthstate is irrelevant here.
+                // Enable this for your observer if you want to log etw (which can then be read by some agent that will send it to some endpoint)
+                // for each resource usage observation it makes per specified metric.
+                if (IsEtwEnabled)
                 {
-                    // Process no longer exists. Do not report on it.
-                    return;
+                    ObserverLogger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            ApplicationName = appName?.OriginalString ?? string.Empty,
+                            NodeName,
+                            ObserverName,
+                            Metric = data.Property,
+                            Value = Math.Round(data.AverageDataValue, 0),
+                            PartitionId = replicaOrInstance?.PartitionId.ToString(),
+                            ProcessId = replicaOrInstance?.HostProcessId.ToString(),
+                            ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
+                            ServiceName = serviceName?.OriginalString ?? string.Empty,
+                            Source = ObserverConstants.FabricObserverName,
+                            SystemServiceProcessName = appName?.OriginalString == "fabric:/system" ? name : string.Empty,
+                        });
                 }
             }
             else
@@ -934,9 +928,7 @@ namespace FabricObserver.Observers
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportHealthAsync(
-                            telemetryData,
-                            Token);
+                    _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                 }
 
                 // ETW.
@@ -953,10 +945,11 @@ namespace FabricObserver.Observers
                             Description = healthMessage.ToString(),
                             Metric = $"{drive}{data.Property}",
                             Node = NodeName,
+                            ProcessId = replicaOrInstance?.HostProcessId.ToString(),
                             ServiceName = serviceName?.OriginalString ?? string.Empty,
                             Source = ObserverConstants.FabricObserverName,
-                            Value = Math.Round(data.AverageDataValue, 0),
                             SystemServiceProcessName = appName?.OriginalString == "fabric:/system" ? name : string.Empty,
+                            Value = Math.Round(data.AverageDataValue, 0),
                         });
                 }
 
@@ -1020,9 +1013,7 @@ namespace FabricObserver.Observers
                     // Telemetry
                     if (IsTelemetryEnabled)
                     {
-                        _ = TelemetryClient?.ReportMetricAsync(
-                                telemetryData,
-                                Token);
+                        _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token);
                     }
 
                     // ETW.
@@ -1039,10 +1030,11 @@ namespace FabricObserver.Observers
                                 Description = $"{data.Property} is now within normal/expected range.",
                                 Metric = data.Property,
                                 Node = NodeName,
+                                ProcessId = replicaOrInstance?.HostProcessId.ToString(),
                                 ServiceName = name ?? string.Empty,
                                 Source = ObserverConstants.FabricObserverName,
-                                Value = Math.Round(data.AverageDataValue, 0),
                                 SystemServiceProcessName = appName?.OriginalString == "fabric:/system" ? name : string.Empty,
+                                Value = Math.Round(data.AverageDataValue, 0),
                             });
                     }
 
