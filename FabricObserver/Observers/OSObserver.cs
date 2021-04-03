@@ -58,12 +58,12 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
+
+            Token = token;
 
             // This only makes sense for Windows and only for non-dev clusters.
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -138,7 +138,7 @@ namespace FabricObserver.Observers
                     HasActiveFabricErrorOrWarning = false;
                 }
 
-                if (ObserverManager.ObserverWebAppDeployed)
+                if (IsObserverWebApiAppDeployed)
                 {
                     var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "SysInfo.txt");
 
@@ -225,10 +225,8 @@ namespace FabricObserver.Observers
                             });
                     }
                 }
-
-                return Task.CompletedTask;
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
                     FabricServiceContext.ServiceName.OriginalString,
@@ -238,6 +236,8 @@ namespace FabricObserver.Observers
 
                 throw;
             }
+
+            return Task.CompletedTask;
         }
 
         private async Task InitializeAUCheckAsync()
@@ -312,14 +312,13 @@ namespace FabricObserver.Observers
                 _ = sb.Clear();
             }
             catch (Exception e) when (
-                e is ArgumentException ||
-                e is FormatException ||
-                e is InvalidCastException ||
-                e is ManagementException ||
-                e is NullReferenceException ||
-                e is OperationCanceledException ||
-                e is TaskCanceledException)
+                    e is ArgumentException ||
+                    e is FormatException ||
+                    e is InvalidCastException ||
+                    e is ManagementException ||
+                    e is NullReferenceException)
             {
+
             }
             finally
             {
@@ -346,10 +345,10 @@ namespace FabricObserver.Observers
                     wuLibAutoUpdates.Settings.NotificationLevel == AutomaticUpdatesNotificationLevel.aunlScheduledInstallation;
             }
             catch (Exception e) when (
-                e is COMException ||
-                e is InvalidOperationException ||
-                e is SecurityException ||
-                e is Win32Exception)
+                    e is COMException ||
+                    e is InvalidOperationException ||
+                    e is SecurityException ||
+                    e is Win32Exception)
             {
                 ObserverLogger.LogWarning(
                     $"{AuStateUnknownMessage}{Environment.NewLine}{e}");
@@ -592,15 +591,7 @@ namespace FabricObserver.Observers
                         }, Token);
                 }
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is InvalidComObjectException)
-            {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                      FabricServiceContext.ServiceName.OriginalString,
-                      ObserverName,
-                      HealthState.Warning,
-                      $"Handled Exception processing OS information:{Environment.NewLine}{e}");
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
                        FabricServiceContext.ServiceName.OriginalString,

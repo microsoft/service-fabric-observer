@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.7" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
@@ -12,8 +12,8 @@
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
@@ -74,8 +74,8 @@
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <!-- CertificateObserver-->
+    <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['mythumb1', 'mythumb2', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
@@ -99,7 +99,7 @@
     <Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="4096" />
     <Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="4000" />
     <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverAllocatedHandlesErrorLimit" DefaultValue="" />
     <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="5000" />
@@ -131,6 +131,7 @@
     
     <!-- OSObserver Windows AutoUpdate Settings Check -->
     <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
+    
     <!-- Observers with JSON config - File names.
          You can point to a different, existing file name in PackageRoot's Config, for example. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
@@ -140,7 +141,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.7" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.8" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

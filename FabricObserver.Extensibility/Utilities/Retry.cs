@@ -20,11 +20,12 @@ namespace FabricObserver.Observers.Utilities
         {
             _ = Do<object>(
                 () =>
-            {
-                action();
-                token.ThrowIfCancellationRequested();
-                return null;
-            }, retryInterval,
+                {
+                    action();
+                    token.ThrowIfCancellationRequested();
+                    return null;
+                }, 
+                retryInterval,
                 token,
                 maxAttempts);
         }

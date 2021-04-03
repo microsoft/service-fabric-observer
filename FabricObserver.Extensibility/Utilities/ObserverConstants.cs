@@ -9,7 +9,7 @@ namespace FabricObserver.Observers.Utilities
     {
         public const string ObserverManagerName = "ObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
-        public const string ObserverWebApiAppDeployed = "ObserverWebApiEnabled";
+        public const string ObserverWebApiEnabled = "ObserverWebApiEnabled";
         public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
         public const string Fqdn = "FQDN";
         public const string EnableETWProvider = "EnableETWProvider";

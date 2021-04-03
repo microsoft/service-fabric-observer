@@ -157,9 +157,7 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
@@ -171,10 +169,10 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            Initialize();
-
             try
             {
+                Initialize();
+
                 foreach (var procName in processWatchList)
                 {
                     Token.ThrowIfCancellationRequested();
@@ -190,186 +188,198 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                if (!(e is OperationCanceledException))
-                {
-                    WriteToLogWithLevel(
+                WriteToLogWithLevel(
                         ObserverName,
-                        "Unhandled exception in ObserveAsync. Failed to observe CPU and Memory usage of " + string.Join(",", processWatchList) + ": " + e,
+                        $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
                         LogLevel.Error);
-                }
-
                 throw;
             }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                && ObserverManager.ObserverWebAppDeployed
+                && IsObserverWebApiAppDeployed
                 && monitorWinEventLog)
             {
                 ReadServiceFabricWindowsEventLog();
             }
 
-            // Set TTL.
-            stopwatch.Stop();
-            RunDuration = stopwatch.Elapsed;
-            stopwatch.Reset();
-
+            
             await ReportAsync(token).ConfigureAwait(true);
 
+            // The time it took to run this observer to completion.
+            stopwatch.Stop();
+            RunDuration = stopwatch.Elapsed;
+
+            if (EnableVerboseLogging)
+            {
+                ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
+            }
+
+            stopwatch.Reset();
             LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
         {
-            Token.ThrowIfCancellationRequested();
-
-            string memHandlesInfo = string.Empty;
-
-            if (allMemData != null)
+            try
             {
-                memHandlesInfo += $"Fabric memory: {allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
-                                  $"FabricDCA memory: {allMemData.Where(x => x.Id.Contains("FabricDCA"))?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
-                                  $"FabricGateway memory: {allMemData.Where(x => x.Id.Contains("FabricGateway"))?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
-                                  // FO runs as NetworkUser on Windows by default and thererfore can't monintor FabricHost process, which runs as System.
-                                  (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                      $"FabricHost memory: {allMemData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" : string.Empty);
-                                    
-            }
+                Token.ThrowIfCancellationRequested();
 
-            if (allHandlesData != null)
-            {
-                memHandlesInfo += $"Fabric file handles: {(int)(allHandlesData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
-                                  $"FabricDCA file handles: {(int)(allHandlesData.Where(x => x.Id.Contains("FabricDCA"))?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
-                                  $"FabricGateway file handles: {(int)(allHandlesData.Where(x => x.Id.Contains("FabricGateway"))?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
-                                   (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                        $"FabricHost file handles: {(int)(allHandlesData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue)}" : string.Empty);
-            }
+                string memHandlesInfo = string.Empty;
 
-            // Informational report.
-            TimeSpan timeToLiveWarning = GetHealthReportTimeToLive();
-            HealthReport informationReport = new HealthReport
-            {
-                Observer = ObserverName,
-                NodeName = NodeName,
-                HealthMessage = $"TCP ports in use by Fabric System services: {TotalActivePortCountAllSystemServices}{Environment.NewLine}" +
-                                $"Ephemeral TCP ports in use by Fabric System services: {TotalActiveEphemeralPortCountAllSystemServices}{Environment.NewLine}" +
-                                $"File handles in use by Fabric System services: {TotalAllocatedHandlesAllSystemServices}{Environment.NewLine}{memHandlesInfo}",
-
-            State = HealthState.Ok,
-                HealthReportTimeToLive = timeToLiveWarning,
-            };
-
-            HealthReporter.ReportHealthToServiceFabric(informationReport);
-
-            // Reset local tracking counters.
-            TotalActivePortCountAllSystemServices = 0;
-            TotalActiveEphemeralPortCountAllSystemServices = 0;
-            TotalAllocatedHandlesAllSystemServices = 0;
-
-            // CPU
-            if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
-            {
-                ProcessResourceDataList(allCpuData, CpuErrorUsageThresholdPct, CpuWarnUsageThresholdPct);
-            }
-
-            // Memory
-            if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
-            {
-                ProcessResourceDataList(allMemData, MemErrorUsageThresholdMb, MemWarnUsageThresholdMb);
-            }
-
-            // Ports - Active TCP
-            if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
-            {
-                ProcessResourceDataList(allActiveTcpPortData, ActiveTcpPortCountError, ActiveTcpPortCountWarning);
-            }
-
-            // Ports - Ephemeral
-            if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
-            {
-                ProcessResourceDataList(allEphemeralTcpPortData, ActiveEphemeralPortCountError, ActiveEphemeralPortCountWarning);
-            }
-
-            // Handles
-            if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
-            {
-                ProcessResourceDataList(allHandlesData, AllocatedHandlesError, AllocatedHandlesWarning);
-            }
-
-            // Windows Event Log
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && ObserverManager.ObserverWebAppDeployed
-                && monitorWinEventLog)
-            {
-                // SF Eventlog Errors?
-                // Write this out to a new file, for use by the web front end log viewer.
-                // Format = HTML.
-                int count = evtRecordList.Count();
-                var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
-
-                // Remove existing file.
-                if (File.Exists(logPath))
+                if (allMemData != null)
                 {
-                    try
-                    {
-                        File.Delete(logPath);
-                    }
-                    catch (IOException)
-                    {
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                    }
+                    memHandlesInfo += $"Fabric memory: {allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                                      $"FabricDCA memory: {allMemData.Where(x => x.Id.Contains("FabricDCA"))?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                                      $"FabricGateway memory: {allMemData.Where(x => x.Id.Contains("FabricGateway"))?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+
+                                      // On Windows, FO runs as NetworkUser by default and thererfore can't monintor FabricHost process, which runs as System.
+                                      (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+                                          $"FabricHost memory: {allMemData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" : string.Empty);
+
                 }
 
-                if (count >= 10)
+                if (allHandlesData != null)
                 {
-                    var sb = new StringBuilder();
+                    memHandlesInfo += $"Fabric file handles: {(int)(allHandlesData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
+                                      $"FabricDCA file handles: {(int)(allHandlesData.Where(x => x.Id.Contains("FabricDCA"))?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
+                                      $"FabricGateway file handles: {(int)(allHandlesData.Where(x => x.Id.Contains("FabricGateway"))?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
 
-                    _ = sb.AppendLine("<br/><div><strong>" +
-                                      "<a href='javascript:toggle(\"evtContainer\")'>" +
-                                      "<div id=\"plus\" style=\"display: inline; font-size: 25px;\">+</div> " + count +
-                                      " Error Events in ServiceFabric and System</a> " +
-                                      "Event logs</strong>.<br/></div>");
+                                      // On Windows, FO runs as NetworkUser by default and thererfore can't monintor FabricHost process, which runs as System. 
+                                      (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+                                            $"FabricHost file handles: {(int)(allHandlesData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue)}" : string.Empty);
+                }
 
-                    _ = sb.AppendLine("<div id='evtContainer' style=\"display: none;\">");
+                // Informational report.
+                TimeSpan timeToLiveWarning = GetHealthReportTimeToLive();
+                HealthReport informationReport = new HealthReport
+                {
+                    Observer = ObserverName,
+                    NodeName = NodeName,
+                    HealthMessage = $"TCP ports in use by Fabric System services: {TotalActivePortCountAllSystemServices}{Environment.NewLine}" +
+                                    $"Ephemeral TCP ports in use by Fabric System services: {TotalActiveEphemeralPortCountAllSystemServices}{Environment.NewLine}" +
+                                    $"File handles in use by Fabric System services: {TotalAllocatedHandlesAllSystemServices}{Environment.NewLine}{memHandlesInfo}",
 
-                    foreach (var evt in evtRecordList.Distinct())
+                    State = HealthState.Ok,
+                    HealthReportTimeToLive = timeToLiveWarning,
+                };
+
+                HealthReporter.ReportHealthToServiceFabric(informationReport);
+
+                // Reset local tracking counters.
+                TotalActivePortCountAllSystemServices = 0;
+                TotalActiveEphemeralPortCountAllSystemServices = 0;
+                TotalAllocatedHandlesAllSystemServices = 0;
+
+                // CPU
+                if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
+                {
+                    ProcessResourceDataList(allCpuData, CpuErrorUsageThresholdPct, CpuWarnUsageThresholdPct);
+                }
+
+                // Memory
+                if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
+                {
+                    ProcessResourceDataList(allMemData, MemErrorUsageThresholdMb, MemWarnUsageThresholdMb);
+                }
+
+                // Ports - Active TCP
+                if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
+                {
+                    ProcessResourceDataList(allActiveTcpPortData, ActiveTcpPortCountError, ActiveTcpPortCountWarning);
+                }
+
+                // Ports - Ephemeral
+                if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
+                {
+                    ProcessResourceDataList(allEphemeralTcpPortData, ActiveEphemeralPortCountError, ActiveEphemeralPortCountWarning);
+                }
+
+                // Handles
+                if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
+                {
+                    ProcessResourceDataList(allHandlesData, AllocatedHandlesError, AllocatedHandlesWarning);
+                }
+
+                // Windows Event Log
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsObserverWebApiAppDeployed
+                    && monitorWinEventLog)
+                {
+                    // SF Eventlog Errors?
+                    // Write this out to a new file, for use by the web front end log viewer.
+                    // Format = HTML.
+                    int count = evtRecordList.Count();
+                    var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
+
+                    // Remove existing file.
+                    if (File.Exists(logPath))
                     {
-                        token.ThrowIfCancellationRequested();
-
                         try
                         {
-                            // Access event properties:
-                            _ = sb.AppendLine("<div>" + evt.LogName + "</div>");
-                            _ = sb.AppendLine("<div>" + evt.LevelDisplayName + "</div>");
-                            if (evt.TimeCreated.HasValue)
-                            {
-                                _ = sb.AppendLine("<div>" + evt.TimeCreated.Value.ToShortDateString() + "</div>");
-                            }
-
-                            foreach (var prop in evt.Properties)
-                            {
-                                if (prop.Value != null && Convert.ToString(prop.Value).Length > 0)
-                                {
-                                    _ = sb.AppendLine("<div>" + prop.Value + "</div>");
-                                }
-                            }
+                            File.Delete(logPath);
                         }
-                        catch (EventLogException)
+                        catch (IOException)
+                        {
+                        }
+                        catch (UnauthorizedAccessException)
                         {
                         }
                     }
 
-                    _ = sb.AppendLine("</div>");
+                    if (count >= 10)
+                    {
+                        var sb = new StringBuilder();
 
-                    _ = ObserverLogger.TryWriteLogFile(logPath, sb.ToString());
-                    _ = sb.Clear();
-                }
+                        _ = sb.AppendLine("<br/><div><strong>" +
+                                          "<a href='javascript:toggle(\"evtContainer\")'>" +
+                                          "<div id=\"plus\" style=\"display: inline; font-size: 25px;\">+</div> " + count +
+                                          " Error Events in ServiceFabric and System</a> " +
+                                          "Event logs</strong>.<br/></div>");
 
-                // Clean up.
-                if (count > 0)
-                {
-                    evtRecordList.Clear();
+                        _ = sb.AppendLine("<div id='evtContainer' style=\"display: none;\">");
+
+                        foreach (var evt in evtRecordList.Distinct())
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            try
+                            {
+                                // Access event properties:
+                                _ = sb.AppendLine("<div>" + evt.LogName + "</div>");
+                                _ = sb.AppendLine("<div>" + evt.LevelDisplayName + "</div>");
+                                if (evt.TimeCreated.HasValue)
+                                {
+                                    _ = sb.AppendLine("<div>" + evt.TimeCreated.Value.ToShortDateString() + "</div>");
+                                }
+
+                                foreach (var prop in evt.Properties)
+                                {
+                                    if (prop.Value != null && Convert.ToString(prop.Value).Length > 0)
+                                    {
+                                        _ = sb.AppendLine("<div>" + prop.Value + "</div>");
+                                    }
+                                }
+                            }
+                            catch (EventLogException)
+                            {
+                            }
+                        }
+
+                        _ = sb.AppendLine("</div>");
+
+                        _ = ObserverLogger.TryWriteLogFile(logPath, sb.ToString());
+                        _ = sb.Clear();
+                    }
+
+                    // Clean up.
+                    if (count > 0)
+                    {
+                        evtRecordList.Clear();
+                    }
                 }
+            }
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            {
+
             }
 
             return Task.CompletedTask;
@@ -610,7 +620,7 @@ namespace FabricObserver.Observers
         private void SetThresholdSFromConfiguration()
         {
             /* Error thresholds */
-
+            
             Token.ThrowIfCancellationRequested();
 
             var cpuError = GetSettingParameterValue(
@@ -885,6 +895,10 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
+                catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+                {
+
+                }
                 catch (Win32Exception)
                 {
                     // This will always be the case if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
@@ -894,8 +908,14 @@ namespace FabricObserver.Observers
                         ObserverName,
                         $"Can't observe {procName} due to it's privilege level. FabricObserver must be running as System or Admin on Windows for this specific task.",
                         LogLevel.Information);
-
-                    break;
+                }
+                catch (Exception e)
+                {
+                    WriteToLogWithLevel(
+                            ObserverName,
+                            $"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}",
+                            LogLevel.Error);
+                    throw;
                 }
                 finally
                 {
@@ -913,6 +933,13 @@ namespace FabricObserver.Observers
             T thresholdWarning)
                 where T : struct
         {
+            string fileName = null;
+
+            if (EnableCsvLogging || IsTelemetryProviderEnabled)
+            {
+                fileName = $"FabricSystemServices_{DateTime.UtcNow:o}";
+            }
+
             foreach (var dataItem in data)
             {
                 Token.ThrowIfCancellationRequested();
@@ -922,9 +949,8 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                if (CsvFileLogger != null && CsvFileLogger.EnableCsvLogging)
+                if (EnableCsvLogging || IsTelemetryProviderEnabled)
                 {
-                    var fileName = "FabricSystemServices_" + NodeName;
                     var propertyName = data.First().Property;
 
                     // Log average data value to long-running store (CSV).
@@ -953,18 +979,41 @@ namespace FabricObserver.Observers
                             break;
                     }
 
+                    // Log pid
+                    Process[] p;
+                    int procId = -1;
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        p = GetDotnetProcessesByFirstArgument(dataItem.Id);
+                    }
+                    else
+                    {
+                        p = Process.GetProcessesByName(dataItem.Id);
+                    }
+
+                    if (p.Length > 0)
+                    {
+                        procId = p.First().Id;
+                    }
+
+                    if (procId > 0)
+                    {
+                        CsvFileLogger.LogData(fileName, dataItem.Id, "ProcessId", "", procId);
+                    }
+
                     CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
                     CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
                 }
 
                 // This function will clear Data items in list (will call Clear() on the supplied FabricResourceUsageData instance's Data field..)
                 ProcessResourceDataReportHealth(
-                    dataItem,
-                    thresholdError,
-                    thresholdWarning,
-                    GetHealthReportTimeToLive(),
-                    HealthReportType.Application);
-            }
+                            dataItem,
+                            thresholdError,
+                            thresholdWarning,
+                            GetHealthReportTimeToLive(),
+                            HealthReportType.Application);
+                    }
         }
     }
 }

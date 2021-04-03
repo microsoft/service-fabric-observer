@@ -304,9 +304,7 @@ namespace FabricObserver.Observers
             foreach (var obs in observers)
             {
                 // If the node goes down, for example, or the app is gracefully closed, then clear all existing error or health reports suppled by FO.
-                // NetworkObserver takes care of this internally, so ignore here.
-                if (obs.HasActiveFabricErrorOrWarning &&
-                    obs.ObserverName != ObserverConstants.NetworkObserverName)
+                if (obs.HasActiveFabricErrorOrWarning)
                 {
                     Utilities.HealthReport healthReport = new Utilities.HealthReport
                     {
@@ -383,8 +381,12 @@ namespace FabricObserver.Observers
             }
 
             this.shutdownSignaled = shutdownSignaled;
-            SignalAbortToRunningObserver();
-            IsObserverRunning = false;
+
+            if (!isConfigurationUpdateInProgess)
+            {
+                SignalAbortToRunningObserver();
+                IsObserverRunning = false;
+            }
         }
 
         public void Dispose()
@@ -530,21 +532,29 @@ namespace FabricObserver.Observers
                         // The ObserverLogger instance (member of each observer type) checks its EnableVerboseLogging setting before writing Info events (it won't write if this setting is false, thus non-verbose).
                         // So, we set it here in case the parameter update includes a change to this config setting. 
                         // This is the only updatable setting that requires we do this as part of the config update event handling.
-                        string newVerboseLoggingSetting = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
-                        string oldVerboseLoggingSetting = e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter]?.Value.ToLower();
-
-                        if (newVerboseLoggingSetting != oldVerboseLoggingSetting)
+                        if (e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters.Contains(ObserverConstants.EnableVerboseLoggingParameter)
+                            && e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters.Contains(ObserverConstants.EnableVerboseLoggingParameter))
                         {
-                            observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
+                            string newLoggingSetting = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter].Value.ToLower();
+                            string oldLoggingSetting = e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter].Value.ToLower();
+
+                            if (newLoggingSetting != oldLoggingSetting)
+                            {
+                                observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
+                            }
                         }
 
                         observers.Add(observer);
                     }
                 }
 
-                cts = new CancellationTokenSource();
+                if (cts == null)
+                {
+                    cts = new CancellationTokenSource();
+                }
+
                 linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
-                Logger.LogInfo($"Application Parameter upgrade in progress: new observer list count -> {observers.Count}");
+                Logger.LogWarning($"Application Parameter upgrade in progress: new observer list count -> {observers.Count}");
             }
             catch (Exception err)
             {
@@ -615,7 +625,7 @@ namespace FabricObserver.Observers
             }
 
             // ObserverWebApi.
-            ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiAppDeployed), out bool obsWeb) ? obsWeb : IsObserverWebApiAppInstalled();
+            ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
 
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))

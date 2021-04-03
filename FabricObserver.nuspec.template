@@ -3,7 +3,7 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>3.1.8</version>
-    <releaseNotes>Updated Windows port monitoring code (ephemeral port range). Added new member to TelemetryData, ProcessId.</releaseNotes>
+    <releaseNotes>Updated Windows port monitoring code (ephemeral port range). Added new member to TelemetryData, ProcessId. Observers will no longer locally log Error or Warning Health Events when EnableVerboseLogging is set to false - and it should be false, generally. Only enable EnableVerboseLogging for debugging purposes. You should emit health telemetry to an external service as a general rule. FO supports ApplicationInsights and LogAnalytics out of the box. If you are using the FabricObserverWebApi service, you will still get local Error/Warning logs, regardless of EnableVerboseLogging setting.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

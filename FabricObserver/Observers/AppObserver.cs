@@ -41,6 +41,7 @@ namespace FabricObserver.Observers
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
         private readonly List<ApplicationInfo> deployedTargetList;
         private readonly MachineInfoModel.ConfigSettings configSettings;
+        private string fileName;
 
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
@@ -74,9 +75,7 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
@@ -100,176 +99,184 @@ namespace FabricObserver.Observers
             }
 
             await MonitorDeployedAppsAsync(token).ConfigureAwait(false);
-
-            // The time it took to get to ReportAsync.
-            // For use in computing actual HealthReport TTL.
-            stopwatch.Stop();
-            RunDuration = stopwatch.Elapsed;
-            stopwatch.Reset();
-
             await ReportAsync(token).ConfigureAwait(true);
 
+            // The time it took to run this observer.
+            stopwatch.Stop();
+            RunDuration = stopwatch.Elapsed;
+            
+            if (EnableVerboseLogging)
+            {
+                ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
+            }
+            
+            stopwatch.Reset();
             LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
         {
-            try
+            token.ThrowIfCancellationRequested();
+
+            if (deployedTargetList.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            var healthReportTimeToLive = GetHealthReportTimeToLive();
+
+            // App-specific reporting.
+            foreach (var app in deployedTargetList)
             {
                 token.ThrowIfCancellationRequested();
 
-                if (deployedTargetList.Count == 0)
-                {
-                    return Task.CompletedTask;
-                }
-
-                var healthReportTimeToLive = GetHealthReportTimeToLive();
-
-                // App-specific reporting.
-                foreach (var app in deployedTargetList)
+                // Process data for reporting.
+                foreach (var repOrInst in ReplicaOrInstanceList)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    // Process data for reporting.
-                    foreach (var repOrInst in ReplicaOrInstanceList)
+                    if (!string.IsNullOrWhiteSpace(app.TargetAppType)
+                        && !string.Equals(
+                            repOrInst.ApplicationTypeName,
+                            app.TargetAppType,
+                            StringComparison.CurrentCultureIgnoreCase))
                     {
-                        token.ThrowIfCancellationRequested();
+                        continue;
+                    }
 
-                        if (!string.IsNullOrWhiteSpace(app.TargetAppType)
-                            && !string.Equals(
-                                repOrInst.ApplicationTypeName,
-                                app.TargetAppType,
-                                StringComparison.CurrentCultureIgnoreCase))
+                    if (!string.IsNullOrWhiteSpace(app.TargetApp)
+                        && !string.Equals(
+                            repOrInst.ApplicationName.OriginalString,
+                            app.TargetApp,
+                            StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    string processName = null;
+                    int processId = 0;
+
+                    try
+                    {
+                        using Process p = Process.GetProcessById((int)repOrInst.HostProcessId);
+
+                        // If the process is no longer running, then don't report on it.
+                        if (p.HasExited)
                         {
                             continue;
                         }
 
-                        if (!string.IsNullOrWhiteSpace(app.TargetApp)
-                            && !string.Equals(
-                                repOrInst.ApplicationName.OriginalString,
-                                app.TargetApp,
-                                StringComparison.CurrentCultureIgnoreCase))
-                        {
-                            continue;
-                        }
+                        processName = p.ProcessName;
+                        processId = p.Id;
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                    {
+                        continue;
+                    }
 
-                        string processName = null;
+                    string appNameOrType = GetAppNameOrType(repOrInst);
 
-                        try
-                        {
-                            using Process p = Process.GetProcessById((int)repOrInst.HostProcessId);
+                    var id = $"{appNameOrType}:{processName}";
 
-                            // If the process is no longer running, then don't report on it.
-                            if (p.HasExited)
-                            {
-                                continue;
-                            }
+                    // Locally Log (csv) CPU/Mem/FileHandles/Ports per app.
+                    if (EnableCsvLogging)
+                    {
+                        fileName = $"{processName}_{DateTime.UtcNow:o}";
 
-                            processName = p.ProcessName;
-                        }
-                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-                        {
-                            continue;
-                        }
+                        // BaseLogDataLogFolderPath is set in ObserverBase or a default one is created by CsvFileLogger.
+                        // This means a new folder will be added to the base path.
+                        CsvFileLogger.DataLogFolder = processName;
 
-                        string appNameOrType = GetAppNameOrType(repOrInst);
+                        // Log pid..
+                        CsvFileLogger.LogData(
+                                fileName,
+                                id,
+                                "ProcessId",
+                                "",
+                                processId);
 
-                        var id = $"{appNameOrType}:{processName}";
+                        // Log resource usage data.
+                        LogAllAppResourceDataToCsv(id);
+                    }
 
-                        // Log (csv) CPU/Mem/DiskIO per app.
-                        if (CsvFileLogger != null && CsvFileLogger.EnableCsvLogging)
-                        {
-                            LogAllAppResourceDataToCsv(id);
-                        }
+                    // CPU
+                    if (AllAppCpuData.Any(x => x.Id == id))
+                    {
+                        ProcessResourceDataReportHealth(
+                            AllAppCpuData.FirstOrDefault(x => x.Id == id),
+                            app.CpuErrorLimitPercent,
+                            app.CpuWarningLimitPercent,
+                            healthReportTimeToLive,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError);
+                    }
 
-                        // CPU
-                        if (AllAppCpuData.Any(x => x.Id == id))
-                        {
-                            ProcessResourceDataReportHealth(
-                                AllAppCpuData.FirstOrDefault(x => x.Id == id),
-                                app.CpuErrorLimitPercent,
-                                app.CpuWarningLimitPercent,
-                                healthReportTimeToLive,
-                                HealthReportType.Application,
-                                repOrInst,
-                                app.DumpProcessOnError);
-                        }
+                    // Memory MB
+                    if (AllAppMemDataMb.Any(x => x.Id == id))
+                    {
+                        ProcessResourceDataReportHealth(
+                            AllAppMemDataMb.FirstOrDefault(x => x.Id == id),
+                            app.MemoryErrorLimitMb,
+                            app.MemoryWarningLimitMb,
+                            healthReportTimeToLive,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError);
+                    }
 
-                        // Memory MB
-                        if (AllAppMemDataMb.Any(x => x.Id == id))
-                        {
-                            ProcessResourceDataReportHealth(
-                                AllAppMemDataMb.FirstOrDefault(x => x.Id == id),
-                                app.MemoryErrorLimitMb,
-                                app.MemoryWarningLimitMb,
-                                healthReportTimeToLive,
-                                HealthReportType.Application,
-                                repOrInst,
-                                app.DumpProcessOnError);
-                        }
+                    // Memory Percent
+                    if (AllAppMemDataPercent.Any(x => x.Id == id))
+                    {
+                        ProcessResourceDataReportHealth(
+                            AllAppMemDataPercent.FirstOrDefault(x => x.Id == id),
+                            app.MemoryErrorLimitPercent,
+                            app.MemoryWarningLimitPercent,
+                            healthReportTimeToLive,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError);
+                    }
 
-                        // Memory Percent
-                        if (AllAppMemDataPercent.Any(x => x.Id == id))
-                        {
-                            ProcessResourceDataReportHealth(
-                                AllAppMemDataPercent.FirstOrDefault(x => x.Id == id),
-                                app.MemoryErrorLimitPercent,
-                                app.MemoryWarningLimitPercent,
-                                healthReportTimeToLive,
-                                HealthReportType.Application,
-                                repOrInst,
-                                app.DumpProcessOnError);
-                        }
+                    // TCP Ports - Active
+                    if (AllAppTotalActivePortsData.Any(x => x.Id == id))
+                    {
+                        ProcessResourceDataReportHealth(
+                            AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id),
+                            app.NetworkErrorActivePorts,
+                            app.NetworkWarningActivePorts,
+                            healthReportTimeToLive,
+                            HealthReportType.Application,
+                            repOrInst);
+                    }
 
-                        // TCP Ports - Active
-                        if (AllAppTotalActivePortsData.Any(x => x.Id == id))
-                        {
-                            ProcessResourceDataReportHealth(
-                                AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id),
-                                app.NetworkErrorActivePorts,
-                                app.NetworkWarningActivePorts,
-                                healthReportTimeToLive,
-                                HealthReportType.Application,
-                                repOrInst);
-                        }
+                    // TCP Ports - Ephemeral (port numbers fall in the dynamic range)
+                    if (AllAppEphemeralPortsData.Any(x => x.Id == id))
+                    {
+                        ProcessResourceDataReportHealth(
+                            AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id),
+                            app.NetworkErrorEphemeralPorts,
+                            app.NetworkWarningEphemeralPorts,
+                            healthReportTimeToLive,
+                            HealthReportType.Application,
+                            repOrInst);
+                    }
 
-                        // TCP Ports - Ephemeral (port numbers fall in the dynamic range)
-                        if (AllAppEphemeralPortsData.Any(x => x.Id == id))
-                        {
-                            ProcessResourceDataReportHealth(
-                                AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id),
-                                app.NetworkErrorEphemeralPorts,
-                                app.NetworkWarningEphemeralPorts,
-                                healthReportTimeToLive,
-                                HealthReportType.Application,
-                                repOrInst);
-                        }
-
-                        // Allocated (in use) Handles
-                        if (AllAppHandlesData.Any(x => x.Id == id))
-                        {
-                            ProcessResourceDataReportHealth(
-                                AllAppHandlesData.FirstOrDefault(x => x.Id == id),
-                                app.ErrorOpenFileHandles,
-                                app.WarningOpenFileHandles,
-                                healthReportTimeToLive,
-                                HealthReportType.Application,
-                                repOrInst);
-                        }
+                    // Allocated (in use) Handles
+                    if (AllAppHandlesData.Any(x => x.Id == id))
+                    {
+                        ProcessResourceDataReportHealth(
+                            AllAppHandlesData.FirstOrDefault(x => x.Id == id),
+                            app.ErrorOpenFileHandles,
+                            app.WarningOpenFileHandles,
+                            healthReportTimeToLive,
+                            HealthReportType.Application,
+                            repOrInst);
                     }
                 }
-
-                return Task.CompletedTask;
             }
-            catch (Exception e)
-            {
-                WriteToLogWithLevel(
-                    ObserverName,
-                    $"Unhandled exception in ReportAsync: \n{e}",
-                    LogLevel.Error);
 
-                throw;
-            }
+            return Task.CompletedTask;
         }
 
         private static string GetAppNameOrType(ReplicaOrInstanceMonitoringInfo repOrInst)
@@ -679,28 +686,14 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e)
                 {
-#if DEBUG
-                    // DEBUG INFO
-                    var healthReport = new Utilities.HealthReport
-                    {
-                        AppName = repOrInst.ApplicationName,
-                        HealthMessage = $"Error:{Environment.NewLine}{e}{Environment.NewLine}",
-                        State = HealthState.Ok,
-                        Code = FOErrorWarningCodes.Ok,
-                        NodeName = NodeName,
-                        Observer = ObserverName,
-                        Property = $"{e.Source}",
-                        ReportType = HealthReportType.Application,
-                    };
-
-                    HealthReporter.ReportHealthToServiceFabric(healthReport);
-#endif
                     if (e is Win32Exception || e is ArgumentException || e is InvalidOperationException)
                     {
                         WriteToLogWithLevel(
                             ObserverName,
                             $"MonitorDeployedAppsAsync: failed to find current service process or target process is running at a higher privilege than FO for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
                             LogLevel.Information);
+
+                        continue;
                     }
                     else
                     {
@@ -723,9 +716,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private async Task SetDeployedApplicationReplicaOrInstanceListAsync(
-            Uri applicationNameFilter = null,
-            string applicationType = null)
+        private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
             DeployedApplicationList deployedApps;
 
@@ -897,12 +888,10 @@ namespace FabricObserver.Observers
 
         private void LogAllAppResourceDataToCsv(string appName)
         {
-            if (!CsvFileLogger.EnableCsvLogging && !IsTelemetryProviderEnabled)
+            if (!EnableCsvLogging && !IsTelemetryProviderEnabled)
             {
                 return;
             }
-
-            var fileName = $"{appName.Replace(":", string.Empty)}{NodeName}";
 
             // CPU Time
             if (AllAppCpuData.Any(x => x.Id == appName))
@@ -966,6 +955,17 @@ namespace FabricObserver.Observers
                     ErrorWarningProperty.TotalActivePorts,
                     "Total",
                     Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+            }
+
+            if (AllAppEphemeralPortsData.Any(x => x.Id == appName))
+            {
+                // Network
+                CsvFileLogger.LogData(
+                    fileName,
+                    appName,
+                    ErrorWarningProperty.TotalEphemeralPorts,
+                    "Total",
+                    Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == appName).MaxDataValue)));
             }
 
             if (AllAppHandlesData.Any(x => x.Id == appName))

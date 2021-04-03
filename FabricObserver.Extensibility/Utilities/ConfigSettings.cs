@@ -39,6 +39,11 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
+        public bool EnableCsvLogging
+        {
+            get; set;
+        }
+
         public bool IsObserverTelemetryEnabled
         {
             get; set;
@@ -119,6 +124,15 @@ namespace FabricObserver.Observers.Utilities
                     out bool enableVerboseLogging))
             {
                 EnableVerboseLogging = enableVerboseLogging;
+            }
+
+            // CSV Logging?
+            if (bool.TryParse(
+                    GetConfigSettingValue(
+                    ObserverConstants.EnableLongRunningCsvLogging),
+                    out bool enableCsvLogging))
+            {
+                EnableCsvLogging = enableCsvLogging;
             }
 
             // RunInterval?

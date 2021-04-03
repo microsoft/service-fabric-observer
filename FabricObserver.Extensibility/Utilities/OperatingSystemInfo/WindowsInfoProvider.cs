@@ -64,9 +64,9 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
             catch (Exception e) when (
-                e is FormatException
-                || e is InvalidCastException
-                || e is ManagementException)
+                    e is FormatException
+                    || e is InvalidCastException
+                    || e is ManagementException)
             {
             }
             finally
@@ -88,14 +88,21 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                List<(int Pid, int Port)> tempPortData = new List<(int Pid, int Port)>();
+                List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
+                string s = string.Empty;
+                int count = -1;
+
+                if (processId > 0)
+                {
+                    s = $" | find \"{processId}\"";
+                }
 
                 using (var p = new Process())
                 {
                     var ps = new ProcessStartInfo
                     {
-                        Arguments = $"-ano -p {TcpProtocol}",
-                        FileName = "netstat.exe",
+                        Arguments = $"/c netstat -qno -p {TcpProtocol}{s}",
+                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                         UseShellExecute = false,
                         WindowStyle = ProcessWindowStyle.Hidden,
                         RedirectStandardInput = true,
@@ -106,47 +113,59 @@ namespace FabricObserver.Observers.Utilities
                     p.StartInfo = ps;
                     _ = p.Start();
                     var stdOutput = p.StandardOutput;
-
+                    
                     (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
-
                     string portRow;
-
-                    var processIdString = processId > -1 ? processId.ToString() : string.Empty;
-
                     while ((portRow = stdOutput.ReadLine()) != null)
                     {
-                        if (!portRow.ToLower().Contains(TcpProtocol))
+                        if (string.IsNullOrWhiteSpace(portRow))
                         {
                             continue;
                         }
 
-                        if (processId > -1)
-                        {
-                            int lastSpaceIndex = portRow.LastIndexOf(' ');
+                        int port = GetLocalPortFromConsoleOutputRow(portRow);
 
-                            // Don't process different PIDs if processId is supplied.
-                            if (portRow.Substring(lastSpaceIndex + 1).CompareTo(processIdString) != 0)
+                        // Only add unique pid and port data to list. This would filter out cases where BOUND and ESTABLISHED states have the same Pid and Port, which
+                        // would artificially increase the count of ports that FO computes.
+                        if (processId > 0)
+                        {
+                            List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                            if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
                             {
                                 continue;
                             }
-                        }
 
-                        int port = GetLocalPortAndStateFromConsoleOutputRow(portRow);
-
-                        // Only add unique pid and port data to list. This would filter out cases where BOUND and ESTABLISHED states have the same Pid and Port, which
-                        // would artifically increase the count of ports that FO computes.
-                        if (!tempPortData.Any(t => t.Pid > 0 && t.Pid == processId && t.Port == port))
-                        {
-                            // We only care about active ports in dynamic range.
-                            if (port >= lowPortRange && port <= highPortRange)
+                            if (processId != pidPart)
                             {
-                                tempPortData.Add((processId, port));
+                                continue;
+                            }
+
+                            if (!tempLocalPortData.Any(t => t.Pid == processId && t.Port == port))
+                            {
+                                if (port >= lowPortRange && port <= highPortRange)
+                                {
+                                    tempLocalPortData.Add((processId, port));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (!tempLocalPortData.Any(t => t.Port == port))
+                            {
+                                if (port >= lowPortRange && port <= highPortRange)
+                                {
+                                    tempLocalPortData.Add((processId, port));
+                                }
                             }
                         }
                     }
 
+                    p.WaitForExit();
                     int exitStatus = p.ExitCode;
                     stdOutput.Close();
+                    count = tempLocalPortData.Count;
+                    tempLocalPortData.Clear();
 
                     if (exitStatus != 0)
                     {
@@ -154,12 +173,12 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                return tempPortData.Count;
+                return count;
             }
             catch (Exception e) when (
-                e is ArgumentException
-                || e is InvalidOperationException
-                || e is Win32Exception)
+                    e is ArgumentException
+                    || e is InvalidOperationException
+                    || e is Win32Exception)
             {
             }
 
@@ -208,9 +227,11 @@ namespace FabricObserver.Observers.Utilities
                     return (lowPortRange, highPortRange);
                 }
                 catch (Exception e) when (
-                    e is IOException
-                    || e is InvalidOperationException
-                    || e is Win32Exception)
+                        e is ArgumentException
+                        || e is IOException
+                        || e is InvalidOperationException
+                        || e is RegexMatchTimeoutException
+                        || e is Win32Exception)
                 {
                 }
             }
@@ -223,18 +244,20 @@ namespace FabricObserver.Observers.Utilities
             try
             {
                 string protoParam = "-p " + TcpProtocol;
-                string findStrProc = $"| find /i \"{TcpProtocol}\"";
+                string findStrProc = string.Empty;
+                List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
+                int output;
 
                 if (processId > 0)
                 {
-                    findStrProc = $"| find \"{processId}\" | find /i \"established\"";
+                    findStrProc = $" | find \"{processId}\"";
                 }
 
                 using (var p = new Process())
                 {
                     var ps = new ProcessStartInfo
                     {
-                        Arguments = $"/c netstat -ano {protoParam} {findStrProc} /c",
+                        Arguments = $"/c netstat -qno {protoParam}{findStrProc}",
                         FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                         UseShellExecute = false,
                         WindowStyle = ProcessWindowStyle.Hidden,
@@ -244,25 +267,67 @@ namespace FabricObserver.Observers.Utilities
 
                     p.StartInfo = ps;
                     _ = p.Start();
-
                     var stdOutput = p.StandardOutput;
-                    string output = stdOutput.ReadToEnd().Trim('\n', '\r');
+
+                    string portRow;
+                    while ((portRow = stdOutput.ReadLine()) != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(portRow))
+                        {
+                            continue;
+                        }
+
+                        int localPort = GetLocalPortFromConsoleOutputRow(portRow);
+
+                        // Only add unique pid (if supplied in call) and local port data to list.
+                        if (processId > 0)
+                        {
+                            List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                            
+                            if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
+                            {
+                                continue;
+                            }
+
+                            if (processId != pidPart)
+                            {
+                                continue;
+                            }
+
+                            if (!tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
+                            {
+                                tempLocalPortData.Add((processId, localPort));
+                            }
+                        }
+                        else
+                        {
+                            if (!tempLocalPortData.Any(t => t.Port == localPort))
+                            {
+                                tempLocalPortData.Add((processId, localPort));
+                            }
+                        }
+                    }
+
+                    output = tempLocalPortData.Count;
+                    p.WaitForExit();
                     string exitStatus = p.ExitCode.ToString();
                     stdOutput.Close();
+                    tempLocalPortData.Clear();
 
                     if (exitStatus != "0")
                     {
                         return -1;
                     }
 
-                    return int.TryParse(output, out int ret) ? ret : 0;
+                    return output;
                 }
             }
             catch (Exception e) when (
-                e is ArgumentException
-                || e is InvalidOperationException
-                || e is Win32Exception)
+                    e is ArgumentException
+                    || e is InvalidOperationException
+                    || e is Win32Exception)
             {
+
             }
 
             return -1;
@@ -355,7 +420,7 @@ namespace FabricObserver.Observers.Utilities
             return Task.FromResult(osInfo);
         }
 
-        private int GetLocalPortAndStateFromConsoleOutputRow(string portRow)
+        private int GetLocalPortFromConsoleOutputRow(string portRow)
         {
             if (string.IsNullOrWhiteSpace(portRow))
             {
