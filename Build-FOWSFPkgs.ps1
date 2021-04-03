@@ -23,11 +23,11 @@ function Build-SFPkg {
 try {
     Push-Location $scriptPath
 
-    Build-SFPkg "FabricObserverWeb.Linux.SelfContained" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\self-contained\FabricObserverWebApiType"
-    Build-SFPkg "FabricObserverWeb.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\framework-dependent\FabricObserverWebApiType"
+    Build-SFPkg "FabricObserverWeb.Linux.SelfContained.2.0.1" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\self-contained\FabricObserverWebApiType"
+    Build-SFPkg "FabricObserverWeb.Linux.FrameworkDependent.2.0.1" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\framework-dependent\FabricObserverWebApiType"
 
-    Build-SFPkg "FabricObserverWeb.Windows.SelfContained" "$scriptPath\bin\release\FabricObserverWeb\win-x64\self-contained\FabricObserverWebApiType"
-    Build-SFPkg "FabricObserverWeb.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricObserverWeb\win-x64\framework-dependent\FabricObserverWebApiType"
+    Build-SFPkg "FabricObserverWeb.Windows.SelfContained.2.0.1" "$scriptPath\bin\release\FabricObserverWeb\win-x64\self-contained\FabricObserverWebApiType"
+    Build-SFPkg "FabricObserverWeb.Windows.FrameworkDependent.2.0.1" "$scriptPath\bin\release\FabricObserverWeb\win-x64\framework-dependent\FabricObserverWebApiType"
 }
 finally {
     Pop-Location
