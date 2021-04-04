@@ -63,13 +63,13 @@ namespace FabricObserver.Observers
         private readonly string dataPackagePath;
         private readonly List<NetworkObserverConfig> userConfig = new List<NetworkObserverConfig>();
         private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
-        private Dictionary<string, bool> connEndpointTestResults = new Dictionary<string, bool>();
+        private readonly Dictionary<string, bool> connEndpointTestResults = new Dictionary<string, bool>();
+        private readonly Stopwatch stopwatch;
+        private readonly MachineInfoModel.ConfigSettings configSettings;
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;
-        private Stopwatch stopwatch;
         private CancellationToken cancellationToken;
         private int tcpConnTestRetried;
-        private MachineInfoModel.ConfigSettings configSettings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetworkObserver"/> class.
@@ -536,6 +536,7 @@ namespace FabricObserver.Observers
                                 HealthState.Warning,
                                 e.ToString());
 
+                            // Fix the bug..
                             throw;
                         }
                     }

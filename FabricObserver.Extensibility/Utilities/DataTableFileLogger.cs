@@ -4,7 +4,9 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using FabricObserver.Interfaces;
 using NLog;
@@ -16,14 +18,16 @@ namespace FabricObserver.Observers.Utilities
     // CSV file logger for long-running monitoring data (memory/cpu/disk/network usage data).
     public class DataTableFileLogger : IDataTableFileLogger<ILogger>
     {
-        public string DataLogFolder 
-        { 
-            get; set; 
-        }
-
         private static ILogger dataLogger
         {
             get; set;
+        }
+
+        private readonly Dictionary<string, DateTime> FolderCleanedState;
+
+        public string DataLogFolder 
+        { 
+            get; set; 
         }
 
         public string BaseDataLogFolderPath 
@@ -34,6 +38,25 @@ namespace FabricObserver.Observers.Utilities
         public bool EnableCsvLogging
         {
             get; set;
+        }
+
+        public CsvFileWriteFormat FileWriteFormat
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The maximum number of archive files that will be stored.
+        /// 0 means there is no limit set. 
+        /// </summary>
+        public int MaxArchiveCsvFileLifetimeDays
+        {
+            get; set;
+        } = 0;
+
+        public DataTableFileLogger()
+        {
+            FolderCleanedState = new Dictionary<string, DateTime>();
         }
 
         public void ConfigureLogger(string filename)
@@ -85,20 +108,44 @@ namespace FabricObserver.Observers.Utilities
 
             var csvPath = Path.Combine(logFullPath, filename + ".csv");
 
+            // Clean out old files.
+            if (MaxArchiveCsvFileLifetimeDays > 0 && FileWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives)
+            {
+                // Add folder path to state dictionary.
+                if (!FolderCleanedState.ContainsKey(logFullPath))
+                {
+                    FolderCleanedState.Add(logFullPath, DateTime.UtcNow);
+                }
+                else
+                {
+                    // Only clean a folder that hasn't been cleaned for MaxArchiveCsvFileLifetimeDays days.
+                    if (DateTime.UtcNow.Subtract(FolderCleanedState[logFullPath]) >= TimeSpan.FromDays(MaxArchiveCsvFileLifetimeDays))
+                    {
+                        CleanLogFolder(logFullPath, TimeSpan.FromDays(MaxArchiveCsvFileLifetimeDays));
+                    }
+                }
+            }
+
             if (dataLogger == null)
             {
                 dataLogger = LogManager.GetLogger("FabricObserver.Utilities.DataTableFileLogger");
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
-            var dataLog = (FileTarget)LogManager.Configuration.FindTargetByName("AvgTargetDataStore");
-            dataLog.FileName = csvPath;
-            dataLog.AutoFlush = true;
-            dataLog.ConcurrentWrites = true;
-            dataLog.ArchiveEvery = FileArchivePeriod.Day;
-            dataLog.ArchiveNumbering = ArchiveNumberingMode.DateAndSequence;
-            dataLog.AutoFlush = true;
-            dataLog.CreateDirs = true;
+            FileTarget dataLog = (FileTarget)LogManager.Configuration.FindTargetByName("AvgTargetDataStore");
+                       dataLog.FileName = csvPath;
+                       dataLog.AutoFlush = true;
+                       dataLog.ConcurrentWrites = false;
+                       dataLog.EnableFileDelete = true;
+                       dataLog.AutoFlush = true;
+                       dataLog.CreateDirs = true;
+
+            if (FileWriteFormat == CsvFileWriteFormat.SingleFileWithArchives)
+            {
+                dataLog.MaxArchiveDays = MaxArchiveCsvFileLifetimeDays;
+                dataLog.ArchiveEvery = FileArchivePeriod.Day;
+                dataLog.ArchiveNumbering = ArchiveNumberingMode.DateAndSequence;
+            }
 
             LogManager.ReconfigExistingLoggers();
         }
@@ -113,14 +160,19 @@ namespace FabricObserver.Observers.Utilities
         */
 
         public void LogData(
-            string fileName,
-            string target,
-            string metric,
-            string stat,
-            double value)
+                    string fileName,
+                    string target,
+                    string metric,
+                    string stat,
+                    double value)
         {
             // If you use the AppInsights IObserverTelemetry impl, then this will, for example,
             // send traces up to AppInsights instead of writing locally. See NLog.config for settings.
+            // **NOTE**: It is preferred that if you want data for every reading that an observer conducts then you 
+            // just enable Telemetry on the observers you want the data from. This will be high volume telemetry... 
+            // You don't need to use this logger for that. This really should only be used to create csv files on disk,
+            // which will take place as one file (datestamped) per configured metric reading per supported observer. Not all 
+            // observers currently support csv logging: Only AppObserver, FabricSystemObserver and NodeObserver support csv file logging.
             if (!EnableCsvLogging)
             {
                 if (dataLogger == null)
@@ -152,6 +204,38 @@ namespace FabricObserver.Observers.Utilities
         public static void Flush()
         {
             LogManager.Flush();
+        }
+
+        private void CleanLogFolder(string folderPath, TimeSpan maxAge)
+        {
+            int count = 0;
+
+            if (Directory.Exists(folderPath))
+            {
+                string[] files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories);
+                
+                foreach (string file in files)
+                {
+                    try
+                    {
+                        if (DateTime.UtcNow.Subtract(File.GetCreationTime(file)) >= maxAge)
+                        {
+                            File.Delete(file);
+                            count++;
+                        }
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException || e is PathTooLongException)
+                    {
+
+                    }
+                }
+
+                if (count > 0)
+                {
+                    // The dictionary will always contain the folderPath key. See calling code.
+                    FolderCleanedState[folderPath] = DateTime.UtcNow; 
+                }
+            }
         }
     }
 }

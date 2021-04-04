@@ -78,6 +78,8 @@ namespace FabricObserver.Observers
                 return;
             }
 
+            Token = token;
+
             stopWatch.Start();
 
             SetErrorWarningThresholds();
@@ -167,6 +169,8 @@ namespace FabricObserver.Observers
                     // This section only needs to run if you have the FabricObserverWebApi app installed.
                     if (IsObserverWebApiAppDeployed && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
+                        token.ThrowIfCancellationRequested();
+
                         _ = diskInfo.AppendFormat(
                             "{0}",
                             GetWindowsPerfCounterDetailsText(
@@ -177,12 +181,14 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
                         LogLevel.Error);
+
+                // Fix the bug..
                 throw;
             }
 
@@ -211,6 +217,7 @@ namespace FabricObserver.Observers
                 foreach (var data in DiskSpaceUsagePercentageData)
                 {
                     token.ThrowIfCancellationRequested();
+
                     ProcessResourceDataReportHealth(
                         data,
                         DiskSpacePercentErrorThreshold,
@@ -224,6 +231,7 @@ namespace FabricObserver.Observers
                     foreach (var data in DiskAverageQueueLengthData)
                     {
                         token.ThrowIfCancellationRequested();
+
                         ProcessResourceDataReportHealth(
                             data,
                             AverageQueueLengthErrorThreshold,
@@ -240,6 +248,7 @@ namespace FabricObserver.Observers
                     foreach (var data in DiskSpaceAvailableMbData)
                     {
                         token.ThrowIfCancellationRequested();
+
                         ProcessResourceDataReportHealth(
                             data,
                             0,
@@ -251,6 +260,7 @@ namespace FabricObserver.Observers
                     foreach (var data in DiskSpaceTotalMbData)
                     {
                         token.ThrowIfCancellationRequested();
+
                         ProcessResourceDataReportHealth(
                             data,
                             0,
@@ -273,14 +283,15 @@ namespace FabricObserver.Observers
 
                 _ = diskInfo.Clear();
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
-                        FabricServiceContext.ServiceName.OriginalString,
-                        ObserverName,
-                        HealthState.Warning,
-                        $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+                                FabricServiceContext.ServiceName.OriginalString,
+                                ObserverName,
+                                HealthState.Warning,
+                                $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
+                // Fix the bug..
                 throw;
             }
 
@@ -289,56 +300,73 @@ namespace FabricObserver.Observers
 
         private void SetErrorWarningThresholds()
         {
+            Token.ThrowIfCancellationRequested();
+
             try
             {
                 if (int.TryParse(
-                    GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
+                            GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
                     DiskSpacePercentErrorThreshold = diskUsedError;
                 }
 
+                Token.ThrowIfCancellationRequested();
+
                 if (int.TryParse(
-                    GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
+                            GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
                     DiskSpacePercentWarningThreshold = diskUsedWarning;
                 }
 
+                Token.ThrowIfCancellationRequested();
+
                 if (int.TryParse(
-                    GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
+                            GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
                 {
                     AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
                 }
 
+                Token.ThrowIfCancellationRequested();
+
                 if (int.TryParse(
-                    GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
+                            GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
                     AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
                 }
             }
-            catch (ArgumentNullException)
+            catch (Exception e) when (e is ArgumentException || e is FormatException)
             {
+
             }
-            catch (FormatException)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
+                HealthReporter.ReportFabricObserverServiceHealth(
+                                FabricServiceContext.ServiceName.OriginalString,
+                                ObserverName,
+                                HealthState.Warning,
+                                $"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
+
+                // Fix the bug..
+                throw;
             }
         }
 
-        private string GetWindowsPerfCounterDetailsText(
-            ICollection<float> data,
-            string counter)
+        private string GetWindowsPerfCounterDetailsText(ICollection<float> data, string counter)
         {
             if (data == null || data.Count == 0)
             {
                 return null;
             }
+
+            Token.ThrowIfCancellationRequested();
 
             var sb = new StringBuilder();
             string ret;

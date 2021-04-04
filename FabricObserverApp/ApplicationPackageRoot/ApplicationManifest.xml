@@ -74,6 +74,7 @@
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
+    
     <!-- CertificateObserver-->
     <!-- Cluster and App Certs Warning Start (Days) -> Default is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />

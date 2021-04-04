@@ -190,9 +190,9 @@ namespace FabricObserver.Observers
             {
                 token.ThrowIfCancellationRequested();
 
-                if (EnableCsvLogging || IsTelemetryProviderEnabled)
+                if (EnableCsvLogging)
                 {
-                    var fileName = $"MachineResourceData_{DateTime.UtcNow:o}";
+                    var fileName = $"MachineResourceData{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
 
                     // Log (csv) system-wide CPU/Mem/Ports/File Handles(Linux)/Firewall Rules(Windows) data.
                     if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
@@ -376,7 +376,7 @@ namespace FabricObserver.Observers
 
                 return Task.CompletedTask;
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
                     FabricServiceContext.ServiceName.OriginalString,
@@ -384,6 +384,7 @@ namespace FabricObserver.Observers
                     HealthState.Warning,
                     $"Unhandled exception re-thrown:{Environment.NewLine}{e}");
 
+                // Fix the bug..
                 throw;
             }
         }
@@ -739,6 +740,7 @@ namespace FabricObserver.Observers
                         HealthState.Warning,
                         $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
+                // Fix the bug..
                 throw;
             }
             finally

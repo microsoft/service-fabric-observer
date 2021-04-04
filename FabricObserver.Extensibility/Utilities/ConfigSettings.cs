@@ -129,7 +129,7 @@ namespace FabricObserver.Observers.Utilities
             // CSV Logging?
             if (bool.TryParse(
                     GetConfigSettingValue(
-                    ObserverConstants.EnableLongRunningCsvLogging),
+                    ObserverConstants.EnableCSVDataLogging),
                     out bool enableCsvLogging))
             {
                 EnableCsvLogging = enableCsvLogging;

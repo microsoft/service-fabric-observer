@@ -178,14 +178,17 @@ namespace FabricObserver.Observers
 
                     var id = $"{appNameOrType}:{processName}";
 
-                    // Locally Log (csv) CPU/Mem/FileHandles/Ports per app.
+                    // Locally Log (csv) CPU/Mem/FileHandles/Ports per app service process.
                     if (EnableCsvLogging)
                     {
-                        fileName = $"{processName}_{DateTime.UtcNow:o}";
+                        fileName = $"{processName}{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
 
                         // BaseLogDataLogFolderPath is set in ObserverBase or a default one is created by CsvFileLogger.
                         // This means a new folder will be added to the base path.
-                        CsvFileLogger.DataLogFolder = processName;
+                        if (CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives)
+                        {
+                            CsvFileLogger.DataLogFolder = processName;
+                        }
 
                         // Log pid..
                         CsvFileLogger.LogData(
@@ -480,14 +483,10 @@ namespace FabricObserver.Observers
                 }
             }
 
-            foreach (var app in deployedTargetList)
+            foreach (var rep in ReplicaOrInstanceList)
             {
                 Token.ThrowIfCancellationRequested();
-
-                if (ReplicaOrInstanceList.Count > 0 && ReplicaOrInstanceList.Any(r => r.ApplicationName.OriginalString == app.TargetApp))
-                {
-                    ObserverLogger.LogInfo($"Will observe resource consumption by {app.TargetApp} on Node {NodeName}.");
-                }
+                ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");   
             }
 
             return true;
@@ -657,7 +656,7 @@ namespace FabricObserver.Observers
                         }
 
                         if (checkMemPct)
-                        { 
+                        {
                             // Memory (percent in use (total)).
                             var (TotalMemory, PercentInUse) = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
 
@@ -671,7 +670,7 @@ namespace FabricObserver.Observers
                         if (checkHandles)
                         {
                             float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(currentProcess.Id, FabricServiceContext);
-                            
+
                             if (handles > -1)
                             {
                                 AllAppHandlesData.FirstOrDefault(x => x.Id == id).Data.Add(handles);
@@ -684,29 +683,23 @@ namespace FabricObserver.Observers
                     timer.Stop();
                     timer.Reset();
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                 {
-                    if (e is Win32Exception || e is ArgumentException || e is InvalidOperationException)
-                    {
-                        WriteToLogWithLevel(
-                            ObserverName,
-                            $"MonitorDeployedAppsAsync: failed to find current service process or target process is running at a higher privilege than FO for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
-                            LogLevel.Information);
+                    WriteToLogWithLevel(
+                        ObserverName,
+                        $"MonitorDeployedAppsAsync: failed to find current service process or target process is running at a higher privilege than FO for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
+                        LogLevel.Information);
 
-                        continue;
-                    }
-                    else
-                    {
-                        if (!(e is OperationCanceledException || e is TaskCanceledException))
-                        {
-                            WriteToLogWithLevel(
-                                ObserverName,
-                                $"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}",
-                                LogLevel.Warning);
-                        }
+                    continue;
+                }
+                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                {
+                    WriteToLogWithLevel(
+                        ObserverName,
+                        $"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}",
+                        LogLevel.Warning);
 
-                        throw;
-                    }
+                    throw;
                 }
                 finally
                 {

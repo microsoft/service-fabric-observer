@@ -234,6 +234,7 @@ namespace FabricObserver.Observers
                     HealthState.Error,
                     $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
+                // Fix the bug..
                 throw;
             }
 
@@ -599,6 +600,7 @@ namespace FabricObserver.Observers
                        HealthState.Error,
                        $"Unhandled Exception processing OS information:{Environment.NewLine}{e}");
 
+                // Fix the bug..
                 throw;
             }
         }

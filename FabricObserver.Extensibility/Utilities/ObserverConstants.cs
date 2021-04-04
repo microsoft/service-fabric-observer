@@ -10,7 +10,7 @@ namespace FabricObserver.Observers.Utilities
         public const string ObserverManagerName = "ObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
         public const string ObserverWebApiEnabled = "ObserverWebApiEnabled";
-        public const string EnableLongRunningCsvLogging = "EnableLongRunningCSVLogging";
+        public const string EnableCSVDataLogging = "EnableCSVDataLogging";
         public const string Fqdn = "FQDN";
         public const string EnableETWProvider = "EnableETWProvider";
         public const string EventSourceProviderName = "FabricObserverETWProvider";
@@ -47,6 +47,9 @@ namespace FabricObserver.Observers.Utilities
         public const string DataCapacityParameter = "ResourceUsageDataCapacity";
         public const string UseCircularBufferParameter = "UseCircularBuffer";
         public const string MonitorDurationParameter = "MonitorDuration";
+        public const string MaxArchivedCsvFileLifetimeDays = "MaxArchivedCsvFileLifetimeDays";
+        public const string MaxArchivedLogFileLifetimeDays = "MaxArchivedLogFileLifetimeDays";
+        public const string CsvFileWriteFormat = "CsvFileWriteFormat";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";

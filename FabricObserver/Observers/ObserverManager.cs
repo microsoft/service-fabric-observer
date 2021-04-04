@@ -40,6 +40,16 @@ namespace FabricObserver.Observers
         private IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgess;
 
+        private bool TaskCancelled
+        {
+            get
+            {
+                return linkedSFRuntimeObserverTokenSource != null ?
+                            linkedSFRuntimeObserverTokenSource.Token.IsCancellationRequested :
+                            token.IsCancellationRequested;
+            }
+        }
+
         public static FabricClient FabricClientInstance
         {
             get; set;
@@ -105,6 +115,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        private int MaxArchivedLogFileLifetimeDays
+        {
+            get;
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// This is used for unit testing.
@@ -143,8 +158,7 @@ namespace FabricObserver.Observers
 
             // Observer Logger setup.
             string logFolderBasePath;
-            string observerLogPath = GetConfigSettingValue(
-                ObserverConstants.ObserverLogPathParameter);
+            string observerLogPath = GetConfigSettingValue(ObserverConstants.ObserverLogPathParameter);
 
             if (!string.IsNullOrEmpty(observerLogPath))
             {
@@ -156,8 +170,13 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDays), out int maxArchivedLogFileLifetimeDays))
+            {
+                MaxArchivedLogFileLifetimeDays = maxArchivedLogFileLifetimeDays;
+            }
+
             // this logs error/warning/info messages for ObserverManager.
-            Logger = new Logger("ObserverManager", logFolderBasePath);
+            Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays > 0 ? MaxArchivedLogFileLifetimeDays : 7);
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
             SetPropertieSFromConfigurationParameters();
             serviceCollection = serviceProvider.GetServices<ObserverBase>();
@@ -748,12 +767,7 @@ namespace FabricObserver.Observers
 
                 try
                 {
-                    // Shutdown/cancellation signaled, so stop.
-                    bool taskCancelled = linkedSFRuntimeObserverTokenSource != null ? 
-                                            linkedSFRuntimeObserverTokenSource.Token.IsCancellationRequested : 
-                                            token.IsCancellationRequested;
-
-                    if (taskCancelled || shutdownSignaled)
+                    if (TaskCancelled || shutdownSignaled)
                     {
                         return false;
                     }
@@ -774,7 +788,7 @@ namespace FabricObserver.Observers
 
                     // The observer is taking too long (hung?), move on to next observer.
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
-                    if (!isCompleted)
+                    if (!isCompleted && !(TaskCancelled || shutdownSignaled))
                     {
                         string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. " +
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it.";
@@ -827,7 +841,7 @@ namespace FabricObserver.Observers
                     else
                     {
                         // Delete the observer's instance log (local file with Warn/Error details per run)..
-                        _ = observer.ObserverLogger.TryDeleteInstanceLog();
+                        _ = observer.ObserverLogger.TryDeleteInstanceLogFile();
 
                         try
                         {

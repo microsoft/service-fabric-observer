@@ -179,6 +179,22 @@ namespace FabricObserver.Observers
             }
         }
 
+        /// <summary>
+        /// The maximum number of days an archived observer log file will be stored. After this time, it will be deleted from disk.
+        /// </summary>
+        public int MaxLogArchiveFileLifetimeDays
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The maximum number of days a csv file produced by CsvLogger will be stored. After this time, it will be deleted from disk.
+        /// </summary>
+        public int MaxCsvArchiveFileLifetimeDays
+        {
+            get; set;
+        }
+
         public Logger ObserverLogger
         {
             get; set;
@@ -313,6 +329,11 @@ namespace FabricObserver.Observers
             get;
         }
 
+        public CsvFileWriteFormat CsvWriteFormat 
+        {
+            get; set; 
+        }
+
         /// <summary>
         /// Base type constructor for all observers (both built-in and plugin impls).
         /// </summary>
@@ -326,14 +347,14 @@ namespace FabricObserver.Observers
             FabricServiceContext = statelessServiceContext;
             NodeName = FabricServiceContext.NodeContext.NodeName;
             NodeType = FabricServiceContext.NodeContext.NodeType;
-            SetConfiguration();
+            SetObserverConfiguration();
 
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetSettingParameterValue(
                 ObserverConstants.ObserverManagerConfigurationSectionName,
                 ObserverConstants.ObserverLogPathParameter);
-
+            
             if (!string.IsNullOrEmpty(observerLogPath))
             {
                 logFolderBasePath = observerLogPath;
@@ -344,7 +365,7 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            ObserverLogger = new Logger(ObserverName, logFolderBasePath)
+            ObserverLogger = new Logger(ObserverName, logFolderBasePath, MaxLogArchiveFileLifetimeDays)
             {
                 EnableETWLogging = IsEtwProviderEnabled,
             };
@@ -357,13 +378,15 @@ namespace FabricObserver.Observers
             ConfigurationSettings = new Utilities.ConfigSettings(
                     FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings,
                     ConfigurationSectionName);
-            
+
             // DataLogger setup
             if (EnableCsvLogging)
             {
                 CsvFileLogger = new DataTableFileLogger()
                 {
                     EnableCsvLogging = true,
+                    FileWriteFormat = CsvWriteFormat,
+                    MaxArchiveCsvFileLifetimeDays = MaxCsvArchiveFileLifetimeDays,
                 };
 
                 string dataLogPath = GetSettingParameterValue(
@@ -443,10 +466,7 @@ namespace FabricObserver.Observers
         /// <param name="parameterName">Name of the parameter.</param>
         /// <param name="defaultValue">Default value.</param>
         /// <returns>parameter value.</returns>
-        public string GetSettingParameterValue(
-            string sectionName,
-            string parameterName,
-            string defaultValue = null)
+        public string GetSettingParameterValue(string sectionName, string parameterName, string defaultValue = null)
         {
             if (string.IsNullOrEmpty(sectionName) || string.IsNullOrEmpty(parameterName))
             {
@@ -483,6 +503,7 @@ namespace FabricObserver.Observers
             }
             catch (ArgumentException)
             {
+
             }
 
             return null;
@@ -1182,7 +1203,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void SetConfiguration()
+        private void SetObserverConfiguration()
         {
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
@@ -1194,6 +1215,24 @@ namespace FabricObserver.Observers
             if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableETWProvider), out bool etwProviderEnabled))
             {
                 IsEtwProviderEnabled = etwProviderEnabled;
+            }
+
+            // Archive file lifetime - ObserverLogger files.
+            if (int.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedLogFileLifetimeDays), out int maxFileArchiveLifetime))
+            {
+                MaxLogArchiveFileLifetimeDays = maxFileArchiveLifetime;
+            }
+
+            // Archive file lifetime - CsvLogger files.
+            if (int.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedCsvFileLifetimeDays), out int maxCsvFileArchiveLifetime))
+            {
+                MaxCsvArchiveFileLifetimeDays = maxCsvFileArchiveLifetime;
+            }
+
+            // Csv file write format - CsvLogger only.
+            if (Enum.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.CsvFileWriteFormat), ignoreCase:true, out CsvFileWriteFormat csvWriteFormat))
+            {
+                CsvWriteFormat = csvWriteFormat;
             }
 
             if (IsTelemetryProviderEnabled)

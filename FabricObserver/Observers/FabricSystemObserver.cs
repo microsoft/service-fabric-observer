@@ -175,34 +175,40 @@ namespace FabricObserver.Observers
 
                 foreach (var procName in processWatchList)
                 {
-                    Token.ThrowIfCancellationRequested();
-                    string dotnet = string.Empty;
-
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.EndsWith(".dll"))
+                    try
                     {
-                        dotnet = "dotnet ";
-                    }
+                        Token.ThrowIfCancellationRequested();
+                        string dotnet = string.Empty;
 
-                    await GetProcessInfoAsync($"{dotnet}{procName}").ConfigureAwait(false);
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.EndsWith(".dll"))
+                        {
+                            dotnet = "dotnet ";
+                        }
+
+                        await GetProcessInfoAsync($"{dotnet}{procName}").ConfigureAwait(false);
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                    {
+                        continue;
+                    }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
                         LogLevel.Error);
+
+                // Fix the bug..
                 throw;
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                && IsObserverWebApiAppDeployed
-                && monitorWinEventLog)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsObserverWebApiAppDeployed && monitorWinEventLog)
             {
                 ReadServiceFabricWindowsEventLog();
             }
 
-            
             await ReportAsync(token).ConfigureAwait(true);
 
             // The time it took to run this observer to completion.
@@ -377,9 +383,15 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
+                WriteToLogWithLevel(
+                        ObserverName,
+                        $"Unhandled exception in ReportAsync:{Environment.NewLine}{e}",
+                        LogLevel.Error);
 
+                // Fix the bug..
+                throw;
             }
 
             return Task.CompletedTask;
@@ -411,9 +423,7 @@ namespace FabricObserver.Observers
             var evtLogQuery = new EventLogQuery(sfAdminLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
+                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
                 {
                     Token.ThrowIfCancellationRequested();
                     evtRecordList.Add(eventInstance);
@@ -424,9 +434,7 @@ namespace FabricObserver.Observers
             evtLogQuery = new EventLogQuery(sfOperationalLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
+                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
                 {
                     Token.ThrowIfCancellationRequested();
                     evtRecordList.Add(eventInstance);
@@ -437,9 +445,7 @@ namespace FabricObserver.Observers
             evtLogQuery = new EventLogQuery(sfLeaseAdminLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
+                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
                 {
                     Token.ThrowIfCancellationRequested();
                     evtRecordList.Add(eventInstance);
@@ -450,9 +456,7 @@ namespace FabricObserver.Observers
             evtLogQuery = new EventLogQuery(sfLeaseOperationalLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
+                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
                 {
                     Token.ThrowIfCancellationRequested();
                     evtRecordList.Add(eventInstance);
@@ -463,9 +467,7 @@ namespace FabricObserver.Observers
             evtLogQuery = new EventLogQuery(systemLogSource, PathType.LogName, xQuery);
             using (var evtLogReader = new EventLogReader(evtLogQuery))
             {
-                for (var eventInstance = evtLogReader.ReadEvent();
-                     eventInstance != null;
-                     eventInstance = evtLogReader.ReadEvent())
+                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
                 {
                     Token.ThrowIfCancellationRequested();
                     evtRecordList.Add(eventInstance);
@@ -473,8 +475,13 @@ namespace FabricObserver.Observers
             }
         }
 
-        private Process[] GetDotnetProcessesByFirstArgument(string argument)
+        private Process[] GetDotnetLinuxProcessesByFirstArgument(string argument)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                throw new PlatformNotSupportedException("This function should only be called on Linux platforms.");
+            }
+
             List<Process> result = new List<Process>();
             Process[] processes = Process.GetProcessesByName("dotnet");
 
@@ -782,7 +789,7 @@ namespace FabricObserver.Observers
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.Contains("dotnet"))
             {
                 dotnetArg = $"{procName.Replace("dotnet ", string.Empty)}";
-                processes = GetDotnetProcessesByFirstArgument(dotnetArg);
+                processes = GetDotnetLinuxProcessesByFirstArgument(dotnetArg);
             }
             else
             {
@@ -884,30 +891,29 @@ namespace FabricObserver.Observers
 
                             await Task.Delay(250, Token).ConfigureAwait(false);
                         }
-                        catch (Exception e)
+                        catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                         {
                             WriteToLogWithLevel(
                                 ObserverName,
-                                $"Can't observe {process} details:{Environment.NewLine}{e}",
+                                $"Unhandled Exception thrown in GetProcessInfoAsync:{Environment.NewLine}{e}",
                                 LogLevel.Warning);
 
+                            // Fix the bug..
                             throw;
                         }
                     }
                 }
-                catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                 {
-
-                }
-                catch (Win32Exception)
-                {
-                    // This will always be the case if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
+                    // This will be a Win32Exception or InvalidOperationException if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
                     // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
-                    // It is generally not worth running FO process as a Windows elevated user just for this scenario.
+                    // It is generally *not* worth running FO process as a Windows elevated user just for this scenario. On Linux, FO always should be run as normal user, not root.
                     WriteToLogWithLevel(
                         ObserverName,
                         $"Can't observe {procName} due to it's privilege level. FabricObserver must be running as System or Admin on Windows for this specific task.",
                         LogLevel.Information);
+                    
+                    continue;
                 }
                 catch (Exception e)
                 {
@@ -915,6 +921,8 @@ namespace FabricObserver.Observers
                             ObserverName,
                             $"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}",
                             LogLevel.Error);
+
+                    // Fix the bug..
                     throw;
                 }
                 finally
@@ -928,16 +936,16 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessResourceDataList<T>(
-            IReadOnlyCollection<FabricResourceUsageData<T>> data,
-            T thresholdError,
-            T thresholdWarning)
-                where T : struct
+                        IReadOnlyCollection<FabricResourceUsageData<T>> data,
+                        T thresholdError,
+                        T thresholdWarning)
+                            where T : struct
         {
             string fileName = null;
 
-            if (EnableCsvLogging || IsTelemetryProviderEnabled)
+            if (EnableCsvLogging)
             {
-                fileName = $"FabricSystemServices_{DateTime.UtcNow:o}";
+                fileName = $"FabricSystemServices{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
             }
 
             foreach (var dataItem in data)
@@ -949,7 +957,7 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                if (EnableCsvLogging || IsTelemetryProviderEnabled)
+                if (EnableCsvLogging)
                 {
                     var propertyName = data.First().Property;
 
@@ -985,7 +993,7 @@ namespace FabricObserver.Observers
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
-                        p = GetDotnetProcessesByFirstArgument(dataItem.Id);
+                        p = GetDotnetLinuxProcessesByFirstArgument(dataItem.Id);
                     }
                     else
                     {
@@ -1013,7 +1021,7 @@ namespace FabricObserver.Observers
                             thresholdWarning,
                             GetHealthReportTimeToLive(),
                             HealthReportType.Application);
-                    }
+            }
         }
     }
 }
