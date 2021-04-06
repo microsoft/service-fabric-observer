@@ -17,8 +17,8 @@
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <!-- Telemetry - AppInsights or LogAnalytics -->
     <!--Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />-->
+    <!-- Telemetry - AppInsights or LogAnalytics -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="false" />
@@ -27,8 +27,8 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- ETW - Custom EventSource Tracing -->
     <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
+    <!-- ETW - Custom EventSource Tracing -->
     <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
@@ -37,8 +37,8 @@
     <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
-    <!-- CSV Logging -->
     <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" /> -->
+    <!-- CSV Logging -->
     <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
@@ -51,8 +51,8 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
     <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:03" />
     <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:03" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:03" />
@@ -66,8 +66,8 @@
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!-- AppObserver -->
     <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
+    <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
