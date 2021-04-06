@@ -479,14 +479,43 @@ By design, CO will send an Ok health state report when a cluster goes from Warni
 Example Configuration:  
 
 ```XML
+  <!-- ClusterObserver Configuration Settings. NOTE: These are overridable settings, see ApplicationManifest.xml. 
+       The Values for these will be overriden by ApplicationManifest Parameter settings. Set DefaultValue for each
+       overridable parameter in that file, not here, as the parameter DefaultValues in ApplicationManifest.xml will be used, by default. 
+       This design is to enable unversioned application-parameter-only updates. This means you will be able to change
+       any of the MustOverride parameters below at runtime by doing an ApplicationUpdate with ApplicationParameters flag. 
+       See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version -->
+  <Section Name="ClusterObserverConfiguration">
+    <!-- Maximum amount of time to wait for an async operation to complete (e.g., any of the SF API calls..) -->
+    <Parameter Name="AsyncOperationTimeoutSeconds" Value="" MustOverride="true" />
+    <!-- Required: To enable or not enable, that is the question.-->
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
+         Aggregated Error evaluations will always be transmitted regardless of this setting. -->
+    <Parameter Name="EmitHealthWarningEvaluationDetails" Value="" MustOverride="true" />
+    <!-- Maximum amount of time a node can be in disabling/disabled/down state before
+         emitting a Warning signal.-->
+    <Parameter Name="MaxTimeNodeStatusNotOk" Value="" MustOverride="true" />
+    <!-- How often to run ClusterObserver. This is a Timespan value, e.g., 00:10:00 means every 10 minutes, for example. -->
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+  </Section>
+
+ApplicationManifest.xml is where you set Overridable settings.  
+
+  <Parameters>
     <!-- ClusterObserver settings. -->
+    <Parameter Name="ClusterObserver_InstanceCount" DefaultValue="1" />
     <Parameter Name="Enabled" DefaultValue="true" />
-    <Parameter Name="EnableTelemetry" DefaultValue="true" />
     <Parameter Name="EnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
-    <Parameter Name="RunInterval" DefaultValue="00:02:00" />
+    <Parameter Name="RunInterval" DefaultValue="" />
     <Parameter Name="AsyncOperationTimeoutSeconds" DefaultValue="120" />
+  </Parameters>
 ``` 
 You deploy CO into your cluster just as you would any other Service Fabric service.
 ### Application Parameter Updates
@@ -510,7 +539,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.7 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.8 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 Note: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to get the Capabilities in place. For Windows, FO processes will NOT be restarted.

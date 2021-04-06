@@ -138,8 +138,9 @@ namespace FabricObserver.Observers.Utilities
                     case ObserverConstants.NodeObserverName:
                         healthReport.Property = "MachineResourceHealth";
                         break;
+
                     default:
-                        healthReport.Property = $"{healthReport.Observer}_HealthProperty";
+                        healthReport.Property = $"{healthReport.Observer}_{(!string.IsNullOrWhiteSpace(healthReport.ResourceUsageDataProperty) ? healthReport.ResourceUsageDataProperty : "GenericHealthProperty")}";
                         break;
 
                 };

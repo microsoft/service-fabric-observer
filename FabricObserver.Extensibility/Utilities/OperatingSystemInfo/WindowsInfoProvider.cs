@@ -4,10 +4,12 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.IO;
+using System.Linq;
 using System.Management;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -17,6 +19,8 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsInfoProvider : OperatingSystemInfoProvider
     {
+        private const string TcpProtocol = "tcp";
+
         public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
         {
             ManagementObjectSearcher win32OsInfo = null;
@@ -60,9 +64,9 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
             catch (Exception e) when (
-                e is FormatException
-                || e is InvalidCastException
-                || e is ManagementException)
+                    e is FormatException
+                    || e is InvalidCastException
+                    || e is ManagementException)
             {
             }
             finally
@@ -74,20 +78,31 @@ namespace FabricObserver.Observers.Utilities
             return (-1L, -1);
         }
 
+        /// <summary>
+        /// Compute count of active ports in dynamic range.
+        /// </summary>
+        /// <param name="processId">Optional: If supplied, then return the number of ephemeral ports in use by the process.</param>
+        /// <param name="context">Optional (this is used by Linux callers only): If supplied, will use the ServiceContext to find the Linux Capabilities binary to run this command.</param>
+        /// <returns></returns>
         public override int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null)
         {
             try
             {
-                string protoParam = "tcp";
+                List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
+                string s = string.Empty;
+                int count = -1;
 
-                int count = 0;
+                if (processId > 0)
+                {
+                    s = $" | find \"{processId}\"";
+                }
 
                 using (var p = new Process())
                 {
                     var ps = new ProcessStartInfo
                     {
-                        Arguments = $"-ano -p {protoParam}",
-                        FileName = "netstat.exe",
+                        Arguments = $"/c netstat -qno -p {TcpProtocol}{s}",
+                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                         UseShellExecute = false,
                         WindowStyle = ProcessWindowStyle.Hidden,
                         RedirectStandardInput = true,
@@ -98,40 +113,59 @@ namespace FabricObserver.Observers.Utilities
                     p.StartInfo = ps;
                     _ = p.Start();
                     var stdOutput = p.StandardOutput;
-
+                    
                     (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
-
                     string portRow;
-
-                    var processIdx = processId > -1 ? processId.ToString() : string.Empty;
-
                     while ((portRow = stdOutput.ReadLine()) != null)
                     {
-                        if (!portRow.ToLower().Contains(protoParam))
+                        if (string.IsNullOrWhiteSpace(portRow))
                         {
                             continue;
                         }
 
-                        if (processId > -1)
-                        {
-                            int lastSpaceIndex = portRow.LastIndexOf(' ');
+                        int port = GetLocalPortFromConsoleOutputRow(portRow);
 
-                            if (portRow.Substring(lastSpaceIndex + 1).CompareTo(processIdx) != 0)
+                        // Only add unique pid and port data to list. This would filter out cases where BOUND and ESTABLISHED states have the same Pid and Port, which
+                        // would artificially increase the count of ports that FO computes.
+                        if (processId > 0)
+                        {
+                            List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                            if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
                             {
                                 continue;
                             }
+
+                            if (processId != pidPart)
+                            {
+                                continue;
+                            }
+
+                            if (!tempLocalPortData.Any(t => t.Pid == processId && t.Port == port))
+                            {
+                                if (port >= lowPortRange && port <= highPortRange)
+                                {
+                                    tempLocalPortData.Add((processId, port));
+                                }
+                            }
                         }
-
-                        int port = GetPortNumberFromConsoleOutputRow(portRow);
-
-                        if (port >= lowPortRange && port <= highPortRange)
+                        else
                         {
-                            ++count;
+                            if (!tempLocalPortData.Any(t => t.Port == port))
+                            {
+                                if (port >= lowPortRange && port <= highPortRange)
+                                {
+                                    tempLocalPortData.Add((processId, port));
+                                }
+                            }
                         }
                     }
 
+                    p.WaitForExit();
                     int exitStatus = p.ExitCode;
                     stdOutput.Close();
+                    count = tempLocalPortData.Count;
+                    tempLocalPortData.Clear();
 
                     if (exitStatus != 0)
                     {
@@ -139,13 +173,12 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                // Compute count of active ports in dynamic range.
                 return count;
             }
             catch (Exception e) when (
-                e is ArgumentException
-                || e is InvalidOperationException
-                || e is Win32Exception)
+                    e is ArgumentException
+                    || e is InvalidOperationException
+                    || e is Win32Exception)
             {
             }
 
@@ -156,13 +189,11 @@ namespace FabricObserver.Observers.Utilities
         {
             using (var p = new Process())
             {
-                string protoParam = "tcp";
-
                 try
                 {
                     var ps = new ProcessStartInfo
                     {
-                        Arguments = $"/c netsh int ipv4 show dynamicportrange {protoParam} | find /i \"port\"",
+                        Arguments = $"/c netsh int ipv4 show dynamicportrange {TcpProtocol} | find /i \"port\"",
                         FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                         UseShellExecute = false,
                         WindowStyle = ProcessWindowStyle.Hidden,
@@ -196,9 +227,11 @@ namespace FabricObserver.Observers.Utilities
                     return (lowPortRange, highPortRange);
                 }
                 catch (Exception e) when (
-                    e is IOException
-                    || e is InvalidOperationException
-                    || e is Win32Exception)
+                        e is ArgumentException
+                        || e is IOException
+                        || e is InvalidOperationException
+                        || e is RegexMatchTimeoutException
+                        || e is Win32Exception)
                 {
                 }
             }
@@ -208,26 +241,23 @@ namespace FabricObserver.Observers.Utilities
 
         public override int GetActivePortCount(int processId = -1, ServiceContext context = null)
         {
-            const string Protocol = "tcp";
-
             try
             {
-                string protoParam = string.Empty;
-
-                protoParam = "-p " + Protocol;
-
-                var findStrProc = $"| find /i \"{Protocol}\"";
+                string protoParam = "-p " + TcpProtocol;
+                string findStrProc = string.Empty;
+                List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
+                int output;
 
                 if (processId > 0)
                 {
-                    findStrProc = $"| find \"{processId}\"";
+                    findStrProc = $" | find \"{processId}\"";
                 }
 
                 using (var p = new Process())
                 {
                     var ps = new ProcessStartInfo
                     {
-                        Arguments = $"/c netstat -ano {protoParam} {findStrProc} /c",
+                        Arguments = $"/c netstat -qno {protoParam}{findStrProc}",
                         FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                         UseShellExecute = false,
                         WindowStyle = ProcessWindowStyle.Hidden,
@@ -237,25 +267,67 @@ namespace FabricObserver.Observers.Utilities
 
                     p.StartInfo = ps;
                     _ = p.Start();
-
                     var stdOutput = p.StandardOutput;
-                    string output = stdOutput.ReadToEnd().Trim('\n', '\r');
+
+                    string portRow;
+                    while ((portRow = stdOutput.ReadLine()) != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(portRow))
+                        {
+                            continue;
+                        }
+
+                        int localPort = GetLocalPortFromConsoleOutputRow(portRow);
+
+                        // Only add unique pid (if supplied in call) and local port data to list.
+                        if (processId > 0)
+                        {
+                            List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                            
+                            if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
+                            {
+                                continue;
+                            }
+
+                            if (processId != pidPart)
+                            {
+                                continue;
+                            }
+
+                            if (!tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
+                            {
+                                tempLocalPortData.Add((processId, localPort));
+                            }
+                        }
+                        else
+                        {
+                            if (!tempLocalPortData.Any(t => t.Port == localPort))
+                            {
+                                tempLocalPortData.Add((processId, localPort));
+                            }
+                        }
+                    }
+
+                    output = tempLocalPortData.Count;
+                    p.WaitForExit();
                     string exitStatus = p.ExitCode.ToString();
                     stdOutput.Close();
+                    tempLocalPortData.Clear();
 
                     if (exitStatus != "0")
                     {
                         return -1;
                     }
 
-                    return int.TryParse(output, out int ret) ? ret : 0;
+                    return output;
                 }
             }
             catch (Exception e) when (
-                e is ArgumentException
-                || e is InvalidOperationException
-                || e is Win32Exception)
+                    e is ArgumentException
+                    || e is InvalidOperationException
+                    || e is Win32Exception)
             {
+
             }
 
             return -1;
@@ -266,7 +338,7 @@ namespace FabricObserver.Observers.Utilities
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
 
-            OSInfo osInfo = default(OSInfo);
+            OSInfo osInfo = default;
 
             try
             {
@@ -348,21 +420,31 @@ namespace FabricObserver.Observers.Utilities
             return Task.FromResult(osInfo);
         }
 
-        private static int GetPortNumberFromConsoleOutputRow(string row)
+        private int GetLocalPortFromConsoleOutputRow(string portRow)
         {
-            int colonIndex = row.IndexOf(':');
-
-            if (colonIndex >= 0)
+            if (string.IsNullOrWhiteSpace(portRow))
             {
-                int spaceIndex = row.IndexOf(' ', startIndex: colonIndex + 1);
-
-                if (spaceIndex >= 0)
-                {
-                    return int.Parse(row.Substring(colonIndex + 1, spaceIndex - colonIndex - 1));
-                }
+                return -1;
             }
 
-            return -1;
+            List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+            if (stats.Count == 0)
+            {
+                return -1;
+            }
+
+            string localIpAndPort = stats[1];
+
+            if (!localIpAndPort.Contains(":"))
+            {
+                return -1;
+            }
+
+            // We *only* care about the local IP.
+            string localPort = localIpAndPort.Split(':')[1];
+
+            return int.Parse(localPort);
         }
 
         // Not implemented. No Windows support.

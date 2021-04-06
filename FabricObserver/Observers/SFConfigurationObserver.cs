@@ -67,17 +67,17 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
             // This observer is only useful if you enable the web api for producing
             // an html page with a bunch of information that's easy to read in one go.
-            if (!ObserverManager.ObserverWebAppDeployed
-                || (RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
+            if (!IsObserverWebApiAppDeployed || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
             }
 
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
 
             try
             {
@@ -93,14 +93,16 @@ namespace FabricObserver.Observers
                 SFVolumeDiskServiceEnabled = config.IsSFVolumeDiskServiceEnabled;
                 unsupportedPreviewFeaturesEnabled = config.EnableUnsupportedPreviewFeatures;
                 SFNodeLastBootTime = config.NodeLastBootUpTime;
+
+                await ReportAsync(token).ConfigureAwait(true);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException)
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                    FabricServiceContext.ServiceName.OriginalString,
-                    ObserverName,
-                    HealthState.Warning,
-                    $"{NodeName} | Handled Exception, but failed to read registry value:\n{e}");
+                
+            }
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            {
+                return;
             }
             catch (Exception e)
             {
@@ -112,10 +114,6 @@ namespace FabricObserver.Observers
 
                 throw;
             }
-
-            token.ThrowIfCancellationRequested();
-
-            await ReportAsync(token).ConfigureAwait(true);
 
             LastRunDateTime = DateTime.Now;
         }

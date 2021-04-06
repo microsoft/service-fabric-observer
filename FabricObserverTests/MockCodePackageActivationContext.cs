@@ -87,7 +87,7 @@ namespace FabricObserverTests
 
         public ApplicationPrincipalsDescription GetApplicationPrincipals()
         {
-            return default(ApplicationPrincipalsDescription);
+            return default;
         }
 
         public IList<string> GetCodePackageNames()
@@ -97,7 +97,7 @@ namespace FabricObserverTests
 
         public CodePackage GetCodePackageObject(string packageName)
         {
-            return default(CodePackage);
+            return default;
         }
 
         public IList<string> GetConfigurationPackageNames()
@@ -107,7 +107,7 @@ namespace FabricObserverTests
 
         public ConfigurationPackage GetConfigurationPackageObject(string packageName)
         {
-            return default(ConfigurationPackage);
+            return default;
         }
 
         public IList<string> GetDataPackageNames()
@@ -117,12 +117,12 @@ namespace FabricObserverTests
 
         public DataPackage GetDataPackageObject(string packageName)
         {
-            return default(DataPackage);
+            return default;
         }
 
         public EndpointResourceDescription GetEndpoint(string endpointName)
         {
-            return default(EndpointResourceDescription);
+            return default;
         }
 
         public KeyedCollection<string, EndpointResourceDescription> GetEndpoints()

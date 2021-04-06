@@ -110,7 +110,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the largest numeric value in the Data collection.
         /// </summary>
-        public T MaxDataValue => Data?.Count > 0 ? Data.Max() : default(T);
+        public T MaxDataValue => Data?.Count > 0 ? Data.Max() : default;
 
         /// <summary>
         /// Gets the average value in the Data collection.

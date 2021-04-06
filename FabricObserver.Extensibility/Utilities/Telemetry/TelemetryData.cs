@@ -68,6 +68,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string ProcessId
+        {
+            get; set;
+        }
+
         public string ReplicaId
         {
             get; set;

@@ -1,9 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="FabricObserverLogs">
-    <!-- For Windows deployments, add the drive letter to ObserverLogBaseFolderPath Value. Do not do this
-         for Linux deployments. This folder path must be the same as the one specified in FabricObserver's Settings.xml file.-->
-    <Parameter Name="ObserverLogBaseFolderPath" Value="C:\observer_logs" />
+    <Parameter Name="FabricObserverLogFolderName" Value="observer_logs" />
   </Section>
   <Section Name="SecurityInfo">
     <Parameter Name="Thumbprint" Value="[Your cert thumbprint]" />

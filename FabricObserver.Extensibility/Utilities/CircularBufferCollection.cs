@@ -170,7 +170,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             var dequeued = buffer[tail];
-            buffer[tail] = default(T);
+            buffer[tail] = default;
             tail = (tail + 1) % Capacity;
             --Count;
 

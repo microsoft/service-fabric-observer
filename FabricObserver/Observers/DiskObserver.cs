@@ -73,111 +73,143 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
+
+            Token = token;
+
+            stopWatch.Start();
 
             SetErrorWarningThresholds();
 
             DriveInfo[] allDrives = DriveInfo.GetDrives();
 
-            if (ObserverManager.ObserverWebAppDeployed)
+            if (IsObserverWebApiAppDeployed)
             {
                 diskInfo = new StringBuilder();
             }
 
-            foreach (var d in allDrives)
+            try 
             {
-                token.ThrowIfCancellationRequested();
-
-                if (!DiskUsage.ShouldCheckDrive(d))
+                foreach (var d in allDrives)
                 {
-                    continue;
-                }
+                    token.ThrowIfCancellationRequested();
 
-                // This section only needs to run if you have the FabricObserverWebApi app installed.
-                if (ObserverManager.ObserverWebAppDeployed)
-                {
-                    _ = diskInfo.AppendFormat("\n\nDrive Name: {0}\n", d.Name);
-
-                    // Logging.
-                    _ = diskInfo.AppendFormat("Drive Type: {0}\n", d.DriveType);
-                    _ = diskInfo.AppendFormat("  Volume Label   : {0}\n", d.VolumeLabel);
-                    _ = diskInfo.AppendFormat("  Filesystem     : {0}\n", d.DriveFormat);
-                    _ = diskInfo.AppendFormat("  Total Disk Size: {0} GB\n", d.TotalSize / 1024 / 1024 / 1024);
-                    _ = diskInfo.AppendFormat("  Root Directory : {0}\n", d.RootDirectory);
-                    _ = diskInfo.AppendFormat("  Free User : {0} GB\n", d.AvailableFreeSpace / 1024 / 1024 / 1024);
-                    _ = diskInfo.AppendFormat("  Free Total: {0} GB\n", d.TotalFreeSpace / 1024 / 1024 / 1024);
-                    _ = diskInfo.AppendFormat("  % Used    : {0}%\n", DiskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
-                }
-
-                // Setup monitoring data structures.
-                string id = d.Name;
-
-                // Since these live across iterations, do not duplicate them in the containing list.
-                // Disk space %.
-                if (DiskSpaceUsagePercentageData.All(data => data.Id != id) && (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0))
-                {
-                    DiskSpaceUsagePercentageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id, DataCapacity));
-                }
-
-                // Current disk queue length. Windows only.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
-                {
-                    DiskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, DataCapacity));
-                }
-
-                // This data is just used for Telemetry today.
-                if (DiskSpaceAvailableMbData.All(data => data.Id != id))
-                {
-                    DiskSpaceAvailableMbData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMb, id, DataCapacity));
-                }
-
-                // This data is just used for Telemetry today.
-                if (DiskSpaceTotalMbData.All(data => data.Id != id))
-                {
-                    DiskSpaceTotalMbData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMb, id, DataCapacity));
-                }
-
-                // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
+                    if (!DiskUsage.ShouldCheckDrive(d))
                     {
-                        // Warm up counter.
-                        _ = DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2));
+                        continue;
+                    }
 
-                        DiskAverageQueueLengthData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2)));
+                    // This section only needs to run if you have the FabricObserverWebApi app installed.
+                    if (IsObserverWebApiAppDeployed)
+                    {
+                        _ = diskInfo.AppendFormat("\n\nDrive Name: {0}\n", d.Name);
+
+                        // Logging.
+                        _ = diskInfo.AppendFormat("Drive Type: {0}\n", d.DriveType);
+                        _ = diskInfo.AppendFormat("  Volume Label   : {0}\n", d.VolumeLabel);
+                        _ = diskInfo.AppendFormat("  Filesystem     : {0}\n", d.DriveFormat);
+                        _ = diskInfo.AppendFormat("  Total Disk Size: {0} GB\n", d.TotalSize / 1024 / 1024 / 1024);
+                        _ = diskInfo.AppendFormat("  Root Directory : {0}\n", d.RootDirectory);
+                        _ = diskInfo.AppendFormat("  Free User : {0} GB\n", d.AvailableFreeSpace / 1024 / 1024 / 1024);
+                        _ = diskInfo.AppendFormat("  Free Total: {0} GB\n", d.TotalFreeSpace / 1024 / 1024 / 1024);
+                        _ = diskInfo.AppendFormat("  % Used    : {0}%\n", DiskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
+                    }
+
+                    // Setup monitoring data structures.
+                    string id = d.Name;
+
+                    // Since these live across iterations, do not duplicate them in the containing list.
+                    // Disk space %.
+                    if (DiskSpaceUsagePercentageData.All(data => data.Id != id) && (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0))
+                    {
+                        DiskSpaceUsagePercentageData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceUsagePercentage, id, DataCapacity));
+                    }
+
+                    // Current disk queue length. Windows only.
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
+                    {
+                        DiskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, DataCapacity));
+                    }
+
+                    // This data is just used for Telemetry today.
+                    if (DiskSpaceAvailableMbData.All(data => data.Id != id))
+                    {
+                        DiskSpaceAvailableMbData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceAvailableMb, id, DataCapacity));
+                    }
+
+                    // This data is just used for Telemetry today.
+                    if (DiskSpaceTotalMbData.All(data => data.Id != id))
+                    {
+                        DiskSpaceTotalMbData.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.DiskSpaceTotalMb, id, DataCapacity));
+                    }
+
+                    // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
+                        {
+                            // Warm up counter.
+                            _ = DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2));
+
+                            DiskAverageQueueLengthData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2)));
+                        }
+                    }
+
+                    if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
+                    {
+                        DiskSpaceUsagePercentageData.Single(x => x.Id == id).Data.Add(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
+                    }
+
+                    DiskSpaceAvailableMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
+                    DiskSpaceTotalMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
+
+                    // This section only needs to run if you have the FabricObserverWebApi app installed.
+                    if (IsObserverWebApiAppDeployed && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        _ = diskInfo.AppendFormat(
+                            "{0}",
+                            GetWindowsPerfCounterDetailsText(
+                                DiskAverageQueueLengthData.FirstOrDefault(
+                                    x => x.Id == d.Name.Substring(0, 1))
+                                    ?.Data,
+                                "Avg. Disk Queue Length"));
                     }
                 }
-
-                if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
-                {
-                    DiskSpaceUsagePercentageData.Single(x => x.Id == id).Data.Add(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
+            }
+            catch (Exception e) 
+            {
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException) 
+                { 
+                    throw;
                 }
 
-                DiskSpaceAvailableMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
-                DiskSpaceTotalMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
-
-                // This section only needs to run if you have the FabricObserverWebApi app installed.
-                if (ObserverManager.ObserverWebAppDeployed && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    _ = diskInfo.AppendFormat(
-                        "{0}",
-                        GetWindowsPerfCounterDetailsText(
-                            DiskAverageQueueLengthData.FirstOrDefault(
-                                x => x.Id == d.Name.Substring(0, 1))
-                                ?.Data,
-                            "Avg. Disk Queue Length"));
-                }
-
-                RunDuration = stopWatch.Elapsed;
+                WriteToLogWithLevel(
+                    ObserverName,
+                    $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
+                    LogLevel.Error); 
+                
+                // Fix the bug..
+                throw;
             }
 
             await ReportAsync(token).ConfigureAwait(true);
+
+            // The time it took to run this observer.
+            stopWatch.Stop();
+            RunDuration = stopWatch.Elapsed;
+
+            if (EnableVerboseLogging)
+            {
+                ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
+            }
+
+            stopWatch.Reset();
             LastRunDateTime = DateTime.Now;
         }
 
@@ -187,10 +219,11 @@ namespace FabricObserver.Observers
             {
                 var timeToLiveWarning = GetHealthReportTimeToLive();
 
-                // User-supplied Disk Space Usage % thresholds from Settings.xml.
+                // User-supplied Disk Space Usage % thresholds from ApplicationManifest.xml.
                 foreach (var data in DiskSpaceUsagePercentageData)
                 {
                     token.ThrowIfCancellationRequested();
+
                     ProcessResourceDataReportHealth(
                         data,
                         DiskSpacePercentErrorThreshold,
@@ -198,12 +231,13 @@ namespace FabricObserver.Observers
                         timeToLiveWarning);
                 }
 
-                // User-supplied Average disk queue length thresholds from Settings.xml. Windows only.
+                // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     foreach (var data in DiskAverageQueueLengthData)
                     {
                         token.ThrowIfCancellationRequested();
+
                         ProcessResourceDataReportHealth(
                             data,
                             AverageQueueLengthErrorThreshold,
@@ -212,13 +246,15 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                /* For ETW Only - These calls will just produce ETW (note the thresholds). */
+                /* For ETW Only - These calls will just produce ETW (note the thresholds). See ObserverBase.ProcessDataReportHealth 
+                                  in FabricObserver.Extensibility project. */
                 if (IsEtwEnabled)
                 {
                     // Disk Space Available
                     foreach (var data in DiskSpaceAvailableMbData)
                     {
                         token.ThrowIfCancellationRequested();
+
                         ProcessResourceDataReportHealth(
                             data,
                             0,
@@ -230,6 +266,7 @@ namespace FabricObserver.Observers
                     foreach (var data in DiskSpaceTotalMbData)
                     {
                         token.ThrowIfCancellationRequested();
+
                         ProcessResourceDataReportHealth(
                             data,
                             0,
@@ -241,7 +278,7 @@ namespace FabricObserver.Observers
                 token.ThrowIfCancellationRequested();
 
                 // This section only needs to run if you have the FabricObserverWebApi app installed.
-                if (!ObserverManager.ObserverWebAppDeployed)
+                if (!IsObserverWebApiAppDeployed)
                 {
                     return Task.CompletedTask;
                 }
@@ -251,77 +288,102 @@ namespace FabricObserver.Observers
                 _ = ObserverLogger.TryWriteLogFile(diskInfoPath, diskInfo.ToString());
 
                 _ = diskInfo.Clear();
-
-                return Task.CompletedTask;
-            }
-            catch (AggregateException e) when (e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException || e.InnerException is TimeoutException)
-            {
-                return Task.CompletedTask;
             }
             catch (Exception e)
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                        FabricServiceContext.ServiceName.OriginalString,
-                        ObserverName,
-                        HealthState.Warning,
-                        $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    throw;
+                }
 
+                HealthReporter.ReportFabricObserverServiceHealth(
+                                FabricServiceContext.ServiceName.OriginalString,
+                                ObserverName,
+                                HealthState.Warning,
+                                $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+
+                // Fix the bug..
                 throw;
             }
+
+            return Task.CompletedTask;
         }
 
         private void SetErrorWarningThresholds()
         {
+            Token.ThrowIfCancellationRequested();
+
             try
             {
                 if (int.TryParse(
-                    GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
+                            GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
                     DiskSpacePercentErrorThreshold = diskUsedError;
                 }
 
+                Token.ThrowIfCancellationRequested();
+
                 if (int.TryParse(
-                    GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
+                            GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
                     DiskSpacePercentWarningThreshold = diskUsedWarning;
                 }
 
+                Token.ThrowIfCancellationRequested();
+
                 if (int.TryParse(
-                    GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
+                            GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
                 {
                     AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
                 }
 
+                Token.ThrowIfCancellationRequested();
+
                 if (int.TryParse(
-                    GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
+                            GetSettingParameterValue(
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
                     AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
                 }
             }
-            catch (ArgumentNullException)
+            catch (Exception e) when (e is ArgumentException || e is FormatException)
             {
+
             }
-            catch (FormatException)
+            catch (Exception e)
             {
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    throw;
+                }
+
+                HealthReporter.ReportFabricObserverServiceHealth(
+                                FabricServiceContext.ServiceName.OriginalString,
+                                ObserverName,
+                                HealthState.Warning,
+                                $"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
+                // Fix the bug...
+                throw;
             }
         }
 
-        private string GetWindowsPerfCounterDetailsText(
-            ICollection<float> data,
-            string counter)
+        private string GetWindowsPerfCounterDetailsText(ICollection<float> data, string counter)
         {
             if (data == null || data.Count == 0)
             {
                 return null;
             }
+
+            Token.ThrowIfCancellationRequested();
 
             var sb = new StringBuilder();
             string ret;

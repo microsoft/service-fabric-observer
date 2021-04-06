@@ -373,9 +373,9 @@ namespace ClusterObserver
 
                 string telemetryDescription = string.Empty;
                 ApplicationHealth appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
-                                                healthState.ApplicationName,
-                                                ConfigSettings.AsyncTimeout,
-                                                token).ConfigureAwait(false);
+                                                                                        healthState.ApplicationName,
+                                                                                        ConfigSettings.AsyncTimeout,
+                                                                                        token).ConfigureAwait(false);
                 if (appHealth == null)
                 {
                     continue;
@@ -478,24 +478,24 @@ namespace ClusterObserver
                             // ETW.
                             if (etwEnabled)
                             {
-                                double value = double.TryParse(foTelemetryData.Value.ToString(), out double val) ? val : 0;
+                                double value = double.TryParse(foTelemetryData.Value?.ToString(), out double val) ? val : -1;
 
                                 Logger.EtwLogger?.Write(
-                                    ObserverConstants.ClusterObserverETWEventName,
-                                    new
-                                    {
-                                        foTelemetryData.ApplicationName,
-                                        foTelemetryData.HealthState,
-                                        foTelemetryData.Description,
-                                        foTelemetryData.Metric,
-                                        foTelemetryData.ObserverName,
-                                        foTelemetryData.NodeName,
-                                        Source = ObserverName,
-                                        foTelemetryData.PartitionId,
-                                        foTelemetryData.ReplicaId,
-                                        foTelemetryData.SystemServiceProcessName,
-                                        Value = value,
-                                    });
+                                        ObserverConstants.ClusterObserverETWEventName,
+                                        new
+                                        {
+                                            foTelemetryData.ApplicationName,
+                                            foTelemetryData.HealthState,
+                                            foTelemetryData.Description,
+                                            foTelemetryData.Metric,
+                                            foTelemetryData.ObserverName,
+                                            foTelemetryData.NodeName,
+                                            Source = ObserverName,
+                                            foTelemetryData.PartitionId,
+                                            foTelemetryData.ReplicaId,
+                                            foTelemetryData.SystemServiceProcessName,
+                                            Value = value,
+                                        });
                             }
 
                             // Reset 
@@ -551,9 +551,7 @@ namespace ClusterObserver
         private async Task ProcessNodeHealthAsync(IList<NodeHealthState> nodeHealthStates, CancellationToken token)
         {
             // Check cluster upgrade status.
-            int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(
-                                            FabricClientInstance,
-                                            token).ConfigureAwait(false);
+            int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(FabricClientInstance, token).ConfigureAwait(false);
 
             var supportedNodeHealthStates = 
                 nodeHealthStates.Where( a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
@@ -562,8 +560,7 @@ namespace ClusterObserver
             {
                 token.ThrowIfCancellationRequested();
 
-                if (node.AggregatedHealthState == HealthState.Ok
-                        || (!ConfigSettings.EmitWarningDetails && node.AggregatedHealthState == HealthState.Warning))
+                if (node.AggregatedHealthState == HealthState.Ok || (!ConfigSettings.EmitWarningDetails && node.AggregatedHealthState == HealthState.Warning))
                 {
                     continue;
                 }
@@ -578,10 +575,7 @@ namespace ClusterObserver
                         $"normal part of the upgrade process.{Environment.NewLine}";
                 }
 
-                var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(
-                                        node.NodeName,
-                                        ConfigSettings.AsyncTimeout,
-                                        token);
+                var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(node.NodeName, ConfigSettings.AsyncTimeout, token);
 
                 foreach (var nodeHealthEvent in nodeHealth.HealthEvents.Where(ev => ev.HealthInformation.HealthState != HealthState.Ok))
                 {
@@ -608,10 +602,7 @@ namespace ClusterObserver
                     }
 
                     var targetNodeList =
-                        await FabricClientInstance.QueryManager.GetNodeListAsync(
-                            node.NodeName,
-                            ConfigSettings.AsyncTimeout,
-                            token).ConfigureAwait(false);
+                        await FabricClientInstance.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, token).ConfigureAwait(false);
 
                     Node targetNode = null;
 
@@ -643,24 +634,23 @@ namespace ClusterObserver
                         double value = 0;
                         if (foStats != null)
                         {
-                            value = double.TryParse(foStats.Value.ToString(), out double val) ? val : 0;
+                            value = double.TryParse(foStats.Value?.ToString(), out double val) ? val : 0;
                         }
 
                         Logger.EtwLogger?.Write(
-                            ObserverConstants.ClusterObserverETWEventName,
-                            new
-                            {
-                                node.NodeName,
-                                NodeStatus = targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty,
-                                HealthScope = "Node",
-                                HealthState = Enum.GetName(typeof(HealthState), node.AggregatedHealthState),
-                                HealthEventDescription = telemetryDescription,
-                                Metric = metric ?? "AggregatedClusterHealth",
-                                ObserverName = sourceObserver ?? string.Empty,
-                                Source = ObserverName,
-                                Value = value,
-                            });
-                        ;
+                                ObserverConstants.ClusterObserverETWEventName,
+                                new
+                                {
+                                    node.NodeName,
+                                    NodeStatus = targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty,
+                                    HealthScope = "Node",
+                                    HealthState = Enum.GetName(typeof(HealthState), node.AggregatedHealthState),
+                                    HealthEventDescription = telemetryDescription,
+                                    Metric = metric ?? "AggregatedClusterHealth",
+                                    ObserverName = sourceObserver ?? string.Empty,
+                                    Source = ObserverName,
+                                    Value = value,
+                                });
                     }
                 }
             }
@@ -690,13 +680,13 @@ namespace ClusterObserver
             if (etwEnabled)
             {
                 Logger.EtwLogger?.Write(
-                    ObserverConstants.ClusterObserverETWEventName,
-                    new
-                    {
-                        HealthEventDescription = telemetryDescription,
-                        HealthState = healthState,
-                        Source = ObserverName,
-                    });
+                        ObserverConstants.ClusterObserverETWEventName,
+                        new
+                        {
+                            HealthEventDescription = telemetryDescription,
+                            HealthState = healthState,
+                            Source = ObserverName,
+                        });
             }
         }
 
@@ -742,17 +732,17 @@ namespace ClusterObserver
                     if (etwEnabled)
                     {
                         Logger.EtwLogger?.Write(
-                            ObserverConstants.ClusterObserverETWEventName,
-                            new
-                            {
-                                HealthScope = "Node",
-                                HealthState = "Ok",
-                                HealthEventDescription = $"{nodeDictItem.Key} is now Up.",
-                                Metric = "NodeStatus",
-                                NodeName = nodeDictItem.Key,
-                                NodeStatus = "Up",
-                                Source = ObserverName,
-                            });
+                                ObserverConstants.ClusterObserverETWEventName,
+                                new
+                                {
+                                    HealthScope = "Node",
+                                    HealthState = "Ok",
+                                    HealthEventDescription = $"{nodeDictItem.Key} is now Up.",
+                                    Metric = "NodeStatus",
+                                    NodeName = nodeDictItem.Key,
+                                    NodeStatus = "Up",
+                                    Source = ObserverName,
+                                });
                     }
 
                     // Clear dictionary entry.
@@ -879,10 +869,10 @@ namespace ClusterObserver
             try
             {
                 var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(
-                                      fabricSystemAppUri,
-                                      repairManagerServiceUri,
-                                      ConfigSettings.AsyncTimeout,
-                                      cancellationToken).ConfigureAwait(true);
+                                                                              fabricSystemAppUri,
+                                                                              repairManagerServiceUri,
+                                                                              ConfigSettings.AsyncTimeout,
+                                                                              cancellationToken).ConfigureAwait(true);
 
                 return serviceList?.Count > 0;
             }
@@ -911,13 +901,13 @@ namespace ClusterObserver
             try
             {
                 var repairTasks = await FabricClientInstance.RepairManager.GetRepairTaskListAsync(
-                                            null,
-                                            RepairTaskStateFilter.Active |
-                                            RepairTaskStateFilter.Approved |
-                                            RepairTaskStateFilter.Executing,
-                                            null,
-                                            ConfigSettings.AsyncTimeout,
-                                            cancellationToken);
+                                                                            null,
+                                                                            RepairTaskStateFilter.Active |
+                                                                            RepairTaskStateFilter.Approved |
+                                                                            RepairTaskStateFilter.Executing,
+                                                                            null,
+                                                                            ConfigSettings.AsyncTimeout,
+                                                                            cancellationToken);
 
                 return repairTasks;
             }

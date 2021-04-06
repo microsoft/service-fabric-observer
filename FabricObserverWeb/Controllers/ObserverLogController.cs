@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -68,13 +69,34 @@ namespace FabricObserverWeb.Controllers
             // Note: FO produces Json output for health report messages/logs..
             ContentResult ret = Content(string.Empty);
 
-            string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
-            string logFolder;
+            string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, certObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
+            string logFolder = string.Empty;
+            var configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
 
             try
             {
-                System.Fabric.Description.ConfigurationSettings configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
-                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
+                if (configSettings != null)
+                {
+                    logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "FabricObserverLogFolderName");
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        // Add current drive letter if not supplied for Windows path target.
+                        if (!logFolder.Substring(0, 3).Contains(":\\"))
+                        {
+                            string windrive = Environment.SystemDirectory.Substring(0, 3);
+                            logFolder = Path.Combine(windrive, logFolder);
+                        }
+                    }
+                    else
+                    {
+                        // Remove supplied drive letter if Linux is the runtime target.
+                        if (logFolder.Substring(0, 3).Contains(":\\"))
+                        {
+                            logFolder = logFolder.Remove(0, 3);
+                        }
+                    }
+                }
 
                 if (!Directory.Exists(logFolder))
                 {
@@ -89,6 +111,7 @@ namespace FabricObserverWeb.Controllers
 
             // Observer log paths.
             string appObserverLogPath = Path.Combine(logFolder, "AppObserver", "AppObserver.log");
+            string certObserverLogPath = Path.Combine(logFolder, "CertificateObserver", "CertificateObserver.log");
             string osObserverLogPath = Path.Combine(logFolder, "OSObserver", "OSObserver.log");
             string diskObserverLogPath = Path.Combine(logFolder, "DiskObserver", "DiskObserver.log");
             string networkObserverLogPath = Path.Combine(logFolder, "NetworkObserver", "NetworkObserver.log");
@@ -105,6 +128,12 @@ namespace FabricObserverWeb.Controllers
                         && System.IO.File.GetCreationTimeUtc(appObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
                         appObserverLogText = System.IO.File.ReadAllText(appObserverLogPath, Encoding.UTF8);
+                    }
+
+                    if (System.IO.File.Exists(certObserverLogPath)
+                       && System.IO.File.GetCreationTimeUtc(certObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
+                    {
+                        certObserverLogText = System.IO.File.ReadAllText(certObserverLogPath, Encoding.UTF8);
                     }
 
                     if (System.IO.File.Exists(diskObserverLogPath)
@@ -145,6 +174,10 @@ namespace FabricObserverWeb.Controllers
                             reportItems = GetObserverErrWarnLogEntryListFromLogText(appObserverLogText);
                             break;
 
+                        case "certificateobserver":
+                            reportItems = GetObserverErrWarnLogEntryListFromLogText(certObserverLogText);
+                            break;
+
                         case "diskobserver":
                             reportItems = GetObserverErrWarnLogEntryListFromLogText(diskObserverLogText);
                             break;
@@ -166,7 +199,7 @@ namespace FabricObserverWeb.Controllers
                             break;
 
                         default:
-                            return Json("Specified Observer, " + name + ", does not exist.");
+                            return Json("Data for specified Observer, " + name + ", does not exist.");
                     }
 
                     ret = Content(reportItems);
@@ -429,8 +462,8 @@ namespace FabricObserverWeb.Controllers
 
             foreach (string item in logArray)
             {
-                if (!item.Contains("--") &&
-                    (!item.Contains("WARN") || !item.Contains("ERROR")))
+                
+                if (item.Contains("--INFO") || !(item.Contains("--WARN") || item.Contains("--ERROR")))
                 {
                     continue;
                 }
@@ -438,7 +471,15 @@ namespace FabricObserverWeb.Controllers
                 string[] arr = item.Split("--", StringSplitOptions.RemoveEmptyEntries);
 
                 // Note: This is already Json (it's a serialized instance of FO's TelemetryData type)..
-                entry += arr[2][arr[2].IndexOf("{")..] + ",";
+                // It could be the case that an WARN or ERROR entry does not contain JSON (like an observer unhandled exception), which would crash the below code, thus try-catch.
+                try
+                {
+                    entry += arr[2][arr[2].IndexOf("{")..] + ",";
+                }
+                catch (ArgumentException)
+                {
+                    continue;
+                }
             }
 
             entry = entry.TrimEnd(',');

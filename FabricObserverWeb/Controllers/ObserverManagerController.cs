@@ -61,19 +61,36 @@ namespace FabricObserverWeb
         public string Get()
         {
             string html = string.Empty;
-            string observerLogFilePath = null;
-            var nodeName = serviceContext.NodeContext.NodeName;
+            string nodeName = serviceContext.NodeContext.NodeName;
             var configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
             string logFolder = null;
-            string logFileName = null;
+            string obsManagerLogFilePath = null;
+            string obsManagerLogFolderPath = null;
 
-            // Windows only for now.
             if (configSettings != null)
             {
-                string windrive = Environment.SystemDirectory.Substring(0, 3);
-                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
-                logFileName = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverManagerLogFileName");
-                observerLogFilePath = Path.Combine(logFolder, logFileName);
+                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "FabricObserverLogFolderName");
+                
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    // Add current drive letter if not supplied for Windows path target.
+                    if (!logFolder.Substring(0, 3).Contains(":\\"))
+                    {
+                        string windrive = Environment.SystemDirectory.Substring(0, 3);
+                        logFolder = Path.Combine(windrive, logFolder);
+                    }
+                }
+                else
+                {
+                    // Remove supplied drive letter if Linux is the runtime target.
+                    if (logFolder.Substring(0, 3).Contains(":\\"))
+                    {
+                        logFolder = logFolder.Remove(0, 3);
+                    }
+                }
+
+                obsManagerLogFolderPath = Path.Combine(logFolder, "ObserverManager");
+                obsManagerLogFilePath = Path.Combine(obsManagerLogFolderPath, "ObserverManager.log");
             }
 
             // Implicit retry loop. Will run only once if no exceptions arise.
@@ -82,23 +99,18 @@ namespace FabricObserverWeb
             {
                 try
                 {
-                    string fragment = Path.Combine("ObserverManager", "ObserverManager.log");
-
-                    var netFileInfoPath = observerLogFilePath.Replace(fragment, "NetInfo.txt");
-                    var sysFileInfoPath = observerLogFilePath.Replace(fragment, "SysInfo.txt");
-                    var evtVwrErrorLogPath = observerLogFilePath.Replace(fragment, "EventVwrErrors.txt");
-                    var diskFileInfoPath = observerLogFilePath.Replace(fragment, "disks.txt");
-                    var sfInfraInfoPath = observerLogFilePath.Replace(fragment, "SFInfraInfo.txt");
-
-                    // These are the app-specific
-                    var currentDataHealthLogPathPart = observerLogFilePath.Replace(fragment, "apps");
+                    string netFileInfoPath = Path.Combine(logFolder, "NetInfo.txt");
+                    string sysFileInfoPath = Path.Combine(logFolder, "SysInfo.txt");
+                    string evtVwrErrorLogPath = Path.Combine(logFolder, "EventVwrErrors.txt");
+                    string diskFileInfoPath = Path.Combine(logFolder, "disks.txt");
+                    string sfInfraInfoPath = Path.Combine(logFolder, "SFInfraInfo.txt");
                     string sysInfofileText = string.Empty, evtVwrErrorsText = string.Empty, log = string.Empty, diskInfoTxt = string.Empty, appHealthText = string.Empty, sfInfraText = string.Empty, netInfofileText = string.Empty;
 
                     // Only show info from current day, by default. This is just for web UI (html).
-                    if (System.IO.File.Exists(observerLogFilePath)
-                        && System.IO.File.GetCreationTimeUtc(observerLogFilePath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
+                    if (System.IO.File.Exists(obsManagerLogFilePath)
+                        && System.IO.File.GetCreationTimeUtc(obsManagerLogFilePath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
-                        log = System.IO.File.ReadAllText(observerLogFilePath, Encoding.UTF8).Replace("\n", "<br/>");
+                        log = System.IO.File.ReadAllText(obsManagerLogFilePath, Encoding.UTF8).Replace("\n", "<br/>");
                     }
 
                     if (System.IO.File.Exists(netFileInfoPath))
@@ -126,26 +138,11 @@ namespace FabricObserverWeb
                         sfInfraText = System.IO.File.ReadAllText(sfInfraInfoPath, Encoding.UTF8).Trim();
                     }
 
-                    appHealthText = string.Empty;
-
-                    if (Directory.Exists(currentDataHealthLogPathPart))
-                    {
-                        var currentAppDataLogFiles = Directory.GetFiles(currentDataHealthLogPathPart);
-                        if (currentAppDataLogFiles.Length > 0)
-                        {
-                            foreach (var file in currentAppDataLogFiles)
-                            {
-                                appHealthText += System.IO.File.ReadAllText(file, Encoding.UTF8).Replace("\n", "<br/>");
-                            }
-                        }
-                    }
-
                     // Node links..
                     string nodeLinks = string.Empty;
-
                     var nodeList = fabricClient.QueryManager.GetNodeListAsync().Result;
                     var ordered = nodeList.OrderBy(node => node.NodeName);
-                    var host = Request.Host.Value;
+                    string host = Request.Host.Value;
 
                     // Request originating from ObserverWeb node hyperlinks.
                     if (Request.QueryString.HasValue && Request.Query.ContainsKey("fqdn"))

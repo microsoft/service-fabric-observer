@@ -76,17 +76,27 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
+        /// The maximum number of archive files that will be stored.
+        /// 0 means there is no limit set.
+        /// </summary>
+        public int MaxArchiveFileLifetimeDays
+        {
+            get; set;
+        } = 0;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.
         /// </summary>
         /// <param name="observerName">Name of observer.</param>
         /// <param name="logFolderBasePath">Base folder path.</param>
-        public Logger(string observerName, string logFolderBasePath = null)
+        public Logger(string observerName, string logFolderBasePath = null, int maxArchiveFileLifetimeDays = 7)
         {
             FolderName = observerName;
             Filename = observerName + ".log";
             loggerName = observerName;
+            MaxArchiveFileLifetimeDays = maxArchiveFileLifetimeDays;
 
-            if (!string.IsNullOrEmpty(logFolderBasePath))
+            if (!string.IsNullOrWhiteSpace(logFolderBasePath))
             {
                 LogFolderBasePath = logFolderBasePath;
             }
@@ -171,9 +181,9 @@ namespace FabricObserver.Observers.Utilities
             return false;
         }
 
-        public bool TryDeleteInstanceLog()
+        public bool TryDeleteInstanceLogFile()
         {
-            if (string.IsNullOrEmpty(FilePath) || !File.Exists(FilePath))
+            if (string.IsNullOrWhiteSpace(FilePath) || !File.Exists(FilePath))
             {
                 return false;
             }
@@ -185,11 +195,9 @@ namespace FabricObserver.Observers.Utilities
                     File.Delete(FilePath);
                     return true;
                 }
-                catch (IOException)
+                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException || e is PathTooLongException)
                 {
-                }
-                catch (UnauthorizedAccessException)
-                {
+
                 }
 
                 Thread.Sleep(1000);
@@ -263,12 +271,14 @@ namespace FabricObserver.Observers.Utilities
                 {
                     Name = targetName,
                     OptimizeBufferReuse = true,
-                    ConcurrentWrites = true,
+                    ConcurrentWrites = false,
+                    EnableFileDelete = true,
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",
                     OpenFileCacheTimeout = 5,
                     ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     ArchiveEvery = FileArchivePeriod.Day,
+                    MaxArchiveDays = MaxArchiveFileLifetimeDays <= 0 ? 7 : MaxArchiveFileLifetimeDays,
                     AutoFlush = true,
                 };
 

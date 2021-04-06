@@ -419,7 +419,7 @@ namespace FabricObserverTests
                 ApplicationName = new Uri("fabric:/TestApp"),
                 PartitionId = Guid.NewGuid(),
                 HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
-                ReplicaOrInstanceId = default(long),
+                ReplicaOrInstanceId = default,
             });
 
             var obsMgr = new ObserverManager(obs, fabricClient)
@@ -485,7 +485,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync();
             });
 
-            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
+            await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(true);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             _ = obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -892,15 +892,16 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = context;
-
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new OSObserver(fabricClient, context)
             {
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
             };
+
+            // This is required since output files are only created if fo api app is also deployed to cluster..
+            obs.IsObserverWebApiAppDeployed = true;
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
 
@@ -942,12 +943,14 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new DiskObserver(fabricClient, context)
             {
+                // This is required since output files are only created if fo api app is also deployed to cluster..
+                IsObserverWebApiAppDeployed = true,
                 MonitorDuration = TimeSpan.FromSeconds(1),
             };
+
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
 
@@ -990,12 +993,14 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new DiskObserver(fabricClient, context)
             {
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
+
+                // This is required since output files are only created if fo api app is also deployed to cluster..
+                IsObserverWebApiAppDeployed = true,
                 MonitorDuration = TimeSpan.FromSeconds(5),
             };
 
@@ -1086,9 +1091,12 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
 
-            var obs = new NetworkObserver(fabricClient, context);
+            var obs = new NetworkObserver(fabricClient, context)
+            {
+                // This is required since output files are only created if fo api app is also deployed to cluster..
+                IsObserverWebApiAppDeployed = true,
+            };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
 
@@ -1182,11 +1190,13 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = context;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.ObserverWebAppDeployed = true;
 
             var obs = new SFConfigurationObserver(fabricClient, context)
             {
                 IsEnabled = true,
+
+                // This is required since output files are only created if fo api app is also deployed to cluster..
+                IsObserverWebApiAppDeployed = true,
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
             };
 
@@ -1604,7 +1614,7 @@ namespace FabricObserverTests
 
             while (stopwatch.Elapsed < TimeSpan.FromSeconds(timeoutInSeconds) && !predicate())
             {
-                await Task.Delay(5).ConfigureAwait(false); // sleep 5 ms
+                await Task.Delay(1).ConfigureAwait(false); // sleep 5 ms
             }
         }
 

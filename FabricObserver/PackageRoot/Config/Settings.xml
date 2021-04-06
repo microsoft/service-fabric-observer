@@ -5,97 +5,141 @@
          0 means run continuously with no pausing. ***NOTE: If you only enable one observer, you really should set this to a number greater than 0.***
          SF Error/Warning Reports have TTLs that are computed in part with this value. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
+    
     <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
-         Below setting represents 30 minutes. If you are monitoring several services, you should increase this if necessary.
-         Or decrease it if not. Measure and determine how long it takes for AppObserver, for example, to run to completion in 
-         your deployment and configuration (like if you watch all services of a single application type and there are hundreds of them. -->
-    <Parameter Name="ObserverExecutionTimeout" Value="1800" />
+         Below setting represents 120 minutes. If you are not monitoring hundreds of services, then you should decrease this if necessary.
+         Measure and determine how long it takes for AppObserver, for example, to run to completion in 
+         your deployment and configuration - like if you watch all services of a all applications and there are hundreds of them. You can do this easily by
+         setting EnableVerboseLogging to true on AppObserver, for example, and it will log how long it takes to run each time it runs to completion. Any observer
+         that monitors stuff supports run duration logging. Use this these values to determine what constitutes too long and that an observer needs to be fixed. 
+         No Observer should ever take 2 hours to run, so the below setting is an extreme maximum. Vary the number to meet your actual needs. -->
+    <Parameter Name="ObserverExecutionTimeout" Value="7200" />
+    
+    <!-- How long to wait, in seconds, after a shutdown is signaled. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
+    
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          Each observer will write to their own directory on this path.
         **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you do for Windows).** -->
     <Parameter Name="ObserverLogPath" Value="observer_logs" />
+    
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data.
          **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you do for Windows).** -->
     <Parameter Name="DataLogPath" Value="fabric_observer_csvdata" />
+    
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="false" />
+    
     <!-- Optional: This is for use by the text logger to build node warning/error hyperlinks 
          that FabricObserverWebApi uses in html output. The API does not communicate directly with FabricObserver.
          It relies on the existence of local log files, across ObserverManager and individual observers (they log to their own folders). 
          This only makes sense if you enable secure (SSL) communication in FabricObserverWebApi. By default, it is an internal(node)-only 
          API service.-->
     <Parameter Name="FQDN" Value="" />
+    
+    <!-- Optional: Maximum Number of days to store Archived observer log files on disk. 
+         This setting spans all Observer Logger instances (ObserverBase.ObserverLogger), including plugins and ObserverManager. 
+         The default value is 0. An empty value or 0 means there is no lifetime constraint. They are immortal files. -->
+    <Parameter Name="MaxArchivedLogFileLifetimeDays" Value="3" />
+    
+    <!-- Optional: Maximum Number of days to store CSV files on disk, which are produced by DataLogger instances (ObserverBase.CsvLogger). 
+         This setting spans all file loggers for observers (including plugins) and ObserverManager. 
+         The default value is 0. An empty value or 0 means there is no lifetime constraint. They are immortal files. 
+         Note: For csv files, since they are produced (and stored individually) for each configured metric reading on each entity 
+         by a supported observer (AppObserver, FabricSystemObserver or NodeObserver only), there will be a lot of these files produced depending upon your 
+         RunInterval setting for supported observer. -->
+    <Parameter Name="MaxArchivedCsvFileLifetimeDays" Value="1" />
+    
+    <!-- Optional: How do you want to store csv files per observer run? Default is SingleFileWithArchives which means write to a single file that is updated per run and archived after 1 day. 
+         The other option, MultipleFilesNoArchives means files are written per run per monitor target (so, one file for each service process that you are monitoring, for example, 
+         time-stamped (Utc), per observer run. Note that in either case, files will remain on disk for the number of days specified in MaxArchivedCsvFileLifetimeDays. -->
+    <Parameter Name="CsvFileWriteFormat" Value="SingleFileWithArchives" />
+    
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="false" />
+    
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
+    
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. 
          You have to also add this key to [repo root]\FabricObserver\ApplicationInsights.config -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
+    
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
     <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+    
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
     <Parameter Name="LogAnalyticsSharedKey" Value="" />
+    
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
-    <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object on Logger instances that will emit FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
+    
+    <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object in Logger instances that will emit 
+         FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
     <Parameter Name="EnableETWProvider" Value="false" />
-    <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII. 
-         Please enable so we can learn how FO is being used. Nothing more.
-         True by default as this is how the authors of FO can see how it's doing
-         in the real world, especially if an observer (or the service itself) fails for some reason. 
+    
+    <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII.  
          We just want to know if FO is running somewhere and that it is healthy. We collect no personal identifiable information, 
-         as you can see in the source code. See ObserverManager.cs for examples of a collected data for FO.
+         as you can see in the source code. See ObserverManager.cs for examples of collected data for FO.
          See TelemetryLib project for SF info that is collected. -->
-    <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="true" />
-    <!-- Optional: If you deploy the FabricObserverWebApi app, set this to True.
-         If set to True or False, ObserverManager won't check to see if "fabric:/FabricObserverWebApi" app is deployed 
-         so you can rename the FO API app to whatever you want. The point here is that 
-         if the web API app (log reader API service for observer warnings/errors) is not present,
-         then FO will not run code that the app needs (like files written to OS disk and 
-         other aspects of FO log management).-->
+    <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="false" />
+    
+    <!-- Optional: If you deploy the FabricObserverWebApi app, set this to true.-->
     <Parameter Name="ObserverWebApiEnabled" Value="false" />
   </Section>
-  <!-- Observer Configuration Settings - NOTE: These are overridable settings, see ApplicationManifest.xml. 
-       The Values for these will overriden by ApplicationManifest Parameter settings. Set DefaultValue for each
-       overridable parameter in that file, not here, as the parameter DefaultValues in ApplicationManifest.xml will be used, by default. 
+  
+  <!-- Observer Configuration Settings - *NOTE*: These are overridable settings, see ApplicationManifest.xml. 
+       The Values for these will be overriden by ApplicationManifest Parameter settings. Set DefaultValue for each
+       overridable parameter in that file, *not here*, as the parameter DefaultValues in ApplicationManifest.xml will be used, by default. 
        This design is to enable unversioned application-parameter-only updates. This means you will be able to change
        any of the MustOverride parameters below at runtime by doing an ApplicationUpdate with ApplicationParameters flag. 
        See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version -->
   <Section Name="AppObserverConfiguration">
+    
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="" MustOverride="true" />
+    
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    
     <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
-    <!-- Optional: Enabling this will generate CSV files that contain long-running resource metric data across observers. 
-         These files will be written to the DataLogPath supplied above.-->
-    <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
+    
+    <!-- Optional: Enabling this will generate CSV files that contain resource metric data across runs. 
+         These files will be written to the DataLogPath supplied in ObserverManagerConfiguration section above. -->
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
+    
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    
     <!-- Optional: The amount of time this observer conducts resource usage probing. 
          Each observer has a default value set, but you should override by setting this
          parameter to what makes sense for your service(s). Note that this value represents
          the time spent monitoring for each service you specify in configuration. -->
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+
+    <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
+         in ApplicationManifest.xml, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter. -->
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    
     <!-- Required: The thresholds are held in a json file. Note that these thresholds apply to any service that is part 
          of the Target Application, which is the logical container for service processes in Service Fabric parlance.-->
     <Parameter Name="AppObserverDataFileName" Value="" MustOverride="true" />
+    
     <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="" MustOverride="true" />
+    
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about
          the most recent data (where number of most recent items in collection 
          type equals the ResourceUsageDataCapacity you specify). -->
     <Parameter Name="UseCircularBuffer" Value="" MustOverride="true"/>
+    
     <!-- Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for
          the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
          like 0 or a negative number (or omit the parameter altogether). -->
@@ -104,17 +148,19 @@
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    
     <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
          below, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter.
          Just add a Parameter like below to any of the observers' config sections when you want this level of run control.
          Format: Day(s).Hours:Minutes:Seconds e.g., 1.00:00:00 = 1 day. -->
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    
     <!-- Cluster and App Certs Warning Start (Days) -> DefaultValue is 42 -->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="" MustOverride="true" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="" MustOverride="true" />
+    
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
     <Parameter Name="AppCertThumbprintsToObserve" Value="" MustOverride="true" />
     <Parameter Name="AppCertCommonNamesToObserve" Value="" MustOverride="true" />
@@ -131,28 +177,24 @@
     <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" MustOverride="true" />
     <Parameter Name="AverageQueueLengthWarningThreshold" Value ="" MustOverride="true" />
   </Section>
-  <!-- Only enable FabricSystemObserver after you get a sense of what impact your services have on the SF runtime. 
-       This is very important because there is no "one threshold fits all" across warning/error thresholds for any of the SF system services. 
-       That is, we do not have a fixed set of guaranteed problematic thresholds for SF infrastructure services. 
-       Again, it is best to not Enable this observer until you have done some experimentation with monitoring how your service code impacts 
-       Service Fabric system services. Otherwise, you may end up generating noise and creating support tickets when there is in fact nothing wrong with
-       SF, but that your service code is just stressing SF runtime services. This is of course useful to know, but FabricSystemObserver can't tell you that
-       your code is the problem. -->
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
-    <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about
          the most recent data (where number of most recent items in collection 
          type equals the ResourceUsageDataCapacity you specify). -->
     <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
+    
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    
     <!-- Optional: SF Event Log can be noisy and full of non-error errors., 
          so it's recommended that you only enable this for debugging purposes. This
          only works if you deploy the FabricObserverWebApi service and enable it above (ObserverWebApiEnabled). -->
@@ -175,6 +217,7 @@
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
          These values are held in a json file, NetworkObserver.config.json". -->
@@ -184,13 +227,15 @@
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
-    <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
+    
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    
     <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
@@ -203,6 +248,7 @@
     <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
+    
     <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
     <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
     <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>

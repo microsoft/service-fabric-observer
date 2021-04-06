@@ -210,7 +210,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             var result = Parse(valueString, typeof(TU));
             if (result == null)
             {
-                value = default(TU);
+                value = default;
                 return false;
             }
 
