@@ -181,13 +181,19 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) 
             {
-                WriteToLogWithLevel(
-                        ObserverName,
-                        $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
-                        LogLevel.Error);
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException) 
+                { 
+                    throw;
+                }
 
+                WriteToLogWithLevel(
+                    ObserverName,
+                    $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
+                    LogLevel.Error); 
+                
                 // Fix the bug..
                 throw;
             }
@@ -283,8 +289,14 @@ namespace FabricObserver.Observers
 
                 _ = diskInfo.Clear();
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e)
             {
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    throw;
+                }
+
                 HealthReporter.ReportFabricObserverServiceHealth(
                                 FabricServiceContext.ServiceName.OriginalString,
                                 ObserverName,
@@ -346,15 +358,20 @@ namespace FabricObserver.Observers
             {
 
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e)
             {
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    throw;
+                }
+
                 HealthReporter.ReportFabricObserverServiceHealth(
                                 FabricServiceContext.ServiceName.OriginalString,
                                 ObserverName,
                                 HealthState.Warning,
                                 $"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
-
-                // Fix the bug..
+                // Fix the bug...
                 throw;
             }
         }

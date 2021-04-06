@@ -193,8 +193,14 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e)
             {
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    throw;
+                }
+
                 WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
@@ -307,8 +313,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Windows Event Log
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsObserverWebApiAppDeployed
-                    && monitorWinEventLog)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsObserverWebApiAppDeployed && monitorWinEventLog)
                 {
                     // SF Eventlog Errors?
                     // Write this out to a new file, for use by the web front end log viewer.
@@ -323,11 +328,9 @@ namespace FabricObserver.Observers
                         {
                             File.Delete(logPath);
                         }
-                        catch (IOException)
+                        catch (Exception e) when (e is ArgumentException || e is IOException || e is PathTooLongException || e is UnauthorizedAccessException)
                         {
-                        }
-                        catch (UnauthorizedAccessException)
-                        {
+
                         }
                     }
 
@@ -383,8 +386,14 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e)
             {
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    throw;
+                }
+
                 WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in ReportAsync:{Environment.NewLine}{e}",
@@ -617,8 +626,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && monitorWinEventLog
-                && evtRecordList == null)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && monitorWinEventLog && evtRecordList == null)
             {
                 evtRecordList = new List<EventRecord>();
             }
@@ -630,9 +638,7 @@ namespace FabricObserver.Observers
             
             Token.ThrowIfCancellationRequested();
 
-            var cpuError = GetSettingParameterValue(
-                ConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverCpuErrorLimitPct);
+            var cpuError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverCpuErrorLimitPct);
 
             if (!string.IsNullOrEmpty(cpuError))
             {
@@ -646,9 +652,7 @@ namespace FabricObserver.Observers
                 CpuErrorUsageThresholdPct = threshold;
             }
 
-            var memError = GetSettingParameterValue(
-                ConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverMemoryErrorLimitMb);
+            var memError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMemoryErrorLimitMb);
 
             if (!string.IsNullOrEmpty(memError))
             {
@@ -663,9 +667,7 @@ namespace FabricObserver.Observers
             }
 
             // Ports
-            var activeTcpPortsError = GetSettingParameterValue(
-                     ConfigurationSectionName,
-                     ObserverConstants.FabricSystemObserverNetworkErrorActivePorts);
+            var activeTcpPortsError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkErrorActivePorts);
 
             if (!string.IsNullOrEmpty(activeTcpPortsError))
             {
@@ -673,9 +675,7 @@ namespace FabricObserver.Observers
                 ActiveTcpPortCountError = threshold;
             }
 
-            var activeEphemeralPortsError = GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.FabricSystemObserverNetworkErrorEphemeralPorts);
+            var activeEphemeralPortsError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkErrorEphemeralPorts);
 
             if (!string.IsNullOrEmpty(activeEphemeralPortsError))
             {
@@ -684,9 +684,7 @@ namespace FabricObserver.Observers
             }
 
             // Handles
-            var handlesError = GetSettingParameterValue(
-                ConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverErrorHandles);
+            var handlesError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverErrorHandles);
 
             if (!string.IsNullOrEmpty(handlesError))
             {
@@ -698,9 +696,7 @@ namespace FabricObserver.Observers
 
             Token.ThrowIfCancellationRequested();
 
-            var cpuWarn = GetSettingParameterValue(
-                ConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverCpuWarningLimitPct);
+            var cpuWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverCpuWarningLimitPct);
 
             if (!string.IsNullOrEmpty(cpuWarn))
             {
@@ -714,9 +710,7 @@ namespace FabricObserver.Observers
                 CpuWarnUsageThresholdPct = threshold;
             }
 
-            var memWarn = GetSettingParameterValue(
-                ConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverMemoryWarningLimitMb);
+            var memWarn = GetSettingParameterValue( ConfigurationSectionName, ObserverConstants.FabricSystemObserverMemoryWarningLimitMb);
 
             if (!string.IsNullOrEmpty(memWarn))
             {
@@ -731,9 +725,7 @@ namespace FabricObserver.Observers
             }
 
             // Ports
-            var activeTcpPortsWarning = GetSettingParameterValue(
-                     ConfigurationSectionName,
-                     ObserverConstants.FabricSystemObserverNetworkWarningActivePorts);
+            var activeTcpPortsWarning = GetSettingParameterValue( ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkWarningActivePorts);
 
             if (!string.IsNullOrEmpty(activeTcpPortsWarning))
             {
@@ -741,9 +733,7 @@ namespace FabricObserver.Observers
                 ActiveTcpPortCountWarning = threshold;
             }
 
-            var activeEphemeralPortsWarning = GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.FabricSystemObserverNetworkWarningEphemeralPorts);
+            var activeEphemeralPortsWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkWarningEphemeralPorts);
 
             if (!string.IsNullOrEmpty(activeEphemeralPortsWarning))
             {
@@ -752,9 +742,7 @@ namespace FabricObserver.Observers
             }
 
             // Handles
-            var handlesWarning = GetSettingParameterValue(
-                ConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverWarningHandles);
+            var handlesWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverWarningHandles);
 
             if (!string.IsNullOrEmpty(handlesWarning))
             {
@@ -769,9 +757,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            var watchEvtLog = GetSettingParameterValue(
-                ConfigurationSectionName,
-                ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
+            var watchEvtLog = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
 
             if (!string.IsNullOrEmpty(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
             {
@@ -891,8 +877,14 @@ namespace FabricObserver.Observers
 
                             await Task.Delay(250, Token).ConfigureAwait(false);
                         }
-                        catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                        catch (Exception e)
                         {
+                            // ObserverManager handles these.
+                            if (e is OperationCanceledException || e is TaskCanceledException)
+                            {
+                                throw;
+                            }
+
                             WriteToLogWithLevel(
                                 ObserverName,
                                 $"Unhandled Exception thrown in GetProcessInfoAsync:{Environment.NewLine}{e}",
@@ -908,19 +900,25 @@ namespace FabricObserver.Observers
                     // This will be a Win32Exception or InvalidOperationException if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
                     // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
                     // It is generally *not* worth running FO process as a Windows elevated user just for this scenario. On Linux, FO always should be run as normal user, not root.
+#if DEBUG
                     WriteToLogWithLevel(
                         ObserverName,
                         $"Can't observe {procName} due to it's privilege level. FabricObserver must be running as System or Admin on Windows for this specific task.",
-                        LogLevel.Information);
-                    
+                        LogLevel.Warning);
+#endif       
                     continue;
                 }
                 catch (Exception e)
                 {
+                    if (e is OperationCanceledException || e is TaskCanceledException)
+                    {
+                        throw;
+                    }
+
                     WriteToLogWithLevel(
-                            ObserverName,
-                            $"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}",
-                            LogLevel.Error);
+                        ObserverName,
+                        $"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}",
+                        LogLevel.Error);
 
                     // Fix the bug..
                     throw;

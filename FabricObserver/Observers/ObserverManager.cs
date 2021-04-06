@@ -213,15 +213,11 @@ namespace FabricObserver.Observers
                 ServiceEventSource.Current,
                 this.token);
 
-            string foInternalTelemetryData = GetFabricObserverInternalConfiguration();
-            if (telemetryEvents.FabricObserverRuntimeNodeEvent(
-                codePkgVersion,
-                foInternalTelemetryData,
-                "HealthState.Initialized"))
+            if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion, GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
             {
                 // Log a file to prevent re-sending this in case of process restart(s).
                 // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates.).
-                _ = Logger.TryWriteLogFile(filepath, foInternalTelemetryData);
+                _ = Logger.TryWriteLogFile(filepath, GetFabricObserverInternalConfiguration());
             }
         }
 
@@ -264,7 +260,10 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is TaskCanceledException || e is OperationCanceledException)
             {
-            
+                if (!isConfigurationUpdateInProgess && (shutdownSignaled || token.IsCancellationRequested))
+                {
+                    await ShutDownAsync().ConfigureAwait(false);
+                }
             }
             catch (Exception e)
             {
@@ -279,27 +278,27 @@ namespace FabricObserver.Observers
                 if (TelemetryEnabled)
                 {
                     await (TelemetryClient?.ReportHealthAsync(
-                            HealthScope.Application,
-                            "FabricObserverServiceHealth",
-                            HealthState.Warning,
-                            message,
-                            ObserverConstants.ObserverManagerName,
-                            token)).ConfigureAwait(false);
+                                                HealthScope.Application,
+                                                "FabricObserverServiceHealth",
+                                                HealthState.Warning,
+                                                message,
+                                                ObserverConstants.ObserverManagerName,
+                                                token)).ConfigureAwait(false);
                 }
 
                 // ETW.
                 if (EtwEnabled)
                 {
                     Logger.LogEtw(
-                        ObserverConstants.FabricObserverETWEventName,
-                        new
-                        {
-                            HealthScope = "Application",
-                            HealthState = "Warning",
-                            Node = nodeName,
-                            Observer = ObserverConstants.ObserverManagerName,
-                            Description = message,
-                        });
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                HealthScope = "Application",
+                                HealthState = "Warning",
+                                Node = nodeName,
+                                Observer = ObserverConstants.ObserverManagerName,
+                                Description = message,
+                            });
                 }
 
                 // Don't swallow the exception.
@@ -550,7 +549,6 @@ namespace FabricObserver.Observers
                     {
                         // The ObserverLogger instance (member of each observer type) checks its EnableVerboseLogging setting before writing Info events (it won't write if this setting is false, thus non-verbose).
                         // So, we set it here in case the parameter update includes a change to this config setting. 
-                        // This is the only updatable setting that requires we do this as part of the config update event handling.
                         if (e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters.Contains(ObserverConstants.EnableVerboseLoggingParameter)
                             && e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters.Contains(ObserverConstants.EnableVerboseLoggingParameter))
                         {
@@ -573,7 +571,6 @@ namespace FabricObserver.Observers
                 }
 
                 linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
-                Logger.LogWarning($"Application Parameter upgrade in progress: new observer list count -> {observers.Count}");
             }
             catch (Exception err)
             {
@@ -605,24 +602,18 @@ namespace FabricObserver.Observers
             ApplicationName = FabricRuntime.GetActivationContext().ApplicationName;
 
             // Observers
-            if (int.TryParse(
-                GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout),
-                out int result))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout), out int result))
             {
                 observerExecTimeout = TimeSpan.FromSeconds(result);
             }
 
             // Logger
-            if (bool.TryParse(
-                GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter),
-                out bool enableVerboseLogging))
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter), out bool enableVerboseLogging))
             {
                 Logger.EnableVerboseLogging = enableVerboseLogging;
             }
 
-            if (int.TryParse(
-                GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds),
-                out int execFrequency))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds), out int execFrequency))
             {
                 ObserverExecutionLoopSleepSeconds = execFrequency;
 
@@ -674,17 +665,13 @@ namespace FabricObserver.Observers
                 {
                     case TelemetryProviderType.AzureLogAnalytics:
                     {
-                        var logAnalyticsLogType =
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter);
+                        var logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter);
 
-                        var logAnalyticsSharedKey =
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
+                        var logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
 
-                        var logAnalyticsWorkspaceId =
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+                        var logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
 
-                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId)
-                            || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                         {
                             TelemetryEnabled = false;
 
@@ -692,11 +679,11 @@ namespace FabricObserver.Observers
                         }
 
                         TelemetryClient = new LogAnalyticsTelemetry(
-                            logAnalyticsWorkspaceId,
-                            logAnalyticsSharedKey,
-                            logAnalyticsLogType,
-                            FabricClientInstance,
-                            token);
+                                                logAnalyticsWorkspaceId,
+                                                logAnalyticsSharedKey,
+                                                logAnalyticsLogType,
+                                                FabricClientInstance,
+                                                token);
 
                         break;
                     }
@@ -800,26 +787,26 @@ namespace FabricObserver.Observers
                         if (TelemetryEnabled)
                         {
                             await (TelemetryClient?.ReportHealthAsync(
-                                    HealthScope.Application,
-                                    $"{observer.ObserverName}HealthError",
-                                    HealthState.Error,
-                                    observerHealthWarning,
-                                    ObserverConstants.ObserverManagerName,
-                                    token)).ConfigureAwait(false);
+                                                        HealthScope.Application,
+                                                        $"{observer.ObserverName}HealthError",
+                                                        HealthState.Error,
+                                                        observerHealthWarning,
+                                                        ObserverConstants.ObserverManagerName,
+                                                        token)).ConfigureAwait(false);
                         }
 
                         // ETW.
                         if (EtwEnabled)
                         {
                             Logger.LogEtw(
-                                ObserverConstants.FabricObserverETWEventName,
-                                new
-                                {
-                                    Scope = HealthScope.Application,
-                                    Source = ObserverConstants.ObserverManagerName,
-                                    HealthState = "Error",
-                                    Message = observerHealthWarning,
-                                });
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Scope = HealthScope.Application,
+                                        Source = ObserverConstants.ObserverManagerName,
+                                        HealthState = "Error",
+                                        Message = observerHealthWarning,
+                                    });
                         }
 
                         continue;
@@ -849,9 +836,9 @@ namespace FabricObserver.Observers
                             {
                                 // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s).
                                 File.WriteAllLines(
-                                    Logger.FilePath,
-                                    File.ReadLines(Logger.FilePath)
-                                        .Where(line => !line.Contains(observer.ObserverName)).ToList());
+                                        Logger.FilePath,
+                                        File.ReadLines(Logger.FilePath)
+                                            .Where(line => !line.Contains(observer.ObserverName)).ToList());
                             }
                         }
                         catch (IOException)
@@ -895,10 +882,10 @@ namespace FabricObserver.Observers
                 catch (Exception e)
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
-                            ObserverConstants.ObserverManagerName,
-                            ApplicationName,
-                            HealthState.Error,
-                            $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                                    ObserverConstants.ObserverManagerName,
+                                    ApplicationName,
+                                    HealthState.Error,
+                                    $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
 
                     allExecuted = false;
                 }
@@ -915,10 +902,10 @@ namespace FabricObserver.Observers
                 if (Logger.EnableVerboseLogging)
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
-                        ObserverConstants.ObserverManagerName,
-                        ApplicationName,
-                        HealthState.Warning,
-                        exceptionBuilder.ToString());
+                                    ObserverConstants.ObserverManagerName,
+                                    ApplicationName,
+                                    HealthState.Warning,
+                                    exceptionBuilder.ToString());
                 }
 
                 _ = exceptionBuilder.Clear();

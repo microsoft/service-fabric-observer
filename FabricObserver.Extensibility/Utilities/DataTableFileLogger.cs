@@ -18,7 +18,7 @@ namespace FabricObserver.Observers.Utilities
     // CSV file logger for long-running monitoring data (memory/cpu/disk/network usage data).
     public class DataTableFileLogger : IDataTableFileLogger<ILogger>
     {
-        private static ILogger dataLogger
+        private static ILogger DataLogger
         {
             get; set;
         }
@@ -33,11 +33,6 @@ namespace FabricObserver.Observers.Utilities
         public string BaseDataLogFolderPath 
         { 
             get; set; 
-        }
-
-        public bool EnableCsvLogging
-        {
-            get; set;
         }
 
         public CsvFileWriteFormat FileWriteFormat
@@ -126,9 +121,9 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            if (dataLogger == null)
+            if (DataLogger == null)
             {
-                dataLogger = LogManager.GetLogger("FabricObserver.Utilities.DataTableFileLogger");
+                DataLogger = LogManager.GetLogger("FabricObserver.Utilities.DataTableFileLogger");
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
@@ -166,29 +161,9 @@ namespace FabricObserver.Observers.Utilities
                     string stat,
                     double value)
         {
-            // If you use the AppInsights IObserverTelemetry impl, then this will, for example,
-            // send traces up to AppInsights instead of writing locally. See NLog.config for settings.
-            // **NOTE**: It is preferred that if you want data for every reading that an observer conducts then you 
-            // just enable Telemetry on the observers you want the data from. This will be high volume telemetry... 
-            // You don't need to use this logger for that. This really should only be used to create csv files on disk,
-            // which will take place as one file (datestamped) per configured metric reading per supported observer. Not all 
-            // observers currently support csv logging: Only AppObserver, FabricSystemObserver and NodeObserver support csv file logging.
-            if (!EnableCsvLogging)
-            {
-                if (dataLogger == null)
-                {
-                    dataLogger = LogManager.GetCurrentClassLogger();
-                }
-
-                dataLogger.Info($"{target}/{metric}/{stat}: {value}");
-
-                return;
-            }
-
-            // Else, reconfigure logger to write to file on disk.
             ConfigureLogger(fileName);
 
-            dataLogger.Info(
+            DataLogger.Info(
                 "{target}{metric}{stat}{value}",
                 target,
                 metric,

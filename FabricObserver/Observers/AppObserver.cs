@@ -181,6 +181,13 @@ namespace FabricObserver.Observers
                     // Locally Log (csv) CPU/Mem/FileHandles/Ports per app service process.
                     if (EnableCsvLogging)
                     {
+                        // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
+                        // Please use ContainerObserver for SF container app service monitoring.
+                        if (processName == "Fabric")
+                        {
+                            continue;
+                        }
+
                         fileName = $"{processName}{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
 
                         // BaseLogDataLogFolderPath is set in ObserverBase or a default one is created by CsvFileLogger.
@@ -198,7 +205,7 @@ namespace FabricObserver.Observers
                                 "",
                                 processId);
 
-                        // Log resource usage data.
+                        // Log resource usage data to CSV files.
                         LogAllAppResourceDataToCsv(id);
                     }
 
@@ -333,13 +340,12 @@ namespace FabricObserver.Observers
             }
 
             using Stream stream = new FileStream(
-                appObserverConfigFileName,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read);
+                                        appObserverConfigFileName,
+                                        FileMode.Open,
+                                        FileAccess.Read,
+                                        FileShare.Read);
 
-            if (stream.Length > 0
-                && JsonHelper.IsJson<List<ApplicationInfo>>(File.ReadAllText(appObserverConfigFileName)))
+            if (stream.Length > 0 && JsonHelper.IsJson<List<ApplicationInfo>>(File.ReadAllText(appObserverConfigFileName)))
             {
                 userTargetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
             }
@@ -360,11 +366,12 @@ namespace FabricObserver.Observers
             {
                 ApplicationInfo application = userTargetList.Find(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
 
+                // TODO: This should be paged for cases where a node has hundreds of apps.
                 var appList = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
-                                        NodeName,
-                                        null,
-                                        ConfigurationSettings.AsyncTimeout,
-                                        Token).ConfigureAwait(false);
+                                                                        NodeName,
+                                                                        null,
+                                                                        ConfigurationSettings.AsyncTimeout,
+                                                                        Token).ConfigureAwait(false);
 
                 foreach (var app in appList)
                 {
@@ -380,7 +387,7 @@ namespace FabricObserver.Observers
                     {
                         continue;
                     }
-                    else if(!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString))
+                    else if (!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString))
                     {
                         continue;
                     }
@@ -453,8 +460,7 @@ namespace FabricObserver.Observers
             {
                 Token.ThrowIfCancellationRequested();
 
-                if (string.IsNullOrWhiteSpace(application.TargetApp)
-                    && string.IsNullOrWhiteSpace(application.TargetAppType))
+                if (string.IsNullOrWhiteSpace(application.TargetApp) && string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
                         FabricServiceContext.ServiceName.ToString(),
@@ -486,7 +492,24 @@ namespace FabricObserver.Observers
             foreach (var rep in ReplicaOrInstanceList)
             {
                 Token.ThrowIfCancellationRequested();
-                ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");   
+                
+                try
+                {
+                    // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
+                    // Please use ContainerObserver for SF container app service monitoring.
+                    using Process p = Process.GetProcessById((int)rep.HostProcessId);
+
+                    if (p.ProcessName == "Fabric")
+                    {
+                        continue;
+                    }
+
+                    ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
+                {
+                    continue;
+                }
             }
 
             return true;
@@ -518,13 +541,19 @@ namespace FabricObserver.Observers
                 {
                     // App level.
                     currentProcess = Process.GetProcessById(processId);
+                    string procName = currentProcess.ProcessName;
 
-                    token.ThrowIfCancellationRequested();
+                    // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
+                    // Please use ContainerObserver for SF container app service monitoring.
+                    if (procName == "Fabric")
+                    {
+                        continue;
+                    }
 
-                    var procName = currentProcess.ProcessName;
                     string appNameOrType = GetAppNameOrType(repOrInst);
-
-                    var id = $"{appNameOrType}:{procName}";
+                    string id = $"{appNameOrType}:{procName}";
+                    
+                    token.ThrowIfCancellationRequested();
 
                     // Add new resource data structures for each app service process where the metric is specified in configuration for related observation.
                     if (AllAppCpuData.All(list => list.Id != id) && (application.CpuErrorLimitPercent > 0 || application.CpuWarningLimitPercent > 0))
@@ -607,7 +636,7 @@ namespace FabricObserver.Observers
 
                     /* CPU and Memory Usage */
 
-                    TimeSpan duration = TimeSpan.FromSeconds(15);
+                    TimeSpan duration = TimeSpan.FromSeconds(10);
 
                     if (MonitorDuration > TimeSpan.MinValue)
                     {
@@ -685,20 +714,28 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                 {
+#if DEBUG
                     WriteToLogWithLevel(
                         ObserverName,
                         $"MonitorDeployedAppsAsync: failed to find current service process or target process is running at a higher privilege than FO for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
-                        LogLevel.Information);
-
+                        LogLevel.Warning);
+#endif
                     continue;
                 }
-                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                catch (Exception e)
                 {
+                    // ObserverManager handles these.
+                    if (e is OperationCanceledException || e is TaskCanceledException)
+                    {
+                        throw;
+                    }
+
                     WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}",
                         LogLevel.Warning);
 
+                    // Fix the bug..
                     throw;
                 }
                 finally
@@ -787,10 +824,10 @@ namespace FabricObserver.Observers
         }
 
         private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedPrimaryReplicaAsync(
-            Uri appName,
-            List<string> serviceFilterList = null,
-            ServiceFilterType filterType = ServiceFilterType.None,
-            string appTypeName = null)
+                                                                    Uri appName,
+                                                                    List<string> serviceFilterList = null,
+                                                                    ServiceFilterType filterType = ServiceFilterType.None,
+                                                                    string appTypeName = null)
         {
             var deployedReplicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName).ConfigureAwait(true);
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>();
@@ -807,12 +844,12 @@ namespace FabricObserver.Observers
         }
 
         private void SetInstanceOrReplicaMonitoringList(
-            Uri appName,
-            List<string> filterList,
-            ServiceFilterType filterType,
-            string appTypeName,
-            DeployedServiceReplicaList deployedReplicaList,
-            ref List<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
+                        Uri appName,
+                        List<string> filterList,
+                        ServiceFilterType filterType,
+                        string appTypeName,
+                        DeployedServiceReplicaList deployedReplicaList,
+                        ref List<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
             foreach (var deployedReplica in deployedReplicaList)
             {
@@ -833,8 +870,7 @@ namespace FabricObserver.Observers
                         ServiceName = statefulReplica.ServiceName,
                     };
 
-                    if (filterList != null
-                        && filterType != ServiceFilterType.None)
+                    if (filterList != null && filterType != ServiceFilterType.None)
                     {
                         bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
@@ -881,7 +917,7 @@ namespace FabricObserver.Observers
 
         private void LogAllAppResourceDataToCsv(string appName)
         {
-            if (!EnableCsvLogging && !IsTelemetryProviderEnabled)
+            if (!EnableCsvLogging)
             {
                 return;
             }

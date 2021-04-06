@@ -129,7 +129,7 @@ namespace FabricObserver.Observers
                         NodeName = NodeName,
                         HealthMessage = healthMessage,
                         State = HealthState.Ok,
-                        HealthReportTimeToLive = default(TimeSpan),
+                        HealthReportTimeToLive = default,
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -226,8 +226,14 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e)
             {
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    throw;
+                }
+
                 HealthReporter.ReportFabricObserverServiceHealth(
                     FabricServiceContext.ServiceName.OriginalString,
                     ObserverName,
@@ -592,8 +598,14 @@ namespace FabricObserver.Observers
                         }, Token);
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e)
             {
+                // ObserverManager handles these.
+                if (e is OperationCanceledException || e is TaskCanceledException)
+                {
+                    throw;
+                }
+
                 HealthReporter.ReportFabricObserverServiceHealth(
                        FabricServiceContext.ServiceName.OriginalString,
                        ObserverName,

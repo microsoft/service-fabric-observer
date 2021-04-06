@@ -11,35 +11,25 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsCpuUtilizationProvider : CpuUtilizationProvider
     {
-        private PerformanceCounter performanceCounter = new PerformanceCounter()
-        {
-            CategoryName = "Processor",
-            CounterName = "% Processor Time",
-            InstanceName = "_Total",
-            ReadOnly = true,
-        };
+        private PerformanceCounter performanceCounter = new PerformanceCounter(categoryName: "Processor", counterName: "% Processor Time", instanceName: "_Total", readOnly: true);
 
         public override Task<float> NextValueAsync()
         {
-            PerformanceCounter perfCounter = performanceCounter;
+            PerformanceCounter perfCounter = this.performanceCounter;
 
             if (perfCounter == null)
             {
                 throw new ObjectDisposedException(nameof(WindowsCpuUtilizationProvider));
             }
 
-            // warm up counter.
-            _ = perfCounter.NextValue();
-
             float result = perfCounter.NextValue();
-
             return Task.FromResult(result);
         }
 
         protected override void Dispose(bool disposing)
         {
-            performanceCounter?.Dispose();
-            performanceCounter = null;
+            this.performanceCounter?.Dispose();
+            this.performanceCounter = null;
         }
     }
 }

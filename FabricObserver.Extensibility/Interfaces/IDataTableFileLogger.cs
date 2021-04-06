@@ -12,11 +12,6 @@ namespace FabricObserver.Interfaces
             get; set;
         }
 
-        bool EnableCsvLogging
-        {
-            get; set;
-        }
-
         string BaseDataLogFolderPath
         {
             get; set;

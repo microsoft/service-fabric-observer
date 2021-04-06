@@ -136,13 +136,13 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Fabric Warning. |  
 | **Output**| Log text(Error/Warning), Service Fabric Application Health Report, ETW (EventSource), Telemetry (AppInsights/LogAnalytics) |
 
-AppObserver also optionally outputs CSV files for each app containing all resource usage data across iterations for use in analysis. Included are Average and Peak measurements. You can turn this on/off in Settings.xml, where there are comments explaining the feature further.  
+AppObserver also optionally outputs CSV files for each app containing all resource usage data across iterations for use in analysis. Included are Average and Peak measurements. You can turn this on/off in ApplicationManifest.xml. See Settings.xml where there are comments explaining the feature further.  
   
 AppObserver error/warning thresholds are user-supplied-only and bound to specific service instances (processes) as dictated by the user,
 as explained above. Like FabricSystemObserver, all data is stored in in-memory data structures for the lifetime of the run (for example, 60 seconds at 5 second intervals). Like all observers, the last thing this observer does is call its *ReportAsync*, which will then determine the health state based on accumulated data across resources, send a Warning if necessary (clear an existing warning if necessary), then clean out the in-memory data structures to limit impact on the system over time. So, each iteration of this observer accumulates *temporary* data for use in health determination.
   
 This observer also monitors the FabricObserver service itself across
-CPU/Mem/Disk.  
+CPU/Mem/FileHandles/Ports.  
 
 ## CertificateObserver
 Monitors the expiration date of the cluster certificate and any other certificates provided by the user. 
@@ -277,7 +277,7 @@ Again, it is best to Enable this observer only after you have done some experime
 
 **This observer also optionally outputs a CSV file containing all resource usage
 data across iterations for use in analysis. Included are Average and
-Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean setting.**
+Peak measurements. See Settings.xml's EnableCSVDataLogging setting.**
 
 This observer runs for either a specified configuration setting of time
 or default of 30 seconds. Each fabric system process is monitored for

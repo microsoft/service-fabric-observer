@@ -92,7 +92,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public static bool TryParseStatusFile(string statuSFilePath, out ParsedStatus result)
         {
-            result = default(ParsedStatus);
+            result = default;
 
             if (!TryReadFile(statuSFilePath, out string[] fileLines))
             {

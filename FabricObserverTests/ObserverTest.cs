@@ -419,7 +419,7 @@ namespace FabricObserverTests
                 ApplicationName = new Uri("fabric:/TestApp"),
                 PartitionId = Guid.NewGuid(),
                 HostProcessId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 0 : 1,
-                ReplicaOrInstanceId = default(long),
+                ReplicaOrInstanceId = default,
             });
 
             var obsMgr = new ObserverManager(obs, fabricClient)
@@ -485,7 +485,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync();
             });
 
-            await WaitAsync(() => obsMgr.IsObserverRunning, 10);
+            await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(true);
             Assert.IsTrue(obsMgr.IsObserverRunning);
             _ = obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
@@ -1614,7 +1614,7 @@ namespace FabricObserverTests
 
             while (stopwatch.Elapsed < TimeSpan.FromSeconds(timeoutInSeconds) && !predicate())
             {
-                await Task.Delay(5).ConfigureAwait(false); // sleep 5 ms
+                await Task.Delay(1).ConfigureAwait(false); // sleep 5 ms
             }
         }
 

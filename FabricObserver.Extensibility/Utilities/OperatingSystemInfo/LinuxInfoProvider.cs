@@ -58,7 +58,7 @@ namespace FabricObserver.Observers.Utilities
 
         public override async Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
         {
-            OSInfo osInfo = default(OSInfo);
+            OSInfo osInfo = default;
             (int exitCode, List<string> outputLines) = await ExecuteProcessAsync("lsb_release", "-d");
 
             if (exitCode == 0 && outputLines.Count == 1)

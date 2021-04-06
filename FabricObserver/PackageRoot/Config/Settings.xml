@@ -8,10 +8,13 @@
     
     <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
-         Below setting represents 60 minutes. If you are monitoring hundreds of services, then you should increase this if necessary.
-         Or decrease it if not. Measure and determine how long it takes for AppObserver, for example, to run to completion in 
-         your deployment and configuration (like if you watch all services of a single application type and there are hundreds of them. -->
-    <Parameter Name="ObserverExecutionTimeout" Value="3600" />
+         Below setting represents 120 minutes. If you are not monitoring hundreds of services, then you should decrease this if necessary.
+         Measure and determine how long it takes for AppObserver, for example, to run to completion in 
+         your deployment and configuration - like if you watch all services of a all applications and there are hundreds of them. You can do this easily by
+         setting EnableVerboseLogging to true on AppObserver, for example, and it will log how long it takes to run each time it runs to completion. Any observer
+         that monitors stuff supports run duration logging. Use this these values to determine what constitutes too long and that an observer needs to be fixed. 
+         No Observer should ever take 2 hours to run, so the below setting is an extreme maximum. Vary the number to meet your actual needs. -->
+    <Parameter Name="ObserverExecutionTimeout" Value="7200" />
     
     <!-- How long to wait, in seconds, after a shutdown is signaled. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
@@ -78,21 +81,13 @@
          FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
     <Parameter Name="EnableETWProvider" Value="false" />
     
-    <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII. 
-         Please enable so we can learn how FO is being used. Nothing more.
-         True by default as this is how the authors of FO can see how it's doing
-         in the real world, especially if an observer (or the service itself) fails for some reason. 
+    <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII.  
          We just want to know if FO is running somewhere and that it is healthy. We collect no personal identifiable information, 
-         as you can see in the source code. See ObserverManager.cs for examples of a collected data for FO.
+         as you can see in the source code. See ObserverManager.cs for examples of collected data for FO.
          See TelemetryLib project for SF info that is collected. -->
-    <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="true" />
+    <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="false" />
     
-    <!-- Optional: If you deploy the FabricObserverWebApi app, set this to True.
-         If set to True or False, ObserverManager won't check to see if "fabric:/FabricObserverWebApi" app is deployed 
-         so you can rename the FO API app to whatever you want. The point here is that 
-         if the web API app (log reader API service for observer warnings/errors) is not present,
-         then FO will not run code that the app needs (like files written to OS disk and 
-         other aspects of FO log management).-->
+    <!-- Optional: If you deploy the FabricObserverWebApi app, set this to true.-->
     <Parameter Name="ObserverWebApiEnabled" Value="false" />
   </Section>
   
@@ -115,7 +110,7 @@
     
     <!-- Optional: Enabling this will generate CSV files that contain resource metric data across runs. 
          These files will be written to the DataLogPath supplied in ObserverManagerConfiguration section above. -->
-    <Parameter Name="EnableCSVDataLogging" Value="false" />
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
     
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
@@ -127,8 +122,9 @@
          parameter to what makes sense for your service(s). Note that this value represents
          the time spent monitoring for each service you specify in configuration. -->
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
-    
-    <!-- Optional: Run interval time. You can set how often you want an observer to run. -->
+
+    <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
+         in ApplicationManifest.xml, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter. -->
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     
     <!-- Required: The thresholds are held in a json file. Note that these thresholds apply to any service that is part 
@@ -152,8 +148,6 @@
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    
-    <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     
@@ -187,7 +181,7 @@
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
-    <Parameter Name="EnableCSVDataLogging" Value="false"  />
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
@@ -233,7 +227,7 @@
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
-    <Parameter Name="EnableCSVDataLogging" Value="false" />
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />

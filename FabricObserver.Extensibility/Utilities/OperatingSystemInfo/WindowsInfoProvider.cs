@@ -338,7 +338,7 @@ namespace FabricObserver.Observers.Utilities
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
 
-            OSInfo osInfo = default(OSInfo);
+            OSInfo osInfo = default;
 
             try
             {
