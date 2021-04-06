@@ -13,8 +13,6 @@
     <Product>TelemetryLib</Product>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
-  <Import Project="Properties\common.props" />
-  <Import Project="Properties\EnableStylecop.props" />
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.16.0" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
