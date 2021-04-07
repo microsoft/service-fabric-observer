@@ -40,21 +40,20 @@
     <Parameter Name="FQDN" Value="" />
     
     <!-- Optional: Maximum Number of days to store Archived observer log files on disk. 
-         This setting spans all Observer Logger instances (ObserverBase.ObserverLogger), including plugins and ObserverManager. 
+         This setting spans all ObserverLogger instances (ObserverBase.ObserverLogger), including plugins and ObserverManager. 
          The default value is 0. An empty value or 0 means there is no lifetime constraint. They are immortal files. -->
     <Parameter Name="MaxArchivedLogFileLifetimeDays" Value="3" />
     
-    <!-- Optional: Maximum Number of days to store CSV files on disk, which are produced by DataLogger instances (ObserverBase.CsvLogger). 
-         This setting spans all file loggers for observers (including plugins) and ObserverManager. 
-         The default value is 0. An empty value or 0 means there is no lifetime constraint. They are immortal files. 
-         Note: For csv files, since they are produced (and stored individually) for each configured metric reading on each entity 
-         by a supported observer (AppObserver, FabricSystemObserver or NodeObserver only), there will be a lot of these files produced depending upon your 
-         RunInterval setting for supported observer. -->
+    <!-- Optional: Maximum Number of days to store CSV files on disk, which are produced by CsvFileLogger instances (ObserverBase.CsvFileLogger). 
+         This setting spans all CsvFileLogger instances for observers (including plugins) and ObserverManager. 
+         The default value is 0. An empty value or 0 means there is no lifetime constraint. They are immortal files. -->
     <Parameter Name="MaxArchivedCsvFileLifetimeDays" Value="1" />
     
     <!-- Optional: How do you want to store csv files per observer run? Default is SingleFileWithArchives which means write to a single file that is updated per run and archived after 1 day. 
          The other option, MultipleFilesNoArchives means files are written per run per monitor target (so, one file for each service process that you are monitoring, for example, 
-         time-stamped (Utc), per observer run. Note that in either case, files will remain on disk for the number of days specified in MaxArchivedCsvFileLifetimeDays. -->
+         time-stamped (Utc), per observer run. For MultipleFilesNoArchives, since each run produces a file for each entity target (like a service process monitored by AppObserver, which can 10s or 100s)  
+         by a supported observer (AppObserver, FabricSystemObserver or NodeObserver only), there will be a lot of these files produced depending upon your 
+         RunInterval setting for supported observer. Note that in either case, files will remain on disk for the number of days specified in MaxArchivedCsvFileLifetimeDays. -->
     <Parameter Name="CsvFileWriteFormat" Value="SingleFileWithArchives" />
     
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
