@@ -22,7 +22,7 @@ namespace FabricObserver.Observers.Utilities
     public sealed class Logger : IObserverLogger<ILogger>
     {
         private const int Retries = 5;
-        private EventSource etwLogger = null;
+        private static EventSource etwLogger = null;
 
         // Text file logger for observers - info/warn/error.
         private ILogger OLogger
