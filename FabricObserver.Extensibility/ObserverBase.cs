@@ -683,8 +683,6 @@ namespace FabricObserver.Observers
                 {
                     ApplicationName = appName?.OriginalString ?? string.Empty,
                     NodeName = NodeName,
-                    Code = string.Empty,
-                    HealthState = string.Empty,
                     ObserverName = ObserverName,
                     Metric = data.Property,
                     Value = Math.Round(data.AverageDataValue, 0),
@@ -758,8 +756,6 @@ namespace FabricObserver.Observers
                 // of user telemetry settings.
                 telemetryData = new TelemetryData(FabricClientInstance, Token)
                 {
-                    Code = string.Empty,
-                    HealthState = string.Empty,
                     NodeName = NodeName,
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
@@ -778,8 +774,6 @@ namespace FabricObserver.Observers
                                     ObserverConstants.FabricObserverETWEventName,
                                     new
                                     {
-                                        Code = string.Empty,
-                                        HealthState = string.Empty,
                                         NodeName,
                                         ObserverName,
                                         Metric = $"{drive}{data.Property}",
@@ -1042,7 +1036,7 @@ namespace FabricObserver.Observers
                     // Telemetry
                     if (IsTelemetryEnabled)
                     {
-                        _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token);
+                        _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                     }
 
                     // ETW.

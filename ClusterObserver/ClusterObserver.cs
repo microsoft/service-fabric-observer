@@ -196,8 +196,8 @@ namespace ClusterObserver
                     }
 
                     telemetryDescription +=
-                    $"Note: There are currently one or more Repair Tasks processing in the cluster.{Environment.NewLine}" +
-                    $"{ids}";
+                        $"Note: There are currently one or more Repair Tasks processing in the cluster.{Environment.NewLine}" +
+                        $"{ids}";
                 }
 
                 int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(FabricClientInstance, token);
@@ -275,11 +275,11 @@ namespace ClusterObserver
                                 await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates, token).ConfigureAwait(false);
                             }
                             catch (Exception e) when
-                            (e is FabricException ||
-                             e is OperationCanceledException ||
-                             e is TimeoutException)
+                                    (e is FabricException ||
+                                     e is OperationCanceledException ||
+                                     e is TimeoutException)
                             {
-                                ObserverLogger.LogWarning($"Handled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}");
+                                continue;
                             }
                         }
                         else if (evaluation.Kind == HealthEvaluationKind.Application
@@ -291,11 +291,11 @@ namespace ClusterObserver
                                 await ProcessApplicationHealthAsync(clusterHealth.ApplicationHealthStates, token).ConfigureAwait(false);
                             }
                             catch (Exception e) when
-                            (e is FabricException ||
-                             e is OperationCanceledException ||
-                             e is TimeoutException)
+                                    (e is FabricException ||
+                                     e is OperationCanceledException ||
+                                     e is TimeoutException)
                             {
-                                ObserverLogger.LogWarning($"Handled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}");
+                                continue;
                             }
                         }
                         else
@@ -305,11 +305,11 @@ namespace ClusterObserver
                                 await ProcessGenericEntityHealthAsync(evaluation, token).ConfigureAwait(false);
                             }
                             catch (Exception e) when
-                            (e is FabricException ||
-                             e is TimeoutException ||
-                             e is OperationCanceledException)
+                                    (e is FabricException ||
+                                     e is TimeoutException ||
+                                     e is OperationCanceledException)
                             {
-                                ObserverLogger.LogWarning($"Handled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}");
+                                continue;
                             }
                         }
                     }
@@ -320,7 +320,7 @@ namespace ClusterObserver
             }
             catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
             {
-                // Handled by ignoring.
+                
             }
             catch (Exception e)
             {
@@ -417,134 +417,94 @@ namespace ClusterObserver
 
                 if (appHealthEvents.Count() == 0)
                 {
-                    var evals = appHealth.UnhealthyEvaluations;
-
-                    if (evals.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    var eval = appHealth.UnhealthyEvaluations[0];
-
-                    telemetryDescription += eval.Description;
-                    
-                    // Telemetry.
-                    if (TelemetryEnabled && ObserverTelemetryClient != null)
-                    {
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
-                        {
-                            ApplicationName = appName.OriginalString,
-                            HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
-                            Description = telemetryDescription,
-                            Source = ObserverName,
-                        };
-
-                        await ObserverTelemetryClient.ReportHealthAsync(telemetryData, token);
-                    }
-
-                    // ETW.
-                    if (etwEnabled)
-                    {
-                        Logger.EtwLogger?.Write(
-                            ObserverConstants.ClusterObserverETWEventName,
-                            new
-                            {
-                                ApplicationName = appName.OriginalString,
-                                HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
-                                HealthEventDescription = telemetryDescription,
-                                Source = ObserverName,
-                            });
-                    }
-
-                    // Reset 
-                    telemetryDescription = string.Empty;
+                    continue;
                 }
-                else
+
+                foreach (HealthEvent healthEvent in appHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
                 {
-                    // We only care about the latest (most recent) health event - there can be a very large number of events in the Health Event Store.
-                    foreach (HealthEvent healthEvent in appHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp).Take(1))
-                    {
-                        var foTelemetryData = TryGetFOHealthStateEventData(healthEvent, HealthScope.Application);
+                    var foTelemetryData = TryGetFOHealthStateEventData(healthEvent, HealthScope.Application);
                         
-                        // From FabricObserver?
-                        if (foTelemetryData != null)
+                    // From FabricObserver?
+                    if (foTelemetryData != null)
+                    {
+                        // Telemetry.
+                        if (TelemetryEnabled && ObserverTelemetryClient != null)
                         {
-                            // Telemetry.
-                            if (TelemetryEnabled && ObserverTelemetryClient != null)
-                            {
-                                await ObserverTelemetryClient.ReportHealthAsync(foTelemetryData, token);
-                            }
-
-                            // ETW.
-                            if (etwEnabled)
-                            {
-                                double value = double.TryParse(foTelemetryData.Value?.ToString(), out double val) ? val : -1;
-
-                                Logger.EtwLogger?.Write(
-                                        ObserverConstants.ClusterObserverETWEventName,
-                                        new
-                                        {
-                                            foTelemetryData.ApplicationName,
-                                            foTelemetryData.HealthState,
-                                            foTelemetryData.Description,
-                                            foTelemetryData.Metric,
-                                            foTelemetryData.ObserverName,
-                                            foTelemetryData.NodeName,
-                                            Source = ObserverName,
-                                            foTelemetryData.PartitionId,
-                                            foTelemetryData.ReplicaId,
-                                            foTelemetryData.SystemServiceProcessName,
-                                            Value = value,
-                                        });
-                            }
-
-                            // Reset 
-                            telemetryDescription = string.Empty;
+                            await ObserverTelemetryClient.ReportHealthAsync(foTelemetryData, token);
                         }
-                        else
+
+                        // ETW.
+                        if (etwEnabled)
                         {
-                            if (!string.IsNullOrWhiteSpace(healthEvent.HealthInformation.Description))
-                            {
-                                telemetryDescription += healthEvent.HealthInformation.Description;
-                            }
-                            else
-                            {
-                                telemetryDescription += string.Join($"{Environment.NewLine}", appHealth.UnhealthyEvaluations);
-                            }
+                            double value = double.TryParse(foTelemetryData.Value?.ToString(), out double val) ? val : -1;
 
-                            // Telemetry.
-                            if (TelemetryEnabled && ObserverTelemetryClient != null)
-                            {
-                                var telemetryData = new TelemetryData(FabricClientInstance, token)
-                                {
-                                    ApplicationName = appName.OriginalString,
-                                    HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
-                                    Description = telemetryDescription,
-                                    Source = ObserverName,
-                                };
-
-                                await ObserverTelemetryClient.ReportHealthAsync(telemetryData, token);
-                            }
-
-                            // ETW.
-                            if (etwEnabled)
-                            {
-                                Logger.EtwLogger?.Write(
+                            Logger.EtwLogger?.Write(
                                     ObserverConstants.ClusterObserverETWEventName,
                                     new
                                     {
-                                        ApplicationName = appName.OriginalString,
-                                        HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
-                                        HealthEventDescription = telemetryDescription,
+                                        foTelemetryData.ApplicationName,
+                                        foTelemetryData.ServiceName,
+                                        foTelemetryData.HealthState,
+                                        foTelemetryData.Description,
+                                        foTelemetryData.Metric,
+                                        foTelemetryData.ObserverName,
+                                        foTelemetryData.NodeName,
                                         Source = ObserverName,
+                                        foTelemetryData.PartitionId,
+                                        foTelemetryData.ProcessId,
+                                        foTelemetryData.ReplicaId,
+                                        foTelemetryData.SystemServiceProcessName,
+                                        // 0 could be a real value, thus defaulting to -1 when tryparse returns false (see above)..
+                                        Value = value > -1 ? value : 0,
                                     });
-                            }
-
-                            // Reset 
-                            telemetryDescription = string.Empty;
                         }
+
+                        // Reset 
+                        telemetryDescription = string.Empty;
                     }
-                }
+                    else
+                    {
+                        if (!string.IsNullOrWhiteSpace(healthEvent.HealthInformation.Description))
+                        {
+                            telemetryDescription += healthEvent.HealthInformation.Description;
+                        }
+                        else
+                        {
+                            telemetryDescription += string.Join($"{Environment.NewLine}", appHealth.UnhealthyEvaluations);
+                        }
+
+                        // Telemetry.
+                        if (TelemetryEnabled && ObserverTelemetryClient != null)
+                        {
+                            var telemetryData = new TelemetryData(FabricClientInstance, token)
+                            {
+                                ApplicationName = appName.OriginalString,
+                                HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
+                                Description = telemetryDescription,
+                                Source = ObserverName,
+                            };
+
+                            await ObserverTelemetryClient.ReportHealthAsync(telemetryData, token);
+                        }
+
+                        // ETW.
+                        if (etwEnabled)
+                        {
+                            Logger.EtwLogger?.Write(
+                                ObserverConstants.ClusterObserverETWEventName,
+                                new
+                                {
+                                    ApplicationName = appName.OriginalString,
+                                    HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
+                                    HealthEventDescription = telemetryDescription,
+                                    Source = ObserverName,
+                                });
+                        }
+
+                        // Reset 
+                        telemetryDescription = string.Empty;
+                    }
+                } 
             }
         }
 

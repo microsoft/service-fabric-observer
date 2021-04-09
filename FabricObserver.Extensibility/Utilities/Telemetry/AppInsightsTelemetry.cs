@@ -72,15 +72,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="message">Error message on availability test run failure.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportAvailabilityAsync(
-            Uri serviceName,
-            string instance,
-            string testName,
-            DateTimeOffset captured,
-            TimeSpan duration,
-            string location,
-            bool success,
-            CancellationToken cancellationToken,
-            string message = null)
+                        Uri serviceName,
+                        string instance,
+                        string testName,
+                        DateTimeOffset captured,
+                        TimeSpan duration,
+                        string location,
+                        bool success,
+                        CancellationToken cancellationToken,
+                        string message = null)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -110,14 +110,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
-            HealthScope scope,
-            string propertyName,
-            HealthState state,
-            string unhealthyEvaluations,
-            string source,
-            CancellationToken cancellationToken,
-            string serviceName = null,
-            string instanceName = null)
+                        HealthScope scope,
+                        string propertyName,
+                        HealthState state,
+                        string unhealthyEvaluations,
+                        string source,
+                        CancellationToken cancellationToken,
+                        string serviceName = null,
+                        string instanceName = null)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -147,7 +147,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
-                throw;
             }
 
             return Task.CompletedTask;
@@ -159,15 +158,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>a Task.</returns>
-        public Task ReportHealthAsync(
-            TelemetryData telemetryData,
-            CancellationToken cancellationToken)
+        public Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
-            if (!IsEnabled
-                || cancellationToken.IsCancellationRequested
-                || telemetryData == null)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested || telemetryData == null)
             {
-                return Task.FromResult(1);
+                return Task.CompletedTask;
             }
 
             try
@@ -183,31 +178,28 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 Dictionary<string, string> properties = new Dictionary<string, string>
                 {
-                    { "Application", telemetryData.ApplicationName ?? string.Empty },
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
-                    { "ErrorCode", telemetryData.Code ?? string.Empty },
-                    { "HealthEventDescription", telemetryData.Description ?? string.Empty },
                     { "HealthState", telemetryData.HealthState ?? string.Empty },
+                    { "Application", telemetryData.ApplicationName ?? string.Empty },
+                    { "Service", telemetryData.ServiceName ?? string.Empty },
+                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
+                    { "ErrorCode", telemetryData.Code ?? string.Empty },
+                    { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OSPlatform", telemetryData.OS },
-                    { "Partition", $"{telemetryData.PartitionId}" },
-                    { "Replica", $"{telemetryData.ReplicaId}" },
-                    { "Source", telemetryData.Source ?? string.Empty },
                     { "Value", value ?? string.Empty },
+                    { "Partition", telemetryData.PartitionId },
+                    { "Replica", telemetryData.ReplicaId },
+                    { "Source", telemetryData.ObserverName },
+                    { "NodeName", telemetryData.NodeName ?? string.Empty },
+                    { "OS", telemetryData.OS ?? string.Empty },
                 };
 
-                telemetryClient.TrackEvent(
-                    $"{telemetryData.ObserverName ?? "ClusterObserver"}DataEvent",
-                    properties);
+                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
             }
             catch (Exception e)
             {
-                logger.LogWarning(
-                    $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
-                    $"{Environment.NewLine}{e}");
-
-                throw;
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
             }
 
             return Task.CompletedTask;
@@ -222,10 +214,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="cancellationToken">cancellation token.</param>
         /// <returns>A Task of bool.</returns>
         public Task<bool> ReportMetricAsync<T>(
-            string metric,
-            T value,
-            string source,
-            CancellationToken cancellationToken)
+                            string metric,
+                            T value,
+                            string source,
+                            CancellationToken cancellationToken)
         {
             if (!IsEnabled || string.IsNullOrEmpty(metric) || cancellationToken.IsCancellationRequested)
             {
@@ -233,8 +225,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             telemetryClient?.TrackEvent(
-                string.IsNullOrEmpty(source) ? ObserverConstants.FabricObserverETWEventName : source,
-                new Dictionary<string, string> { { metric, value?.ToString() } });
+                                string.IsNullOrEmpty(source) ? ObserverConstants.FabricObserverETWEventName : source,
+                                new Dictionary<string, string> { { metric, value?.ToString() } });
 
             return Task.FromResult(true);
         }
@@ -245,35 +237,44 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A task.</returns>
-        public Task ReportMetricAsync(
-          TelemetryData telemetryData,
-          CancellationToken cancellationToken)
+        public Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
                 return Task.CompletedTask;
             }
 
-            Dictionary<string, string> properties = new Dictionary<string, string>
-            {
-                { "Application", telemetryData.ApplicationName ?? string.Empty },
-                { "ClusterId", telemetryData.ClusterId ?? string.Empty },
-                { "ErrorCode", telemetryData.Code ?? string.Empty },
-                { "HealthEventDescription", telemetryData.Description ?? string.Empty },
-                { "HealthState", telemetryData.HealthState ?? string.Empty },
-                { "Metric", telemetryData.Metric ?? string.Empty },
-                { "NodeName", telemetryData.NodeName ?? string.Empty },
-                { "ObserverName", telemetryData.ObserverName ?? string.Empty },
-                { "OSPlatform", telemetryData.OS },
-                { "Partition", telemetryData.PartitionId ?? string.Empty },
-                { "Replica", telemetryData.ReplicaId ?? string.Empty },
-                { "Source", telemetryData.Source ?? string.Empty },
-                { "Value", telemetryData.Value?.ToString() ?? string.Empty },
-            };
+            string value = null;
 
-            telemetryClient.TrackEvent(
-                $"{telemetryData.ObserverName ?? "FabricObserver"}DataEvent",
-                properties);
+            if (telemetryData.Value != null)
+            {
+                value = telemetryData.Value.ToString();
+            }
+
+            try
+            {
+                Dictionary<string, string> properties = new Dictionary<string, string>
+                {
+                    { "ClusterId", telemetryData.ClusterId ?? string.Empty },
+                    { "Application", telemetryData.ApplicationName ?? string.Empty },
+                    { "Service", telemetryData.ServiceName ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
+                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
+                    { "Metric", telemetryData.Metric ?? string.Empty },
+                    { "Value", value ?? string.Empty },
+                    { "Partition", telemetryData.PartitionId },
+                    { "Replica", telemetryData.ReplicaId },
+                    { "Source", telemetryData.ObserverName },
+                    { "NodeName", telemetryData.NodeName ?? string.Empty },
+                    { "OS", telemetryData.OS ?? string.Empty },
+                };
+
+                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e}");
+            }
 
             return Task.CompletedTask;
         }
@@ -284,42 +285,45 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A task.</returns>
-        public Task ReportMetricAsync(
-            MachineTelemetryData telemetryData,
-            CancellationToken cancellationToken)
+        public Task ReportMetricAsync(MachineTelemetryData telemetryData, CancellationToken cancellationToken)
         {
             if (telemetryData == null || cancellationToken.IsCancellationRequested)
             {
                 return Task.CompletedTask;
             }
 
-            Dictionary<string, string> properties = new Dictionary<string, string>
+            try
             {
-                { "ActiveEphemeralPorts", telemetryData.ActiveEphemeralPorts.ToString() },
-                { "ActiveFirewallRules", telemetryData.ActiveFirewallRules.ToString() },
-                { "ActivePorts", telemetryData.ActivePorts.ToString() },
-                { "AvailablePhysicalMemory", telemetryData.AvailablePhysicalMemoryGB.ToString() },
-                { "AvailableVirtualMemory", telemetryData.AvailableVirtualMemoryGB.ToString() },
-                { "DriveInfo", telemetryData.DriveInfo },
-                { "FabricAppPortRange", telemetryData.FabricAppPortRange.ToString() },
-                { "HotFixes", telemetryData.HotFixes.ToString() },
-                { "LastBootUpTime", telemetryData.LastBootUpTime.ToString() },
-                { "Level", telemetryData.HealthState.ToString() },
-                { "LogicalDriveCount", telemetryData.LogicalDriveCount.ToString() },
-                { "LogicalProcessorCount", telemetryData.LogicalProcessorCount.ToString() },
-                { "Node", telemetryData.Node.ToString() },
-                { "NumberOfRunningProcesses", telemetryData.NumberOfRunningProcesses.ToString() },
-                { "Observer", telemetryData.Observer },
-                { "OS", telemetryData.OS },
-                { "OSInstallDate", telemetryData.OSInstallDate },
-                { "OSVersion", telemetryData.OSVersion },
-                { "TotalMemorySizeGB", telemetryData.TotalMemorySizeGB.ToString() },
-                { "WindowsDynamicPortRange", telemetryData.WindowsDynamicPortRange },
-            };
+                Dictionary<string, string> properties = new Dictionary<string, string>
+                {
+                    { "ActiveEphemeralPorts", telemetryData.ActiveEphemeralPorts.ToString() },
+                    { "ActiveFirewallRules", telemetryData.ActiveFirewallRules.ToString() },
+                    { "ActivePorts", telemetryData.ActivePorts.ToString() },
+                    { "AvailablePhysicalMemory", telemetryData.AvailablePhysicalMemoryGB.ToString() },
+                    { "AvailableVirtualMemory", telemetryData.AvailableVirtualMemoryGB.ToString() },
+                    { "DriveInfo", telemetryData.DriveInfo },
+                    { "FabricAppPortRange", telemetryData.FabricAppPortRange.ToString() },
+                    { "HotFixes", telemetryData.HotFixes.ToString() },
+                    { "LastBootUpTime", telemetryData.LastBootUpTime.ToString() },
+                    { "Level", telemetryData.HealthState.ToString() },
+                    { "LogicalDriveCount", telemetryData.LogicalDriveCount.ToString() },
+                    { "LogicalProcessorCount", telemetryData.LogicalProcessorCount.ToString() },
+                    { "Node", telemetryData.Node.ToString() },
+                    { "NumberOfRunningProcesses", telemetryData.NumberOfRunningProcesses.ToString() },
+                    { "Observer", telemetryData.Observer },
+                    { "OS", telemetryData.OS },
+                    { "OSInstallDate", telemetryData.OSInstallDate },
+                    { "OSVersion", telemetryData.OSVersion },
+                    { "TotalMemorySizeGB", telemetryData.TotalMemorySizeGB.ToString() },
+                    { "WindowsDynamicPortRange", telemetryData.WindowsDynamicPortRange },
+                };
 
-            telemetryClient.TrackEvent(
-                $"{telemetryData.Observer ?? "FabricObserver"}DataEvent",
-                properties);
+                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e}");
+            }
 
             return Task.CompletedTask;
         }

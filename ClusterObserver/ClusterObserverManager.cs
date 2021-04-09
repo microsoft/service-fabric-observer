@@ -334,27 +334,27 @@ namespace ClusterObserver
                 if (TelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                        HealthScope.Application,
-                        "ClusterObserverServiceHealth",
-                        HealthState.Warning,
-                        message,
-                        ObserverConstants.ObserverManagerName,
-                        token);
+                                            HealthScope.Application,
+                                            "ClusterObserverServiceHealth",
+                                            HealthState.Warning,
+                                            message,
+                                            ObserverConstants.ObserverManagerName,
+                                            token);
                 }
 
                 // ETW.
                 if (EtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
-                            ObserverConstants.ClusterObserverETWEventName,
-                            new
-                            {
-                                HealthScope = "Application",
-                                HealthState = "Warning",
-                                HealthEventDescription = message,
-                                Metric = "ClusterObserverServiceHealth",
-                                Source = ObserverConstants.ClusterObserverName,
-                            });
+                                        ObserverConstants.ClusterObserverETWEventName,
+                                        new
+                                        {
+                                            HealthScope = "Application",
+                                            HealthState = "Warning",
+                                            HealthEventDescription = message,
+                                            Metric = "ClusterObserverServiceHealth",
+                                            Source = ObserverConstants.ClusterObserverName,
+                                        });
                 }
 
                 // Don't swallow the unhandled exception. Fix the bug.
@@ -388,27 +388,27 @@ namespace ClusterObserver
                 if (TelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                            HealthScope.Application,
-                            "ClusterObserverServiceHealth",
-                            HealthState.Warning,
-                            $"{e}",
-                            ObserverConstants.ObserverManagerName,
-                            token);
+                                            HealthScope.Application,
+                                            "ClusterObserverServiceHealth",
+                                            HealthState.Warning,
+                                            $"{e}",
+                                            ObserverConstants.ObserverManagerName,
+                                            token);
                 }
 
                 // ETW.
                 if (EtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
-                            ObserverConstants.ClusterObserverETWEventName,
-                            new
-                            {
-                                HealthScope = "Application",
-                                HealthState = "Warning",
-                                HealthEventDescription = $"{e}",
-                                Metric = "ClusterObserverServiceHealth",
-                                Source = ObserverConstants.ClusterObserverName,
-                            });
+                                        ObserverConstants.ClusterObserverETWEventName,
+                                        new
+                                        {
+                                            HealthScope = "Application",
+                                            HealthState = "Warning",
+                                            HealthEventDescription = $"{e}",
+                                            Metric = "ClusterObserverServiceHealth",
+                                            Source = ObserverConstants.ClusterObserverName,
+                                        });
                 }
             }
 
@@ -445,12 +445,12 @@ namespace ClusterObserver
                     if (TelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportHealthAsync(
-                                HealthScope.Application,
-                                "ObserverHealthReport",
-                                HealthState.Warning,
-                                observerHealthWarning,
-                                ObserverConstants.ObserverManagerName,
-                                token);
+                                                HealthScope.Application,
+                                                "ObserverHealthReport",
+                                                HealthState.Warning,
+                                                observerHealthWarning,
+                                                ObserverConstants.ObserverManagerName,
+                                                token);
                     }
 
                     if (EtwEnabled)
@@ -489,26 +489,26 @@ namespace ClusterObserver
                 if (TelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                            HealthScope.Application,
-                            "ObserverHealthReport",
-                            HealthState.Warning,
-                            msg,
-                            ObserverConstants.ObserverManagerName,
-                            token);
+                                            HealthScope.Application,
+                                            "ObserverHealthReport",
+                                            HealthState.Warning,
+                                            msg,
+                                            ObserverConstants.ObserverManagerName,
+                                            token);
                 }
 
                 if (EtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
-                            ObserverConstants.ClusterObserverETWEventName,
-                            new
-                            {
-                                HealthScope = "Application",
-                                HealthState = "Warning",
-                                HealthEventDescription = msg,
-                                Metric = "ClusterObserverServiceHealth",
-                                Source = ObserverConstants.ClusterObserverName,
-                            });
+                                        ObserverConstants.ClusterObserverETWEventName,
+                                        new
+                                        {
+                                            HealthScope = "Application",
+                                            HealthState = "Warning",
+                                            HealthEventDescription = msg,
+                                            Metric = "ClusterObserverServiceHealth",
+                                            Source = ObserverConstants.ClusterObserverName,
+                                        });
                 }
 
                 throw;
@@ -517,9 +517,7 @@ namespace ClusterObserver
             IsObserverRunning = false;
         }
 
-        private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(
-                        object sender,
-                        PackageModifiedEventArgs<ConfigurationPackage> e)
+        private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
             appParamsUpdating = true;
             Logger.LogInfo("Application Parameter upgrade started...");

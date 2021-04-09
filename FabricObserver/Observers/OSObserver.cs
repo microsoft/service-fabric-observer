@@ -188,9 +188,7 @@ namespace FabricObserver.Observers
 
                     HealthReporter.ReportHealthToServiceFabric(report);
 
-                    if (IsTelemetryProviderEnabled
-                        && IsTelemetryEnabled
-                        && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (IsEtwEnabled && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
                         var telemetryData = new TelemetryData(FabricClientInstance, token)
@@ -204,9 +202,7 @@ namespace FabricObserver.Observers
                             Source = ObserverConstants.FabricObserverName,
                         };
 
-                        _ = TelemetryClient?.ReportMetricAsync(
-                            telemetryData,
-                            Token);
+                        _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                     }
 
                     // ETW.

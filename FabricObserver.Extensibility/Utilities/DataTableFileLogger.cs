@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using FabricObserver.Interfaces;
 using NLog;
@@ -41,7 +40,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// The maximum number of archive files that will be stored.
+        /// The maximum number of days that archive files will be stored.
         /// 0 means there is no limit set. 
         /// </summary>
         public int MaxArchiveCsvFileLifetimeDays

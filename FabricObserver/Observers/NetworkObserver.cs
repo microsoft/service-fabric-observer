@@ -165,9 +165,7 @@ namespace FabricObserver.Observers
 
                         if (IsTelemetryEnabled)
                         {
-                            _ = TelemetryClient?.ReportMetricAsync(
-                                    telemetryData,
-                                    Token);
+                            _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                         }
 
                         var report = new HealthReport
@@ -195,17 +193,17 @@ namespace FabricObserver.Observers
                         if (IsEtwEnabled)
                         {
                             ObserverLogger.LogEtw(
-                                ObserverConstants.FabricObserverETWEventName,
-                                new
-                                {
-                                    ApplicationName = conn.TargetApp,
-                                    Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
-                                    HealthState = "Warning",
-                                    HealthEventDescription = healthMessage,
-                                    ObserverName,
-                                    Metric = ErrorWarningProperty.InternetConnectionFailure,
-                                    NodeName,
-                                });
+                                            ObserverConstants.FabricObserverETWEventName,
+                                            new
+                                            {
+                                                ApplicationName = conn.TargetApp,
+                                                Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
+                                                HealthState = "Warning",
+                                                HealthEventDescription = healthMessage,
+                                                ObserverName,
+                                                Metric = ErrorWarningProperty.InternetConnectionFailure,
+                                                NodeName,
+                                            });
                         }
                     }
                     else
@@ -249,26 +247,24 @@ namespace FabricObserver.Observers
                                 NodeName = NodeName,
                             };
 
-                            _ = TelemetryClient?.ReportMetricAsync(
-                                    telemetryData,
-                                    Token);
+                            _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                         }
 
                         // ETW.
                         if (IsEtwEnabled)
                         {
                             ObserverLogger.LogEtw(
-                                ObserverConstants.FabricObserverETWEventName,
-                                new
-                                {
-                                    ApplicationName = conn.TargetApp,
-                                    Code = FOErrorWarningCodes.Ok,
-                                    HealthState = "Ok",
-                                    HealthEventDescription = healthMessage,
-                                    ObserverName,
-                                    Metric = "Internet Connection State",
-                                    NodeName,
-                                });
+                                            ObserverConstants.FabricObserverETWEventName,
+                                            new
+                                            {
+                                                ApplicationName = conn.TargetApp,
+                                                Code = FOErrorWarningCodes.Ok,
+                                                HealthState = "Ok",
+                                                HealthEventDescription = healthMessage,
+                                                ObserverName,
+                                                Metric = "Internet Connection State",
+                                                NodeName,
+                                            });
                         }
 
                         // Reset health state.

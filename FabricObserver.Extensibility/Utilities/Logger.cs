@@ -22,6 +22,8 @@ namespace FabricObserver.Observers.Utilities
     public sealed class Logger : IObserverLogger<ILogger>
     {
         private const int Retries = 5;
+
+        // This needs to be static to prevent internal EventSource instantiation errors.
         private static EventSource etwLogger = null;
 
         // Text file logger for observers - info/warn/error.
@@ -76,7 +78,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// The maximum number of archive files that will be stored.
+        /// The maximum number of days that archive files will be stored.
         /// 0 means there is no limit set.
         /// </summary>
         public int MaxArchiveFileLifetimeDays
@@ -276,8 +278,8 @@ namespace FabricObserver.Observers.Utilities
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",
                     OpenFileCacheTimeout = 5,
-                    ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     ArchiveEvery = FileArchivePeriod.Day,
+                    ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     MaxArchiveDays = MaxArchiveFileLifetimeDays <= 0 ? 7 : MaxArchiveFileLifetimeDays,
                     AutoFlush = true,
                 };
