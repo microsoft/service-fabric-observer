@@ -19,7 +19,7 @@ namespace ClusterObserver.Utilities.Telemetry
     /// Abstracts the ApplicationInsights telemetry API calls allowing
     /// other telemetry providers to be plugged in.
     /// </summary>
-    public class AppInsightsTelemetry : ITelemetryProvider, IDisposable
+    public class AppInsightsTelemetry : ITelemetryProvider
     {
         /// <summary>
         /// ApplicationInsights telemetry client.
@@ -343,39 +343,6 @@ namespace ClusterObserver.Utilities.Telemetry
             telemetryClient.TrackMetric(mt);
 
             return Task.FromResult(0);
-        }
-
-        private bool disposedValue; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                }
-
-                disposedValue = true;
-            }
-        }
-
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~AppInsightsTelemetry()
-        // {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
-        // This code added to correctly implement the disposable pattern.
-
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
         }
     }
 }

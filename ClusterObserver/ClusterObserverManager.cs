@@ -20,18 +20,17 @@ namespace ClusterObserver
 {
     public class ClusterObserverManager : IDisposable
     {
+        private static bool etwEnabled;
         private readonly string nodeName;
+        private readonly CancellationTokenSource linkedSFRuntimeObserverTokenSource;
+        private readonly CancellationToken token;
         private ClusterObserver observer;
-        private EventWaitHandle globalShutdownEventHandle;
-        private volatile bool shutdownSignaled;
         private int shutdownGracePeriodInSeconds = 2;
         private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(30);
-        private CancellationToken token;
         private CancellationTokenSource cts;
-        private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
+        private volatile bool shutdownSignaled;
         private bool hasDisposed;
         private bool appParamsUpdating;
-        private static bool etwEnabled;
 
         public bool IsObserverRunning
         {
@@ -133,6 +132,7 @@ namespace ClusterObserver
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
             {
+
             }
 
             return null;
@@ -145,84 +145,38 @@ namespace ClusterObserver
                 return;
             }
 
-            Thread.Sleep(shutdownGracePeriodInSeconds * 1000);
+            await Task.Delay(shutdownGracePeriodInSeconds).ConfigureAwait(false);
 
             shutdownSignaled = true;
-            _ = globalShutdownEventHandle?.Set();
             await StopAsync();
-        }
-
-        // This impl is to ensure FCO exits if shutdown is requested while the over loop is sleeping
-        // So, instead of blocking with a Thread.Sleep, for example, ThreadSleep is used to ensure
-        // we can receive signals and act accordingly during thread sleep state.
-        private void ThreadSleep(EventWaitHandle ewh, TimeSpan timeout)
-        {
-            // if timeout is <= 0, return. 0 is infinite, and negative is not valid
-            if (timeout.TotalMilliseconds <= 0)
-            {
-                return;
-            }
-
-            var elapsedTime = new TimeSpan(0, 0, 0);
-            var stopwatch = new Stopwatch();
-
-            while (!shutdownSignaled &&
-                   !token.IsCancellationRequested &&
-                   timeout > elapsedTime)
-            {
-                stopwatch.Start();
-
-                // The event can be signaled by CtrlC,
-                // Exit ASAP when the program terminates (i.e., shutdown/abort is signaled.)
-                _ = ewh.WaitOne(timeout.Subtract(elapsedTime));
-                stopwatch.Stop();
-
-                elapsedTime = stopwatch.Elapsed;
-            }
-
-            if (stopwatch.IsRunning)
-            {
-                stopwatch.Stop();
-            }
         }
 
         private void SetPropertiesFromConfigurationParameters()
         {
             // Observer
-            if (int.TryParse(
-                GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout),
-                out int result))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout), out int result))
             {
                 observerExecTimeout = TimeSpan.FromSeconds(result);
             }
 
             // Logger
-            if (bool.TryParse(
-                GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter),
-                out bool enableVerboseLogging))
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter), out bool enableVerboseLogging))
             {
                 Logger.EnableVerboseLogging = enableVerboseLogging;
             }
 
-            if (int.TryParse(
-                GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds),
-                out int execFrequency))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds), out int execFrequency))
             {
                 ObserverExecutionLoopSleepSeconds = execFrequency;
-
-                Logger.LogInfo($"ExecutionFrequency is {ObserverExecutionLoopSleepSeconds} Seconds");
             }
 
             // Shutdown
-            if (int.TryParse(
-                GetConfigSettingValue(ObserverConstants.ObserverShutdownGracePeriodInSeconds),
-                out int gracePeriodInSeconds))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverShutdownGracePeriodInSeconds), out int gracePeriodInSeconds))
             {
                 shutdownGracePeriodInSeconds = gracePeriodInSeconds;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.AsyncOperationTimeoutSeconds),
-                out int asyncTimeout))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.AsyncOperationTimeoutSeconds), out int asyncTimeout))
             {
                 AsyncOperationTimeoutSeconds = asyncTimeout;
             }
@@ -240,14 +194,12 @@ namespace ClusterObserver
                 if (string.IsNullOrEmpty(telemetryProviderType))
                 {
                     TelemetryEnabled = false;
-
                     return;
                 }
 
                 if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
                 {
                     TelemetryEnabled = false;
-
                     return;
                 }
 
@@ -255,29 +207,22 @@ namespace ClusterObserver
                 {
                     case TelemetryProviderType.AzureLogAnalytics:
                     
-                        var logAnalyticsLogType =
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter) ?? "Application";
+                        string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter) ?? "Application";
+                        string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
+                        string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
 
-                        var logAnalyticsSharedKey =
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
-
-                        var logAnalyticsWorkspaceId =
-                            GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
-
-                        if (string.IsNullOrEmpty(logAnalyticsSharedKey)
-                            || string.IsNullOrEmpty(logAnalyticsWorkspaceId))
+                        if (string.IsNullOrEmpty(logAnalyticsSharedKey) || string.IsNullOrEmpty(logAnalyticsWorkspaceId))
                         {
                             TelemetryEnabled = false;
-
                             return;
                         }
 
                         TelemetryClient = new LogAnalyticsTelemetry(
-                            logAnalyticsWorkspaceId,
-                            logAnalyticsSharedKey,
-                            logAnalyticsLogType,
-                            FabricClientInstance,
-                            token);
+                                                logAnalyticsWorkspaceId,
+                                                logAnalyticsSharedKey,
+                                                logAnalyticsLogType,
+                                                FabricClientInstance,
+                                                token);
 
                         break;
                     
@@ -288,7 +233,6 @@ namespace ClusterObserver
                         if (string.IsNullOrEmpty(aiKey))
                         {
                             TelemetryEnabled = false;
-
                             return;
                         }
 
@@ -303,31 +247,30 @@ namespace ClusterObserver
         {
             try
             {
-                if (globalShutdownEventHandle == null)
-                {
-                    globalShutdownEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset);
-                }
-
                 while (true)
                 {
                     if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                     {
-                        _ = globalShutdownEventHandle.Set();
                         Logger.LogInfo("Shutdown signaled. Stopping.");
+                        await StopAsync().ConfigureAwait(false);
                         break;
                     }
 
                     await RunObserverAync().ConfigureAwait(false);
 
-                    Logger.LogInfo($"Sleeping for {(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10)} seconds before running again.");
-                    ThreadSleep(globalShutdownEventHandle, TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10));
+                    Logger.LogInfo($"Sleeping for {(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 30)} seconds before running again.");
+                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 30), token);
 
                     Logger.Flush();
                 }
             }
-            catch (Exception ex)
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
-                var message = $"Unhanded Exception in ClusterObserverManager on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{ex}";
+
+            }
+            catch (Exception e)
+            {
+                string message = $"Unhanded Exception in ClusterObserverManager on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
                 Logger.LogError(message);
 
                 // Telemetry.
@@ -422,23 +365,20 @@ namespace ClusterObserver
                 return;
             }
 
-            var exceptionBuilder = new StringBuilder();
-
             try
             {
                 Logger.LogInfo($"Starting {observer.ObserverName}");
                 IsObserverRunning = true;
 
                 // Synchronous call.
-                var isCompleted = observer.ObserveAsync(
-                    linkedSFRuntimeObserverTokenSource != null ? linkedSFRuntimeObserverTokenSource.Token : token).Wait(observerExecTimeout);
+                var isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource != null ? linkedSFRuntimeObserverTokenSource.Token : token).Wait(observerExecTimeout);
 
                 // The observer is taking too long (hung?)
                 if (!isCompleted)
                 {
                     string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. Aborting.";
                     
-                    await SignalAbortToRunningObserverAsync();
+                    await SignalAbortToRunningObserverAsync().ConfigureAwait(false);
 
                     Logger.LogWarning(observerHealthWarning);
 
@@ -456,34 +396,25 @@ namespace ClusterObserver
                     if (EtwEnabled)
                     {
                         Logger.EtwLogger?.Write(
-                                ObserverConstants.ClusterObserverETWEventName,
-                                new
-                                {
-                                    HealthScope = "Application",
-                                    HealthState = "Warning",
-                                    HealthEventDescription = observerHealthWarning,
-                                    Metric = "ClusterObserverServiceHealth",
-                                    Source = ObserverConstants.ClusterObserverName,
-                                });
+                                            ObserverConstants.ClusterObserverETWEventName,
+                                            new
+                                            {
+                                                HealthScope = "Application",
+                                                HealthState = "Warning",
+                                                HealthEventDescription = observerHealthWarning,
+                                                Metric = "ClusterObserverServiceHealth",
+                                                Source = ObserverConstants.ClusterObserverName,
+                                            });
                     }
 
+                    // Create new instance of CO.
                     observer = new ClusterObserver();
                     cts = new CancellationTokenSource();
                 }
             }
-            catch (AggregateException ex) when (
-                ex.InnerException is OperationCanceledException ||
-                ex.InnerException is TaskCanceledException ||
-                ex.InnerException is TimeoutException)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                IsObserverRunning = false;
-                _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{ex.InnerException}");
-                Logger.LogError(exceptionBuilder.ToString());
-                _ = exceptionBuilder.Clear();
-            }
-            catch (Exception e)
-            {
-                string msg = $"Unhandled exception in ClusterObserverManager.Run(). Taking down process. Error info:{Environment.NewLine}{e}";
+                string msg = $"Unhandled exception in ClusterObserverManager.RunObserverAync(). Taking down process. Error info:{Environment.NewLine}{e}";
                 Logger.LogError(msg);
 
                 if (TelemetryEnabled)
@@ -517,13 +448,21 @@ namespace ClusterObserver
             IsObserverRunning = false;
         }
 
-        private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
+        /// <summary>
+        /// App parameter config update handler. This will recreate CO instance with new ConfigSettings applied.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
             appParamsUpdating = true;
             Logger.LogInfo("Application Parameter upgrade started...");
-            SignalAbortToRunningObserverAsync();
+
+            await SignalAbortToRunningObserverAsync();
+
             observer = new ClusterObserver(e.NewPackage.Settings);
             cts = new CancellationTokenSource();
+
             Logger.LogInfo("Application Parameter upgrade complete...");
             appParamsUpdating = false;
         }
@@ -545,8 +484,6 @@ namespace ClusterObserver
                 StopAsync().GetAwaiter().GetResult();
             }
 
-            globalShutdownEventHandle?.Dispose();
-
             if (FabricClientInstance != null)
             {
                 FabricClientInstance.Dispose();
@@ -562,9 +499,7 @@ namespace ClusterObserver
             // Flush and Dispose all NLog targets. No more logging.
             Logger.Flush();
             Logger.ShutDown();
-
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-
             hasDisposed = true;
         }
 

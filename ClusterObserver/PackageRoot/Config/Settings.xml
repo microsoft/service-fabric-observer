@@ -1,9 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observer run loop. 0 means run continuously (not recommended).
-         The value below is reasonable -> Run every 15 minutes (900 seconds) and check cluster health, provide Error/Warning detail per monitoried entity. -->
-    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="900" />
+    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. 0 means run continuously (not recommended if RunInterval not set). -->
+    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 30 minutes. -->
@@ -33,7 +32,7 @@
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
-    <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="3" />
+    <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
   </Section>
   <!-- ClusterObserver Configuration Settings. NOTE: These are overridable settings, see ApplicationManifest.xml. 
        The Values for these will be overriden by ApplicationManifest Parameter settings. Set DefaultValue for each

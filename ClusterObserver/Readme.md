@@ -1,4 +1,4 @@
-### ClusterObserver 2.1.0
+### ClusterObserver 2.1.7
 
 ClusterObserver (CO) is a standalone SF singleton stateless service that runs on one node (1) and is independent from FabricObserver, which runs on all nodes (-1). CO observes cluster health (aggregated) 
 and sends telemetry when cluster is in Error (and optionally in Warning). CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 

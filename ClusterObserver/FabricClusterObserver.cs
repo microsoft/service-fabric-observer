@@ -10,8 +10,6 @@ namespace ClusterObserver
     /// </summary>
     internal sealed class FabricClusterObserver : StatelessService
     {
-        private ClusterObserverManager observerManager;
-
         public FabricClusterObserver(StatelessServiceContext context)
             : base(context)
         {
@@ -24,20 +22,8 @@ namespace ClusterObserver
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            observerManager = new ClusterObserverManager(Context, cancellationToken);
-
+            using var observerManager = new ClusterObserverManager(Context, cancellationToken);
             await observerManager.StartAsync().ConfigureAwait(true);
-        }
-
-
-        protected override Task OnCloseAsync(CancellationToken cancellationToken)
-        {
-            if (observerManager != null)
-            {
-                observerManager.Dispose();
-            }
-
-            return base.OnCloseAsync(cancellationToken);
         }
     }
 }

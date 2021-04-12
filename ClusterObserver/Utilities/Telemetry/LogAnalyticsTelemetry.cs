@@ -121,13 +121,11 @@ namespace ClusterObserver.Utilities.Telemetry
 
                 logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
             }
-#pragma warning disable CA1031 // Do not take down process due to unhandled exception during telemetry transmission. Log it, fix the bug.
             catch (Exception e)
             {
                 // An Exception during telemetry data submission should never take down CO process. Log it. Don't throw it. Fix it.
                 logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
             }
-#pragma warning restore CA1031 // It's ok here.
 
             if (retries < MaxRetries)
             {
@@ -178,24 +176,23 @@ namespace ClusterObserver.Utilities.Telemetry
                             string serviceName = null,
                             string instanceName = null)
         {
-            var (clusterId, _) =
-                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
+            var (clusterId, _) = await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
 
             string jsonPayload = JsonConvert.SerializeObject(
-                new
-                {
-                    id = $"CO_{Guid.NewGuid()}",
-                    datetime = DateTime.UtcNow,
-                    clusterId = clusterId ?? string.Empty,
-                    source = ObserverConstants.ClusterObserverName,
-                    property = propertyName,
-                    healthScope = scope.ToString(),
-                    healthState = state.ToString(),
-                    healthEvaluation = unhealthyEvaluations,
-                    serviceName = serviceName ?? string.Empty,
-                    instanceName = instanceName ?? string.Empty,
-                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                });
+                                                new
+                                                {
+                                                    id = $"CO_{Guid.NewGuid()}",
+                                                    datetime = DateTime.UtcNow,
+                                                    clusterId = clusterId ?? string.Empty,
+                                                    source = ObserverConstants.ClusterObserverName,
+                                                    property = propertyName,
+                                                    healthScope = scope.ToString(),
+                                                    healthState = state.ToString(),
+                                                    healthEvaluation = unhealthyEvaluations,
+                                                    serviceName = serviceName ?? string.Empty,
+                                                    instanceName = instanceName ?? string.Empty,
+                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                                                });
 
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
