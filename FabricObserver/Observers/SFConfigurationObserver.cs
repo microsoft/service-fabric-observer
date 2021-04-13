@@ -333,7 +333,7 @@ namespace FabricObserver.Observers
 
                                 if (procId > -1)
                                 {
-                                    ports = OperatingSystemInfoProvider.Instance.GetActivePortCount(procId);
+                                    ports = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId);
                                     ephemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId);
                                 }
 

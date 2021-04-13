@@ -796,7 +796,7 @@ namespace FabricObserver.Observers
                     Token.ThrowIfCancellationRequested();
 
                     // Ports - Active TCP All
-                    int activePortCount = OperatingSystemInfoProvider.Instance.GetActivePortCount(process.Id, FabricServiceContext);
+                    int activePortCount = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(process.Id, FabricServiceContext);
                     
                     // This is used for info report.
                     TotalActivePortCountAllSystemServices += activePortCount;

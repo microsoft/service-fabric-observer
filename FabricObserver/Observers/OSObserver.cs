@@ -373,7 +373,7 @@ namespace FabricObserver.Observers
                 osStatus = osInfo.Status;
 
                 // Active, bound ports.
-                int activePorts = OperatingSystemInfoProvider.Instance.GetActivePortCount();
+                int activePorts = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
 
                 // Active, ephemeral ports.
                 int activeEphemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();

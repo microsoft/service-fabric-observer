@@ -636,7 +636,7 @@ namespace FabricObserver.Observers
                     // Measure Total and Ephemeral ports.
                     if (checkAllPorts)
                     {
-                        AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActivePortCount(currentProcess.Id, FabricServiceContext));
+                        AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(currentProcess.Id, FabricServiceContext));
                     }
 
                     if (checkEphemeralPorts)

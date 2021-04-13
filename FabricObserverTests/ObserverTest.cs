@@ -1113,8 +1113,6 @@ namespace FabricObserverTests
 
             string outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "NetInfo.txt");
 
-            Console.WriteLine($"outputFilePath: {outputFilePath}");
-
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
                           && File.GetLastWriteTime(outputFilePath) > startDateTime
@@ -1151,6 +1149,7 @@ namespace FabricObserverTests
                 UseCircularBuffer = true,
                 CpuWarningUsageThresholdPct = 10,
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
+                ActivePortsWarningThreshold = 100, // This will generate Warning for sure.
             };
 
             var obsMgr = new ObserverManager(obs, fabricClient);
@@ -1171,7 +1170,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
             obs.Dispose();
 
-            await CleanupTestHealthReportsAsync();
+            //await CleanupTestHealthReportsAsync();
         }
 
         /// <summary>

@@ -53,7 +53,7 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse();
 
-        public abstract int GetActivePortCount(int processId = -1, ServiceContext context = null);
+        public abstract int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null);
 
         public abstract int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null);
 

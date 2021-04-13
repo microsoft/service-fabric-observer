@@ -631,7 +631,7 @@ namespace FabricObserver.Observers
                 // Ports.
                 if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                 {
-                    int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActivePortCount();
+                    int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
                     ActivePortsData.Data.Add(activePortCountTotal);
                 }
 
