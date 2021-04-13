@@ -63,11 +63,9 @@ namespace FabricObserver.Observers.Utilities
                     return (visibleTotal / 1024 / 1024, Math.Round(usedPct, 2));
                 }
             }
-            catch (Exception e) when (
-                    e is FormatException
-                    || e is InvalidCastException
-                    || e is ManagementException)
+            catch (Exception e) when (e is FormatException || e is InvalidCastException || e is ManagementException)
             {
+                Logger.LogWarning($"Handled failure in TupleGetTotalPhysicalMemorySizeAndPercentInUse:{Environment.NewLine}{e}");
             }
             finally
             {
@@ -100,9 +98,9 @@ namespace FabricObserver.Observers.Utilities
                     var stdOutput = p.StandardOutput;
                     string output = stdOutput.ReadToEnd();
                     Match match = Regex.Match(
-                        output,
-                        @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
-                        RegexOptions.Singleline | RegexOptions.IgnoreCase);
+                                        output,
+                                        @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
+                                        RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
                     string startPort = match.Groups["startPort"].Value;
                     string portCount = match.Groups["numberOfPorts"].Value;
@@ -142,9 +140,10 @@ namespace FabricObserver.Observers.Utilities
         public override int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null)
         {
             int count;
+
             try
             {
-                count = Retry.Do(() => GetEphemeralPortCount(processId), TimeSpan.FromSeconds(5), CancellationToken.None);
+                count = Retry.Do(() => GetEphemeralPortCount(processId), TimeSpan.FromSeconds(3), CancellationToken.None);
             }
             catch (AggregateException ae)
             {
@@ -159,14 +158,16 @@ namespace FabricObserver.Observers.Utilities
         /// Compute count of active TCP ports.
         /// </summary>
         /// <param name="processId">Optional: If supplied, then return the number of tcp ports in use by the process.</param>
-        /// <param name="context">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): If supplied, will use the ServiceContext to find the Linux Capabilities binary to run this command.</param>
+        /// <param name="context">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
+        /// If supplied, will use the ServiceContext to find the Linux Capabilities binary to run this command.</param>
         /// <returns>number of active TCP ports as int value</returns>
         public override int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null)
         {
             int count;
+
             try
             {
-                count = Retry.Do(() => GetTcpPortCount(processId), TimeSpan.FromSeconds(5), CancellationToken.None);
+                count = Retry.Do(() => GetTcpPortCount(processId), TimeSpan.FromSeconds(3), CancellationToken.None);
             }
             catch (AggregateException ae)
             {

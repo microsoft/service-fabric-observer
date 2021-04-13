@@ -169,10 +169,12 @@ namespace FabricObserver.Observers
                         var report = new HealthReport
                         {
                             AppName = new Uri(conn.TargetApp),
+                            Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
                             HealthData = telemetryData,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = timeToLiveWarning,
+                            SourceId = $"{ObserverConstants.NetworkObserverName}({FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable})",
                             State = healthState,
                             NodeName = NodeName,
                             Observer = ObserverName,
@@ -223,6 +225,7 @@ namespace FabricObserver.Observers
                             EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = default,
+                            SourceId = $"{ObserverConstants.NetworkObserverName}({FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable})",
                             State = HealthState.Ok,
                             NodeName = NodeName,
                             Observer = ObserverName,

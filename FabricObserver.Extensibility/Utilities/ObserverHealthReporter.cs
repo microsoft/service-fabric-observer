@@ -86,16 +86,14 @@ namespace FabricObserver.Observers.Utilities
 
             string errWarnPreamble = string.Empty;
 
-            if (healthReport.State == HealthState.Error
-                || healthReport.State == HealthState.Warning)
+            if (healthReport.State == HealthState.Error || healthReport.State == HealthState.Warning)
             {
                 errWarnPreamble =
                     $"{healthReport.Observer} detected " +
                     $"{Enum.GetName(typeof(HealthState), healthReport.State)} threshold breach. ";
 
                 // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
-                if (healthReport.Observer == ObserverConstants.OSObserverName
-                    && healthReport.Property == "OSConfiguration")
+                if (healthReport.Observer == ObserverConstants.OSObserverName && healthReport.Property == "OSConfiguration")
                 {
                     errWarnPreamble = $"{ObserverConstants.OSObserverName} detected potential problem with OS configuration: ";
                 }
