@@ -1189,7 +1189,7 @@ namespace FabricObserver.Observers
                 IsEtwProviderEnabled = etwProviderEnabled;
             }
 
-            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
+            // Telemetry.
             if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
                 IsTelemetryProviderEnabled = telemEnabled;
@@ -1226,11 +1226,9 @@ namespace FabricObserver.Observers
                         string logAnalyticsWorkspaceId =
                             GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
 
-                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId)
-                            || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                         {
                             IsTelemetryProviderEnabled = false;
-
                             return;
                         }
 
@@ -1250,7 +1248,6 @@ namespace FabricObserver.Observers
                         if (string.IsNullOrEmpty(aiKey))
                         {
                             IsTelemetryProviderEnabled = false;
-
                             return;
                         }
 
@@ -1268,8 +1265,6 @@ namespace FabricObserver.Observers
 
         private void InitializeCsvLogger()
         {
-            // This could be called from app paramter-only update handler.
-            // You can turn CSV data logging on and off with app parameter updates for 3 observers: AppObserver, FabricSystemObserver and NodeObserver.
             if (CsvFileLogger != null)
             {
                 return;
@@ -1314,6 +1309,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
+
             }
 
             return false;
