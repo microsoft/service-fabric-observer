@@ -5,8 +5,6 @@
 
 using System.Fabric;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {

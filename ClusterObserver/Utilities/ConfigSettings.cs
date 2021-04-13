@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Linq;
-using System.Threading;
 
 namespace ClusterObserver.Utilities
 {

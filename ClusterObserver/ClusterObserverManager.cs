@@ -5,11 +5,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ClusterObserver.Interfaces;

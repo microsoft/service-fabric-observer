@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
