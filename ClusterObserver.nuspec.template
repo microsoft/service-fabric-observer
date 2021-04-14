@@ -3,7 +3,11 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>2.1.7</version>
-    <releaseNotes>Bug fix in Application monitoring logic.</releaseNotes>
+    <releaseNotes>
+      - Fixed bug in Application health query processor.
+      - ApplicationInsights TelemetryProvider impl update.
+      - Improvements in service close code.
+    </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

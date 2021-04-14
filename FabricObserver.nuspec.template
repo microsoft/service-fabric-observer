@@ -3,7 +3,13 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>3.1.9</version>
-    <releaseNotes>Minor bug fixes: ETW (internal EventSource error), Telemetry provider impl (ApplicationInsights).</releaseNotes>
+    <releaseNotes>
+      - Fixed EventSource logger bug.
+      - Added retry logic and logging to Windows port monitoring code.
+      - Added result set paging support in AppObserver's DeployedApplication query logic.
+      - Updated ApplicationInsights telemetry provider impl.
+      - Code maintenance.
+    </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
