@@ -116,7 +116,7 @@
     <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
     <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="10000" />
+    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
     <!-- The below settings only make sense for Linux. -->
     <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
     <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
