@@ -4,10 +4,13 @@
     <id>%PACKAGE_ID%</id>
     <version>3.1.9</version>
     <releaseNotes>
-      - Fixed EventSource logger bug.
+      - Fixed minor EventSource logger bug.
       - Added retry logic and logging to Windows port monitoring code.
       - Added result set paging support in AppObserver's DeployedApplication query logic.
+      - Added retry logic to AppObserver's FabricClient calls.
       - Updated ApplicationInsights telemetry provider impl.
+      - Updated CsvLogger file management logic.
+      - Removed counter warm up calls in Windows Provider impls. Moved to callers.
       - Code maintenance.
     </releaseNotes>
     <authors>Microsoft</authors>
