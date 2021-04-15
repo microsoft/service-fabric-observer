@@ -28,10 +28,10 @@ namespace FabricObserver.Observers.Utilities
                     processName = process.ProcessName;
                 }
             }
-            catch (ArgumentException ex)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
             {
                 // "Process with an Id of 12314 is not running."
-                Logger.LogError(ex.Message);
+                Logger.LogWarning($"Handled Exception in GetProcessPrivateWorkingSetInMB: {e.Message}");
                 return 0F;
             }
 
@@ -48,15 +48,11 @@ namespace FabricObserver.Observers.Utilities
                         InstanceName = processName
                     };
 
-                    // warm up counter.
-                    _ = memProcessPrivateWorkingSetCounter.NextValue();
-
                     return memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
                 }
-                catch (Exception e) when (e is ArgumentNullException || e is PlatformNotSupportedException ||
-                                          e is Win32Exception || e is UnauthorizedAccessException)
+                catch (Exception e) when (e is ArgumentNullException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    Logger.LogError($"{CategoryName} {WorkingSetCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
+                    Logger.LogWarning($"{CategoryName} {WorkingSetCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
 
                     // Don't throw.
                     return 0F;
@@ -93,10 +89,10 @@ namespace FabricObserver.Observers.Utilities
                     processName = process.ProcessName;
                 }
             }
-            catch (ArgumentException ex)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
             {
                 // "Process with an Id of 12314 is not running."
-                Logger.LogError(ex.Message);
+                Logger.LogWarning($"Handled Exception in GetProcessAllocatedHandles: {e.Message}");
                 return -1F;
             }
 
@@ -113,15 +109,11 @@ namespace FabricObserver.Observers.Utilities
                         InstanceName = processName
                     };
 
-                    // warm up counter.
-                    _ = processFileHandleCounter.NextValue();
-
                     return processFileHandleCounter.NextValue();
                 }
-                catch (Exception e) when (e is ArgumentNullException || e is PlatformNotSupportedException ||
-                                          e is Win32Exception || e is UnauthorizedAccessException)
+                catch (Exception e) when (e is InvalidOperationException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    Logger.LogError($"{CategoryName} {FileHandlesCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
+                    Logger.LogWarning($"{CategoryName} {FileHandlesCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
 
                     // Don't throw.
                     return -1F;

@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using FabricObserver.Interfaces;
@@ -21,8 +20,6 @@ namespace FabricObserver.Observers.Utilities
         {
             get; set;
         }
-
-        private readonly Dictionary<string, DateTime> FolderCleanedState;
 
         public string DataLogFolder 
         { 
@@ -50,7 +47,7 @@ namespace FabricObserver.Observers.Utilities
 
         public DataTableFileLogger()
         {
-            FolderCleanedState = new Dictionary<string, DateTime>();
+
         }
 
         public void ConfigureLogger(string filename)
@@ -102,22 +99,10 @@ namespace FabricObserver.Observers.Utilities
 
             var csvPath = Path.Combine(logFullPath, filename + ".csv");
 
-            // Clean out old files.
+            // Clean out old files if written as MultipleFilesNoArchives.
             if (MaxArchiveCsvFileLifetimeDays > 0 && FileWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives)
             {
-                // Add folder path to state dictionary.
-                if (!FolderCleanedState.ContainsKey(logFullPath))
-                {
-                    FolderCleanedState.Add(logFullPath, DateTime.UtcNow);
-                }
-                else
-                {
-                    // Only clean a folder that hasn't been cleaned for MaxArchiveCsvFileLifetimeDays days.
-                    if (DateTime.UtcNow.Subtract(FolderCleanedState[logFullPath]) >= TimeSpan.FromDays(MaxArchiveCsvFileLifetimeDays))
-                    {
-                        CleanLogFolder(logFullPath, TimeSpan.FromDays(MaxArchiveCsvFileLifetimeDays));
-                    }
-                }
+                TryCleanLogFolder(logFullPath, TimeSpan.FromDays(MaxArchiveCsvFileLifetimeDays));
             }
 
             if (DataLogger == null)
@@ -180,11 +165,9 @@ namespace FabricObserver.Observers.Utilities
             LogManager.Flush();
         }
 
-        private void CleanLogFolder(string folderPath, TimeSpan maxAge)
+        private void TryCleanLogFolder(string folderPath, TimeSpan maxAge)
         {
-            int count = 0;
-
-            if (Directory.Exists(folderPath))
+            if (Directory.Exists(folderPath) && DateTime.UtcNow.Subtract(Directory.GetLastWriteTimeUtc(folderPath)) >= maxAge)
             {
                 string[] files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories);
                 
@@ -195,19 +178,12 @@ namespace FabricObserver.Observers.Utilities
                         if (DateTime.UtcNow.Subtract(File.GetCreationTime(file)) >= maxAge)
                         {
                             File.Delete(file);
-                            count++;
                         }
                     }
                     catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException || e is PathTooLongException)
                     {
 
                     }
-                }
-
-                if (count > 0)
-                {
-                    // The dictionary will always contain the folderPath key. See calling code.
-                    FolderCleanedState[folderPath] = DateTime.UtcNow; 
                 }
             }
         }

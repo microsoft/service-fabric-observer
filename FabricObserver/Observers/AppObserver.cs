@@ -361,7 +361,7 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            // Support for specifying single configuration item for any or all or * applications.
+            // Support for specifying single configuration item for all or * applications.
             if (userTargetList != null && userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*"))
             {
                 ApplicationInfo application = userTargetList.Find(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
@@ -486,27 +486,57 @@ namespace FabricObserver.Observers
                 apps = null;
             }
 
-            int settingSFail = 0;
+            int settingsFail = 0;
 
-            foreach (var application in userTargetList)
+            for (int i = 0; i < userTargetList.Count; i++)
             {
                 Token.ThrowIfCancellationRequested();
+
+                Uri appUri = null;
+                ApplicationInfo application = userTargetList[i];
 
                 if (string.IsNullOrWhiteSpace(application.TargetApp) && string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
-                        FabricServiceContext.ServiceName.ToString(),
-                        ObserverName,
-                        HealthState.Warning,
-                        $"Initialize() | {application.TargetApp}: Required setting, target, is not set.");
+                                    FabricServiceContext.ServiceName.ToString(),
+                                    ObserverName,
+                                    HealthState.Warning,
+                                    $"InitializeAsync() | {application.TargetApp}: Required setting, target, is not set.");
 
-                    settingSFail++;
-
+                    settingsFail++;
                     continue;
+                }
+                else if (!string.IsNullOrWhiteSpace(application.TargetApp))
+                {
+                    try
+                    {
+                        if (!application.TargetApp.StartsWith("fabric:/"))
+                        {
+                            application.TargetApp = application.TargetApp.Insert(0, $"fabric:/");
+                        }
+
+                        if (application.TargetApp.Contains(" "))
+                        {
+                            application.TargetApp = application.TargetApp.Replace(" ", string.Empty);
+                        }
+
+                        appUri = new Uri(application.TargetApp);
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is UriFormatException)
+                    {
+                        HealthReporter.ReportFabricObserverServiceHealth(
+                                    FabricServiceContext.ServiceName.ToString(),
+                                    ObserverName,
+                                    HealthState.Warning,
+                                    $"InitializeAsync() | {application.TargetApp}: Invalid TargetApp value. Value must be a valid Uri string of format \"fabric:/MyApp\", for example.");
+
+                        settingsFail++;
+                        continue;
+                    }
                 }
 
                 // No required settings supplied for deployed application(s).
-                if (settingSFail == userTargetList.Count)
+                if (settingsFail == userTargetList.Count)
                 {
                     return false;
                 }
@@ -517,7 +547,7 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    await SetDeployedApplicationReplicaOrInstanceListAsync(new Uri(application.TargetApp)).ConfigureAwait(false);
+                    await SetDeployedApplicationReplicaOrInstanceListAsync(appUri).ConfigureAwait(false);
                 }
             }
 
@@ -528,7 +558,7 @@ namespace FabricObserver.Observers
                 try
                 {
                     // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
-                    // Please use ContainerObserver for SF container app service monitoring.
+                    // Please use ContainerObserver for SF container app service monitoring. https://github.com/gittorre/ContainerObserver
                     using Process p = Process.GetProcessById((int)rep.HostProcessId);
 
                     if (p.ProcessName == "Fabric")
@@ -668,17 +698,28 @@ namespace FabricObserver.Observers
 
                     /* CPU and Memory Usage */
 
-                    TimeSpan duration = TimeSpan.FromSeconds(10);
+                    TimeSpan duration = TimeSpan.FromSeconds(3);
 
                     if (MonitorDuration > TimeSpan.MinValue)
                     {
                         duration = MonitorDuration;
                     }
 
-                    // Warm up the counters.
+                    /* Warm up counters. */
+
                     if (checkCpu)
                     {
                         _ = cpuUsage.GetCpuUsagePercentageProcess(currentProcess);
+                    }
+
+                    if (checkHandles)
+                    {
+                        _ = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(currentProcess.Id, FabricServiceContext);
+                    }
+
+                    if (checkMemMb || checkMemPct)
+                    {
+                        _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(currentProcess.Id);
                     }
 
                     timer.Start();
@@ -779,7 +820,7 @@ namespace FabricObserver.Observers
             if (applicationNameFilter != null)
             {
                 var app = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter).ConfigureAwait(false);
-                deployedApps = app.ToList();
+                deployedApps.AddRange(app.ToList());
             }
             else if (!string.IsNullOrWhiteSpace(applicationType))
             {
@@ -791,11 +832,11 @@ namespace FabricObserver.Observers
                 };
 
                 var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                        deployedAppQueryDesc,
-                                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                                        Token),
-                                            Token);
+                                    () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                                                deployedAppQueryDesc,
+                                                                                ConfigurationSettings.AsyncTimeout,
+                                                                                Token),
+                                    Token);
 
                 // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
                 // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -811,11 +852,11 @@ namespace FabricObserver.Observers
                     deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
 
                     appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                        deployedAppQueryDesc,
-                                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                                        Token),
-                                            Token);
+                                    () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                                                deployedAppQueryDesc,
+                                                                                ConfigurationSettings.AsyncTimeout,
+                                                                                Token),
+                                    Token);
 
                     deployedApps.AddRange(appList.ToList());
                 }
@@ -832,10 +873,9 @@ namespace FabricObserver.Observers
                 List<string> filteredServiceList = null;
 
                 // Filter service list if ServiceExcludeList/ServiceIncludeList config setting is non-empty.
-                var serviceFilter = userTargetList.Find(x => (x.TargetApp != null || x.TargetAppType != null)
-                                                        && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                            || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
-                                                        && (!string.IsNullOrWhiteSpace(x.ServiceExcludeList) || !string.IsNullOrWhiteSpace(x.ServiceIncludeList)));
+                var serviceFilter = userTargetList.Find(x => (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
+                                                                || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
+                                                                && (!string.IsNullOrWhiteSpace(x.ServiceExcludeList) || !string.IsNullOrWhiteSpace(x.ServiceIncludeList)));
 
                 ServiceFilterType filterType = ServiceFilterType.None;
                 
@@ -884,12 +924,12 @@ namespace FabricObserver.Observers
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>();
 
             SetInstanceOrReplicaMonitoringList(
-                    appName,
-                    serviceFilterList,
-                    filterType,
-                    appTypeName,
-                    deployedReplicaList,
-                    ref replicaMonitoringList);
+                appName,
+                serviceFilterList,
+                filterType,
+                appTypeName,
+                deployedReplicaList,
+                ref replicaMonitoringList);
 
             return replicaMonitoringList;
         }
@@ -910,16 +950,6 @@ namespace FabricObserver.Observers
 
                 if (deployedReplica is DeployedStatefulServiceReplica statefulReplica && statefulReplica.ReplicaRole == ReplicaRole.Primary)
                 {
-                    replicaInfo = new ReplicaOrInstanceMonitoringInfo()
-                    {
-                        ApplicationName = appName,
-                        ApplicationTypeName = appTypeName,
-                        HostProcessId = statefulReplica.HostProcessId,
-                        ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                        PartitionId = statefulReplica.Partitionid,
-                        ServiceName = statefulReplica.ServiceName,
-                    };
-
                     if (filterList != null && filterType != ServiceFilterType.None)
                     {
                         bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
@@ -931,19 +961,19 @@ namespace FabricObserver.Observers
                                 continue;
                         }
                     }
-                }
-                else if (deployedReplica is DeployedStatelessServiceInstance statelessInstance)
-                {
+
                     replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                     {
                         ApplicationName = appName,
                         ApplicationTypeName = appTypeName,
-                        HostProcessId = statelessInstance.HostProcessId,
-                        ReplicaOrInstanceId = statelessInstance.InstanceId,
-                        PartitionId = statelessInstance.Partitionid,
-                        ServiceName = statelessInstance.ServiceName,
+                        HostProcessId = statefulReplica.HostProcessId,
+                        ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                        PartitionId = statefulReplica.Partitionid,
+                        ServiceName = statefulReplica.ServiceName,
                     };
-
+                }
+                else if (deployedReplica is DeployedStatelessServiceInstance statelessInstance)
+                {
                     if (filterList != null && filterType != ServiceFilterType.None)
                     {
                         bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
@@ -955,6 +985,16 @@ namespace FabricObserver.Observers
                                 continue;
                         }
                     }
+
+                    replicaInfo = new ReplicaOrInstanceMonitoringInfo()
+                    {
+                        ApplicationName = appName,
+                        ApplicationTypeName = appTypeName,
+                        HostProcessId = statelessInstance.HostProcessId,
+                        ReplicaOrInstanceId = statelessInstance.InstanceId,
+                        PartitionId = statelessInstance.Partitionid,
+                        ServiceName = statelessInstance.ServiceName,
+                    };
                 }
 
                 if (replicaInfo != null)

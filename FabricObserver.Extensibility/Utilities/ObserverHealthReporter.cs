@@ -38,19 +38,21 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="propertyName">Name of the health property.</param>
         /// <param name="healthState">Health state (Ok, Error, etc).</param>
         /// <param name="description">Description of the health condition.</param>
-        public void ReportFabricObserverServiceHealth(
-            string serviceName,
-            string propertyName,
-            HealthState healthState,
-            string description)
+        public void ReportFabricObserverServiceHealth(string serviceName, string propertyName, HealthState healthState, string description)
         {
+            string msg = $"{propertyName} reporting {healthState}: {description}";
+
             if (healthState == HealthState.Error)
             {
-                logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + " | {0}", description);
+                logger.LogError(msg);
             }
             else if (healthState == HealthState.Warning)
             {
-                logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + " | {0}", description);
+                logger.LogWarning(msg);
+            }
+            else if (logger.EnableVerboseLogging)
+            {
+                logger.LogInfo(msg);
             }
         }
 

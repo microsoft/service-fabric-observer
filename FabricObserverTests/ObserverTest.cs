@@ -280,7 +280,7 @@ namespace FabricObserverTests
 
             var obs = new AppObserver(fabricClient, context)
             {
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
             };
@@ -300,47 +300,6 @@ namespace FabricObserverTests
 
             obs.Dispose();
         }
-
-        /// <summary>
-        /// .
-        /// </summary>
-        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        [TestMethod]
-        public async Task AppObserver_ObserveAsync_TargetAppType_Successful_Observer_IsHealthy()
-        {
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
-
-            var startDateTime = DateTime.Now;
-            ObserverManager.FabricServiceContext = context;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
-
-            var obs = new AppObserver(fabricClient, context)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(5),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
-                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>(),
-            };
-
-            await obs.ObserveAsync(token).ConfigureAwait(true);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no warning conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-            
-            await CleanupTestHealthReportsAsync(obs);
-
-            obs.Dispose();
-        }
-
 
         [TestMethod]
         public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()

@@ -3,16 +3,24 @@
     "targetApp": "fabric:/TestApp",
     "endpoints": [
       {
-        "hostname": "www.facebook.com",
-        "port": 443
+        "hostname": "https://myazuresrvice42.westus2.cloudapp.azure.com",
+        "port": 443,
+        "protocol": "http"
       },
       {
-        "hostname": "www.google.com",
-        "port": 443
-      },
+        "hostname": "somesqlservername.database.windows.net",
+        "port": 1433,
+        "protocol": "tcp"
+      }
+    ]
+  },
+  {
+    "targetApp": "fabric:/TestApp1",
+    "endpoints": [
       {
-        "hostname": "www.microsoft.com",
-        "port": 443
+        "hostname": "somesqlservername.database.windows.net",
+        "port": 1433,
+        "protocol": "tcp"
       }
     ]
   }
