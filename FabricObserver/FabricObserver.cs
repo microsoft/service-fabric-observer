@@ -96,10 +96,7 @@ namespace FabricObserver
 
             foreach (string pluginDll in pluginDlls)
             {
-                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(
-                    pluginDll,
-                    sharedTypes);
-
+                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(pluginDll, sharedTypes);
                 pluginLoaders.Add(loader);
             }
 
@@ -107,8 +104,7 @@ namespace FabricObserver
             {
                 Assembly pluginAssembly = pluginLoader.LoadDefaultAssembly();
 
-                FabricObserverStartupAttribute[] startupAttributes =
-                    pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
+                FabricObserverStartupAttribute[] startupAttributes = pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
 
                 for (int i = 0; i < startupAttributes.Length; ++i)
                 {
