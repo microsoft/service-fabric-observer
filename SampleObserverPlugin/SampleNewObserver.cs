@@ -58,7 +58,7 @@ namespace FabricObserver.Observers
 
                 totalNumberOfDeployedServices += services.Count;
                 servicesInWarningError += services.Where(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error).Count();
-                
+
                 foreach (var service in services)
                 {
                     var partitions = await FabricClientInstance.QueryManager.GetPartitionListAsync(

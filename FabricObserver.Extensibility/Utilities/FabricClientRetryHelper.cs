@@ -26,15 +26,13 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="function">Action to be performed.</param>
         /// <param name="cancellationToken">Cancellation token for Async operation.</param>
         /// <returns>Task object.</returns>
-        public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
-            Func<Task<T>> function,
-            CancellationToken cancellationToken)
+        public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(Func<Task<T>> function, CancellationToken cancellationToken)
         {
             return await ExecuteFabricActionWithRetryAsync(
-                function,
-                new FabricClientRetryErrors(),
-                DefaultOperationTimeout,
-                cancellationToken).ConfigureAwait(false);
+                            function,
+                            new FabricClientRetryErrors(),
+                            DefaultOperationTimeout,
+                            cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -46,10 +44,10 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="cancellationToken">Cancellation token for Async operation.</param>
         /// <returns>Task object.</returns>
         public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
-            Func<Task<T>> function,
-            FabricClientRetryErrors errors,
-            TimeSpan operationTimeout,
-            CancellationToken cancellationToken)
+                                        Func<Task<T>> function,
+                                        FabricClientRetryErrors errors,
+                                        TimeSpan operationTimeout,
+                                        CancellationToken cancellationToken)
         {
             bool needToWait = false;
             var watch = new Stopwatch();
@@ -77,16 +75,15 @@ namespace FabricObserver.Observers.Utilities
 
                     if (retryElseSuccess)
                     {
-                        Logger.LogInfo(
-                            $"ExecuteFabricActionWithRetryAsync: Retrying due to Exception: {e}");
+                        Logger.LogInfo($"ExecuteFabricActionWithRetryAsync: Retrying due to Exception: {e}");
 
                         if (watch.Elapsed > operationTimeout)
                         {
                             Logger.LogWarning(
-                                "ExecuteFabricActionWithRetryAsync: Done Retrying. " +
-                                $"Time Elapsed: {watch.Elapsed.TotalSeconds}, " +
-                                $"Timeout: {operationTimeout.TotalSeconds}. " +
-                                $"Throwing Exception: {e}");
+                                    "ExecuteFabricActionWithRetryAsync: Done Retrying. " +
+                                    $"Time Elapsed: {watch.Elapsed.TotalSeconds}, " +
+                                    $"Timeout: {operationTimeout.TotalSeconds}. " +
+                                    $"Throwing Exception: {e}");
 
                             throw;
                         }
@@ -96,70 +93,58 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    Logger.LogInfo(
-                        $"ExecuteFabricActionWithRetryAsync: Exception {e} Handled but No Retry.");
+                    Logger.LogInfo($"ExecuteFabricActionWithRetryAsync: Exception {e} Handled but No Retry.");
 
                     return default;
                 }
             }
         }
 
-        private static bool HandleException(
-            Exception e,
-            FabricClientRetryErrors errors,
-            out bool retryElseSuccess)
+        private static bool HandleException(Exception e, FabricClientRetryErrors errors, out bool retryElseSuccess)
         {
             var fabricException = e as FabricException;
 
             if (errors.RetryableExceptions.Contains(e.GetType()))
             {
                 retryElseSuccess = true /*retry*/;
-
                 return true;
             }
 
             if (fabricException != null && errors.RetryableFabricErrorCodes.Contains(fabricException.ErrorCode))
             {
                 retryElseSuccess = true /*retry*/;
-
                 return true;
             }
 
             if (errors.RetrySuccessExceptions.Contains(e.GetType()))
             {
                 retryElseSuccess = false /*success*/;
-
                 return true;
             }
 
             if (fabricException != null
-                && errors.RetrySuccesSFabricErrorCodes.Contains(fabricException.ErrorCode))
+                && errors.RetrySuccessFabricErrorCodes.Contains(fabricException.ErrorCode))
             {
                 retryElseSuccess = false /*success*/;
-
                 return true;
             }
 
             if (e.GetType() == typeof(FabricTransientException))
             {
                 retryElseSuccess = true /*retry*/;
-
                 return true;
             }
 
             if (fabricException?.InnerException != null)
             {
-                if (fabricException.InnerException is COMException ex
-                    && errors.InternalRetrySuccesSFabricErrorCodes.Contains((uint)ex.ErrorCode))
+                if (fabricException.InnerException is COMException ex && errors.InternalRetrySuccessFabricErrorCodes.Contains((uint)ex.ErrorCode))
                 {
                     retryElseSuccess = false /*success*/;
-
                     return true;
                 }
             }
 
             retryElseSuccess = false;
-
             return false;
         }
     }

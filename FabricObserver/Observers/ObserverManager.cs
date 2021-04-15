@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
@@ -122,7 +121,7 @@ namespace FabricObserver.Observers
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
-        /// This is used for unit testing.
+        /// This is only used by unit tests.
         /// </summary>
         /// <param name="observer">Observer instance.</param>
         public ObserverManager(ObserverBase observer, FabricClient fabricClient)
@@ -208,10 +207,10 @@ namespace FabricObserver.Observers
             }
 #endif
             telemetryEvents = new TelemetryEvents(
-                FabricClientInstance,
-                FabricServiceContext,
-                ServiceEventSource.Current,
-                this.token);
+                                    FabricClientInstance,
+                                    FabricServiceContext,
+                                    ServiceEventSource.Current,
+                                    this.token);
 
             if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion, GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
             {
@@ -356,8 +355,9 @@ namespace FabricObserver.Observers
                                     await Task.Delay(250).ConfigureAwait(false);
                                 }
                             }
-                            catch (Exception)
+                            catch (FabricException)
                             {
+
                             }
 
                             await Task.Delay(250).ConfigureAwait(false);
@@ -389,6 +389,7 @@ namespace FabricObserver.Observers
                         }
                         catch (FabricException)
                         {
+
                         }
 
                         await Task.Delay(250).ConfigureAwait(false);
@@ -452,6 +453,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
+
             }
 
             return false;
@@ -469,6 +471,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
             {
+
             }
 
             return null;

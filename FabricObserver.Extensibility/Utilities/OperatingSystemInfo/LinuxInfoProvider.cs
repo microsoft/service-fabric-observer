@@ -30,7 +30,7 @@ namespace FabricObserver.Observers.Utilities
             return (totalMem, Math.Round(pctUsed, 2));
         }
 
-        public override int GetActivePortCount(int processId = -1, ServiceContext context = null)
+        public override int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null)
         {
             int count = GetPortCount(processId, predicate: (line) => true, context);
             return count;

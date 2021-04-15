@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observer run loop. 0 means run continuously. -->
+    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. 0 means run continuously (not recommended if RunInterval not set). -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 30 minutes. -->
-    <Parameter Name="ObserverExecutionTimeout" Value="1800" />
+    <Parameter Name="ObserverExecutionTimeout" Value="3600" />
     <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large clusters. -->
     <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
@@ -16,11 +16,11 @@
     <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
-    <Parameter Name="EnableVerboseLogging" Value="False" />
-    <Parameter Name="EnableEventSourceProvider" Value="True" />
+    <Parameter Name="EnableVerboseLogging" Value="false" />
+    <Parameter Name="EnableEventSourceProvider" Value="true" />
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. This can be overriden by the setting 
          in the ClusterObserverConfiguration section. The idea there is that you can do an application parameter update and turn this feature on and off. -->
-    <Parameter Name="EnableTelemetry" Value="True" />
+    <Parameter Name="EnableTelemetry" Value="true" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
@@ -32,7 +32,7 @@
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
-    <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="3" />
+    <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
   </Section>
   <!-- ClusterObserver Configuration Settings. NOTE: These are overridable settings, see ApplicationManifest.xml. 
        The Values for these will be overriden by ApplicationManifest Parameter settings. Set DefaultValue for each

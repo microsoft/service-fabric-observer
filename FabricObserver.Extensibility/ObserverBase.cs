@@ -683,8 +683,6 @@ namespace FabricObserver.Observers
                 {
                     ApplicationName = appName?.OriginalString ?? string.Empty,
                     NodeName = NodeName,
-                    Code = string.Empty,
-                    HealthState = string.Empty,
                     ObserverName = ObserverName,
                     Metric = data.Property,
                     Value = Math.Round(data.AverageDataValue, 0),
@@ -758,8 +756,6 @@ namespace FabricObserver.Observers
                 // of user telemetry settings.
                 telemetryData = new TelemetryData(FabricClientInstance, Token)
                 {
-                    Code = string.Empty,
-                    HealthState = string.Empty,
                     NodeName = NodeName,
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
@@ -778,8 +774,6 @@ namespace FabricObserver.Observers
                                     ObserverConstants.FabricObserverETWEventName,
                                     new
                                     {
-                                        Code = string.Empty,
-                                        HealthState = string.Empty,
                                         NodeName,
                                         ObserverName,
                                         Metric = $"{drive}{data.Property}",
@@ -1042,7 +1036,7 @@ namespace FabricObserver.Observers
                     // Telemetry
                     if (IsTelemetryEnabled)
                     {
-                        _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token);
+                        _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                     }
 
                     // ETW.
@@ -1195,7 +1189,7 @@ namespace FabricObserver.Observers
                 IsEtwProviderEnabled = etwProviderEnabled;
             }
 
-            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
+            // Telemetry.
             if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
                 IsTelemetryProviderEnabled = telemEnabled;
@@ -1232,11 +1226,9 @@ namespace FabricObserver.Observers
                         string logAnalyticsWorkspaceId =
                             GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
 
-                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId)
-                            || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                         {
                             IsTelemetryProviderEnabled = false;
-
                             return;
                         }
 
@@ -1256,7 +1248,6 @@ namespace FabricObserver.Observers
                         if (string.IsNullOrEmpty(aiKey))
                         {
                             IsTelemetryProviderEnabled = false;
-
                             return;
                         }
 
@@ -1274,8 +1265,6 @@ namespace FabricObserver.Observers
 
         private void InitializeCsvLogger()
         {
-            // This could be called from app paramter-only update handler.
-            // You can turn CSV data logging on and off with app parameter updates for 3 observers: AppObserver, FabricSystemObserver and NodeObserver.
             if (CsvFileLogger != null)
             {
                 return;
@@ -1320,6 +1309,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
+
             }
 
             return false;

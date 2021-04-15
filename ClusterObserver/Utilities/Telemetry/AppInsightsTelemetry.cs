@@ -19,7 +19,7 @@ namespace ClusterObserver.Utilities.Telemetry
     /// Abstracts the ApplicationInsights telemetry API calls allowing
     /// other telemetry providers to be plugged in.
     /// </summary>
-    public class AppInsightsTelemetry : ITelemetryProvider, IDisposable
+    public class AppInsightsTelemetry : ITelemetryProvider
     {
         /// <summary>
         /// ApplicationInsights telemetry client.
@@ -57,14 +57,8 @@ namespace ClusterObserver.Utilities.Telemetry
         /// </summary>
         public string Key
         {
-            get
-            {
-                return telemetryClient?.InstrumentationKey;
-            }
-            set
-            {
-                telemetryClient.InstrumentationKey = value;
-            }
+            get => telemetryClient?.InstrumentationKey;
+            set => telemetryClient.InstrumentationKey = value;
         }
 
         /// <summary>
@@ -81,15 +75,15 @@ namespace ClusterObserver.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         public Task ReportAvailabilityAsync(
-            Uri serviceName,
-            string instance,
-            string testName,
-            DateTimeOffset captured,
-            TimeSpan duration,
-            string location,
-            bool success,
-            CancellationToken cancellationToken,
-            string message = null)
+                        Uri serviceName,
+                        string instance,
+                        string testName,
+                        DateTimeOffset captured,
+                        TimeSpan duration,
+                        string location,
+                        bool success,
+                        CancellationToken cancellationToken,
+                        string message = null)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -117,13 +111,9 @@ namespace ClusterObserver.Utilities.Telemetry
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>a Task.</returns>
-        public Task ReportHealthAsync(
-            TelemetryData telemetryData,
-            CancellationToken cancellationToken)
+        public Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
-            if (!IsEnabled
-                || cancellationToken.IsCancellationRequested
-                || telemetryData == null)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested || telemetryData == null)
             {
                 return Task.FromResult(1);
             }
@@ -141,29 +131,28 @@ namespace ClusterObserver.Utilities.Telemetry
 
                 Dictionary<string, string> properties = new Dictionary<string, string>
                 {
-                    { "Application", telemetryData.ApplicationName ?? string.Empty },
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
+                    { "HealthState", telemetryData.HealthState ?? string.Empty },
+                    { "Application", telemetryData.ApplicationName ?? string.Empty },
+                    { "Service", telemetryData.ServiceName ?? string.Empty },
+                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
-                    { "HealthState", telemetryData.HealthState ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OSPlatform", telemetryData.OS },
-                    { "Partition", $"{telemetryData.PartitionId}" },
-                    { "Replica", $"{telemetryData.ReplicaId}" },
-                    { "Source", telemetryData.Source ?? ObserverConstants.ClusterObserverName },
                     { "Value", value ?? string.Empty },
+                    { "Partition", telemetryData.PartitionId },
+                    { "Replica", telemetryData.ReplicaId },
+                    { "Source", telemetryData.ObserverName },
+                    { "NodeName", telemetryData.NodeName ?? string.Empty },
+                    { "OS", telemetryData.OS ?? string.Empty },
                 };
 
                 telemetryClient.TrackEvent(ObserverConstants.ClusterObserverETWEventName, properties);
             }
             catch (Exception e)
             {
-                logger.LogWarning(
-                    $"Unhandled exception in TelemetryClient.ReportHealthAsync:" +
-                    $"{Environment.NewLine}{e}");
-
-                throw;
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
             }
 
             return Task.FromResult(0);
@@ -182,14 +171,14 @@ namespace ClusterObserver.Utilities.Telemetry
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
-            HealthScope scope,
-            string propertyName,
-            HealthState state,
-            string unhealthyEvaluations,
-            string source,
-            CancellationToken cancellationToken,
-            string serviceName = null,
-            string instanceName = null)
+                        HealthScope scope,
+                        string propertyName,
+                        HealthState state,
+                        string unhealthyEvaluations,
+                        string source,
+                        CancellationToken cancellationToken,
+                        string serviceName = null,
+                        string instanceName = null)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -219,7 +208,6 @@ namespace ClusterObserver.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
-                throw;
             }
 
             return Task.FromResult(0);
@@ -232,10 +220,7 @@ namespace ClusterObserver.Utilities.Telemetry
         /// <param name="value">Value of the property.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>Task of bool.</returns>
-        public Task<bool> ReportMetricAsync<T>(
-            string name,
-            T value,
-            CancellationToken cancellationToken)
+        public Task<bool> ReportMetricAsync<T>(string name, T value, CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested || string.IsNullOrEmpty(name))
             {
@@ -317,17 +302,17 @@ namespace ClusterObserver.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         public Task ReportMetricAsync(
-            string roleName,
-            string instance,
-            string name,
-            long value,
-            int count,
-            long min,
-            long max,
-            long sum,
-            double deviation,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string roleName,
+                        string instance,
+                        string name,
+                        long value,
+                        int count,
+                        long min,
+                        long max,
+                        long sum,
+                        double deviation,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -358,39 +343,6 @@ namespace ClusterObserver.Utilities.Telemetry
             telemetryClient.TrackMetric(mt);
 
             return Task.FromResult(0);
-        }
-
-        private bool disposedValue; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                }
-
-                disposedValue = true;
-            }
-        }
-
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~AppInsightsTelemetry()
-        // {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
-        // This code added to correctly implement the disposable pattern.
-
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
         }
     }
 }

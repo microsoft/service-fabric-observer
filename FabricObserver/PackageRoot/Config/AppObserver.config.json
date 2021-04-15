@@ -9,7 +9,7 @@
   },
   {
     "targetAppType": "SomeAppType",
-    "memoryWarningLimitMb": 1048,
-    "networkWarningEphemeralPorts": 7500
+    "memoryWarningLimitMb": 500,
+    "networkWarningEphemeralPorts": 5000
   }
 ]

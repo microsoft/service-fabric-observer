@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.9" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our 
          extensibility model will employ the same basic config parameters as all observers do.
@@ -116,7 +116,7 @@
     <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
     <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="10000" />
+    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
     <!-- The below settings only make sense for Linux. -->
     <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
     <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
@@ -133,7 +133,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.8" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.9" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

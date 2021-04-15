@@ -193,14 +193,8 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException)
-                {
-                    throw;
-                }
-
                 WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
@@ -386,14 +380,8 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException)
-                {
-                    throw;
-                }
-
                 WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in ReportAsync:{Environment.NewLine}{e}",
@@ -796,7 +784,7 @@ namespace FabricObserver.Observers
                     Token.ThrowIfCancellationRequested();
 
                     // Ports - Active TCP All
-                    int activePortCount = OperatingSystemInfoProvider.Instance.GetActivePortCount(process.Id, FabricServiceContext);
+                    int activePortCount = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(process.Id, FabricServiceContext);
                     
                     // This is used for info report.
                     TotalActivePortCountAllSystemServices += activePortCount;
@@ -877,14 +865,8 @@ namespace FabricObserver.Observers
 
                             await Task.Delay(250, Token).ConfigureAwait(false);
                         }
-                        catch (Exception e)
+                        catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                         {
-                            // ObserverManager handles these.
-                            if (e is OperationCanceledException || e is TaskCanceledException)
-                            {
-                                throw;
-                            }
-
                             WriteToLogWithLevel(
                                 ObserverName,
                                 $"Unhandled Exception thrown in GetProcessInfoAsync:{Environment.NewLine}{e}",
@@ -908,13 +890,8 @@ namespace FabricObserver.Observers
 #endif       
                     continue;
                 }
-                catch (Exception e)
+                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
-                    if (e is OperationCanceledException || e is TaskCanceledException)
-                    {
-                        throw;
-                    }
-
                     WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}",

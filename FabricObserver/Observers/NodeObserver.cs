@@ -394,13 +394,8 @@ namespace FabricObserver.Observers
 
                 return Task.CompletedTask;
             }
-            catch (Exception e) 
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             { 
-                if (e is OperationCanceledException || e is TaskCanceledException) 
-                { 
-                    throw; 
-                } 
-
                 HealthReporter.ReportFabricObserverServiceHealth(
                                 FabricServiceContext.ServiceName.OriginalString,
                                 ObserverName,
@@ -631,7 +626,7 @@ namespace FabricObserver.Observers
                 // Ports.
                 if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                 {
-                    int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActivePortCount();
+                    int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
                     ActivePortsData.Data.Add(activePortCountTotal);
                 }
 
@@ -731,14 +726,8 @@ namespace FabricObserver.Observers
                 timer.Stop();
                 timer.Reset();
             }
-            catch (Exception e) 
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             { 
-                // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException) 
-                { 
-                    throw; 
-                } 
-                
                 HealthReporter.ReportFabricObserverServiceHealth(
                                 FabricServiceContext.ServiceName.OriginalString,
                                 ObserverName,

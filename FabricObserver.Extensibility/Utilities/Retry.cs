@@ -12,11 +12,7 @@ namespace FabricObserver.Observers.Utilities
     // https://stackoverflow.com/questions/1563191/cleanest-way-to-write-retry-logic
     public static class Retry
     {
-        public static void Do(
-            Action action,
-            TimeSpan retryInterval,
-            CancellationToken token,
-            int maxAttempts = 3)
+        public static void Do(Action action, TimeSpan retryInterval, CancellationToken token, int maxAttempts = 3)
         {
             _ = Do<object>(
                 () =>
@@ -30,11 +26,7 @@ namespace FabricObserver.Observers.Utilities
                 maxAttempts);
         }
 
-        public static T Do<T>(
-            Func<T> action,
-            TimeSpan retryInterval,
-            CancellationToken token,
-            int maxAttemptCount = 3)
+        public static T Do<T>(Func<T> action, TimeSpan retryInterval, CancellationToken token, int maxAttemptCount = 3)
         {
             var exceptions = new List<Exception>();
 

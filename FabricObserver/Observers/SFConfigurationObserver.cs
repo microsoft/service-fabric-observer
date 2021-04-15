@@ -100,17 +100,13 @@ namespace FabricObserver.Observers
             {
                 
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
-            {
-                return;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
-                    FabricServiceContext.ServiceName.OriginalString,
-                    ObserverName,
-                    HealthState.Warning,
-                    $"this.NodeName | Unhandled Exception trying to read registry value:\n{e}");
+                                FabricServiceContext.ServiceName.OriginalString,
+                                ObserverName,
+                                HealthState.Warning,
+                                $"Unhandled Exception in ObserveAsync:{Environment.NewLine}{e}");
 
                 throw;
             }
@@ -124,7 +120,7 @@ namespace FabricObserver.Observers
 
             var sb = new StringBuilder();
 
-            _ = sb.AppendLine("\nService Fabric information:\n");
+            _ = sb.AppendLine($"{Environment.NewLine}Service Fabric information:{Environment.NewLine}");
 
             if (!string.IsNullOrEmpty(SFVersion))
             {
@@ -182,10 +178,10 @@ namespace FabricObserver.Observers
             if (!ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
-                    FabricServiceContext.ServiceName.OriginalString,
-                    ObserverName,
-                    HealthState.Warning,
-                    "Unable to create SFInfraInfo.txt file.");
+                                FabricServiceContext.ServiceName.OriginalString,
+                                ObserverName,
+                                HealthState.Warning,
+                                "Unable to create SFInfraInfo.txt file.");
             }
 
             _ = sb.Clear();
@@ -257,7 +253,7 @@ namespace FabricObserver.Observers
                 token.ThrowIfCancellationRequested();
 
                 // Node Information.
-                _ = sb.AppendLine("\nNode Info:\n");
+                _ = sb.AppendLine($"{Environment.NewLine}Node Info:{Environment.NewLine}");
                 _ = sb.AppendLine($"Node Name: {NodeName}");
                 _ = sb.AppendLine($"Node Id: {FabricServiceContext.NodeContext.NodeId}");
                 _ = sb.AppendLine($"Node Instance Id: {FabricServiceContext.NodeContext.NodeInstanceId}");
@@ -288,7 +284,7 @@ namespace FabricObserver.Observers
                 // Application Info.
                 if (appList != null)
                 {
-                    _ = sb.AppendLine("\nDeployed Apps:\n");
+                    _ = sb.AppendLine($"{Environment.NewLine}Deployed Apps:{Environment.NewLine}");
 
                     foreach (var app in appList)
                     {
@@ -307,7 +303,7 @@ namespace FabricObserver.Observers
                         _ = sb.AppendLine("Status: " + status);
 
                         // Service(s).
-                        _ = sb.AppendLine("\n\tServices:");
+                        _ = sb.AppendLine($"{Environment.NewLine}\tServices:");
                         var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
                         var replicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName).ConfigureAwait(true);
 
@@ -333,7 +329,7 @@ namespace FabricObserver.Observers
 
                                 if (procId > -1)
                                 {
-                                    ports = OperatingSystemInfoProvider.Instance.GetActivePortCount(procId);
+                                    ports = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId);
                                     ephemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId);
                                 }
 
@@ -359,25 +355,25 @@ namespace FabricObserver.Observers
                                 if (IsEtwEnabled)
                                 {
                                     ObserverLogger.LogEtw(
-                                        ObserverConstants.FabricObserverETWEventName,
-                                        new
-                                        {
-                                            Level = 0, // Info
-                                            Node = NodeName,
-                                            Observer = ObserverName,
-                                            AppName = appName,
-                                            AppType = appType,
-                                            AppVersion = appVersion,
-                                            AppHealthState = healthState,
-                                            AppStatus = status,
-                                            ServiceName = serviceName.OriginalString,
-                                            ServiceTypeName = type,
-                                            Kind = kind,
-                                            ProcessModel = processModel,
-                                            ServiceManifestVersion = serviceManifestVersion,
-                                            ActivePorts = ports,
-                                            EphemeralPorts = ephemeralPorts,
-                                        });
+                                                    ObserverConstants.FabricObserverETWEventName,
+                                                    new
+                                                    {
+                                                        Level = 0, // Info
+                                                        Node = NodeName,
+                                                        Observer = ObserverName,
+                                                        AppName = appName,
+                                                        AppType = appType,
+                                                        AppVersion = appVersion,
+                                                        AppHealthState = healthState,
+                                                        AppStatus = status,
+                                                        ServiceName = serviceName.OriginalString,
+                                                        ServiceTypeName = type,
+                                                        Kind = kind,
+                                                        ProcessModel = processModel,
+                                                        ServiceManifestVersion = serviceManifestVersion,
+                                                        ActivePorts = ports,
+                                                        EphemeralPorts = ephemeralPorts,
+                                                    });
                                 }
 
                                 break;

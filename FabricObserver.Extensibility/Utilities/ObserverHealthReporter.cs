@@ -38,19 +38,21 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="propertyName">Name of the health property.</param>
         /// <param name="healthState">Health state (Ok, Error, etc).</param>
         /// <param name="description">Description of the health condition.</param>
-        public void ReportFabricObserverServiceHealth(
-            string serviceName,
-            string propertyName,
-            HealthState healthState,
-            string description)
+        public void ReportFabricObserverServiceHealth(string serviceName, string propertyName, HealthState healthState, string description)
         {
+            string msg = $"{propertyName} reporting {healthState}: {description}";
+
             if (healthState == HealthState.Error)
             {
-                logger.LogError("FabricObserver service health error: " + serviceName + " | " + propertyName + " | {0}", description);
+                logger.LogError(msg);
             }
             else if (healthState == HealthState.Warning)
             {
-                logger.LogWarning("FabricObserver service health warning: " + serviceName + " | " + propertyName + " | {0}", description);
+                logger.LogWarning(msg);
+            }
+            else if (logger.EnableVerboseLogging)
+            {
+                logger.LogInfo(msg);
             }
         }
 
@@ -86,16 +88,14 @@ namespace FabricObserver.Observers.Utilities
 
             string errWarnPreamble = string.Empty;
 
-            if (healthReport.State == HealthState.Error
-                || healthReport.State == HealthState.Warning)
+            if (healthReport.State == HealthState.Error || healthReport.State == HealthState.Warning)
             {
                 errWarnPreamble =
                     $"{healthReport.Observer} detected " +
                     $"{Enum.GetName(typeof(HealthState), healthReport.State)} threshold breach. ";
 
                 // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
-                if (healthReport.Observer == ObserverConstants.OSObserverName
-                    && healthReport.Property == "OSConfiguration")
+                if (healthReport.Observer == ObserverConstants.OSObserverName && healthReport.Property == "OSConfiguration")
                 {
                     errWarnPreamble = $"{ObserverConstants.OSObserverName} detected potential problem with OS configuration: ";
                 }

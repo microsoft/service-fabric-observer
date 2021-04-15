@@ -30,7 +30,7 @@ namespace FabricObserver.Observers.Utilities
         public static readonly Lazy<FabricClientRetryErrors> MoveSecondaryFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
             var retryErrors = new FabricClientRetryErrors();
-            retryErrors.RetrySuccesSFabricErrorCodes.Add(FabricErrorCode.AlreadySecondaryReplica);
+            retryErrors.RetrySuccessFabricErrorCodes.Add(FabricErrorCode.AlreadySecondaryReplica);
             retryErrors.RetryableFabricErrorCodes.Add(FabricErrorCode.PLBNotReady);
             return retryErrors;
         });
@@ -41,7 +41,7 @@ namespace FabricObserver.Observers.Utilities
         public static readonly Lazy<FabricClientRetryErrors> MovePrimaryFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
             var retryErrors = new FabricClientRetryErrors();
-            retryErrors.RetrySuccesSFabricErrorCodes.Add(FabricErrorCode.AlreadyPrimaryReplica);
+            retryErrors.RetrySuccessFabricErrorCodes.Add(FabricErrorCode.AlreadyPrimaryReplica);
             retryErrors.RetryableFabricErrorCodes.Add(FabricErrorCode.PLBNotReady);
             return retryErrors;
         });
@@ -92,7 +92,7 @@ namespace FabricObserver.Observers.Utilities
         public static readonly Lazy<FabricClientRetryErrors> ProvisionFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
             var retryErrors = new FabricClientRetryErrors();
-            retryErrors.RetrySuccesSFabricErrorCodes.Add(FabricErrorCode.FabricVersionAlreadyExists);
+            retryErrors.RetrySuccessFabricErrorCodes.Add(FabricErrorCode.FabricVersionAlreadyExists);
             return retryErrors;
         });
 
@@ -102,8 +102,8 @@ namespace FabricObserver.Observers.Utilities
         public static readonly Lazy<FabricClientRetryErrors> UpgradeFabricErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
             var retryErrors = new FabricClientRetryErrors();
-            retryErrors.RetrySuccesSFabricErrorCodes.Add(FabricErrorCode.FabricUpgradeInProgress);
-            retryErrors.RetrySuccesSFabricErrorCodes.Add(FabricErrorCode.FabricAlreadyInTargetVersion);
+            retryErrors.RetrySuccessFabricErrorCodes.Add(FabricErrorCode.FabricUpgradeInProgress);
+            retryErrors.RetrySuccessFabricErrorCodes.Add(FabricErrorCode.FabricAlreadyInTargetVersion);
             return retryErrors;
         });
 
@@ -113,7 +113,7 @@ namespace FabricObserver.Observers.Utilities
         public static readonly Lazy<FabricClientRetryErrors> RemoveUnreliableTransportBehaviorErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
             var retryErrors = new FabricClientRetryErrors();
-            retryErrors.InternalRetrySuccesSFabricErrorCodes.Add(2147949808);
+            retryErrors.InternalRetrySuccessFabricErrorCodes.Add(2147949808);
             return retryErrors;
         });
 
@@ -123,7 +123,7 @@ namespace FabricObserver.Observers.Utilities
         public static readonly Lazy<FabricClientRetryErrors> CreateAppErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
             var retryErrors = new FabricClientRetryErrors();
-            retryErrors.RetrySuccesSFabricErrorCodes.Add(FabricErrorCode.ApplicationAlreadyExists);
+            retryErrors.RetrySuccessFabricErrorCodes.Add(FabricErrorCode.ApplicationAlreadyExists);
             return retryErrors;
         });
 
@@ -133,7 +133,7 @@ namespace FabricObserver.Observers.Utilities
         public static readonly Lazy<FabricClientRetryErrors> DeleteAppErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
             var retryErrors = new FabricClientRetryErrors();
-            retryErrors.RetrySuccesSFabricErrorCodes.Add(FabricErrorCode.ApplicationNotFound);
+            retryErrors.RetrySuccessFabricErrorCodes.Add(FabricErrorCode.ApplicationNotFound);
             return retryErrors;
         });
 
@@ -146,9 +146,8 @@ namespace FabricObserver.Observers.Utilities
             RetryableExceptions = new List<Type>();
             RetryableFabricErrorCodes = new List<FabricErrorCode>();
             RetrySuccessExceptions = new List<Type>();
-            RetrySuccesSFabricErrorCodes = new List<FabricErrorCode>();
-
-            InternalRetrySuccesSFabricErrorCodes = new List<uint>();
+            RetrySuccessFabricErrorCodes = new List<FabricErrorCode>();
+            InternalRetrySuccessFabricErrorCodes = new List<uint>();
 
             PopulateDefaultValues();
         }
@@ -180,7 +179,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets list of success error codes that are retry-able.
         /// </summary>
-        public IList<FabricErrorCode> RetrySuccesSFabricErrorCodes
+        public IList<FabricErrorCode> RetrySuccessFabricErrorCodes
         {
             get; private set;
         }
@@ -188,7 +187,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets list of internal success error codes that are retry-able.
         /// </summary>
-        internal IList<uint> InternalRetrySuccesSFabricErrorCodes
+        internal IList<uint> InternalRetrySuccessFabricErrorCodes
         {
             get; private set;
         }
