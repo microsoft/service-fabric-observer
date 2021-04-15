@@ -308,10 +308,10 @@ namespace FabricObserver.Observers
             }
             
             configSettings.Initialize(
-                FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
-                    ObserverConstants.ObserverConfigurationPackageName)?.Settings,
-                    ConfigurationSectionName,
-                    "AppObserverDataFileName");
+                            FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
+                                ObserverConstants.ObserverConfigurationPackageName)?.Settings,
+                                ConfigurationSectionName,
+                                "AppObserverDataFileName");
             
             // Unit tests may have null path and filename, thus the null equivalence operations.
             var appObserverConfigFileName = Path.Combine(ConfigPackagePath ?? string.Empty, configSettings.AppObserverConfigFileName ?? string.Empty);
@@ -373,10 +373,12 @@ namespace FabricObserver.Observers
                     MaxResults = 150,
                 };
 
-                var appList = await FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                        deployedAppQueryDesc,
-                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                        Token).ConfigureAwait(false);
+                var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                                                        deployedAppQueryDesc,
+                                                                                        ConfigurationSettings.AsyncTimeout,
+                                                                                        Token),
+                                            Token);
 
                 // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
                 // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -391,10 +393,13 @@ namespace FabricObserver.Observers
                     
                     deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
 
-                    appList = await FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                        deployedAppQueryDesc,
-                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                        Token).ConfigureAwait(false);
+                    appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                                                        deployedAppQueryDesc,
+                                                                                        ConfigurationSettings.AsyncTimeout,
+                                                                                        Token),
+                                            Token);
+
                     apps.AddRange(appList.ToList());
                 }
 
@@ -749,14 +754,8 @@ namespace FabricObserver.Observers
 #endif
                     continue;
                 }
-                catch (Exception e)
+                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
-                    // ObserverManager handles these.
-                    if (e is OperationCanceledException || e is TaskCanceledException)
-                    {
-                        throw;
-                    }
-
                     WriteToLogWithLevel(
                         ObserverName,
                         $"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}",
@@ -775,31 +774,53 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            DeployedApplicationList deployedApps;
+            List<DeployedApplication> deployedApps = new List<DeployedApplication>();
 
             if (applicationNameFilter != null)
             {
-                deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter).ConfigureAwait(true);
+                var app = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter).ConfigureAwait(false);
+                deployedApps = app.ToList();
             }
-            else
+            else if (!string.IsNullOrWhiteSpace(applicationType))
             {
-                deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName).ConfigureAwait(true);
-
-                if (deployedApps.Count > 0 && !string.IsNullOrWhiteSpace(applicationType))
+                // Let's make sure that we page through app lists that are huge (like 4MB result set (that's a lot of apps)).
+                var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
                 {
-                    for (int i = 0; i < deployedApps.Count; i++)
-                    {
-                        Token.ThrowIfCancellationRequested();
+                    IncludeHealthState = false,
+                    MaxResults = 150,
+                };
 
-                        if (deployedApps[i].ApplicationTypeName == applicationType)
-                        {
-                            continue;
-                        }
+                var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                                                        deployedAppQueryDesc,
+                                                                                        ConfigurationSettings.AsyncTimeout,
+                                                                                        Token),
+                                            Token);
 
-                        deployedApps.Remove(deployedApps[i]);
-                        --i;
-                    }
+                // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
+                // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
+                // all-app service process monitoring with a very simple configuration pattern.
+                deployedApps = appList.ToList();
+
+                // The GetDeployedApplicationPagedList api will set a continuation token value if it knows it did not return all the results in one swoop.
+                // Check that it is not null, and make a new query passing back the token it gave you.
+                while (appList.ContinuationToken != null)
+                {
+                    Token.ThrowIfCancellationRequested();
+
+                    deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
+
+                    appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                                                        deployedAppQueryDesc,
+                                                                                        ConfigurationSettings.AsyncTimeout,
+                                                                                        Token),
+                                            Token);
+
+                    deployedApps.AddRange(appList.ToList());
                 }
+
+                deployedApps = deployedApps.Where(a => a.ApplicationTypeName == applicationType)?.ToList();
             }
 
             var currentReplicaInfoList = new List<ReplicaOrInstanceMonitoringInfo>();
@@ -856,16 +877,19 @@ namespace FabricObserver.Observers
                                                                     ServiceFilterType filterType = ServiceFilterType.None,
                                                                     string appTypeName = null)
         {
-            var deployedReplicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName).ConfigureAwait(true);
+            var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName),
+                                                Token);
+
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>();
 
             SetInstanceOrReplicaMonitoringList(
-                appName,
-                serviceFilterList,
-                filterType,
-                appTypeName,
-                deployedReplicaList,
-                ref replicaMonitoringList);
+                    appName,
+                    serviceFilterList,
+                    filterType,
+                    appTypeName,
+                    deployedReplicaList,
+                    ref replicaMonitoringList);
 
             return replicaMonitoringList;
         }
@@ -884,8 +908,7 @@ namespace FabricObserver.Observers
 
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
-                if (deployedReplica is DeployedStatefulServiceReplica statefulReplica
-                    && statefulReplica.ReplicaRole == ReplicaRole.Primary)
+                if (deployedReplica is DeployedStatefulServiceReplica statefulReplica && statefulReplica.ReplicaRole == ReplicaRole.Primary)
                 {
                     replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                     {
@@ -921,8 +944,7 @@ namespace FabricObserver.Observers
                         ServiceName = statelessInstance.ServiceName,
                     };
 
-                    if (filterList != null
-                        && filterType != ServiceFilterType.None)
+                    if (filterList != null && filterType != ServiceFilterType.None)
                     {
                         bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 

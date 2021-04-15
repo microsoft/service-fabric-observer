@@ -79,8 +79,7 @@ namespace FabricObserver.Observers
         {
             // Only run once per specified time in Settings.xml. (default is already set to 1 day for CertificateObserver)
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter.
-            if (RunInterval > TimeSpan.MinValue
-                && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }

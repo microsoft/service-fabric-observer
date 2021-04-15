@@ -392,8 +392,8 @@ namespace FabricObserverTests
             obsMgr.Dispose();
         }
 
-        /* NOTE: These test can be flaky due to the Test infra. Try running them as a group, after running all the other tests as a group. 
-           If any fail, then re-run the failed ones.. */
+        /* NOTE: These tests are flaky due to the Test infra. Try running them as a group, after running all the other tests as a group. 
+           If any fail, then re-run the failed ones. */
 
         [TestMethod]
         public async Task Successful_AppObserver_Run_Cancellation_Via_ObserverManager()

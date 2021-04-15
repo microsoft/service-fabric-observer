@@ -181,14 +181,8 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) 
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException) 
-                { 
-                    throw;
-                }
-
                 WriteToLogWithLevel(
                     ObserverName,
                     $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",

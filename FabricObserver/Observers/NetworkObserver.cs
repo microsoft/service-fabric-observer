@@ -417,6 +417,8 @@ namespace FabricObserver.Observers
 
                 foreach (var endpoint in config.Endpoints)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     if (string.IsNullOrEmpty(endpoint.HostName))
                     {
                         continue;
@@ -430,16 +432,13 @@ namespace FabricObserver.Observers
                     }
 
                     bool passed = false;
-                    cancellationToken.ThrowIfCancellationRequested();
 
                     // SQL Azure, other database services that are addressable over direct TCP.
                     if (endpoint.Protocol == DirectInternetProtocol.Tcp)
                     {
                         passed = TcpEndpointDoConnectionTest(endpoint.HostName, endpoint.Port);
                     }
-
-                    // Default is http.
-                    else
+                    else // Default is http.
                     {
                         // Service REST endpoints, CosmosDB REST endpoint, etc.
                         // Http protocol means any enpoint/port pair that is addressable over HTTP/s.
@@ -505,7 +504,7 @@ namespace FabricObserver.Observers
                                 passed = true;
                             }
                         }
-                        catch (Exception e)
+                        catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                         {
                             HealthReporter.ReportFabricObserverServiceHealth(
                                             FabricServiceContext.ServiceName.OriginalString,

@@ -147,7 +147,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (AggregateException ae)
             {
-                Logger.LogWarning($"Retry failed for GetActiveEphemeralPortCount:{Environment.NewLine}{ae.InnerException}");
+                Logger.LogWarning($"Retry failed for GetActiveEphemeralPortCount:{Environment.NewLine}{ae}");
                 count = -1;
             }
 
@@ -171,7 +171,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (AggregateException ae)
             {
-                Logger.LogWarning($"Retry failed for GetActivePortCount:{Environment.NewLine}{ae.InnerException}");
+                Logger.LogWarning($"Retry failed for GetActivePortCount:{Environment.NewLine}{ae}");
                 count = -1;
             }
 
@@ -322,6 +322,8 @@ namespace FabricObserver.Observers.Utilities
                         // would artificially increase the count of ports that FO computes.
                         if (processId > 0)
                         {
+                            /* A pid could be a subset of a port number, so make sure that we only match pid. */
+
                             List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
                             if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
@@ -424,6 +426,8 @@ namespace FabricObserver.Observers.Utilities
                         // Only add unique pid (if supplied in call) and local port data to list.
                         if (processId > 0)
                         {
+                            /* A pid could be a subset of a port number, so make sure that we only match pid. */
+
                             List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
                             if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
