@@ -1170,7 +1170,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
             obs.Dispose();
 
-            //await CleanupTestHealthReportsAsync();
+            await CleanupTestHealthReportsAsync();
         }
 
         /// <summary>
