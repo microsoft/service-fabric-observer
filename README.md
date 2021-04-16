@@ -59,9 +59,28 @@ For more information about **the design of FabricObserver**, please see the [Des
 
 ***Note: By default, FO runs as NetworkUser on Windows and sfappsuser on Linux. If you want to monitor SF service processes that run as elevated (System) on Windows, then you must also run FO as System on Windows. There is no reason to run as root on Linux under any circumstances (see the Capabilities binaries implementations, which allow for FO to run as sfappsuser and successfully execute specific commands that require elevated privilege).*** 
 
-For Linux deployments, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on a proxy binary which can run netstat -tnap elevated. 
-If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section). You will also need to do the same with ApplicationManifest.xml (see FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.linux.xml for required changes). If you use our build scripts, they will take care of these modifications automatically for linux build output.
-Just run Build-FabricObserver.ps1
+For Linux deployments, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on three proxy binaries which can only run specific commands as root. 
+If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section).  
+
+You will also need to modify ApplicationManifest.xml to run Setup as LocalSystem, which maps to root on Linux:
+
+```XML
+    </ConfigOverrides>
+    <Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+    </Policies>  
+
+...
+
+  </DefaultServices>
+  <Principals>
+    <Users>
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
+  </Principals>
+```
+
+If you use our build scripts, they will take care of these modifications automatically for linux build output.
 
 You can also run the build scripts from a Powershell console. These include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
