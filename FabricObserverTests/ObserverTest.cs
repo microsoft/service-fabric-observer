@@ -10,12 +10,12 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using ClusterObserver;
 using FabricObserver.Observers;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ClusterObserverManager = ClusterObserver.ClusterObserverManager;
-using ObserverManager = FabricObserver.Observers.ObserverManager;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 /*
 
@@ -60,16 +60,8 @@ namespace FabricObserverTests
                     long.MaxValue);
 
         private static readonly bool isSFRuntimePresentOnTestMachine;
-        private readonly CancellationToken token = new CancellationToken { };
+        private readonly CancellationToken token = new CancellationToken();
         private readonly FabricClient fabricClient = new FabricClient(FabricClientRole.User);
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverTest"/> class.
-        /// </summary>
-        public ObserverTest()
-        {
-            
-        }
 
         static ObserverTest()
         {
@@ -310,14 +302,10 @@ namespace FabricObserverTests
             ClusterObserverManager.EtwEnabled = true;
 
             var obs = new ClusterObserver.ClusterObserver();
-
             await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
         }
 
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
@@ -1581,10 +1569,10 @@ namespace FabricObserverTests
             // Clear any existing user app, node or fabric:/System app Test Health Reports.
             try
             {
-                FabricObserver.Observers.Utilities.HealthReport healthReport = new FabricObserver.Observers.Utilities.HealthReport
+                HealthReport healthReport = new HealthReport
                 {
                     Code = FOErrorWarningCodes.Ok,
-                    HealthMessage = $"Clearing existing Error/Warning Test Health Reports.",
+                    HealthMessage = "Clearing existing Error/Warning Test Health Reports.",
                     State = HealthState.Ok,
                     ReportType = HealthReportType.Application,
                     NodeName = "_Node_0",
@@ -1648,7 +1636,7 @@ namespace FabricObserverTests
                 }
 
                 // Node reports
-                var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(this.context.NodeContext.NodeName);
+                var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(context.NodeContext.NodeName);
 
                 var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains("NodeObserver")
                                                                                 || s.HealthInformation.SourceId.Contains("DiskObserver")

@@ -45,9 +45,8 @@ namespace FabricObserver
             ServiceCollection services = new ServiceCollection();
             ConfigureServices(services);
 
-            using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            using ObserverManager observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
-
+            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            using var observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
             await observerManager.StartObserversAsync().ConfigureAwait(false);
         }
 
@@ -92,7 +91,7 @@ namespace FabricObserver
 
             List<PluginLoader> pluginLoaders = new List<PluginLoader>(capacity: pluginDlls.Length);
 
-            Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
+            Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
 
             foreach (string pluginDll in pluginDlls)
             {

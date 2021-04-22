@@ -25,7 +25,6 @@ namespace FabricObserver
 
         // Instance constructor is private to enforce singleton semantics
         private ServiceEventSource()
-            : base()
         {
         }
 
@@ -39,11 +38,13 @@ namespace FabricObserver
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (IsEnabled())
+            if (!IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                Message(finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            Message(finalMessage);
         }
 
         private const int MessageEventId = 1;
@@ -60,19 +61,21 @@ namespace FabricObserver
         [NonEvent]
         public void ServiceMessage(StatelessServiceContext serviceContext, string message, params object[] args)
         {
-            if (IsEnabled())
+            if (!IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                ServiceMessage(
-                    serviceContext.ServiceName.ToString(),
-                    serviceContext.ServiceTypeName,
-                    serviceContext.InstanceId,
-                    serviceContext.PartitionId,
-                    serviceContext.CodePackageActivationContext.ApplicationName,
-                    serviceContext.CodePackageActivationContext.ApplicationTypeName,
-                    serviceContext.NodeContext.NodeName,
-                    finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            ServiceMessage(
+                serviceContext.ServiceName.ToString(),
+                serviceContext.ServiceTypeName,
+                serviceContext.InstanceId,
+                serviceContext.PartitionId,
+                serviceContext.CodePackageActivationContext.ApplicationName,
+                serviceContext.CodePackageActivationContext.ApplicationTypeName,
+                serviceContext.NodeContext.NodeName,
+                finalMessage);
         }
 
         // For very high-frequency events it might be advantageous to raise events using WriteEventCore API.

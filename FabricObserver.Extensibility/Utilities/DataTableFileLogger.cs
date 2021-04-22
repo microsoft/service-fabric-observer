@@ -45,11 +45,6 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         } = 0;
 
-        public DataTableFileLogger()
-        {
-
-        }
-
         public void ConfigureLogger(string filename)
         {
             // default log directory.
@@ -165,25 +160,28 @@ namespace FabricObserver.Observers.Utilities
             LogManager.Flush();
         }
 
-        private void TryCleanLogFolder(string folderPath, TimeSpan maxAge)
+        private static void TryCleanLogFolder(string folderPath, TimeSpan maxAge)
         {
-            if (Directory.Exists(folderPath) && DateTime.UtcNow.Subtract(Directory.GetLastWriteTimeUtc(folderPath)) >= maxAge)
+            if (!Directory.Exists(folderPath) ||
+                DateTime.UtcNow.Subtract(Directory.GetLastWriteTimeUtc(folderPath)) < maxAge)
             {
-                string[] files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories);
-                
-                foreach (string file in files)
-                {
-                    try
-                    {
-                        if (DateTime.UtcNow.Subtract(File.GetCreationTime(file)) >= maxAge)
-                        {
-                            File.Delete(file);
-                        }
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException || e is PathTooLongException)
-                    {
+                return;
+            }
 
+            string[] files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories);
+                
+            foreach (string file in files)
+            {
+                try
+                {
+                    if (DateTime.UtcNow.Subtract(File.GetCreationTime(file)) >= maxAge)
+                    {
+                        File.Delete(file);
                     }
+                }
+                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                {
+
                 }
             }
         }

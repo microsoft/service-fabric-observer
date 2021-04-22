@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.1.7" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.1.8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserver_InstanceCount" DefaultValue="1" />
@@ -7,14 +7,15 @@
     <Parameter Name="EnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
-    <Parameter Name="RunInterval" DefaultValue="00:10:00" />
+    <Parameter Name="RunInterval" DefaultValue="" />
     <Parameter Name="AsyncOperationTimeoutSeconds" DefaultValue="120" />
+    <Parameter Name="MonitorRepairJobs" DefaultValue="true" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.1.7" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.1.8" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -25,6 +26,7 @@
             <Parameter Name="MaxTimeNodeStatusNotOk" Value="[MaxTimeNodeStatusNotOk]" />
             <Parameter Name="RunInterval" Value="[RunInterval]" />
             <Parameter Name="AsyncOperationTimeoutSeconds" Value="[AsyncOperationTimeoutSeconds]" />
+            <Parameter Name="MonitorRepairJobs" Value="[MonitorRepairJobs]" />
           </Section>
         </Settings>
       </ConfigOverride>

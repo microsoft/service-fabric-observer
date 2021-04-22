@@ -4,9 +4,8 @@
     <id>%PACKAGE_ID%</id>
     <version>2.1.7</version>
     <releaseNotes>
-      - Fixed important bug in Application health query processor.
-      - ApplicationInsights TelemetryProvider impl update.
-      - Improvements in service close cleanup code.
+      Added new configurable feature: Repair Job monitoring.
+      Code improvements.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

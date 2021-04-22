@@ -49,12 +49,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         public LogAnalyticsTelemetry(
-            string workspaceId,
-            string sharedKey,
-            string logType,
-            FabricClient fabricClient,
-            CancellationToken token,
-            string apiVersion = "2016-04-01")
+                string workspaceId,
+                string sharedKey,
+                string logType,
+                FabricClient fabricClient,
+                CancellationToken token,
+                string apiVersion = "2016-04-01")
         {
             WorkspaceId = workspaceId;
             Key = sharedKey;
@@ -66,14 +66,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         public async Task ReportHealthAsync(
-            HealthScope scope,
-            string propertyName,
-            HealthState state,
-            string unhealthyEvaluations,
-            string source,
-            CancellationToken cancellationToken,
-            string serviceName = null,
-            string instanceName = null)
+                            HealthScope scope,
+                            string propertyName,
+                            HealthState state,
+                            string unhealthyEvaluations,
+                            string source,
+                            CancellationToken cancellationToken,
+                            string serviceName = null,
+                            string instanceName = null)
         {
             var (clusterId, _, clusterType) =
                 await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
@@ -98,9 +98,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ReportHealthAsync(
-            TelemetryData telemetryData,
-            CancellationToken cancellationToken)
+        public async Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
@@ -108,29 +106,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
-
-            return;
-        }
-
-        public async Task ReportMetricAsync(
-            TelemetryData telemetryData,
-            CancellationToken cancellationToken)
-        {
-            if (telemetryData == null)
-            {
-                return;
-            }
-
-            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ReportMetricAsync(
-            MachineTelemetryData telemetryData,
-            CancellationToken cancellationToken)
+        public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
@@ -138,15 +117,25 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+        }
 
+        public async Task ReportMetricAsync(MachineTelemetryData telemetryData, CancellationToken cancellationToken)
+        {
+            if (telemetryData == null)
+            {
+                return;
+            }
+
+            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
-            string name,
-            T value,
-            string source,
-            CancellationToken cancellationToken)
+                                    string name,
+                                    T value,
+                                    string source,
+                                    CancellationToken cancellationToken)
         {
             var (clusterId, _, _) =
                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(
@@ -171,60 +160,60 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         // Implement functions below as you need.
         public Task ReportAvailabilityAsync(
-            Uri serviceUri,
-            string instance,
-            string testName,
-            DateTimeOffset captured,
-            TimeSpan duration,
-            string location,
-            bool success,
-            CancellationToken cancellationToken,
-            string message = null)
+                        Uri serviceUri,
+                        string instance,
+                        string testName,
+                        DateTimeOffset captured,
+                        TimeSpan duration,
+                        string location,
+                        bool success,
+                        CancellationToken cancellationToken,
+                        string message = null)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string name,
-            long value,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string name,
+                        long value,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string service,
-            Guid partition,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                        string service,
+                        Guid partition,
+                        string name,
+                        long value,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string role,
-            long id,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                        string role,
+                        long id,
+                        string name,
+                        long value,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string roleName,
-            string instance,
-            string name,
-            long value,
-            int count,
-            long min,
-            long max,
-            long sum,
-            double deviation,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string roleName,
+                        string instance,
+                        string name,
+                        long value,
+                        int count,
+                        long min,
+                        long max,
+                        long sum,
+                        double deviation,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
@@ -233,8 +222,9 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// Sends telemetry data to Azure LogAnalytics via REST.
         /// </summary>
         /// <param name="payload">Json string containing telemetry data.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A completed task or task containing exception info.</returns>
-        private async Task SendTelemetryAsync(string payload, CancellationToken token)
+        private async Task SendTelemetryAsync(string payload, CancellationToken cancellationToken)
         {
             var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
@@ -248,7 +238,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             request.Headers["Authorization"] = signature;
             byte[] content = Encoding.UTF8.GetBytes(payload);
 
-            if (token.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return;
             }
@@ -257,23 +247,27 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 using (var requestStreamAsync = await request.GetRequestStreamAsync())
                 {
-                    await requestStreamAsync.WriteAsync(content, 0, content.Length);
+                    await requestStreamAsync.WriteAsync(content, 0, content.Length, cancellationToken);
 
                     using (var responseAsync = await request.GetResponseAsync() as HttpWebResponse)
                     {
-                        if (token.IsCancellationRequested)
+                        if (cancellationToken.IsCancellationRequested)
                         {
                             return;
                         }
 
-                        if (responseAsync.StatusCode == HttpStatusCode.OK ||
-                            responseAsync.StatusCode == HttpStatusCode.Accepted)
+                        if (responseAsync != null && (responseAsync.StatusCode == HttpStatusCode.OK ||
+                                                      responseAsync.StatusCode == HttpStatusCode.Accepted))
                         {
                             retries = 0;
                             return;
                         }
 
-                        logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
+                        if (responseAsync != null)
+                        {
+                            logger.LogWarning(
+                                $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
+                        }
                     }
                 }
             }
@@ -285,14 +279,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             if (retries < MaxRetries)
             {
-                if (token.IsCancellationRequested)
+                if (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
 
                 retries++;
                 await Task.Delay(1000).ConfigureAwait(false);
-                await SendTelemetryAsync(payload, token).ConfigureAwait(false);
+                await SendTelemetryAsync(payload, cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -303,11 +297,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         private string GetSignature(
-            string method,
-            int contentLength,
-            string contentType,
-            string date,
-            string resource)
+                        string method,
+                        int contentLength,
+                        string contentType,
+                        string date,
+                        string resource)
         {
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);

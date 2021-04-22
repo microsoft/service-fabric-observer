@@ -15,7 +15,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                memCommittedBytesPerfCounter = new PerformanceCounter()
+                memCommittedBytesPerfCounter = new PerformanceCounter
                 {
                     CategoryName = "Memory",
                     CounterName = "Committed Bytes",

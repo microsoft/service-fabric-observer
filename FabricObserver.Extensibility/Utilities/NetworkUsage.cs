@@ -32,7 +32,7 @@ namespace FabricObserver.Observers.Utilities
                 // Safe XML pattern - *Do not use LoadXml*.
                 var xdoc = new XmlDocument { XmlResolver = null };
                 sreader = new StringReader(clusterManifestXml);
-                xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null });
                 xdoc.Load(xreader);
 
                 // Cluster Information.

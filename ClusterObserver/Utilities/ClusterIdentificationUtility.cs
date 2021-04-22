@@ -42,7 +42,7 @@ namespace ClusterObserver.Utilities
                 clusterManifestXdoc = new XmlDocument { XmlResolver = null };
 
                 using var sreader = new StringReader(clusterManifest);
-                using var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                using var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null });
                 clusterManifestXdoc?.Load(xreader);
 
                 // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.

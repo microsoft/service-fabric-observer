@@ -16,17 +16,12 @@ namespace FabricObserver.Observers.Utilities
 {
     public static class JsonHelper
     {
-        public static MediaTypeFormatter JsonMediaTypeFormatter
-        {
-            get
+        public static MediaTypeFormatter JsonMediaTypeFormatter =>
+            new JsonMediaTypeFormatter
             {
-                return new JsonMediaTypeFormatter
-                {
-                    SerializerSettings = MediaTypeFormatterSettings,
-                    UseDataContractJsonSerializer = false,
-                };
-            }
-        }
+                SerializerSettings = MediaTypeFormatterSettings,
+                UseDataContractJsonSerializer = false,
+            };
 
         public static bool IsJson<T>(string text)
         {

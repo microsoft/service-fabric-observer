@@ -57,5 +57,7 @@
     <Parameter Name="MaxTimeNodeStatusNotOk" Value="" MustOverride="true" />
     <!-- How often to run ClusterObserver. This is a Timespan value, e.g., 00:10:00 means every 10 minutes, for example. -->
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    <!-- Report on currently executing Repair Jobs in the cluster. -->
+    <Parameter Name="MonitorRepairJobs" Value="" MustOverride ="true" />
   </Section>
 </Settings>

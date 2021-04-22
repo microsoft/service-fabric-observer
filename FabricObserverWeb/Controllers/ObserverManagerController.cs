@@ -23,7 +23,7 @@ namespace FabricObserverWeb
         private const int MaxRetries = 3;
         private readonly StatelessServiceContext serviceContext;
         private readonly FabricClient fabricClient;
-        private readonly string script = @"
+        private const string script = @"
                 <script type='text/javascript'>
                 function toggle(e) {
                     var container = document.getElementById(e);
@@ -65,7 +65,6 @@ namespace FabricObserverWeb
             var configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
             string logFolder = null;
             string obsManagerLogFilePath = null;
-            string obsManagerLogFolderPath = null;
 
             if (configSettings != null)
             {
@@ -74,22 +73,22 @@ namespace FabricObserverWeb
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // Add current drive letter if not supplied for Windows path target.
-                    if (!logFolder.Substring(0, 3).Contains(":\\"))
+                    if (!logFolder[..3].Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory.Substring(0, 3);
+                        string windrive = Environment.SystemDirectory[..3];
                         logFolder = Path.Combine(windrive, logFolder);
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (logFolder.Substring(0, 3).Contains(":\\"))
+                    if (logFolder[..3].Contains(":\\"))
                     {
                         logFolder = logFolder.Remove(0, 3);
                     }
                 }
 
-                obsManagerLogFolderPath = Path.Combine(logFolder, "ObserverManager");
+                var obsManagerLogFolderPath = Path.Combine(logFolder, "ObserverManager");
                 obsManagerLogFilePath = Path.Combine(obsManagerLogFolderPath, "ObserverManager.log");
             }
 
@@ -221,36 +220,36 @@ namespace FabricObserverWeb
             {
                 var node = fabricClient.QueryManager.GetNodeListAsync(name).Result;
 
-                if (node.Count > 0)
+                if (node.Count <= 0)
                 {
-                    var addr = node[0].IpAddressOrFQDN;
-
-                    // Only use this API over SSL, but not in LRC.
-                    if (!addr.Contains("http://"))
-                    {
-                        addr = "http://" + addr;
-                    }
-
-                    string fqdn = "?fqdn=" + Request.Host;
-                    var req = WebRequest.Create(addr + ":5000/api/ObserverManager" + fqdn);
-                    req.Credentials = CredentialCache.DefaultCredentials;
-                    var response = (HttpWebResponse)req.GetResponse();
-                    Stream dataStream = response.GetResponseStream();
-
-                    // Open the stream using a StreamReader for easy access.
-                    StreamReader reader = new StreamReader(dataStream);
-                    string responseFromServer = reader.ReadToEnd();
-                    var ret = responseFromServer;
-
-                    // Cleanup the streams and the response.
-                    reader.Close();
-                    dataStream.Close();
-                    response.Close();
-
-                    return ret;
+                    return "no node found with that name.";
                 }
 
-                return "no node found with that name.";
+                var addr = node[0].IpAddressOrFQDN;
+
+                // Only use this API over SSL, but not in LRC.
+                if (!addr.Contains("http://"))
+                {
+                    addr = "http://" + addr;
+                }
+
+                string fqdn = "?fqdn=" + Request.Host;
+                var req = WebRequest.Create(addr + ":5000/api/ObserverManager" + fqdn);
+                req.Credentials = CredentialCache.DefaultCredentials;
+                var response = (HttpWebResponse)req.GetResponse();
+                Stream dataStream = response.GetResponseStream();
+
+                // Open the stream using a StreamReader for easy access.
+                StreamReader reader = new StreamReader(dataStream ?? throw new InvalidOperationException("Get: dataStream is null."));
+                string responseFromServer = reader.ReadToEnd();
+                var ret = responseFromServer;
+
+                // Cleanup the streams and the response.
+                reader.Close();
+                dataStream.Close();
+                response.Close();
+
+                return ret;
             }
             catch (Exception e)
             {

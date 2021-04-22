@@ -11,10 +11,6 @@ namespace FabricObserver.Observers.Utilities
 {
     public abstract class CpuUtilizationProvider : IDisposable
     {
-        protected CpuUtilizationProvider()
-        {
-        }
-
         public abstract Task<float> NextValueAsync();
 
         public void Dispose()
@@ -28,10 +24,8 @@ namespace FabricObserver.Observers.Utilities
             {
                 return new WindowsCpuUtilizationProvider();
             }
-            else
-            {
-                return new LinuxCpuUtilizationProvider();
-            }
+
+            return new LinuxCpuUtilizationProvider();
         }
 
         protected abstract void Dispose(bool disposing);

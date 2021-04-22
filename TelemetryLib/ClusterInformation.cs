@@ -48,7 +48,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
 
                 using (var sreader = new StringReader(clusterManifest))
                 {
-                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null }))
+                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
                     {
                         clusterManifestXdoc?.Load(xreader);
 
@@ -113,10 +113,8 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             {
                 return GetTenantIdWindows();
             }
-            else
-            {
-                return GetTenantIdLinux();
-            }
+
+            return GetTenantIdLinux();
         }
 
         private static string GetTenantIdLinux()
@@ -133,7 +131,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
 
             var xmlDoc = new XmlDocument { XmlResolver = null };
 
-            using (var xmlReader = XmlReader.Create(TenantIdFile, new XmlReaderSettings() { XmlResolver = null }))
+            using (var xmlReader = XmlReader.Create(TenantIdFile, new XmlReaderSettings { XmlResolver = null }))
             {
                 xmlDoc.Load(xmlReader);
             }

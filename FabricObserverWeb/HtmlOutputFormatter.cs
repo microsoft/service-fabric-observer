@@ -3,10 +3,10 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using Microsoft.AspNetCore.Mvc.Formatters;
+
 namespace FabricObserverWeb
 {
-    using Microsoft.AspNetCore.Mvc.Formatters;
-
     // Added to support HTML output to callers.
     public class HtmlOutputFormatter : StringOutputFormatter
     {

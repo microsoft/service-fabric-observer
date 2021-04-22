@@ -278,7 +278,7 @@ namespace FabricObserver.Observers
                             Math.Round(FirewallData.AverageDataValue));
                     }
 
-                    // Windows does not have a corresponding FD/FH limit which can be set by a user, nor does Windows have a reliable way of determing the total number of open handles in the system.
+                    // Windows does not have a corresponding FD/FH limit which can be set by a user, nor does Windows have a reliable way of determining the total number of open handles in the system.
                     // As such, it does not make sense to monitor system-wide, percent usage of ALL available file handles on Windows. This feature of NodeObserver is therefore Linux-only.
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
@@ -333,7 +333,7 @@ namespace FabricObserver.Observers
                 // Memory - Percent
                 if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                 {
-                    ProcessResourceDataReportHealth<double>(
+                    ProcessResourceDataReportHealth(
                         MemDataPercentUsed,
                         MemoryErrorLimitPercent,
                         MemoryWarningLimitPercent,
@@ -589,28 +589,33 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // Linux FDs.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            /* Linux FDs */
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                var warnFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesWarningLimitPct);
+                return;
+            }
 
-                if (!string.IsNullOrEmpty(warnFileHandlesPercentUsed) && double.TryParse(warnFileHandlesPercentUsed, out double fdsPercentUsedWarningThreshold))
+            var warnFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesWarningLimitPct);
+
+            if (!string.IsNullOrEmpty(warnFileHandlesPercentUsed) && double.TryParse(warnFileHandlesPercentUsed, out double fdsPercentUsedWarningThreshold))
+            {
+                if (fdsPercentUsedWarningThreshold > 0 && fdsPercentUsedWarningThreshold <= 100)
                 {
-                    if (fdsPercentUsedWarningThreshold > 0 && fdsPercentUsedWarningThreshold <= 100)
-                    {
-                        LinuxFileHandlesWarningPercent = fdsPercentUsedWarningThreshold;
-                    }
+                    LinuxFileHandlesWarningPercent = fdsPercentUsedWarningThreshold;
                 }
+            }
 
-                var warnFileHandlesCount = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesWarningTotalAllocated);
+            var warnFileHandlesCount = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesWarningTotalAllocated);
 
-                if (!string.IsNullOrEmpty(warnFileHandlesCount) && int.TryParse(warnFileHandlesCount, out int fdsWarningCountThreshold))
-                {
-                    if (fdsWarningCountThreshold > 0)
-                    {
-                        LinuxFileHandlesWarningTotalAllocated = fdsWarningCountThreshold;
-                    }
-                }
+            if (string.IsNullOrEmpty(warnFileHandlesCount) || !int.TryParse(warnFileHandlesCount, out int fdsWarningCountThreshold))
+            {
+                return;
+            }
+
+            if (fdsWarningCountThreshold > 0)
+            {
+                LinuxFileHandlesWarningTotalAllocated = fdsWarningCountThreshold;
             }
         }
 
@@ -720,7 +725,7 @@ namespace FabricObserver.Observers
                         MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
                     }
 
-                    await Task.Delay(250).ConfigureAwait(false);
+                    await Task.Delay(250, Token).ConfigureAwait(false);
                 }
 
                 timer.Stop();

@@ -24,7 +24,7 @@ namespace FabricObserver.Observers.Utilities
         private const int Retries = 5;
 
         // This needs to be static to prevent internal EventSource instantiation errors.
-        private static EventSource etwLogger = null;
+        private static EventSource etwLogger;
 
         // Text file logger for observers - info/warn/error.
         private ILogger OLogger
@@ -84,13 +84,14 @@ namespace FabricObserver.Observers.Utilities
         public int MaxArchiveFileLifetimeDays
         {
             get; set;
-        } = 0;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.
         /// </summary>
         /// <param name="observerName">Name of observer.</param>
         /// <param name="logFolderBasePath">Base folder path.</param>
+        /// <param name="maxArchiveFileLifetimeDays">Optional: Maximum number of days to keep archive files on disk.</param>
         public Logger(string observerName, string logFolderBasePath = null, int maxArchiveFileLifetimeDays = 7)
         {
             FolderName = observerName;
@@ -197,7 +198,7 @@ namespace FabricObserver.Observers.Utilities
                     File.Delete(FilePath);
                     return true;
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException || e is PathTooLongException)
+                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
                 {
 
                 }

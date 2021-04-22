@@ -98,13 +98,9 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public TelemetryData(
-            FabricClient fabricClient,
-            CancellationToken cancellationToken)
+        public TelemetryData(FabricClient fabricClient, CancellationToken cancellationToken)
         {
-            var (clusterId, _, _) =
-              ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
-
+            var (clusterId, _, _) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
             ClusterId = clusterId;
         }
     }

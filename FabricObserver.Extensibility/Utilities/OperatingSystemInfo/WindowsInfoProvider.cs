@@ -283,7 +283,6 @@ namespace FabricObserver.Observers.Utilities
             {
                 List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
                 string s = string.Empty;
-                int count = -1;
 
                 if (processId > 0)
                 {
@@ -324,7 +323,7 @@ namespace FabricObserver.Observers.Utilities
                         {
                             /* A pid could be a subset of a port number, so make sure that we only match pid. */
 
-                            List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                            List<string> stats = portRow.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
                             if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
                             {
@@ -336,22 +335,26 @@ namespace FabricObserver.Observers.Utilities
                                 continue;
                             }
 
-                            if (!tempLocalPortData.Any(t => t.Pid == processId && t.Port == port))
+                            if (tempLocalPortData.Any(t => t.Pid == processId && t.Port == port))
                             {
-                                if (port >= lowPortRange && port <= highPortRange)
-                                {
-                                    tempLocalPortData.Add((processId, port));
-                                }
+                                continue;
+                            }
+
+                            if (port >= lowPortRange && port <= highPortRange)
+                            {
+                                tempLocalPortData.Add((processId, port));
                             }
                         }
                         else
                         {
-                            if (!tempLocalPortData.Any(t => t.Port == port))
+                            if (tempLocalPortData.Any(t => t.Port == port))
                             {
-                                if (port >= lowPortRange && port <= highPortRange)
-                                {
-                                    tempLocalPortData.Add((processId, port));
-                                }
+                                continue;
+                            }
+
+                            if (port >= lowPortRange && port <= highPortRange)
+                            {
+                                tempLocalPortData.Add((processId, port));
                             }
                         }
                     }
@@ -359,19 +362,19 @@ namespace FabricObserver.Observers.Utilities
                     p.WaitForExit();
                     int exitStatus = p.ExitCode;
                     stdOutput.Close();
-                    count = tempLocalPortData.Count;
+                    var count = tempLocalPortData.Count;
                     tempLocalPortData.Clear();
 
-                    if (exitStatus != 0)
+                    if (exitStatus == 0)
                     {
-                        string msg = $"netstat failure: {exitStatus}";
-                        Logger.LogWarning(msg);
-
-                        // this will be handled by Retry.Do().
-                        throw new Exception(msg);
+                        return count;
                     }
 
-                    return count;
+                    string msg = $"netstat failure: {exitStatus}";
+                    Logger.LogWarning(msg);
+
+                    // this will be handled by Retry.Do().
+                    throw new Exception(msg);
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
@@ -390,7 +393,6 @@ namespace FabricObserver.Observers.Utilities
                 string protoParam = "-p " + TcpProtocol;
                 string findStrProc = string.Empty;
                 List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
-                int output;
 
                 if (processId > 0)
                 {
@@ -428,7 +430,7 @@ namespace FabricObserver.Observers.Utilities
                         {
                             /* A pid could be a subset of a port number, so make sure that we only match pid. */
 
-                            List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                            List<string> stats = portRow.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
                             if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
                             {
@@ -447,29 +449,29 @@ namespace FabricObserver.Observers.Utilities
                         }
                         else
                         {
-                            if (!tempLocalPortData.Any(t => t.Port == localPort))
+                            if (tempLocalPortData.All(t => t.Port != localPort))
                             {
                                 tempLocalPortData.Add((processId, localPort));
                             }
                         }
                     }
 
-                    output = tempLocalPortData.Count;
+                    var output = tempLocalPortData.Count;
                     p.WaitForExit();
                     int exitStatus = p.ExitCode;
                     stdOutput.Close();
                     tempLocalPortData.Clear();
 
-                    if (exitStatus != 0)
+                    if (exitStatus == 0)
                     {
-                        string msg = $"netstat failure: {exitStatus}";
-                        Logger.LogWarning(msg);
-
-                        // this will be handled by Retry.Do().
-                        throw new Exception(msg);
+                        return output;
                     }
-                    
-                    return output;
+
+                    string msg = $"netstat failure: {exitStatus}";
+                    Logger.LogWarning(msg);
+
+                    // this will be handled by Retry.Do().
+                    throw new Exception(msg);
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
@@ -488,7 +490,7 @@ namespace FabricObserver.Observers.Utilities
                 return -1;
             }
 
-            List<string> stats = portRow.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            List<string> stats = portRow.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
             if (stats.Count == 0)
             {

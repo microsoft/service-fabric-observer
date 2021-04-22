@@ -16,8 +16,7 @@ namespace FabricObserver.Observers.Utilities
     public abstract class ServiceFabricConfiguration
     {
         private static ServiceFabricConfiguration instance;
-
-        private static object lockObj = new object();
+        private static readonly object lockObj = new object();
 
         public static ServiceFabricConfiguration Instance
         {

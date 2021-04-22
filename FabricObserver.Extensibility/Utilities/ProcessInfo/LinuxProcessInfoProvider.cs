@@ -16,11 +16,9 @@ namespace FabricObserver.Observers.Utilities
             {
                 return (status.VmRSS - status.RsSFile) / 1048576f;
             }
-            else
-            {
-                // Could not read from /proc/[pid]/status - it is possible that process already exited.
-                return 0f;
-            }
+
+            // Could not read from /proc/[pid]/status - it is possible that process already exited.
+            return 0f;
         }
 
         public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context)

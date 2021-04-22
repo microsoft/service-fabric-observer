@@ -9,7 +9,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsServiceFabricConfiguration : ServiceFabricConfiguration
     {
-        private const string SurviceFabricWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
+        private const string ServiceFabricWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
 
         public override string FabricVersion => GetString(nameof(FabricVersion));
 
@@ -17,12 +17,12 @@ namespace FabricObserver.Observers.Utilities
 
         public override string GetString(string name)
         {
-            return (string)Registry.GetValue(SurviceFabricWindowsRegistryPath, name, null);
+            return (string)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, null);
         }
 
         public override int GetInt32(string name)
         {
-            return (int)Registry.GetValue(SurviceFabricWindowsRegistryPath, name, 0);
+            return (int)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, 0);
         }
     }
 }

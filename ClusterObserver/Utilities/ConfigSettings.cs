@@ -53,6 +53,11 @@ namespace ClusterObserver.Utilities
             get; set;
         } = TimeSpan.FromHours(2.0);
 
+        public bool MonitorRepairJobStatus
+        {
+            get; set;
+        }
+
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
             Settings = settings;
@@ -61,7 +66,7 @@ namespace ClusterObserver.Utilities
             UpdateConfigSettings();
         }
 
-        public void UpdateConfigSettings(ConfigurationSettings settings = null)
+        private void UpdateConfigSettings(ConfigurationSettings settings = null)
         {
             if (settings != null)
             {
@@ -120,6 +125,15 @@ namespace ClusterObserver.Utilities
             {
                 MaxTimeNodeStatusNotOk = maxTimeNodeStatusNotOk;
             }
+
+            // Monitor repair jobs
+            if (bool.TryParse(
+                GetConfigSettingValue(
+                    ObserverConstants.MonitorRepairJobsConfigurationSetting),
+                    out bool monitorRepairJobs))
+            {
+                MonitorRepairJobStatus = monitorRepairJobs;
+            }
         }
 
         private string GetConfigSettingValue(string parameterName)
@@ -145,12 +159,7 @@ namespace ClusterObserver.Utilities
                     parameter = Section.Parameters[parameterName];
                 }
 
-                if (parameter == null)
-                {
-                    return null;
-                }
-
-                return parameter.Value;
+                return parameter?.Value;
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
             {

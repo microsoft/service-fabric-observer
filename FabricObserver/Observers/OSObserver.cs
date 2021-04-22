@@ -99,6 +99,7 @@ namespace FabricObserver.Observers
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        ReportType = HealthReportType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -144,6 +145,7 @@ namespace FabricObserver.Observers
                         HealthMessage = healthMessage,
                         State = HealthState.Ok,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        ReportType = HealthReportType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -182,7 +184,7 @@ namespace FabricObserver.Observers
                     var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "SysInfo.txt");
 
                     // This file is used by the web application (log reader.).
-                    if (!ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow.ToString("M/d/yyyy HH:mm:ss")} UTC<br/>{osReport}"))
+                    if (!ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow:M/d/yyyy HH:mm:ss} UTC<br/>{osReport}"))
                     {
                         HealthReporter.ReportFabricObserverServiceHealth(
                             FabricServiceContext.ServiceName.OriginalString,
@@ -199,6 +201,7 @@ namespace FabricObserver.Observers
                     State = HealthState.Ok,
                     NodeName = NodeName,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    ReportType = HealthReportType.Node
                 };
 
                 HealthReporter.ReportHealthToServiceFabric(report);
@@ -208,10 +211,10 @@ namespace FabricObserver.Observers
                 {
                     string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
-                        $"please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\" target=\"blank\">" +
-                        $"enabling VMSS automatic OS image upgrades</a> to prevent unexpected VM reboots. " +
-                        $"For Bronze durability clusters, please consider deploying the " +
-                        $"<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\" target=\"blank\">Patch Orchestration Service</a>.";
+                        "please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\" target=\"blank\">" +
+                        "enabling VMSS automatic OS image upgrades</a> to prevent unexpected VM reboots. " +
+                        "For Bronze durability clusters, please consider deploying the " +
+                        "<a href=\"https://docs.microsoft.com/azure/service-fabric/service-fabric-patch-orchestration-application\" target=\"blank\">Patch Orchestration Service</a>.";
 
                     string auServiceEnabledMessage = $"Windows Update Automatic Download is enabled.{linkText}";
 
@@ -223,6 +226,7 @@ namespace FabricObserver.Observers
                         State = HealthState.Warning,
                         NodeName = NodeName,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        ReportType = HealthReportType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(report);
@@ -261,7 +265,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
                     FabricServiceContext.ServiceName.OriginalString,
@@ -331,7 +335,7 @@ namespace FabricObserver.Observers
 
                 var resultsOrdered = results.Cast<ManagementObject>()
                                             .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
-                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString()));
+                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty));
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";
@@ -341,7 +345,7 @@ namespace FabricObserver.Observers
                     token.ThrowIfCancellationRequested();
 
                     _ = generateUrl ? sb.AppendLine(
-                        $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower()?.Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   {obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
+                        $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower().Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   {obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
                 }
 
                 ret = sb.ToString().Trim();
@@ -414,9 +418,9 @@ namespace FabricObserver.Observers
                 string osEphemeralPortRange = string.Empty;
                 string fabricAppPortRange = string.Empty;
 
-                string clusterManifestXml = !string.IsNullOrWhiteSpace(ClusterManifestPath) ? File.ReadAllText(
-                        ClusterManifestPath) : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                            AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
+                string clusterManifestXml = !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(
+                                                                ClusterManifestPath, token) : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
+                                                                                                AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
 
                 (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(
@@ -519,7 +523,7 @@ namespace FabricObserver.Observers
                     {
                         string systemDrv = "Data";
 
-                        if (string.Equals(Environment.SystemDirectory.Substring(0, 1), driveName.Substring(0, 1), StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(Environment.SystemDirectory[..1], driveName[..1], StringComparison.OrdinalIgnoreCase))
                         {
                             systemDrv = "System";
                         }
@@ -549,7 +553,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Dynamic info qualifier (*)
-                _ = sb.AppendLine($"\n* Dynamic data.");
+                _ = sb.AppendLine("\n* Dynamic data.");
 
                 osReport = sb.ToString();
 

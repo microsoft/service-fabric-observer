@@ -13,11 +13,7 @@ namespace FabricObserver.Observers.Utilities
     public abstract class OperatingSystemInfoProvider
     {
         private static OperatingSystemInfoProvider instance;
-        private static object lockObj = new object();
-
-        protected OperatingSystemInfoProvider()
-        {
-        }
+        private static readonly object lockObj = new object();
 
         public static OperatingSystemInfoProvider Instance
         {

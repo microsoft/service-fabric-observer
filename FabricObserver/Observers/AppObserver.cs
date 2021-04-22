@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
+using ConfigSettings = FabricObserver.Observers.MachineInfoModel.ConfigSettings;
 
 namespace FabricObserver.Observers
 {
@@ -41,7 +42,7 @@ namespace FabricObserver.Observers
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
         private readonly List<ApplicationInfo> deployedTargetList;
-        private readonly MachineInfoModel.ConfigSettings configSettings;
+        private readonly ConfigSettings configSettings;
         private string fileName;
 
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
@@ -60,7 +61,7 @@ namespace FabricObserver.Observers
         public AppObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            configSettings = new MachineInfoModel.ConfigSettings(FabricServiceContext);
+            configSettings = new ConfigSettings(FabricServiceContext);
             ConfigPackagePath = configSettings.ConfigPackagePath;
             userTargetList = new List<ApplicationInfo>();
             deployedTargetList = new List<ApplicationInfo>();
@@ -302,10 +303,7 @@ namespace FabricObserver.Observers
         // be up to date across observer loop iterations.
         private async Task<bool> InitializeAsync()
         {
-            if (ReplicaOrInstanceList == null)
-            {
-                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
-            }
+            ReplicaOrInstanceList ??= new List<ReplicaOrInstanceMonitoringInfo>();
             
             configSettings.Initialize(
                             FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
@@ -339,13 +337,9 @@ namespace FabricObserver.Observers
                 deployedTargetList.Clear();
             }
 
-            using Stream stream = new FileStream(
-                                        appObserverConfigFileName,
-                                        FileMode.Open,
-                                        FileAccess.Read,
-                                        FileShare.Read);
+            await using Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-            if (stream.Length > 0 && JsonHelper.IsJson<List<ApplicationInfo>>(File.ReadAllText(appObserverConfigFileName)))
+            if (stream.Length > 0 && JsonHelper.IsJson<List<ApplicationInfo>>(await File.ReadAllTextAsync(appObserverConfigFileName)))
             {
                 userTargetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
             }
@@ -412,12 +406,13 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    // App filtering: AppExludeList, AppIncludeList. This is only useful when you are observing All/* applications for a range of thresholds.
+                    // App filtering: AppExcludeList, AppIncludeList. This is only useful when you are observing All/* applications for a range of thresholds.
                     if (!string.IsNullOrWhiteSpace(application.AppExcludeList) && application.AppExcludeList.Contains(app.ApplicationName.OriginalString))
                     {
                         continue;
                     }
-                    else if (!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString))
+
+                    if (!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString))
                     {
                         continue;
                     }
@@ -453,7 +448,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        ApplicationInfo appConfig = new ApplicationInfo
+                        var appConfig = new ApplicationInfo
                         {
                             TargetApp = app.ApplicationName.OriginalString,
                             TargetAppType = null,
@@ -488,31 +483,31 @@ namespace FabricObserver.Observers
 
             int settingsFail = 0;
 
-            for (int i = 0; i < userTargetList.Count; i++)
+            foreach (var application in userTargetList)
             {
                 Token.ThrowIfCancellationRequested();
 
                 Uri appUri = null;
-                ApplicationInfo application = userTargetList[i];
 
                 if (string.IsNullOrWhiteSpace(application.TargetApp) && string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
-                                    FabricServiceContext.ServiceName.ToString(),
-                                    ObserverName,
-                                    HealthState.Warning,
-                                    $"InitializeAsync() | {application.TargetApp}: Required setting, target, is not set.");
+                        FabricServiceContext.ServiceName.ToString(),
+                        ObserverName,
+                        HealthState.Warning,
+                        $"InitializeAsync() | {application.TargetApp}: Required setting, target, is not set.");
 
                     settingsFail++;
                     continue;
                 }
-                else if (!string.IsNullOrWhiteSpace(application.TargetApp))
+                
+                if (!string.IsNullOrWhiteSpace(application.TargetApp))
                 {
                     try
                     {
                         if (!application.TargetApp.StartsWith("fabric:/"))
                         {
-                            application.TargetApp = application.TargetApp.Insert(0, $"fabric:/");
+                            application.TargetApp = application.TargetApp.Insert(0, "fabric:/");
                         }
 
                         if (application.TargetApp.Contains(" "))
@@ -525,10 +520,10 @@ namespace FabricObserver.Observers
                     catch (Exception e) when (e is ArgumentException || e is UriFormatException)
                     {
                         HealthReporter.ReportFabricObserverServiceHealth(
-                                    FabricServiceContext.ServiceName.ToString(),
-                                    ObserverName,
-                                    HealthState.Warning,
-                                    $"InitializeAsync() | {application.TargetApp}: Invalid TargetApp value. Value must be a valid Uri string of format \"fabric:/MyApp\", for example.");
+                            FabricServiceContext.ServiceName.ToString(),
+                            ObserverName,
+                            HealthState.Warning,
+                            $"InitializeAsync() | {application.TargetApp}: Invalid TargetApp value. Value must be a valid Uri string of format \"fabric:/MyApp\", for example.");
 
                         settingsFail++;
                         continue;
@@ -570,7 +565,6 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
                 {
-                    continue;
                 }
             }
 
@@ -590,7 +584,7 @@ namespace FabricObserver.Observers
                 var cpuUsage = new CpuUsage();
                 bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false;
                 var application = deployedTargetList?.Find(
-                                    app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString?.ToLower() ||
+                                    app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString.ToLower() ||
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
                                     app.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
                 
@@ -760,11 +754,11 @@ namespace FabricObserver.Observers
                         if (checkMemPct)
                         {
                             // Memory (percent in use (total)).
-                            var (TotalMemory, PercentInUse) = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
+                            var (TotalMemory, _) = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
 
                             if (TotalMemory > 0)
                             {
-                                double usedPct = Math.Round(((double)(processMem * 100)) / (TotalMemory * 1024), 2);
+                                double usedPct = Math.Round((double)(processMem * 100) / (TotalMemory * 1024), 2);
                                 AllAppMemDataPercent.FirstOrDefault(x => x.Id == id).Data.Add(Math.Round(usedPct, 1));
                             }
                         }
@@ -793,7 +787,6 @@ namespace FabricObserver.Observers
                         $"MonitorDeployedAppsAsync: failed to find current service process or target process is running at a higher privilege than FO for {repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
                         LogLevel.Warning);
 #endif
-                    continue;
                 }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
@@ -815,7 +808,7 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            List<DeployedApplication> deployedApps = new List<DeployedApplication>();
+            var deployedApps = new List<DeployedApplication>();
 
             if (applicationNameFilter != null)
             {
@@ -861,10 +854,8 @@ namespace FabricObserver.Observers
                     deployedApps.AddRange(appList.ToList());
                 }
 
-                deployedApps = deployedApps.Where(a => a.ApplicationTypeName == applicationType)?.ToList();
+                deployedApps = deployedApps.Where(a => a.ApplicationTypeName == applicationType).ToList();
             }
-
-            var currentReplicaInfoList = new List<ReplicaOrInstanceMonitoringInfo>();
 
             foreach (var deployedApp in deployedApps)
             {
@@ -902,12 +893,9 @@ namespace FabricObserver.Observers
                 ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
                 deployedTargetList.AddRange(userTargetList.Where(
-                                            x =>
-                                            {
-                                                return (x.TargetApp != null || x.TargetAppType != null)
-                                                        && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                        || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower());
-                                            }));
+                                            x => (x.TargetApp != null || x.TargetAppType != null)
+                                                 && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
+                                                     || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())));
             }
         }
 
@@ -936,7 +924,7 @@ namespace FabricObserver.Observers
 
         private void SetInstanceOrReplicaMonitoringList(
                         Uri appName,
-                        List<string> filterList,
+                        IReadOnlyCollection<string> filterList,
                         ServiceFilterType filterType,
                         string appTypeName,
                         DeployedServiceReplicaList deployedReplicaList,
@@ -948,53 +936,58 @@ namespace FabricObserver.Observers
 
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
-                if (deployedReplica is DeployedStatefulServiceReplica statefulReplica && statefulReplica.ReplicaRole == ReplicaRole.Primary)
+                switch (deployedReplica)
                 {
-                    if (filterList != null && filterType != ServiceFilterType.None)
+                    case DeployedStatefulServiceReplica {ReplicaRole: ReplicaRole.Primary} statefulReplica:
                     {
-                        bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                        switch (filterType)
+                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            case ServiceFilterType.Include when !isInFilterList:
-                            case ServiceFilterType.Exclude when isInFilterList:
-                                continue;
+                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                            switch (filterType)
+                            {
+                                case ServiceFilterType.Include when !isInFilterList:
+                                case ServiceFilterType.Exclude when isInFilterList:
+                                    continue;
+                            }
                         }
-                    }
 
-                    replicaInfo = new ReplicaOrInstanceMonitoringInfo()
-                    {
-                        ApplicationName = appName,
-                        ApplicationTypeName = appTypeName,
-                        HostProcessId = statefulReplica.HostProcessId,
-                        ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                        PartitionId = statefulReplica.Partitionid,
-                        ServiceName = statefulReplica.ServiceName,
-                    };
-                }
-                else if (deployedReplica is DeployedStatelessServiceInstance statelessInstance)
-                {
-                    if (filterList != null && filterType != ServiceFilterType.None)
-                    {
-                        bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                        switch (filterType)
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
-                            case ServiceFilterType.Include when !isInFilterList:
-                            case ServiceFilterType.Exclude when isInFilterList:
-                                continue;
-                        }
+                            ApplicationName = appName,
+                            ApplicationTypeName = appTypeName,
+                            HostProcessId = statefulReplica.HostProcessId,
+                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                            PartitionId = statefulReplica.Partitionid,
+                            ServiceName = statefulReplica.ServiceName,
+                        };
+                        break;
                     }
-
-                    replicaInfo = new ReplicaOrInstanceMonitoringInfo()
+                    case DeployedStatelessServiceInstance statelessInstance:
                     {
-                        ApplicationName = appName,
-                        ApplicationTypeName = appTypeName,
-                        HostProcessId = statelessInstance.HostProcessId,
-                        ReplicaOrInstanceId = statelessInstance.InstanceId,
-                        PartitionId = statelessInstance.Partitionid,
-                        ServiceName = statelessInstance.ServiceName,
-                    };
+                        if (filterList != null && filterType != ServiceFilterType.None)
+                        {
+                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                            switch (filterType)
+                            {
+                                case ServiceFilterType.Include when !isInFilterList:
+                                case ServiceFilterType.Exclude when isInFilterList:
+                                    continue;
+                            }
+                        }
+
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                        {
+                            ApplicationName = appName,
+                            ApplicationTypeName = appTypeName,
+                            HostProcessId = statelessInstance.HostProcessId,
+                            ReplicaOrInstanceId = statelessInstance.InstanceId,
+                            PartitionId = statelessInstance.Partitionid,
+                            ServiceName = statelessInstance.ServiceName,
+                        };
+                        break;
+                    }
                 }
 
                 if (replicaInfo != null)
@@ -1019,14 +1012,14 @@ namespace FabricObserver.Observers
                     appName,
                     ErrorWarningProperty.TotalCpuTime,
                     "Average",
-                    Math.Round((double)AllAppCpuData.FirstOrDefault(x => x.Id == appName).AverageDataValue));
+                    Math.Round(AllAppCpuData.Find(x => x.Id == appName).AverageDataValue));
 
                 CsvFileLogger.LogData(
                     fileName,
                     appName,
                     ErrorWarningProperty.TotalCpuTime,
                     "Peak",
-                    Math.Round(Convert.ToDouble(AllAppCpuData.FirstOrDefault(x => x.Id == appName).MaxDataValue)));
+                    Math.Round(AllAppCpuData.FirstOrDefault(x => x.Id == appName).MaxDataValue));
             }
 
             // Memory - MB

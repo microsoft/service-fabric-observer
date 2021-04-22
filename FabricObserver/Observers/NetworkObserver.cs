@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using ConfigSettings = FabricObserver.Observers.MachineInfoModel.ConfigSettings;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -65,7 +66,7 @@ namespace FabricObserver.Observers
         private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
         private readonly Dictionary<string, bool> connEndpointTestResults = new Dictionary<string, bool>();
         private readonly Stopwatch stopwatch;
-        private readonly MachineInfoModel.ConfigSettings configSettings;
+        private readonly ConfigSettings configSettings;
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;
         private CancellationToken cancellationToken;
@@ -77,7 +78,7 @@ namespace FabricObserver.Observers
         public NetworkObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            configSettings = new MachineInfoModel.ConfigSettings(FabricServiceContext);
+            configSettings = new ConfigSettings(FabricServiceContext);
             dataPackagePath = configSettings.ConfigPackagePath;
             stopwatch = new Stopwatch();
         }
@@ -131,7 +132,7 @@ namespace FabricObserver.Observers
         {
             var timeToLiveWarning = GetHealthReportTimeToLive();
 
-              // Report on connection state.
+            // Report on connection state.
             foreach (var config in userConfig)
             {
                 token.ThrowIfCancellationRequested();
@@ -140,15 +141,13 @@ namespace FabricObserver.Observers
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var connState = conn;
-
-                    if (!connState.Connected)
+                    if (!conn.Connected)
                     {
                         healthState = HealthState.Warning;
-                        var healthMessage = $"Outbound Internet connection failure detected for endpoint {connState?.HostName}";
+                        var healthMessage = $"Outbound Internet connection failure detected for endpoint {conn.HostName}";
 
                         // Send Health Telemetry (perhaps it signals an Alert in AppInsights or LogAnalytics).
-                        // This will also be serialied into the health event (Desf.
+                        // This will also be serialized into the health event Description.
                         var telemetryData = new TelemetryData(FabricClientInstance, token)
                         {
                             ApplicationName = conn.TargetApp,
@@ -180,7 +179,7 @@ namespace FabricObserver.Observers
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
                             ReportType = HealthReportType.Application,
-                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {connState?.HostName}",
+                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {conn.HostName}",
                         };
 
                         // Send health report Warning and log event locally.
@@ -209,13 +208,13 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        if (connState.Health != HealthState.Warning || connState.Health != HealthState.Error)
+                        if (conn.Health != HealthState.Warning || conn.Health != HealthState.Error)
                         {
                             continue;
                         }
 
                         healthState = HealthState.Ok;
-                        var healthMessage = $"Outbound Internet connection successful for {connState?.HostName} from node {NodeName}.";
+                        var healthMessage = $"Outbound Internet connection successful for {conn.HostName} from node {NodeName}.";
 
                         // Clear existing Health Warning.
                         var report = new HealthReport
@@ -373,33 +372,28 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            if (userConfig.Count == 0)
+            if (userConfig.Count != 0)
             {
-                using (Stream stream = new FileStream(networkObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    var configs = JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream);
-
-                    foreach (var netConfig in configs)
-                    {
-                        var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, new Uri(netConfig.TargetApp)).ConfigureAwait(false);
-
-                        if (deployedApps == null || deployedApps.Count < 1)
-                        {
-                            continue;
-                        }
-
-                        userConfig.Add(netConfig);
-                    }
-                }
-
-                // No target apps, as specified in the NetworkObserver configuration file, are deployed.
-                if (userConfig.Count == 0)
-                {
-                    return false;
-                }
+                return true;
             }
 
-            return true;
+            // Get the user config settings and fill userConfig list.
+            await using Stream stream = new FileStream(networkObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var configs = JsonHelper.ReadFromJsonStream<NetworkObserverConfig[]>(stream);
+
+            foreach (var netConfig in configs)
+            {
+                var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, new Uri(netConfig.TargetApp)).ConfigureAwait(false);
+
+                if (deployedApps == null || deployedApps.Count < 1)
+                {
+                    continue;
+                }
+
+                userConfig.Add(netConfig);
+            }
+
+            return userConfig.Count != 0;
         }
 
         private void InternetConnectionStateIsConnected()
@@ -442,22 +436,20 @@ namespace FabricObserver.Observers
                     {
                         // Service REST endpoints, CosmosDB REST endpoint, etc.
                         // Http protocol means any enpoint/port pair that is addressable over HTTP/s.
-                        // E.g., REST enpoints, etc.
+                        // E.g., REST endpoints, etc.
                         try
                         {
                             cancellationToken.ThrowIfCancellationRequested();
 
                             ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
-                            string prefix =
-                                endpoint.Port == 443 ? "https://" : "http://";
+                            string prefix = endpoint.Port == 443 ? "https://" : "http://";
 
                             if (endpoint.HostName.Contains("://"))
                             {
                                 prefix = string.Empty;
                             }
 
-                            var request = (HttpWebRequest)WebRequest.Create(
-                                new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}"));
+                            var request = (HttpWebRequest)WebRequest.Create(new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}"));
 
                             request.AuthenticationLevel = AuthenticationLevel.MutualAuthRequired;
                             request.ImpersonationLevel = TokenImpersonationLevel.Impersonation;
@@ -469,14 +461,14 @@ namespace FabricObserver.Observers
 
                             // The target server responded with something.
                             // It doesn't really matter what it "said".
-                            if (status == HttpStatusCode.OK || response?.Headers?.Count > 0)
+                            if (status == HttpStatusCode.OK || response.Headers?.Count > 0)
                             {
                                 passed = true;
                             }
                         }
                         catch (IOException ie)
                         {
-                            if (ie.InnerException != null && ie.InnerException is ProtocolViolationException)
+                            if (ie.InnerException is ProtocolViolationException)
                             {
                                 passed = true;
                             }
@@ -504,7 +496,7 @@ namespace FabricObserver.Observers
                                 passed = true;
                             }
                         }
-                        catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                        catch (Exception e) when (!(e is OperationCanceledException))
                         {
                             HealthReporter.ReportFabricObserverServiceHealth(
                                             FabricServiceContext.ServiceName.OriginalString,
@@ -532,7 +524,7 @@ namespace FabricObserver.Observers
             TcpClient tcpClient = null;
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
 
-            // NetworkObserver only cares about remote endpoint/port *reachability*, nothing more.
+            // NetworkObserver only cares about remote endpoint/port *availability*, nothing more.
             // This test simply tries to connect to a remote endpoint using TCP sockets. It will attempt to
             // send a byte of data to the remote connection. If it fails, it will retry 5 times.
             try
@@ -558,10 +550,8 @@ namespace FabricObserver.Observers
             }
             catch (IOException ie)
             {
-                if (ie.InnerException != null && ie.InnerException is SocketException)
+                if (ie.InnerException is SocketException se)
                 {
-                    var se = ie.InnerException as SocketException;
-
                     if (se.SocketErrorCode == SocketError.ConnectionRefused || se.SocketErrorCode == SocketError.ConnectionReset)
                     {
                         if (tcpConnTestRetried <= MaxTcpConnTestRetries)
@@ -579,18 +569,20 @@ namespace FabricObserver.Observers
             }
             catch (SocketException se)
             {
-                if (se.SocketErrorCode == SocketError.ConnectionRefused || se.SocketErrorCode == SocketError.ConnectionReset)
+                if (se.SocketErrorCode != SocketError.ConnectionRefused && se.SocketErrorCode != SocketError.ConnectionReset)
                 {
-                    if (tcpConnTestRetried < MaxTcpConnTestRetries)
-                    {
-                        tcpConnTestRetried++;
-                        Thread.Sleep(1000);
-                        _ = TcpEndpointDoConnectionTest(hostName, port);
-                    }
-                    else
-                    {
-                        tcpConnTestRetried = 0;
-                    }
+                    return false;
+                }
+
+                if (tcpConnTestRetried < MaxTcpConnTestRetries)
+                {
+                    tcpConnTestRetried++;
+                    Thread.Sleep(1000);
+                    _ = TcpEndpointDoConnectionTest(hostName, port);
+                }
+                else
+                {
+                    tcpConnTestRetried = 0;
                 }
 
                 return false;
@@ -634,21 +626,26 @@ namespace FabricObserver.Observers
             }
             else
             {
-                if (!connectionStatus.Any(conn => conn.HostName == endpoint.HostName && conn.TargetApp == targetApp && conn.Health == HealthState.Warning))
+                if (connectionStatus.Any(
+                    conn =>
+                        conn.HostName == endpoint.HostName && conn.TargetApp == targetApp &&
+                        conn.Health == HealthState.Warning))
                 {
-                    connectionStatus.Add(
-                                    new ConnectionState
-                                    {
-                                        HostName = endpoint.HostName,
-                                        Connected = false,
-                                        Health = HealthState.Warning,
-                                        TargetApp = targetApp,
-                                    });
+                    return;
+                }
 
-                    if (!AppNames.Contains(targetApp))
+                connectionStatus.Add(
+                    new ConnectionState
                     {
-                        AppNames.Add(targetApp);
-                    }
+                        HostName = endpoint.HostName,
+                        Connected = false,
+                        Health = HealthState.Warning,
+                        TargetApp = targetApp,
+                    });
+
+                if (!AppNames.Contains(targetApp))
+                {
+                    AppNames.Add(targetApp);
                 }
             }
         }
