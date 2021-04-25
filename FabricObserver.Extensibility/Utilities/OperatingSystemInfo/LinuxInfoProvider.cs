@@ -106,7 +106,7 @@ namespace FabricObserver.Observers.Utilities
             return osInfo;
         }
 
-        public static int GetPortCount(int processId, Predicate<string> predicate, ServiceContext context = null)
+        private static int GetPortCount(int processId, Predicate<string> predicate, ServiceContext context = null)
         {
             string processIdStr = processId == -1 ? string.Empty : " " + processId + "/";
 
@@ -185,7 +185,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public static int GetPortFromNetstatOutput(string line)
+        private static int GetPortFromNetstatOutput(string line)
         {
             /*
             ** Example:
@@ -257,7 +257,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        public async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
+        private async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
         {
             var startInfo = new ProcessStartInfo
             {

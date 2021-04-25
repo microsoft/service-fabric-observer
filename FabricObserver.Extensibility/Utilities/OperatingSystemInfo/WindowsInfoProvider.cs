@@ -102,12 +102,14 @@ namespace FabricObserver.Observers.Utilities
                                         @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
                                         RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
+                    p.WaitForExit();
+
                     string startPort = match.Groups["startPort"].Value;
                     string portCount = match.Groups["numberOfPorts"].Value;
-                    string exitStatus = p.ExitCode.ToString();
+                    int exitStatus = p.ExitCode;
                     stdOutput.Close();
 
-                    if (exitStatus != "0")
+                    if (exitStatus != 0)
                     {
                         return (-1, -1);
                     }
@@ -143,7 +145,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                count = Retry.Do(() => GetEphemeralPortCount(processId), TimeSpan.FromSeconds(3), CancellationToken.None);
+                count = Retry.Do(() => GetEphemeralPortCount(processId), TimeSpan.FromSeconds(5), CancellationToken.None);
             }
             catch (AggregateException ae)
             {
@@ -167,7 +169,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                count = Retry.Do(() => GetTcpPortCount(processId), TimeSpan.FromSeconds(3), CancellationToken.None);
+                count = Retry.Do(() => GetTcpPortCount(processId), TimeSpan.FromSeconds(5), CancellationToken.None);
             }
             catch (AggregateException ae)
             {
@@ -279,235 +281,252 @@ namespace FabricObserver.Observers.Utilities
 
         private int GetEphemeralPortCount(int processId = -1)
         {
-            try
+            List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
+            string findStrProc = string.Empty;
+            string error = string.Empty;
+
+            if (processId > 0)
             {
-                List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
-                string s = string.Empty;
+                findStrProc = $" | find \"{processId}\"";
+            }
 
-                if (processId > 0)
+            using (var p = new Process())
+            {
+                var ps = new ProcessStartInfo
                 {
-                    s = $" | find \"{processId}\"";
-                }
+                    Arguments = $"/c netstat -qno -p {TcpProtocol}{findStrProc}",
+                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
 
-                using (var p = new Process())
+                // Capture any error information from netstat.
+                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                p.StartInfo = ps;
+                _ = p.Start();
+                var stdOutput = p.StandardOutput;
+
+                // Start asynchronous read operation on error stream.  
+                p.BeginErrorReadLine();
+
+                (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
+                string portRow;
+                while ((portRow = stdOutput.ReadLine()) != null)
                 {
-                    var ps = new ProcessStartInfo
+                    if (string.IsNullOrWhiteSpace(portRow))
                     {
-                        Arguments = $"/c netstat -qno -p {TcpProtocol}{s}",
-                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                    };
+                        continue;
+                    }
 
-                    p.StartInfo = ps;
-                    _ = p.Start();
-                    var stdOutput = p.StandardOutput;
+                    int localPort = GetLocalPortFromNetstatOutputLine(portRow);
 
-                    (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
-                    string portRow;
-                    while ((portRow = stdOutput.ReadLine()) != null)
+                    if (localPort == -1)
                     {
-                        if (string.IsNullOrWhiteSpace(portRow))
+                        continue;
+                    }
+
+                    // Only add unique pid and port data to list. This would filter out cases where BOUND and ESTABLISHED states have the same Pid and Port, which
+                    // would artificially increase the count of ports that FO computes.
+                    if (processId > 0)
+                    {
+                        /* A pid could be a subset of a port number, so make sure that we only match pid. */
+
+                        List<string> stats = portRow.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                        if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
                         {
                             continue;
                         }
 
-                        int port = GetLocalPortFromConsoleOutputRow(portRow);
-
-                        // Only add unique pid and port data to list. This would filter out cases where BOUND and ESTABLISHED states have the same Pid and Port, which
-                        // would artificially increase the count of ports that FO computes.
-                        if (processId > 0)
+                        if (processId != pidPart)
                         {
-                            /* A pid could be a subset of a port number, so make sure that we only match pid. */
-
-                            List<string> stats = portRow.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-
-                            if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
-                            {
-                                continue;
-                            }
-
-                            if (processId != pidPart)
-                            {
-                                continue;
-                            }
-
-                            if (tempLocalPortData.Any(t => t.Pid == processId && t.Port == port))
-                            {
-                                continue;
-                            }
-
-                            if (port >= lowPortRange && port <= highPortRange)
-                            {
-                                tempLocalPortData.Add((processId, port));
-                            }
+                            continue;
                         }
-                        else
-                        {
-                            if (tempLocalPortData.Any(t => t.Port == port))
-                            {
-                                continue;
-                            }
 
-                            if (port >= lowPortRange && port <= highPortRange)
-                            {
-                                tempLocalPortData.Add((processId, port));
-                            }
+                        if (tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
+                        {
+                            continue;
+                        }
+
+                        if (localPort >= lowPortRange && localPort <= highPortRange)
+                        {
+                            tempLocalPortData.Add((processId, localPort));
                         }
                     }
-
-                    p.WaitForExit();
-                    int exitStatus = p.ExitCode;
-                    stdOutput.Close();
-                    var count = tempLocalPortData.Count;
-                    tempLocalPortData.Clear();
-
-                    if (exitStatus == 0)
+                    else
                     {
-                        return count;
+                        if (tempLocalPortData.Any(t => t.Port == localPort))
+                        {
+                            continue;
+                        }
+
+                        if (localPort >= lowPortRange && localPort <= highPortRange)
+                        {
+                            tempLocalPortData.Add((processId, localPort));
+                        }
                     }
-
-                    string msg = $"netstat failure: {exitStatus}";
-                    Logger.LogWarning(msg);
-
-                    // this will be handled by Retry.Do().
-                    throw new Exception(msg);
                 }
-            }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-            {
-                Logger.LogWarning($"Handled Exception in GetEphemeralPortCount:{Environment.NewLine}{e}");
-                
-                // This will be handled by Retry.Do().
-                throw;
+
+                p.WaitForExit();
+
+                int exitStatus = p.ExitCode;
+                int count = tempLocalPortData.Count;
+                tempLocalPortData.Clear();
+                stdOutput.Close();
+
+                if (exitStatus == 0)
+                {
+                    return count;
+                }
+
+                string msg = $"netstat failure: ({exitStatus}): {error}";
+                Logger.LogWarning(msg);
+
+                // this will be handled by Retry.Do().
+                throw new Exception(msg);
             }
         }
 
         private int GetTcpPortCount(int processId = -1)
         {
-            try
+            string protoParam = "-p " + TcpProtocol;
+            string findStrProc = string.Empty;
+            string error = string.Empty;
+            List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
+
+            if (processId > 0)
             {
-                string protoParam = "-p " + TcpProtocol;
-                string findStrProc = string.Empty;
-                List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
+                findStrProc = $" | find \"{processId}\"";
+            }
 
-                if (processId > 0)
+            using (var p = new Process())
+            {
+                var ps = new ProcessStartInfo
                 {
-                    findStrProc = $" | find \"{processId}\"";
-                }
+                    Arguments = $"/c netstat -qno {protoParam}{findStrProc}",
+                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
 
-                using (var p = new Process())
+                // Capture any error information from netstat.
+                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                p.StartInfo = ps;
+                _ = p.Start();
+                var stdOutput = p.StandardOutput;
+
+                // Start asynchronous read operation on error stream.  
+                p.BeginErrorReadLine();
+
+                string portRow;
+                while ((portRow = stdOutput.ReadLine()) != null)
                 {
-                    var ps = new ProcessStartInfo
+                    if (string.IsNullOrWhiteSpace(portRow))
                     {
-                        Arguments = $"/c netstat -qno {protoParam}{findStrProc}",
-                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                    };
+                        continue;
+                    }
 
-                    p.StartInfo = ps;
-                    _ = p.Start();
-                    var stdOutput = p.StandardOutput;
+                    int localPort = GetLocalPortFromNetstatOutputLine(portRow);
 
-                    string portRow;
-                    while ((portRow = stdOutput.ReadLine()) != null)
+                    if (localPort == -1)
                     {
-                        if (string.IsNullOrWhiteSpace(portRow))
+                        continue;
+                    }
+
+                    // Only add unique pid (if supplied in call) and local port data to list.
+                    if (processId > 0)
+                    {
+                        /* A pid could be a subset of a port number, so make sure that we only match pid. */
+
+                        List<string> stats = portRow.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                        if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
                         {
                             continue;
                         }
 
-                        int localPort = GetLocalPortFromConsoleOutputRow(portRow);
-
-                        // Only add unique pid (if supplied in call) and local port data to list.
-                        if (processId > 0)
+                        if (processId != pidPart)
                         {
-                            /* A pid could be a subset of a port number, so make sure that we only match pid. */
-
-                            List<string> stats = portRow.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-
-                            if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
-                            {
-                                continue;
-                            }
-
-                            if (processId != pidPart)
-                            {
-                                continue;
-                            }
-
-                            if (!tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
-                            {
-                                tempLocalPortData.Add((processId, localPort));
-                            }
+                            continue;
                         }
-                        else
+
+                        if (!tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
                         {
-                            if (tempLocalPortData.All(t => t.Port != localPort))
-                            {
-                                tempLocalPortData.Add((processId, localPort));
-                            }
+                            tempLocalPortData.Add((processId, localPort));
                         }
                     }
-
-                    var output = tempLocalPortData.Count;
-                    p.WaitForExit();
-                    int exitStatus = p.ExitCode;
-                    stdOutput.Close();
-                    tempLocalPortData.Clear();
-
-                    if (exitStatus == 0)
+                    else
                     {
-                        return output;
+                        if (tempLocalPortData.All(t => t.Port != localPort))
+                        {
+                            tempLocalPortData.Add((processId, localPort));
+                        }
                     }
-
-                    string msg = $"netstat failure: {exitStatus}";
-                    Logger.LogWarning(msg);
-
-                    // this will be handled by Retry.Do().
-                    throw new Exception(msg);
                 }
-            }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-            {
-                Logger.LogWarning($"Handled Exception in GetTcpPortCount:{Environment.NewLine}{e}");
 
-                // This will be handled by Retry.Do().
-                throw;
+                p.WaitForExit();
+
+                int exitStatus = p.ExitCode;
+                int count = tempLocalPortData.Count;
+                tempLocalPortData.Clear();
+                stdOutput.Close();
+
+                if (exitStatus == 0)
+                {
+                    return count;
+                }
+
+                string msg = $"netstat failure: ({exitStatus}): {error}";
+                Logger.LogWarning(msg);
+
+                // this will be handled by Retry.Do().
+                throw new Exception(msg);
             }
         }
 
-        private int GetLocalPortFromConsoleOutputRow(string portRow)
+        /// <summary>
+        /// Gets local port number from netstat standard output line.
+        /// </summary>
+        /// <param name="outputLine">Single line (row) of text from netstat output.</param>
+        /// <returns>Local port number</returns>
+        private static int GetLocalPortFromNetstatOutputLine(string outputLine)
         {
-            if (string.IsNullOrWhiteSpace(portRow))
+            try
+            {
+                if (string.IsNullOrWhiteSpace(outputLine))
+                {
+                    return -1;
+                }
+
+                List<string> stats = outputLine.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                if (stats.Count == 0)
+                {
+                    return -1;
+                }
+
+                string localIpAndPort = stats[1];
+
+                if (!localIpAndPort.Contains(":"))
+                {
+                    return -1;
+                }
+
+                // We *only* care about the local IP.
+                string localPort = localIpAndPort.Split(':')[1];
+
+                return int.Parse(localPort);
+            }
+            catch (Exception e) when (e is ArgumentException || e is FormatException)
             {
                 return -1;
             }
-
-            List<string> stats = portRow.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-
-            if (stats.Count == 0)
-            {
-                return -1;
-            }
-
-            string localIpAndPort = stats[1];
-
-            if (!localIpAndPort.Contains(":"))
-            {
-                return -1;
-            }
-
-            // We *only* care about the local IP.
-            string localPort = localIpAndPort.Split(':')[1];
-
-            return int.Parse(localPort);
         }
     }
 }

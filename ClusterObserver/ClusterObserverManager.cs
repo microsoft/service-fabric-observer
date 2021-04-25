@@ -258,9 +258,7 @@ namespace ClusterObserver
                     }
 
                     await RunObserverAync().ConfigureAwait(false);
-
-                    Logger.LogInfo($"Sleeping for {(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 30)} seconds before running again.");
-                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 30), token);
+                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10), token);
 
                     Logger.Flush();
                 }

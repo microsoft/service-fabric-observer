@@ -413,13 +413,12 @@ namespace ClusterObserver
                                                     foTelemetryData.Metric,
                                                     foTelemetryData.ObserverName,
                                                     foTelemetryData.NodeName,
-                                                    Source = ObserverConstants.FabricObserver,
+                                                    foTelemetryData.Source,
                                                     foTelemetryData.PartitionId,
                                                     foTelemetryData.ProcessId,
                                                     foTelemetryData.ReplicaId,
                                                     foTelemetryData.SystemServiceProcessName,
-                                                    // 0 could be a real value, thus defaulting to -1 when tryparse returns false (see above)..
-                                                    Value = value > -1 ? value : 0,
+                                                    Value = value
                                                 });
                         }
 
@@ -542,7 +541,7 @@ namespace ClusterObserver
                             Description = $"{telemetryDescription}{Environment.NewLine}Node Status: {(targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty)}",
                             Metric = metric ?? "AggregatedClusterHealth",
                             ObserverName = sourceObserver ?? string.Empty,
-                            Source = foStats != null ? ObserverConstants.FabricObserver : ObserverName,
+                            Source = foStats != null ? foStats.Source : ObserverName,
                             Value = foStats != null ? foStats.Value : string.Empty,
                         };
 
@@ -557,9 +556,10 @@ namespace ClusterObserver
                     }
 
                     double value = 0;
+
                     if (foStats != null)
                     {
-                        value = double.TryParse(foStats.Value?.ToString(), out double val) ? val : 0;
+                        value = double.TryParse(foStats.Value?.ToString(), out double val) ? val : -1;
                     }
 
                     Logger.EtwLogger?.Write(
@@ -573,7 +573,7 @@ namespace ClusterObserver
                             HealthEventDescription = telemetryDescription,
                             Metric = metric ?? "AggregatedClusterHealth",
                             ObserverName = sourceObserver ?? string.Empty,
-                            Source = foStats != null ? ObserverConstants.FabricObserver : ObserverName,
+                            Source = foStats != null ? foStats.Source : ObserverName,
                             Value = value,
                         });
                 }
