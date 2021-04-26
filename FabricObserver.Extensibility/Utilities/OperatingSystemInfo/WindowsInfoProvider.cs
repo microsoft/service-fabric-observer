@@ -382,6 +382,14 @@ namespace FabricObserver.Observers.Utilities
                     return count;
                 }
 
+                // find will exit with a non-zero exit code if it doesn't find any results for a given pid.
+                // this means there are no ports opened by this process id. Do not throw in this case. 0 is the right answer.
+                if (error == string.Empty)
+                {
+                    return 0;
+                }
+
+                // there really was an error associated with non-zero exit code. Log it and throw.
                 string msg = $"netstat failure: ({exitStatus}): {error}";
                 Logger.LogWarning(msg);
 
@@ -482,6 +490,14 @@ namespace FabricObserver.Observers.Utilities
                     return count;
                 }
 
+                // find will exit with a non-zero exit code if it doesn't find any results for a given pid.
+                // this means there are no ports opened by this process id. Do not throw in this case. 0 is the right answer.
+                if (error == string.Empty)
+                {
+                    return 0;
+                }
+
+                // there really was an error associated with non-zero exit code. Log it and throw.
                 string msg = $"netstat failure: ({exitStatus}): {error}";
                 Logger.LogWarning(msg);
 

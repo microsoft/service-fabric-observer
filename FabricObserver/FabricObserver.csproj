@@ -73,7 +73,6 @@
     <None Include="PackageRoot\Config\AppObserver.config.json" />
     <None Include="PackageRoot\Config\NetworkObserver.config.json" />
     <None Include="PackageRoot\ServiceManifest.xml" />
-    <None Include="stylecop.json" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="NLog.config">
@@ -96,9 +95,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="elevated_proc_fd">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="elevated_proc_fd.c">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="setcaps.sh">
