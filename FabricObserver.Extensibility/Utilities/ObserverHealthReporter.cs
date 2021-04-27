@@ -23,6 +23,7 @@ namespace FabricObserver.Observers.Utilities
         /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
         /// </summary>
         /// <param name="logger">file logger instance.</param>
+        /// <param name="fabricClient">FabricClient instance.</param>
         public ObserverHealthReporter(Logger logger, FabricClient fabricClient)
         {
             this.fabricClient = fabricClient;
@@ -42,17 +43,25 @@ namespace FabricObserver.Observers.Utilities
         {
             string msg = $"{propertyName} reporting {healthState}: {description}";
 
-            if (healthState == HealthState.Error)
+            switch (healthState)
             {
-                logger.LogError(msg);
-            }
-            else if (healthState == HealthState.Warning)
-            {
-                logger.LogWarning(msg);
-            }
-            else if (logger.EnableVerboseLogging)
-            {
-                logger.LogInfo(msg);
+                case HealthState.Error:
+                    logger.LogError(msg);
+                    break;
+
+                case HealthState.Warning:
+                    logger.LogWarning(msg);
+                    break;
+
+                default:
+                {
+                    if (logger.EnableVerboseLogging)
+                    {
+                        logger.LogInfo(msg);
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -143,7 +152,7 @@ namespace FabricObserver.Observers.Utilities
                         healthReport.Property = $"{healthReport.Observer}_{(!string.IsNullOrWhiteSpace(healthReport.ResourceUsageDataProperty) ? healthReport.ResourceUsageDataProperty : "GenericHealthProperty")}";
                         break;
 
-                };
+                }
             }
 
             var healthInformation = new HealthInformation(healthReport.SourceId, healthReport.Property, healthReport.State)
@@ -156,57 +165,64 @@ namespace FabricObserver.Observers.Utilities
             // Log health event locally.
             if (healthReport.EmitLogEvent)
             {
-                if (healthReport.State == HealthState.Error)
+                switch (healthReport.State)
                 {
-                    logger.LogError(healthReport.NodeName + ": {0}", healthInformation.Description);
-                }
-                else if (healthReport.State == HealthState.Warning)
-                {
-                    logger.LogWarning(healthReport.NodeName + ": {0}", healthInformation.Description);
-                }
-                else
-                {
-                    logger.LogInfo(healthReport.NodeName + ": {0}", healthInformation.Description);
+                    case HealthState.Error:
+                        logger.LogError(healthReport.NodeName + ": {0}", healthInformation.Description);
+                        break;
+
+                    case HealthState.Warning:
+                        logger.LogWarning(healthReport.NodeName + ": {0}", healthInformation.Description);
+                        break;
+
+                    default:
+                        logger.LogInfo(healthReport.NodeName + ": {0}", healthInformation.Description);
+                        break;
                 }
             }
 
-            // To SFX.
-            if (healthReport.ReportType == HealthReportType.Application && healthReport.AppName != null)
+            switch (healthReport.ReportType)
             {
-                var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
-                fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
-            }
-            else if (healthReport.ReportType == HealthReportType.Service && healthReport.ServiceName != null)
-            {
-                var serviceHealthReport = new ServiceHealthReport(healthReport.ServiceName, healthInformation);
-                fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
-            }
-            else if (healthReport.ReportType == HealthReportType.StatefulService
-                && healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0)
-            {
-                var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
-                fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
-            }
-            else if (healthReport.ReportType == HealthReportType.StatelessService
-                  && healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0)
-            {
-                var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
-                fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
-            }
-            else if (healthReport.ReportType == HealthReportType.Partition && healthReport.PartitionId != Guid.Empty)
-            {
-                var partitionHealthReport = new PartitionHealthReport(healthReport.PartitionId, healthInformation);
-                fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
-            }
-            else if (healthReport.ReportType == HealthReportType.DeployedApplication && healthReport.AppName != null)
-            {
-                var deployedApplicationHealthReport = new DeployedApplicationHealthReport(healthReport.AppName, healthReport.NodeName, healthInformation);
-                fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
-            }
-            else
-            {
-                var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
-                fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                // To SFX.
+                case HealthReportType.Application when healthReport.AppName != null:
+                
+                    var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
+                    fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                    break;
+                
+                case HealthReportType.Service when healthReport.ServiceName != null:
+                
+                    var serviceHealthReport = new ServiceHealthReport(healthReport.ServiceName, healthInformation);
+                    fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                    break;
+                
+                case HealthReportType.StatefulService when healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0:
+                
+                    var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
+                    fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
+                    break;
+                
+                case HealthReportType.StatelessService when healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0:
+                
+                    var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
+                    fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
+                    break;
+                
+                case HealthReportType.Partition when healthReport.PartitionId != Guid.Empty:
+                    var partitionHealthReport = new PartitionHealthReport(healthReport.PartitionId, healthInformation);
+                    fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
+                    break;
+                
+                case HealthReportType.DeployedApplication when healthReport.AppName != null:
+                
+                    var deployedApplicationHealthReport = new DeployedApplicationHealthReport(healthReport.AppName, healthReport.NodeName, healthInformation);
+                    fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
+                    break;
+                
+                case HealthReportType.Node:
+                    var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
+                    fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                    break;
             }
         }
     }

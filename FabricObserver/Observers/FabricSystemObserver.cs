@@ -189,11 +189,10 @@ namespace FabricObserver.Observers
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
-                        continue;
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 WriteToLogWithLevel(
                         ObserverName,
@@ -234,30 +233,29 @@ namespace FabricObserver.Observers
 
                 if (allMemData != null)
                 {
-                    memHandlesInfo += $"Fabric memory: {allMemData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
-                                      $"FabricDCA memory: {allMemData.Where(x => x.Id.Contains("FabricDCA"))?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
-                                      $"FabricGateway memory: {allMemData.Where(x => x.Id.Contains("FabricGateway"))?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" +
+                    memHandlesInfo += $"Fabric memory: {allMemData.FirstOrDefault(x => x.Id == "Fabric")?.AverageDataValue} MB{Environment.NewLine}" +
+                                      $"FabricDCA memory: {allMemData.FirstOrDefault(x => x.Id.Contains("FabricDCA"))?.AverageDataValue} MB{Environment.NewLine}" +
+                                      $"FabricGateway memory: {allMemData.FirstOrDefault(x => x.Id.Contains("FabricGateway"))?.AverageDataValue} MB{Environment.NewLine}" +
 
-                                      // On Windows, FO runs as NetworkUser by default and thererfore can't monintor FabricHost process, which runs as System.
+                                      // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System.
                                       (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                          $"FabricHost memory: {allMemData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue} MB{Environment.NewLine}" : string.Empty);
-
+                                          $"FabricHost memory: {allMemData.FirstOrDefault(x => x.Id == "FabricHost")?.AverageDataValue} MB{Environment.NewLine}" : string.Empty);
                 }
 
                 if (allHandlesData != null)
                 {
-                    memHandlesInfo += $"Fabric file handles: {(int)(allHandlesData.Where(x => x.Id == "Fabric")?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
-                                      $"FabricDCA file handles: {(int)(allHandlesData.Where(x => x.Id.Contains("FabricDCA"))?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
-                                      $"FabricGateway file handles: {(int)(allHandlesData.Where(x => x.Id.Contains("FabricGateway"))?.FirstOrDefault()?.AverageDataValue)}{Environment.NewLine}" +
+                    memHandlesInfo += $"Fabric file handles: {allHandlesData.FirstOrDefault(x => x.Id == "Fabric")?.AverageDataValue}{Environment.NewLine}" +
+                                      $"FabricDCA file handles: {allHandlesData.FirstOrDefault(x => x.Id.Contains("FabricDCA"))?.AverageDataValue}{Environment.NewLine}" +
+                                      $"FabricGateway file handles: {allHandlesData.FirstOrDefault(x => x.Id.Contains("FabricGateway"))?.AverageDataValue}{Environment.NewLine}" +
 
-                                      // On Windows, FO runs as NetworkUser by default and thererfore can't monintor FabricHost process, which runs as System. 
+                                      // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System. 
                                       (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                            $"FabricHost file handles: {(int)(allHandlesData.Where(x => x.Id == "FabricHost")?.FirstOrDefault()?.AverageDataValue)}" : string.Empty);
+                                            $"FabricHost file handles: {allHandlesData.FirstOrDefault(x => x.Id == "FabricHost")?.AverageDataValue}" : string.Empty);
                 }
 
                 // Informational report.
                 TimeSpan timeToLiveWarning = GetHealthReportTimeToLive();
-                HealthReport informationReport = new HealthReport
+                var informationReport = new HealthReport
                 {
                     Observer = ObserverName,
                     NodeName = NodeName,
@@ -267,6 +265,7 @@ namespace FabricObserver.Observers
 
                     State = HealthState.Ok,
                     HealthReportTimeToLive = timeToLiveWarning,
+                    ReportType = HealthReportType.Node
                 };
 
                 HealthReporter.ReportHealthToServiceFabric(informationReport);
@@ -322,7 +321,7 @@ namespace FabricObserver.Observers
                         {
                             File.Delete(logPath);
                         }
-                        catch (Exception e) when (e is ArgumentException || e is IOException || e is PathTooLongException || e is UnauthorizedAccessException)
+                        catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
                         {
 
                         }
@@ -397,7 +396,7 @@ namespace FabricObserver.Observers
         /// <summary>
         /// ReadServiceFabricWindowsEventLog().
         /// </summary>
-        public void ReadServiceFabricWindowsEventLog()
+        private void ReadServiceFabricWindowsEventLog()
         {
             string sfOperationalLogSource = "Microsoft-ServiceFabric/Operational";
             string sfAdminLogSource = "Microsoft-ServiceFabric/Admin";
@@ -406,12 +405,8 @@ namespace FabricObserver.Observers
             string sfLeaseOperationalLogSource = "Microsoft-ServiceFabric-Lease/Operational";
 
             var range2Days = DateTime.UtcNow.AddDays(-1);
-            var format = range2Days.ToString(
-                         "yyyy-MM-ddTHH:mm:ss.fffffff00K",
-                         CultureInfo.InvariantCulture);
-            var datexQuery = string.Format(
-                             "*[System/TimeCreated/@SystemTime >='{0}']",
-                             format);
+            var format = range2Days.ToString("yyyy-MM-ddTHH:mm:ss.fffffff00K", CultureInfo.InvariantCulture);
+            var datexQuery = $"*[System/TimeCreated/@SystemTime >='{format}']";
 
             // Critical and Errors only.
             string xQuery = "*[System/Level <= 2] and " + datexQuery;
@@ -479,27 +474,25 @@ namespace FabricObserver.Observers
                 throw new PlatformNotSupportedException("This function should only be called on Linux platforms.");
             }
 
-            List<Process> result = new List<Process>();
-            Process[] processes = Process.GetProcessesByName("dotnet");
+            var result = new List<Process>();
+            var processes = Process.GetProcessesByName("dotnet");
 
-            for (int i = 0; i < processes.Length; ++i)
+            foreach (var process in processes)
             {
                 Token.ThrowIfCancellationRequested();
 
-                Process p = processes[i];
-
                 try
                 {
-                    string cmdline = File.ReadAllText($"/proc/{p.Id}/cmdline");
+                    string cmdline = File.ReadAllText($"/proc/{process.Id}/cmdline");
 
                     // dotnet /mnt/sfroot/_App/__FabricSystem_App4294967295/US.Code.Current/FabricUS.dll 
                     if (cmdline.Contains("/mnt/sfroot/_App/"))
                     {
-                        string bin = cmdline[(cmdline.LastIndexOf("/") + 1)..];
+                        string bin = cmdline[(cmdline.LastIndexOf("/", StringComparison.Ordinal) + 1)..];
 
                         if (string.Equals(argument, bin, StringComparison.InvariantCulture))
                         {
-                            result.Add(p);
+                            result.Add(process);
                         }
                     }
                     else if (cmdline.Contains("Fabric"))
@@ -509,7 +502,7 @@ namespace FabricObserver.Observers
 
                         if (parts.Length > 1 && string.Equals(argument, parts[1], StringComparison.Ordinal))
                         {
-                            result.Add(p);
+                            result.Add(process);
                         }
                     }
                 }
@@ -524,10 +517,7 @@ namespace FabricObserver.Observers
 
         private void Initialize()
         {
-            if (stopwatch == null)
-            {
-                stopwatch = new Stopwatch();
-            }
+            stopwatch ??= new Stopwatch();
 
             Token.ThrowIfCancellationRequested();
 
@@ -758,7 +748,7 @@ namespace FabricObserver.Observers
             // This is to support differences between Linux and Windows dotnet process naming pattern.
             // Default value is what Windows expects for proc name. In linux, the procname is an argument (typically) of a dotnet command.
             string dotnetArg = procName;
-            Process[] processes = null;
+            Process[] processes;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.Contains("dotnet"))
             {
@@ -936,53 +926,39 @@ namespace FabricObserver.Observers
                 {
                     var propertyName = data.First().Property;
 
-                    // Log average data value to long-running store (CSV).
-                    string dataLogMonitorType = propertyName;
+                    /* Log average data value to long-running store (CSV).*/
 
-                    switch (propertyName)
+                    var dataLogMonitorType = propertyName switch
                     {
-                        case ErrorWarningProperty.TotalCpuTime:
-                            dataLogMonitorType = "% CPU Time";
-                            break;
-
-                        case ErrorWarningProperty.TotalMemoryConsumptionMb:
-                            dataLogMonitorType = "Working Set %";
-                            break;
-
-                        case ErrorWarningProperty.TotalActivePorts:
-                            dataLogMonitorType = "Active TCP Ports";
-                            break;
-
-                        case ErrorWarningProperty.TotalEphemeralPorts:
-                            dataLogMonitorType = "Active Ephemeral Ports";
-                            break;
-
-                        case ErrorWarningProperty.TotalFileHandlesPct:
-                            dataLogMonitorType = "Allocated (in use) File Handles %";
-                            break;
-                    }
+                        ErrorWarningProperty.TotalCpuTime => "% CPU Time",
+                        ErrorWarningProperty.TotalMemoryConsumptionMb => "Working Set %",
+                        ErrorWarningProperty.TotalActivePorts => "Active TCP Ports",
+                        ErrorWarningProperty.TotalEphemeralPorts => "Active Ephemeral Ports",
+                        ErrorWarningProperty.TotalFileHandlesPct => "Allocated (in use) File Handles %",
+                        _ => propertyName
+                    };
 
                     // Log pid
-                    Process[] p;
-                    int procId = -1;
+                    try
+                    {
+                        int procId = -1;
+                        Process[] p = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                            ? GetDotnetLinuxProcessesByFirstArgument(dataItem.Id)
+                            : Process.GetProcessesByName(dataItem.Id);
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    {
-                        p = GetDotnetLinuxProcessesByFirstArgument(dataItem.Id);
-                    }
-                    else
-                    {
-                        p = Process.GetProcessesByName(dataItem.Id);
-                    }
+                        if (p.Length > 0)
+                        {
+                            procId = p.First().Id;
+                        }
 
-                    if (p.Length > 0)
-                    {
-                        procId = p.First().Id;
+                        if (procId > 0)
+                        {
+                            CsvFileLogger.LogData(fileName, dataItem.Id, "ProcessId", "", procId);
+                        }
                     }
-
-                    if (procId > 0)
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
                     {
-                        CsvFileLogger.LogData(fileName, dataItem.Id, "ProcessId", "", procId);
+
                     }
 
                     CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
@@ -991,11 +967,11 @@ namespace FabricObserver.Observers
 
                 // This function will clear Data items in list (will call Clear() on the supplied FabricResourceUsageData instance's Data field..)
                 ProcessResourceDataReportHealth(
-                            dataItem,
-                            thresholdError,
-                            thresholdWarning,
-                            GetHealthReportTimeToLive(),
-                            HealthReportType.Application);
+                    dataItem,
+                    thresholdError,
+                    thresholdWarning,
+                    GetHealthReportTimeToLive(),
+                    HealthReportType.Application);
             }
         }
     }

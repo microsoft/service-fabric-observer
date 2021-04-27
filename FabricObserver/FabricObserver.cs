@@ -42,12 +42,11 @@ namespace FabricObserver
         /// <returns>a Task.</returns>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            ServiceCollection services = new ServiceCollection();
+            var services = new ServiceCollection();
             ConfigureServices(services);
 
-            using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            using ObserverManager observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
-
+            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            using var observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
             await observerManager.StartObserversAsync().ConfigureAwait(false);
         }
 
@@ -55,7 +54,7 @@ namespace FabricObserver
         /// This function will add observer instances, both static (so, part of the FO impl) and dynamic (so, observer plugin dlls).
         /// </summary>
         /// <param name="services">ServiceCollection collection instance.</param>
-        private void ConfigureServices(ServiceCollection services)
+        private void ConfigureServices(IServiceCollection services)
         {
             _ = services.AddScoped(typeof(ObserverBase), s => new AppObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new CertificateObserver(fabricClient, Context));
@@ -74,7 +73,7 @@ namespace FabricObserver
         /// This function will load observer plugin dlls from PackageRoot/Data/Plugins folder and add them to the ServiceCollection instance.
         /// </summary>
         /// <param name="services"></param>
-        private void LoadObserversFromPlugins(ServiceCollection services)
+        private void LoadObserversFromPlugins(IServiceCollection services)
         {
             string pluginsDir = Path.Combine(Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
@@ -90,9 +89,9 @@ namespace FabricObserver
                 return;
             }
 
-            List<PluginLoader> pluginLoaders = new List<PluginLoader>(capacity: pluginDlls.Length);
+            var pluginLoaders = new List<PluginLoader>(pluginDlls.Length);
 
-            Type[] sharedTypes = new[] { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
+            Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
 
             foreach (string pluginDll in pluginDlls)
             {
@@ -104,6 +103,8 @@ namespace FabricObserver
             {
                 Assembly pluginAssembly = pluginLoader.LoadDefaultAssembly();
 
+                // Note: This is a micro-optimization (including the for below it). It could just as well be left as IEnumerable and then foreach'd over.
+                // It is unlikely that there will be 1000s of plugins...
                 FabricObserverStartupAttribute[] startupAttributes = pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
 
                 for (int i = 0; i < startupAttributes.Length; ++i)

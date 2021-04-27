@@ -51,7 +51,7 @@ namespace FabricObserver.Observers.Utilities
 
                     string key = line.Substring(0, colonIndex);
 
-                    ulong value = LinuxProcFS.ReadUInt64(line, colonIndex + 1);
+                    ulong value = ReadUInt64(line, colonIndex + 1);
                     result.Add(key, value);
                 }
             }
@@ -81,7 +81,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public static bool TryParseStatusFile(int pid, out ParsedStatus result)
         {
-            string statuSFilePath = RootPath + pid.ToString() + StatuSFileName;
+            string statuSFilePath = RootPath + pid + StatuSFileName;
 
             return TryParseStatusFile(statuSFilePath, out result);
         }
@@ -194,7 +194,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (d >= 0 && d <= 9)
                 {
-                    result = checked((result * 10L) + (long)d);
+                    result = checked((result * 10L) + d);
                     ++startIndex;
                 }
                 else

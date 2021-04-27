@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
@@ -36,7 +37,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             logger = new Logger("TelemetryLog");
 
-            TelemetryConfiguration configuration = new TelemetryConfiguration() { InstrumentationKey = key };
+            TelemetryConfiguration configuration = new TelemetryConfiguration { InstrumentationKey = key };
             telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
@@ -299,16 +300,16 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ActiveEphemeralPorts", telemetryData.ActiveEphemeralPorts.ToString() },
                     { "ActiveFirewallRules", telemetryData.ActiveFirewallRules.ToString() },
                     { "ActivePorts", telemetryData.ActivePorts.ToString() },
-                    { "AvailablePhysicalMemory", telemetryData.AvailablePhysicalMemoryGB.ToString() },
-                    { "AvailableVirtualMemory", telemetryData.AvailableVirtualMemoryGB.ToString() },
+                    { "AvailablePhysicalMemory", telemetryData.AvailablePhysicalMemoryGB.ToString(CultureInfo.InvariantCulture) },
+                    { "AvailableVirtualMemory", telemetryData.AvailableVirtualMemoryGB.ToString(CultureInfo.InvariantCulture) },
                     { "DriveInfo", telemetryData.DriveInfo },
-                    { "FabricAppPortRange", telemetryData.FabricAppPortRange.ToString() },
-                    { "HotFixes", telemetryData.HotFixes.ToString() },
-                    { "LastBootUpTime", telemetryData.LastBootUpTime.ToString() },
-                    { "Level", telemetryData.HealthState.ToString() },
+                    { "FabricAppPortRange", telemetryData.FabricAppPortRange },
+                    { "HotFixes", telemetryData.HotFixes },
+                    { "LastBootUpTime", telemetryData.LastBootUpTime },
+                    { "Level", telemetryData.HealthState },
                     { "LogicalDriveCount", telemetryData.LogicalDriveCount.ToString() },
                     { "LogicalProcessorCount", telemetryData.LogicalProcessorCount.ToString() },
-                    { "Node", telemetryData.Node.ToString() },
+                    { "Node", telemetryData.Node },
                     { "NumberOfRunningProcesses", telemetryData.NumberOfRunningProcesses.ToString() },
                     { "Observer", telemetryData.Observer },
                     { "OS", telemetryData.OS },
@@ -337,10 +338,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(
-            string name,
-            long value,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string name,
+                        long value,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -362,11 +363,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(
-            string role,
-            Guid partition,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                        string role,
+                        Guid partition,
+                        string name,
+                        long value,
+                        CancellationToken cancellationToken)
         {
             return ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
@@ -381,11 +382,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task ReportMetricAsync(
-            string role,
-            long id,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                            string role,
+                            long id,
+                            string name,
+                            long value,
+                            CancellationToken cancellationToken)
         {
             await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
         }
@@ -406,17 +407,17 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(
-            string roleName,
-            string instance,
-            string name,
-            long value,
-            int count,
-            long min,
-            long max,
-            long sum,
-            double deviation,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string roleName,
+                        string instance,
+                        string name,
+                        long value,
+                        int count,
+                        long min,
+                        long max,
+                        long sum,
+                        double deviation,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {

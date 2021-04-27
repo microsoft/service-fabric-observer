@@ -34,19 +34,19 @@ namespace FabricObserverWeb
 
             string parameterValue = configurationSettings.Sections[configurationSectionName].Parameters[parameterName].Value;
 
-            if (configurationSettings.Sections[configurationSectionName].Parameters[parameterName].IsEncrypted &&
-                !string.IsNullOrEmpty(parameterValue))
+            if (!configurationSettings.Sections[configurationSectionName].Parameters[parameterName].IsEncrypted ||
+                string.IsNullOrEmpty(parameterValue))
             {
-                var paramValueAsCharArray = SecureStringToCharArray(
-                    configurationSettings.Sections[configurationSectionName].Parameters[parameterName].DecryptValue());
-
-                return new string(paramValueAsCharArray);
+                return parameterValue;
             }
 
-            return parameterValue;
+            var paramValueAsCharArray = SecureStringToCharArray(
+                configurationSettings.Sections[configurationSectionName].Parameters[parameterName].DecryptValue());
+
+            return new string(paramValueAsCharArray);
         }
 
-        internal static char[] SecureStringToCharArray(SecureString secureString)
+        private static char[] SecureStringToCharArray(SecureString secureString)
         {
             if (secureString == null)
             {

@@ -23,11 +23,11 @@ function Build-SFPkg {
 try {
     Push-Location $scriptPath
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserverWeb.Linux.SelfContained.2.0.1" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\self-contained\FabricObserverWebApiType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserverWeb.Linux.FrameworkDependent.2.0.1" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\framework-dependent\FabricObserverWebApiType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserverWeb.Linux.SelfContained.2.0.2" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\self-contained\FabricObserverWebApiType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserverWeb.Linux.FrameworkDependent.2.0.2" "$scriptPath\bin\release\FabricObserverWeb\linux-x64\framework-dependent\FabricObserverWebApiType"
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserverWeb.Windows.SelfContained.2.0.1" "$scriptPath\bin\release\FabricObserverWeb\win-x64\self-contained\FabricObserverWebApiType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserverWeb.Windows.FrameworkDependent.2.0.1" "$scriptPath\bin\release\FabricObserverWeb\win-x64\framework-dependent\FabricObserverWebApiType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserverWeb.Windows.SelfContained.2.0.2" "$scriptPath\bin\release\FabricObserverWeb\win-x64\self-contained\FabricObserverWebApiType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserverWeb.Windows.FrameworkDependent.2.0.2" "$scriptPath\bin\release\FabricObserverWeb\win-x64\framework-dependent\FabricObserverWebApiType"
 }
 finally {
     Pop-Location

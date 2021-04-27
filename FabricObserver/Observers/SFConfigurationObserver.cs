@@ -8,6 +8,7 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,10 +67,7 @@ namespace FabricObserver.Observers
 
         public override async Task ObserveAsync(CancellationToken token)
         {
-            // If set, this observer will only run during the supplied interval.
-            // This observer is only useful if you enable the web api for producing
-            // an html page with a bunch of information that's easy to read in one go.
-            if (!IsObserverWebApiAppDeployed || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
+            if (!IsObserverWebApiAppDeployed || RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }
@@ -81,7 +79,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                ServiceFabricConfiguration config = ServiceFabricConfiguration.Instance;
+                var config = ServiceFabricConfiguration.Instance;
                 SFVersion = config.FabricVersion;
                 SFBinRoot = config.FabricBinRoot;
                 SFCompatibilityJsonPath = config.CompatibilityJsonPath;
@@ -100,7 +98,7 @@ namespace FabricObserver.Observers
             {
                 
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
                                 FabricServiceContext.ServiceName.OriginalString,
@@ -108,6 +106,7 @@ namespace FabricObserver.Observers
                                 HealthState.Warning,
                                 $"Unhandled Exception in ObserveAsync:{Environment.NewLine}{e}");
 
+                // Fix the bug..
                 throw;
             }
 
@@ -201,7 +200,7 @@ namespace FabricObserver.Observers
                     
                 if (!string.IsNullOrWhiteSpace(ClusterManifestPath))
                 {
-                    clusterManifestXml = File.ReadAllText(ClusterManifestPath);
+                    clusterManifestXml = await File.ReadAllTextAsync(ClusterManifestPath, token);
                 }
                 else
                 {
@@ -228,7 +227,7 @@ namespace FabricObserver.Observers
                     // Safe XML pattern - *Do not use LoadXml*.
                     xdoc = new XmlDocument { XmlResolver = null };
                     sreader = new StringReader(clusterManifestXml);
-                    xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                    xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null });
                     xdoc.Load(xreader);
 
                     // Cluster Information.
@@ -329,8 +328,8 @@ namespace FabricObserver.Observers
 
                                 if (procId > -1)
                                 {
-                                    ports = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId);
-                                    ephemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId);
+                                    ports = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
+                                    ephemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
                                 }
 
                                 _ = sb.AppendLine("\tService Name: " + serviceName.OriginalString);

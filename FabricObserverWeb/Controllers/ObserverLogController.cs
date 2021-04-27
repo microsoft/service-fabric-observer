@@ -5,12 +5,15 @@
 
 using System;
 using System.Fabric;
+using System.Fabric.Description;
+using System.Fabric.Query;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,7 +27,7 @@ namespace FabricObserverWeb.Controllers
         private const int MaxRetries = 3;
         private readonly FabricClient fabricClient;
         private readonly StatelessServiceContext serviceContext;
-        private readonly string script = @"
+        private const string script = @"
                 <script type='text/javascript'>
                 function toggle(e) {
                     var container = document.getElementById(e);
@@ -82,16 +85,16 @@ namespace FabricObserverWeb.Controllers
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         // Add current drive letter if not supplied for Windows path target.
-                        if (!logFolder.Substring(0, 3).Contains(":\\"))
+                        if (!logFolder[..3].Contains(":\\"))
                         {
-                            string windrive = Environment.SystemDirectory.Substring(0, 3);
+                            string windrive = Environment.SystemDirectory[..3];
                             logFolder = Path.Combine(windrive, logFolder);
                         }
                     }
                     else
                     {
                         // Remove supplied drive letter if Linux is the runtime target.
-                        if (logFolder.Substring(0, 3).Contains(":\\"))
+                        if (logFolder[..3].Contains(":\\"))
                         {
                             logFolder = logFolder.Remove(0, 3);
                         }
@@ -220,67 +223,102 @@ namespace FabricObserverWeb.Controllers
         // over a secure channel. By default, this API service is node-local (node-only) with no comms outside of VM.
         // GET: api/ObserverLog/DiskObserver/_SFRole_0
         // GET: api/ObserverLog/DiskObserver/_SFRole_0/html
+        [HttpGet("{observername}/{nodename}/{format}", Name = "GetObserverLogNode")]
+        public ContentResult Get(string observername, string nodename, string format)
+        {
+            return string.IsNullOrWhiteSpace(format) ? Content("Error processing request: format is not specified. Supported values are \"html\" or \"json\" e.g., api/ObserverLog/DiskObserver/_SFRole_0/html") : GetContentResult(observername, nodename, format);
+        }
+
         [HttpGet("{observername}/{nodename}/{format?}", Name = "GetObserverLogNode")]
-        public ContentResult Get(string observername, string nodename, string format = "json")
+        private ContentResult GetContentResult(string observername, string nodename, string format = "json")
         {
             try
             {
-                System.Fabric.Query.NodeList node = fabricClient.QueryManager.GetNodeListAsync(nodename).Result;
+                var nodeList = fabricClient.QueryManager.GetNodeListAsync(nodename).GetAwaiter().GetResult();
 
-                if (node.Count > 0)
+                if (nodeList.Count <= 0)
                 {
-                    string addr = node[0].IpAddressOrFQDN;
-
-                    // By default this service is node-local, http, port 5000.
-                    // If you modify the service to support Internet communication over a
-                    // secure channel, then change this code to force https.
-                    if (!addr.Contains("http://"))
-                    {
-                        addr = "http://" + addr;
-                    }
-
-                    string fqdn = "?fqdn=" + Request.Host;
-
-                    // If you modify the service to support Internet communication over a
-                    // secure channel, then change this code to reflect the correct port.
-                    WebRequest req = WebRequest.Create(addr + $":5000/api/ObserverLog/{observername}/{format}{fqdn}");
-                    req.Credentials = CredentialCache.DefaultCredentials;
-                    HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                    Stream dataStream = response.GetResponseStream();
-
-                    // Open the stream using a StreamReader for easy access.
-                    StreamReader reader = new StreamReader(dataStream);
-                    string responseFromServer = reader.ReadToEnd();
-                    string ret = responseFromServer;
-
-                    // Cleanup the streams and the response.
-                    reader.Close();
-                    dataStream.Close();
-                    response.Close();
-
-                    return Content(ret, format.ToLower() == "html" ? "text/html" : "text/json");
+                    return Content("no node found with that name.");
                 }
 
-                return Content("no node found with that name.");
+                string addr = nodeList[0].IpAddressOrFQDN;
+
+                if (!addr.Contains(".") || nodeList.Count == 1)
+                {
+                    addr = "localhost";
+                }
+
+                // By default this service is node-local, http, port 5000.
+                // If you modify the service to support Internet communication over a
+                // secure channel, then change this code to force https.
+                if (!addr.Contains("http://"))
+                {
+                    addr = "http://" + addr;
+                }
+
+                string fqdn = "?fqdn=" + Request.Host;
+
+                // If you modify the service to support Internet communication over a
+                // secure channel, then change this code to reflect the correct port.
+                WebRequest req = WebRequest.Create(addr + $":5000/api/ObserverLog/{observername}/{format}{fqdn}");
+                req.Credentials = CredentialCache.DefaultCredentials;
+                HttpWebResponse response = (HttpWebResponse) req.GetResponse();
+                Stream dataStream = response.GetResponseStream();
+
+                // Open the stream using a StreamReader for easy access.
+                StreamReader reader = new StreamReader(dataStream ?? throw new InvalidOperationException("Get: dataStream is null"));
+                string responseFromServer = reader.ReadToEnd();
+                string ret = responseFromServer;
+
+                // Cleanup the streams and the response.
+                reader.Close();
+                dataStream.Close();
+                response.Close();
+
+                return Content(ret, format.ToLower() == "html" ? "text/html" : "text/json");
+
             }
-            catch (ArgumentException ae)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is IOException)
             {
-                return Content($"Error processing request: {ae.Message}");
-            }
-            catch (IOException ioe)
-            {
-                return Content($"Error processing request: {ioe.Message}");
+                return Content($"Error processing request: {e}");
             }
         }
 
         private string GetHtml(string name)
         {
             string html = string.Empty;
-            string logFolder;
             string nodeName = serviceContext.NodeContext.NodeName;
-            System.Fabric.Description.ConfigurationSettings configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
+            ConfigurationSettings configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
             string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
-            logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "ObserverLogBaseFolderPath");
+            string logFolder = string.Empty;
+
+            if (configSettings != null)
+            {
+                logFolder = Utilities.GetConfigurationSetting(configSettings, "FabricObserverLogs", "FabricObserverLogFolderName");
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    // Add current drive letter if not supplied for Windows path target.
+                    if (!logFolder[..3].Contains(":\\"))
+                    {
+                        string windrive = Environment.SystemDirectory[..3];
+                        logFolder = Path.Combine(windrive, logFolder);
+                    }
+                }
+                else
+                {
+                    // Remove supplied drive letter if Linux is the runtime target.
+                    if (logFolder[..3].Contains(":\\"))
+                    {
+                        logFolder = logFolder.Remove(0, 3);
+                    }
+                }
+            }
+
+            if (!Directory.Exists(logFolder))
+            {
+                throw new ArgumentException($"Specified log folder, {logFolder}, does not exist.");
+            }
 
             // Observer log paths.
             string appObserverLogPath = Path.Combine(logFolder, "AppObserver", "AppObserver.log");
@@ -342,10 +380,10 @@ namespace FabricObserverWeb.Controllers
                         host = Request.Query["fqdn"];
 
                         // Node links.
-                        System.Fabric.Query.NodeList nodeList = fabricClient.QueryManager.GetNodeListAsync().Result;
-                        IOrderedEnumerable<System.Fabric.Query.Node> ordered = nodeList.OrderBy(node => node.NodeName);
+                        NodeList nodeList = fabricClient.QueryManager.GetNodeListAsync().Result;
+                        IOrderedEnumerable<Node> ordered = nodeList.OrderBy(node => node.NodeName);
 
-                        foreach (System.Fabric.Query.Node node in ordered)
+                        foreach (Node node in ordered)
                         {
                             nodeLinks += "| <a href='" + Request.Scheme + "://" + host + "/api/ObserverLog/" + name + "/" + node.NodeName + "/html'>" + node.NodeName + "</a> | ";
                         }
@@ -443,18 +481,18 @@ namespace FabricObserverWeb.Controllers
             return html;
         }
 
-        private string GetObserverErrWarnLogEntryListFromLogText(string observerLogText)
+        private static string GetObserverErrWarnLogEntryListFromLogText(string observerLogText)
         {
             if (string.IsNullOrEmpty(observerLogText))
             {
-                ObserverLogEntry ret = new ObserverLogEntry
+                var ret = new ObserverLogEntry
                 {
                     Date = DateTime.UtcNow.ToString("MM-dd-yyyy HH:mm:ss.ffff", CultureInfo.InvariantCulture),
                     HealthState = "Ok",
                     Message = string.Empty,
                 };
 
-                return System.Text.Json.JsonSerializer.Serialize(ret);
+                return JsonSerializer.Serialize(ret);
             }
 
             string[] logArray = observerLogText.Split($"{Environment.NewLine}", StringSplitOptions.RemoveEmptyEntries);
@@ -474,11 +512,10 @@ namespace FabricObserverWeb.Controllers
                 // It could be the case that an WARN or ERROR entry does not contain JSON (like an observer unhandled exception), which would crash the below code, thus try-catch.
                 try
                 {
-                    entry += arr[2][arr[2].IndexOf("{")..] + ",";
+                    entry += arr[2][arr[2].IndexOf("{", StringComparison.Ordinal)..] + ",";
                 }
                 catch (ArgumentException)
                 {
-                    continue;
                 }
             }
 

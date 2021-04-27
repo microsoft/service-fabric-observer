@@ -152,9 +152,9 @@ namespace FabricObserver.Observers
                         if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
                         {
                             // Warm up counter.
-                            _ = DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2));
+                            _ = DiskUsage.GetAverageDiskQueueLength(d.Name[..2]);
 
-                            DiskAverageQueueLengthData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name.Substring(0, 2)));
+                            DiskAverageQueueLengthData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
                         }
                     }
 
@@ -167,21 +167,19 @@ namespace FabricObserver.Observers
                     DiskSpaceTotalMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
 
                     // This section only needs to run if you have the FabricObserverWebApi app installed.
-                    if (IsObserverWebApiAppDeployed && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (!IsObserverWebApiAppDeployed || !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        token.ThrowIfCancellationRequested();
-
-                        _ = diskInfo.AppendFormat(
-                            "{0}",
-                            GetWindowsPerfCounterDetailsText(
-                                DiskAverageQueueLengthData.FirstOrDefault(
-                                    x => x.Id == d.Name.Substring(0, 1))
-                                    ?.Data,
-                                "Avg. Disk Queue Length"));
+                        continue;
                     }
+
+                    token.ThrowIfCancellationRequested();
+
+                    _ = diskInfo.AppendFormat(
+                        "{0}", 
+                        GetWindowsPerfCounterDetailsText(DiskAverageQueueLengthData.FirstOrDefault(x => d.Name.Length > 0 && x.Id == d.Name[..1])?.Data, "Avg. Disk Queue Length"));
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 WriteToLogWithLevel(
                     ObserverName,

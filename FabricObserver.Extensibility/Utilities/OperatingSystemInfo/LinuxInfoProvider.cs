@@ -32,7 +32,7 @@ namespace FabricObserver.Observers.Utilities
 
         public override int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null)
         {
-            int count = GetPortCount(processId, predicate: (line) => true, context);
+            int count = GetPortCount(processId, predicate: line => true, context);
             return count;
         }
 
@@ -40,7 +40,7 @@ namespace FabricObserver.Observers.Utilities
         {
             (int lowPort, int highPort) = TupleGetDynamicPortRange();
 
-            int count = GetPortCount(processId, (line) =>
+            int count = GetPortCount(processId, line =>
                         {
                             int port = GetPortFromNetstatOutput(line);
                             return port >= lowPort && port <= highPort;
@@ -67,7 +67,7 @@ namespace FabricObserver.Observers.Utilities
                 ** Example:
                 ** Description:\tUbuntu 18.04.2 LTS
                 */
-                osInfo.Name = outputLines[0].Split(new char[] { ':' }, 2)[1].Trim();
+                osInfo.Name = outputLines[0].Split(new[] { ':' }, 2)[1].Trim();
             }
 
             osInfo.Version = File.ReadAllText("/proc/version");
@@ -90,7 +90,7 @@ namespace FabricObserver.Observers.Utilities
 
             osInfo.FreeVirtualMemoryKB = osInfo.FreePhysicalMemoryKB + memInfo[MemInfoConstants.SwapFree];
 
-            (float uptime, float idleTime) = await LinuxProcFS.ReadUptimeAsync();
+            (float uptime, _) = await LinuxProcFS.ReadUptimeAsync();
 
             osInfo.LastBootUpTime = DateTime.UtcNow.AddSeconds(-uptime).ToString("o");
 
@@ -106,9 +106,9 @@ namespace FabricObserver.Observers.Utilities
             return osInfo;
         }
 
-        public static int GetPortCount(int processId, Predicate<string> predicate, ServiceContext context = null)
+        private static int GetPortCount(int processId, Predicate<string> predicate, ServiceContext context = null)
         {
-            string processIdStr = processId == -1 ? string.Empty : " " + processId.ToString() + "/";
+            string processIdStr = processId == -1 ? string.Empty : " " + processId + "/";
 
             /*
             ** -t - tcp
@@ -131,14 +131,14 @@ namespace FabricObserver.Observers.Utilities
                 string path = context.CodePackageActivationContext.GetCodePackageObject("Code").Path;
                 arg = string.Empty;
 
-                // This is a proxy binary that uses Capabilites to run netstat -tpna with elevated privilege.
+                // This is a proxy binary that uses Capabilities to run netstat -tpna with elevated privilege.
                 // FO runs as sfappsuser (SF default, Linux normal user), which can't run netstat -tpna. 
                 // During deployment, a setup script is run (as root user)
                 // that adds capabilities to elevated_netstat program, which will *only* run (execv) "netstat -tpna".
                 bin = $"{path}/elevated_netstat";
             }
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
                 Arguments = arg,
                 FileName = bin,
@@ -150,12 +150,12 @@ namespace FabricObserver.Observers.Utilities
             };
 
             int count = 0;
-            string line;
             using (Process process = Process.Start(startInfo))
             {
-                while ((line = process.StandardOutput.ReadLine()) != null)
+                string line;
+                while (process != null && (line = process.StandardOutput.ReadLine()) != null)
                 {
-                    if (!line.StartsWith("tcp ", StringComparison.Ordinal | StringComparison.OrdinalIgnoreCase))
+                    if (!line.StartsWith("tcp ", StringComparison.OrdinalIgnoreCase))
                     {
                         // skip headers
                         continue;
@@ -174,9 +174,9 @@ namespace FabricObserver.Observers.Utilities
                     ++count;
                 }
 
-                process.WaitForExit();
+                process?.WaitForExit();
 
-                if (process.ExitCode != 0)
+                if (process != null && process.ExitCode != 0)
                 {
                     return -1;
                 }
@@ -185,7 +185,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public static int GetPortFromNetstatOutput(string line)
+        private static int GetPortFromNetstatOutput(string line)
         {
             /*
             ** Example:
@@ -194,14 +194,16 @@ namespace FabricObserver.Observers.Utilities
 
             int colonIndex = line.IndexOf(':');
 
-            if (colonIndex >= 0)
+            if (colonIndex < 0)
             {
-                int spaceIndex = line.IndexOf(' ', startIndex: colonIndex + 1);
+                return -1;
+            }
 
-                if (spaceIndex >= 0)
-                {
-                    return int.Parse(line.Substring(colonIndex + 1, spaceIndex - colonIndex - 1));
-                }
+            int spaceIndex = line.IndexOf(' ', startIndex: colonIndex + 1);
+
+            if (spaceIndex >= 0)
+            {
+                return int.Parse(line.Substring(colonIndex + 1, spaceIndex - colonIndex - 1));
             }
 
             return -1;
@@ -255,9 +257,9 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        public async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
+        private async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
                 Arguments = arguments,
                 FileName = fileName,
@@ -273,8 +275,7 @@ namespace FabricObserver.Observers.Utilities
             using (Process process = Process.Start(startInfo))
             {
                 string line;
-
-                while ((line = await process.StandardOutput.ReadLineAsync()) != null)
+                while (process != null && (line = await process.StandardOutput.ReadLineAsync()) != null)
                 {
                     output.Add(line);
                 }
@@ -298,7 +299,7 @@ namespace FabricObserver.Observers.Utilities
         {
             var escapedArgs = cmd.Replace("\"", "\\\"");
 
-            var process = new Process()
+            var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {

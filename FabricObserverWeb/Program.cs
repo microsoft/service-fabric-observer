@@ -29,9 +29,7 @@ namespace FabricObserverWeb
                                                     .GetAwaiter()
                                                     .GetResult();
 
-                ServiceEventSource.Current.ServiceTypeRegistered(
-                    Process.GetCurrentProcess().Id,
-                    typeof(FabricObserverWeb).Name);
+                ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, nameof(FabricObserverWeb));
 
                 // Prevents this host process from terminating so services keeps running.
                 Thread.Sleep(Timeout.Infinite);

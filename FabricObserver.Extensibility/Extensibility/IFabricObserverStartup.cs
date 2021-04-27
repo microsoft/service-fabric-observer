@@ -3,8 +3,8 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using Microsoft.Extensions.DependencyInjection;
 using System.Fabric;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FabricObserver
 {

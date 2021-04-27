@@ -2,11 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>2.1.7</version>
+    <version>2.1.8</version>
     <releaseNotes>
-      - Fixed important bug in Application health query processor.
-      - ApplicationInsights TelemetryProvider impl update.
-      - Improvements in service close cleanup code.
+      Added new configurable feature: Repair Job monitoring.
+      Code improvements.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

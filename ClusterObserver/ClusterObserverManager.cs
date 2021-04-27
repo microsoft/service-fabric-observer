@@ -16,7 +16,7 @@ using ClusterObserver.Utilities.Telemetry;
 
 namespace ClusterObserver
 {
-    public class ClusterObserverManager : IDisposable
+    public sealed class ClusterObserverManager : IDisposable
     {
         private static bool etwEnabled;
         private readonly string nodeName;
@@ -35,9 +35,10 @@ namespace ClusterObserver
             get; set;
         }
 
-        public static int ObserverExecutionLoopSleepSeconds 
+        private static int ObserverExecutionLoopSleepSeconds 
         { 
-            get; private set; 
+            get;
+            set; 
         } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
         public static int AsyncOperationTimeoutSeconds
@@ -57,12 +58,14 @@ namespace ClusterObserver
 
         public static ITelemetryProvider TelemetryClient
         {
-            get; set;
+            get;
+            private set;
         }
 
         public static bool TelemetryEnabled
         {
-            get; set;
+            get;
+            private set;
         }
 
         public static bool EtwEnabled
@@ -255,9 +258,7 @@ namespace ClusterObserver
                     }
 
                     await RunObserverAync().ConfigureAwait(false);
-
-                    Logger.LogInfo($"Sleeping for {(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 30)} seconds before running again.");
-                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 30), token);
+                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10), token);
 
                     Logger.Flush();
                 }
@@ -319,7 +320,7 @@ namespace ClusterObserver
             
             try
             {
-                cts.Cancel();
+                cts?.Cancel();
                 IsObserverRunning = false;
             }
             catch(Exception e) when (e is AggregateException || e is ObjectDisposedException)
@@ -465,7 +466,7 @@ namespace ClusterObserver
             appParamsUpdating = false;
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (hasDisposed)
             {

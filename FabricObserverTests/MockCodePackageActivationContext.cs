@@ -92,7 +92,7 @@ namespace FabricObserverTests
 
         public IList<string> GetCodePackageNames()
         {
-            return new List<string>() { CodePackageName };
+            return new List<string> { CodePackageName };
         }
 
         public CodePackage GetCodePackageObject(string packageName)
@@ -102,7 +102,7 @@ namespace FabricObserverTests
 
         public IList<string> GetConfigurationPackageNames()
         {
-            return new List<string>() { string.Empty };
+            return new List<string> { string.Empty };
         }
 
         public ConfigurationPackage GetConfigurationPackageObject(string packageName)
@@ -112,7 +112,7 @@ namespace FabricObserverTests
 
         public IList<string> GetDataPackageNames()
         {
-            return new List<string>() { string.Empty };
+            return new List<string> { string.Empty };
         }
 
         public DataPackage GetDataPackageObject(string packageName)

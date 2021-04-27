@@ -9,10 +9,6 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxMemoryUsageProvider : MemoryUsageProvider
     {
-        public LinuxMemoryUsageProvider()
-        {
-        }
-
         public override ulong GetCommittedBytes()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();

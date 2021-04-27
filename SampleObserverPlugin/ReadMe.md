@@ -81,7 +81,7 @@ namespace FabricObserver.Observers
 }
 ```  
   
-**NOTE for FO 3.1.0: If you are using ObserverHealthReporter in your current plugin, you will need to modify the ctor:**
+**NOTE for FO 3.1.x: If you are using ObserverHealthReporter in your current plugin, you will need to modify the ctor:**
 ``` C#
 // FabricClientInstance is a built-in object in ObserverBase. 
 var healthReporter = new ObserverHealthReporter(ObserverLogger, FabricClientInstance);
@@ -126,7 +126,7 @@ You can deploy using the contents of your build out directory - just remove the 
 * Create new instance of FO, which will contain your observer plugin
 ```Powershell
 $path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os platform, e.g., win-x64 or linux-x64]"
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV319 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV3110 -TimeoutSec 1800
 Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV316
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.9
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.10
 ```

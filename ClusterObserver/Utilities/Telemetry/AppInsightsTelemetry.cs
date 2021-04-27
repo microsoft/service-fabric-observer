@@ -39,8 +39,8 @@ namespace ClusterObserver.Utilities.Telemetry
 
             logger = new Logger("TelemetryLog");
 
-            TelemetryConfiguration configuration = new TelemetryConfiguration() { InstrumentationKey = key };
-            telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
+            TelemetryConfiguration configuration = new TelemetryConfiguration { InstrumentationKey = key };
+            telemetryClient = new TelemetryClient(new TelemetryConfiguration { InstrumentationKey = key });
 #if DEBUG
             // Expedites the flow of data through the pipeline.
             configuration.TelemetryChannel.DeveloperMode = true;

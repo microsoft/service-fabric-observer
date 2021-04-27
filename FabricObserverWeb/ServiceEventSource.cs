@@ -24,7 +24,6 @@ namespace FabricObserverWeb
 
         // Instance constructor is private to enforce singleton semantics
         private ServiceEventSource()
-            : base()
         {
         }
 
@@ -47,11 +46,13 @@ namespace FabricObserverWeb
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (IsEnabled())
+            if (!IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                Message(finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            Message(finalMessage);
         }
 
         private const int MessageEventId = 1;
@@ -68,19 +69,21 @@ namespace FabricObserverWeb
         [NonEvent]
         public void ServiceMessage(ServiceContext serviceContext, string message, params object[] args)
         {
-            if (IsEnabled())
+            if (!IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                ServiceMessage(
-                    serviceContext.ServiceName.ToString(),
-                    serviceContext.ServiceTypeName,
-                    GetReplicaOrInstanceId(serviceContext),
-                    serviceContext.PartitionId,
-                    serviceContext.CodePackageActivationContext.ApplicationName,
-                    serviceContext.CodePackageActivationContext.ApplicationTypeName,
-                    serviceContext.NodeContext.NodeName,
-                    finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            ServiceMessage(
+                serviceContext.ServiceName.ToString(),
+                serviceContext.ServiceTypeName,
+                GetReplicaOrInstanceId(serviceContext),
+                serviceContext.PartitionId,
+                serviceContext.CodePackageActivationContext.ApplicationName,
+                serviceContext.CodePackageActivationContext.ApplicationTypeName,
+                serviceContext.NodeContext.NodeName,
+                finalMessage);
         }
 
         // For very high-frequency events it might be advantageous to raise events using WriteEventCore API.
@@ -161,19 +164,12 @@ namespace FabricObserverWeb
 
         private static long GetReplicaOrInstanceId(ServiceContext context)
         {
-            StatelessServiceContext stateless = context as StatelessServiceContext;
-            if (stateless != null)
+            return context switch
             {
-                return stateless.InstanceId;
-            }
-
-            StatefulServiceContext stateful = context as StatefulServiceContext;
-            if (stateful != null)
-            {
-                return stateful.ReplicaId;
-            }
-
-            throw new NotSupportedException("Context type not supported.");
+                StatelessServiceContext stateless => stateless.InstanceId,
+                StatefulServiceContext stateful => stateful.ReplicaId,
+                _ => throw new NotSupportedException("Context type not supported.")
+            };
         }
 #if UNSAFE
         private int SizeInBytes(string s)

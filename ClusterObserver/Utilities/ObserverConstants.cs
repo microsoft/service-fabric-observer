@@ -5,7 +5,7 @@
 
 namespace ClusterObserver.Utilities
 {
-    public sealed class ObserverConstants
+    public static class ObserverConstants
     {
         public const string ObserverManagerName = "ClusterObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
@@ -18,6 +18,7 @@ namespace ClusterObserver.Utilities
         public const string AsyncOperationTimeoutSeconds = "AsyncOperationTimeoutSeconds";
         public const string ClusterObserverETWEventName = "ClusterObserverDataEvent";
         public const string EventSourceProviderName = "ClusterObserverETWProvider";
+        public const string FabricObserver = "FabricObserver";
 
         // The name of the package that contains this Observer's configuration.
         public const string ObserverConfigurationPackageName = "Config";
@@ -36,6 +37,9 @@ namespace ClusterObserver.Utilities
 
         // EmitHealthWarningEvaluationDetails.
         public const string EmitHealthWarningEvaluationConfigurationSetting = "EmitHealthWarningEvaluationDetails";
+
+        // Emit Repair Job information
+        public const string MonitorRepairJobsConfigurationSetting = "MonitorRepairJobs";
 
         // ClusterObserver.
         public const string ClusterObserverName = "ClusterObserver";

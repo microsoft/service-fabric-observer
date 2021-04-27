@@ -89,11 +89,6 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public int NetworkErrorFirewallRules
-        {
-            get; set;
-        }
-
         public bool DumpProcessOnError
         {
             get; set;

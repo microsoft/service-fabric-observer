@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.ServiceModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -23,6 +24,26 @@ namespace FabricObserver.Observers
 
         private const string HowToUpdateSelfSignedCertSfLinkHtml =
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
+
+        private TimeSpan HealthReportTimeToLive
+        {
+            get;
+        } = TimeSpan.FromDays(1);
+
+        private List<string> NotFoundWarnings
+        {
+            get; set;
+        }
+
+        private List<string> ExpiredWarnings
+        {
+            get; set;
+        }
+
+        private List<string> ExpiringWarnings
+        {
+            get; set;
+        }
 
         public CertificateObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base (fabricClient, context)
@@ -49,31 +70,10 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public List<string> NotFoundWarnings
-        {
-            get; set;
-        }
-
-        public List<string> ExpiredWarnings
-        {
-            get; set;
-        }
-
-        public List<string> ExpiringWarnings
-        {
-            get; set;
-        }
-
         public SecurityConfiguration SecurityConfiguration
         {
             get; set;
         }
-
-        public TimeSpan HealthReportTimeToLive 
-        { 
-            get; set; 
-        } = TimeSpan.FromDays(1);
-
 
         public override async Task ObserveAsync(CancellationToken token)
         {
@@ -100,12 +100,12 @@ namespace FabricObserver.Observers
 
             try
             {
-                store?.Open(OpenFlags.ReadOnly);
+                store.Open(OpenFlags.ReadOnly);
 
-                // Cluster Certificates
                 if (SecurityConfiguration.SecurityType == SecurityType.CommonName)
                 {
                     CheckLatestBySubjectName(store, SecurityConfiguration.ClusterCertThumbprintOrCommonName, DaysUntilClusterExpireWarningThreshold);
+
                 }
                 else if (SecurityConfiguration.SecurityType == SecurityType.Thumbprint)
                 {
@@ -142,7 +142,7 @@ namespace FabricObserver.Observers
             }
             finally
             {
-                store?.Dispose();
+                store.Dispose();
             }
 
             ExpiredWarnings?.Clear();
@@ -179,9 +179,9 @@ namespace FabricObserver.Observers
                     ReportType = HealthReportType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
-                    HealthMessage = $"All cluster and monitored app certificates are healthy.",
+                    HealthMessage = "All cluster and monitored app certificates are healthy.",
                     State = HealthState.Ok,
-                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : HealthReportTimeToLive,
+                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : this.HealthReportTimeToLive,
                 };
 
                 HasActiveFabricErrorOrWarning = false;
@@ -208,7 +208,7 @@ namespace FabricObserver.Observers
 
                 if (IsTelemetryEnabled)
                 {
-                    TelemetryData telemetryData = new TelemetryData(FabricClientInstance, token)
+                    var telemetryData = new TelemetryData(FabricClientInstance, token)
                     {
                         Code = FOErrorWarningCodes.WarningCertificateExpiration,
                         HealthState = "Warning",
@@ -293,22 +293,22 @@ namespace FabricObserver.Observers
             token.ThrowIfCancellationRequested();
 
             var daysUntilClusterExpireWarningThreshold = GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.CertificateObserverDaysUntilClusterExpiryWarningThreshold);
+                                                            ConfigurationSectionName,
+                                                            ObserverConstants.CertificateObserverDaysUntilClusterExpiryWarningThreshold);
 
             DaysUntilClusterExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilClusterExpireWarningThreshold) ? int.Parse(daysUntilClusterExpireWarningThreshold) : 14;
 
             var daysUntilAppExpireWarningClusterThreshold = GetSettingParameterValue(
-                    ConfigurationSectionName,
-                    ObserverConstants.CertificateObserverDaysUntilAppExpiryWarningThreshold);
+                                                                ConfigurationSectionName,
+                                                                ObserverConstants.CertificateObserverDaysUntilAppExpiryWarningThreshold);
 
             DaysUntilAppExpireWarningThreshold = !string.IsNullOrEmpty(daysUntilAppExpireWarningClusterThreshold) ? int.Parse(daysUntilAppExpireWarningClusterThreshold) : 14;
 
             if (AppCertificateThumbprintsToObserve == null)
             {
                 var appThumbprintsToObserve = GetSettingParameterValue(
-                        ConfigurationSectionName,
-                        ObserverConstants.CertificateObserverAppCertificateThumbprints);
+                                                ConfigurationSectionName,
+                                                ObserverConstants.CertificateObserverAppCertificateThumbprints);
 
                 AppCertificateThumbprintsToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve) : new List<string>();
             }
@@ -316,8 +316,8 @@ namespace FabricObserver.Observers
             if (AppCertificateCommonNamesToObserve == null)
             {
                 var appCommonNamesToObserve = GetSettingParameterValue(
-                        ConfigurationSectionName,
-                        ObserverConstants.CertificateObserverAppCertificateCommonNames);
+                                                ConfigurationSectionName,
+                                                ObserverConstants.CertificateObserverAppCertificateCommonNames);
 
                 AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appCommonNamesToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();
             }
@@ -339,7 +339,7 @@ namespace FabricObserver.Observers
                 // Safe XML pattern - *Do not use LoadXml*.
                 var xdoc = new XmlDocument { XmlResolver = null };
                 sreader = new StringReader(clusterManifestXml);
-                xreader = XmlReader.Create(sreader, new XmlReaderSettings() { XmlResolver = null });
+                xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null });
                 xdoc.Load(xreader);
 
                 var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
@@ -366,7 +366,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            throw new System.ServiceModel.ActionNotSupportedException("if X509FindTime attribute, value should be FindBySubjectName");
+                            throw new ActionNotSupportedException("if X509FindTime attribute, value should be FindBySubjectName");
                         }
                     }
 
@@ -380,7 +380,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 WriteToLogWithLevel(
                     ObserverName,
@@ -432,7 +432,7 @@ namespace FabricObserver.Observers
                 ExpiredWarnings.Add(
                     $"Certificate expired on {expiry?.ToShortDateString()}: " +
                     $"[Thumbprint: {newestCertificate?.Thumbprint} " +
-                    $"" +
+                    "" +
                     $"Issuer {newestCertificate.Issuer}, " +
                     $"Subject: {newestCertificate.Subject}]{Environment.NewLine}{message}");
             }
@@ -459,14 +459,12 @@ namespace FabricObserver.Observers
                         !TryFindCertificate("/var/lib/waagent", thumbprint, out certificate))
                     {
                         NotFoundWarnings.Add($"Could not find requested certificate with thumbprint: {thumbprint} in /var/lib/sfcerts, /var/lib/waagent, and LocalMachine/Root");
-                        
                         return;
                     }
                 }
                 else
                 {
                     NotFoundWarnings.Add($"Could not find requested certificate with thumbprint: {thumbprint} in LocalMachine/My");
-                    
                     return;
                 }
             }

@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -106,7 +107,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                diskAverageQueueLengthCounter = new PerformanceCounter()
+                diskAverageQueueLengthCounter = new PerformanceCounter
                 {
                     InstanceName = instance,
                     CategoryName = "LogicalDisk",
@@ -124,7 +125,7 @@ namespace FabricObserver.Observers.Utilities
                 Logger logger = new Logger("Utilities");
 
                 if (e is ArgumentNullException || e is PlatformNotSupportedException
-                    || e is System.ComponentModel.Win32Exception || e is UnauthorizedAccessException)
+                    || e is Win32Exception || e is UnauthorizedAccessException)
                 {
                     logger.LogError($"{diskAverageQueueLengthCounter.CategoryName} {diskAverageQueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
 
@@ -157,7 +158,7 @@ namespace FabricObserver.Observers.Utilities
                     return amount / 1024 / 1024 / 1024 / 1024;
                 default:
                     return amount;
-            };
+            }
         }
     }
 

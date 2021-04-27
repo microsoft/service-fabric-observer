@@ -5,8 +5,8 @@
 
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Security;
-using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -32,7 +32,7 @@ namespace FabricObserver.Observers.Utilities
             IntPtr callbackParam);
 
         [Flags]
-        public enum MINIDUMP_TYPE : int
+        public enum MINIDUMP_TYPE
         {
             MiniDumpNormal = 0x00000000,
             MiniDumpWithDataSegs = 0x00000001,
