@@ -145,7 +145,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                count = Retry.Do(() => GetEphemeralPortCount(processId), TimeSpan.FromSeconds(5), CancellationToken.None);
+                count = Retry.Do(() => GetEphemeralPortCount(processId), TimeSpan.FromSeconds(3), CancellationToken.None);
             }
             catch (AggregateException ae)
             {
@@ -169,7 +169,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                count = Retry.Do(() => GetTcpPortCount(processId), TimeSpan.FromSeconds(5), CancellationToken.None);
+                count = Retry.Do(() => GetTcpPortCount(processId), TimeSpan.FromSeconds(3), CancellationToken.None);
             }
             catch (AggregateException ae)
             {
@@ -279,9 +279,11 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
+        /* TODO: These functions are redundant. Add another optional param (bool) for ephemeral port range filtering. Get rid of extra function..*/
+
         private int GetEphemeralPortCount(int processId = -1)
         {
-            List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
+            var tempLocalPortData = new List<(int Pid, int Port)>();
             string findStrProc = string.Empty;
             string error = string.Empty;
 
@@ -313,6 +315,7 @@ namespace FabricObserver.Observers.Utilities
                 p.BeginErrorReadLine();
 
                 (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
+
                 string portRow;
                 while ((portRow = stdOutput.ReadLine()) != null)
                 {
@@ -382,15 +385,15 @@ namespace FabricObserver.Observers.Utilities
                     return count;
                 }
 
-                // find will exit with a non-zero exit code if it doesn't find any results for a given pid.
-                // this means there are no ports opened by this process id. Do not throw in this case. 0 is the right answer.
-                if (error == string.Empty)
+                // find will exit with a non-zero exit code if it doesn't find any matches in the case where a pid was supplied.
+                // Do not throw in this case. 0 is the right answer.
+                if (processId > 0 && error == string.Empty)
                 {
                     return 0;
                 }
 
-                // there really was an error associated with non-zero exit code. Log it and throw.
-                string msg = $"netstat failure: ({exitStatus}): {error}";
+                // there was an error associated with the non-zero exit code. Log it and throw.
+                string msg = $"netstat -qno -p {TcpProtocol}{findStrProc} exited with {exitStatus}: {error}";
                 Logger.LogWarning(msg);
 
                 // this will be handled by Retry.Do().
@@ -400,10 +403,9 @@ namespace FabricObserver.Observers.Utilities
 
         private int GetTcpPortCount(int processId = -1)
         {
-            string protoParam = "-p " + TcpProtocol;
+            var tempLocalPortData = new List<(int Pid, int Port)>();
             string findStrProc = string.Empty;
             string error = string.Empty;
-            List<(int Pid, int Port)> tempLocalPortData = new List<(int Pid, int Port)>();
 
             if (processId > 0)
             {
@@ -414,7 +416,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 var ps = new ProcessStartInfo
                 {
-                    Arguments = $"/c netstat -qno {protoParam}{findStrProc}",
+                    Arguments = $"/c netstat -qno -p {TcpProtocol}{findStrProc}",
                     FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -464,10 +466,12 @@ namespace FabricObserver.Observers.Utilities
                             continue;
                         }
 
-                        if (!tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
+                        if (tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
                         {
-                            tempLocalPortData.Add((processId, localPort));
+                            continue;
                         }
+
+                        tempLocalPortData.Add((processId, localPort));
                     }
                     else
                     {
@@ -490,15 +494,15 @@ namespace FabricObserver.Observers.Utilities
                     return count;
                 }
 
-                // find will exit with a non-zero exit code if it doesn't find any results for a given pid.
-                // this means there are no ports opened by this process id. Do not throw in this case. 0 is the right answer.
-                if (error == string.Empty)
+                // find will exit with a non-zero exit code if it doesn't find any matches in the case where a pid was supplied.
+                // Do not throw in this case. 0 is the right answer.
+                if (processId > 0 && error == string.Empty)
                 {
                     return 0;
                 }
 
-                // there really was an error associated with non-zero exit code. Log it and throw.
-                string msg = $"netstat failure: ({exitStatus}): {error}";
+                // there was an error associated with the non-zero exit code. Log it and throw.
+                string msg = $"netstat -qno -p {TcpProtocol}{findStrProc} exited with {exitStatus}: {error}";
                 Logger.LogWarning(msg);
 
                 // this will be handled by Retry.Do().
