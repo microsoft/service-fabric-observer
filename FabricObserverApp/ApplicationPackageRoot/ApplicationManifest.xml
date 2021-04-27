@@ -29,7 +29,7 @@
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
     <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />

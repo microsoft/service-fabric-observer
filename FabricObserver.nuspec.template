@@ -4,7 +4,7 @@
     <id>%PACKAGE_ID%</id>
     <version>3.1.10</version>
     <releaseNotes>
-      Code improvements, refactorings, optimizations.
+      Bug fix in WindowsInfoProvider port monitoring functions. Code improvements, refactoring, minor optimizations.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

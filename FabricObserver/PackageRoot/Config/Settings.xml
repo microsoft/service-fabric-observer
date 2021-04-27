@@ -78,7 +78,7 @@
     
     <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object in Logger instances that will emit 
          FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
-    <Parameter Name="EnableETWProvider" Value="true" />
+    <Parameter Name="EnableETWProvider" Value="false" />
     
     <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII.  
          We just want to know if FO is running somewhere and that it is healthy. We collect no personal identifiable information, 
