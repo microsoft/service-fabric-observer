@@ -129,4 +129,16 @@ $path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os plat
 Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV3110 -TimeoutSec 1800
 Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV316
 New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.10
-```
+```  
+
+
+### What about adding nuget packages to plugins that are not also installed in FO? 
+
+Great question. The easiest way to solve this problem is to simply put the compile time assemblies of the nuget package 
+you installed into your plugin project into FO's Plugins folder along with your plugin dll. Optionally, you could copy the plugin's
+referenced dlls from the nuget package into FO's code package (Code folder). 
+
+You can see an example of this in the SampleNewObserver project: there is a nuget package installed in the plugin project that is 
+not also used by FO (Polly). Post-Build events are used to copy Polly.dll (the nuget package compile time assembly) from the base nuget packages location
+to the build output folder along with the plugin dll and its pdb. So, the plugin dll, pdb and referenced nuget package assembly are copied to the Plugins folder
+directly. Now, when you deploy FO from the output directory, all of the necessary libs are in place and your plugin will not fail with "file not found" exceptions from the loader.
