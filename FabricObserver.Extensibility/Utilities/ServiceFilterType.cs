@@ -23,6 +23,6 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// No service filter
         /// </summary>
-        None,
+        None
     }
 }

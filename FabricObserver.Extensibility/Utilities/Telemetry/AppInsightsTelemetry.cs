@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
@@ -20,7 +21,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     /// Abstracts the ApplicationInsights telemetry API calls allowing
     /// other telemetry providers to be plugged in.
     /// </summary>
-    public class AppInsightsTelemetry : ITelemetryProvider, IDisposable
+    public class AppInsightsTelemetry : ITelemetryProvider
     {
         /// <summary>
         /// ApplicationInsights telemetry client.
@@ -37,7 +38,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             logger = new Logger("TelemetryLog");
 
-            TelemetryConfiguration configuration = new TelemetryConfiguration { InstrumentationKey = key };
+            var configuration = new TelemetryConfiguration { InstrumentationKey = key };
             telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
@@ -48,7 +49,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <summary>
         /// Gets a value indicating whether telemetry is enabled or not.
         /// </summary>
-        public bool IsEnabled => telemetryClient.IsEnabled();
+        private bool IsEnabled => telemetryClient.IsEnabled();
 
         /// <summary>
         /// Gets or sets the key.
@@ -177,23 +178,23 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     value = telemetryData.Value.ToString();
                 }
 
-                Dictionary<string, string> properties = new Dictionary<string, string>
+                var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                     { "HealthState", telemetryData.HealthState ?? string.Empty },
-                    { "Application", telemetryData.ApplicationName ?? string.Empty },
-                    { "Service", telemetryData.ServiceName ?? string.Empty },
+                    { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
+                    { "ServiceName", telemetryData.ServiceName ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId ?? string.Empty },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "Value", value ?? string.Empty },
-                    { "Partition", telemetryData.PartitionId },
-                    { "Replica", telemetryData.ReplicaId },
-                    { "Source", telemetryData.ObserverName },
+                    { "PartitionId", telemetryData.PartitionId ?? string.Empty },
+                    { "ReplicaId", telemetryData.ReplicaId ?? string.Empty },
+                    { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OS", telemetryData.OS ?? string.Empty },
+                    { "OS", telemetryData.OS ?? string.Empty }
                 };
 
                 telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
@@ -254,20 +255,20 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             try
             {
-                Dictionary<string, string> properties = new Dictionary<string, string>
+                var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
-                    { "Application", telemetryData.ApplicationName ?? string.Empty },
-                    { "Service", telemetryData.ServiceName ?? string.Empty },
+                    { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
+                    { "ServiceName", telemetryData.ServiceName ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "Value", value ?? string.Empty },
-                    { "Partition", telemetryData.PartitionId },
-                    { "Replica", telemetryData.ReplicaId },
+                    { "PartitionId", telemetryData.PartitionId },
+                    { "ReplicaId", telemetryData.ReplicaId },
                     { "Source", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OS", telemetryData.OS ?? string.Empty },
+                    { "OS", telemetryData.OS ?? string.Empty }
                 };
 
                 telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
@@ -283,41 +284,55 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <summary>
         /// Reports a metric to a telemetry service.
         /// </summary>
-        /// <param name="telemetryData">TelemetryData instance.</param>
+        /// <param name="machineTelemetryData">MachineTelemetryData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A task.</returns>
-        public Task ReportMetricAsync(MachineTelemetryData telemetryData, CancellationToken cancellationToken)
+        public Task ReportMetricAsync(MachineTelemetryData machineTelemetryData, CancellationToken cancellationToken)
         {
-            if (telemetryData == null || cancellationToken.IsCancellationRequested)
+            if (machineTelemetryData == null || cancellationToken.IsCancellationRequested)
             {
                 return Task.CompletedTask;
             }
 
             try
             {
-                Dictionary<string, string> properties = new Dictionary<string, string>
+                string virtMem = "AvailableVirtualMemoryGB";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    { "ActiveEphemeralPorts", telemetryData.ActiveEphemeralPorts.ToString() },
-                    { "ActiveFirewallRules", telemetryData.ActiveFirewallRules.ToString() },
-                    { "ActivePorts", telemetryData.ActivePorts.ToString() },
-                    { "AvailablePhysicalMemory", telemetryData.AvailablePhysicalMemoryGB.ToString(CultureInfo.InvariantCulture) },
-                    { "AvailableVirtualMemory", telemetryData.AvailableVirtualMemoryGB.ToString(CultureInfo.InvariantCulture) },
-                    { "DriveInfo", telemetryData.DriveInfo },
-                    { "FabricAppPortRange", telemetryData.FabricAppPortRange },
-                    { "HotFixes", telemetryData.HotFixes },
-                    { "LastBootUpTime", telemetryData.LastBootUpTime },
-                    { "Level", telemetryData.HealthState },
-                    { "LogicalDriveCount", telemetryData.LogicalDriveCount.ToString() },
-                    { "LogicalProcessorCount", telemetryData.LogicalProcessorCount.ToString() },
-                    { "Node", telemetryData.Node },
-                    { "NumberOfRunningProcesses", telemetryData.NumberOfRunningProcesses.ToString() },
-                    { "Observer", telemetryData.Observer },
-                    { "OS", telemetryData.OS },
-                    { "OSInstallDate", telemetryData.OSInstallDate },
-                    { "OSVersion", telemetryData.OSVersion },
-                    { "TotalMemorySizeGB", telemetryData.TotalMemorySizeGB.ToString() },
-                    { "WindowsDynamicPortRange", telemetryData.WindowsDynamicPortRange },
+                    virtMem = "SwapFreeGB";
+                }
+
+                var properties = new Dictionary<string, string>
+                {
+                    { "ActiveEphemeralTcpPorts", machineTelemetryData.ActiveEphemeralTcpPorts.ToString() },
+                    { "ActiveFirewallRules", machineTelemetryData.ActiveFirewallRules.ToString() },
+                    { "ActiveTcpPorts", machineTelemetryData.ActiveTcpPorts.ToString() },
+                    { "DriveInfo", machineTelemetryData.DriveInfo },
+                    { "FabricAppPortRange", machineTelemetryData.FabricAppPortRange },
+                    { "AvailablePhysicalMemoryGB", machineTelemetryData.AvailablePhysicalMemoryGB.ToString(CultureInfo.InvariantCulture) },
+                    { $"{virtMem}", machineTelemetryData.FreeVirtualMemoryGB.ToString(CultureInfo.InvariantCulture) },
+                    { "HotFixes", machineTelemetryData.HotFixes ?? string.Empty },
+                    { "LastBootUpTime", machineTelemetryData.LastBootUpTime },
+                    { "Level", machineTelemetryData.HealthState },
+                    { "LogicalDriveCount", machineTelemetryData.LogicalDriveCount.ToString() },
+                    { "LogicalProcessorCount", machineTelemetryData.LogicalProcessorCount.ToString() },
+                    { "NodeName", machineTelemetryData.NodeName },
+                    { "NumberOfRunningProcesses", machineTelemetryData.NumberOfRunningProcesses.ToString() },
+                    { "ObserverName", machineTelemetryData.ObserverName },
+                    { "OS", machineTelemetryData.OS },
+                    { "OSInstallDate", machineTelemetryData.OSInstallDate },
+                    { "OSVersion", machineTelemetryData.OSVersion },
+                    { "TotalMemorySizeGB", machineTelemetryData.TotalMemorySizeGB.ToString() },
+                    { "EphemeralTcpPortRange", machineTelemetryData.EphemeralTcpPortRange },
+                    { "WindowsUpdateAutoDownloadEnabled", machineTelemetryData.WindowsUpdateAutoDownloadEnabled.ToString() }
                 };
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    _ = properties.Remove("ActiveFirewallRules");
+                    _ = properties.Remove("WindowsUpdateAutoDownloadEnabled");
+                    _ = properties.Remove("HotFixes");
+                }
 
                 telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
             }
@@ -429,7 +444,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 Count = count,
                 Min = min,
                 Max = max,
-                StandardDeviation = deviation,
+                StandardDeviation = deviation
             };
 
             mt.Context.Cloud.RoleName = roleName;
@@ -448,28 +463,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             telemetryClient.TrackMetric(mt);
 
             return Task.CompletedTask;
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-        }
-
-        private bool disposedValue; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposedValue)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-            }
-
-            disposedValue = true;
         }
     }
 }

@@ -22,7 +22,7 @@ namespace ClusterObserver.Utilities
                 return new JsonMediaTypeFormatter
                 {
                     SerializerSettings = MediaTypeFormatterSettings,
-                    UseDataContractJsonSerializer = false,
+                    UseDataContractJsonSerializer = false
                 };
             }
         }
@@ -59,9 +59,9 @@ namespace ClusterObserver.Utilities
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             Converters = new List<JsonConverter>
             {
-                new StringEnumConverter { NamingStrategy = new CamelCaseNamingStrategy() },
+                new StringEnumConverter { NamingStrategy = new CamelCaseNamingStrategy() }
             },
-            TypeNameHandling = TypeNameHandling.Auto,
+            TypeNameHandling = TypeNameHandling.Auto
         };
 
         public static T ReadFromJsonStream<T>(Stream stream)

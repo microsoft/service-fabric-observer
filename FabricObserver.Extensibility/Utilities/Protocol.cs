@@ -9,6 +9,6 @@ namespace FabricObserver.Observers.Utilities
     {
         None,
         Tcp,
-        Udp,
+        Udp
     }
 }

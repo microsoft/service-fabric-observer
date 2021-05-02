@@ -13,11 +13,10 @@ namespace FabricObserver.Observers.Utilities
 {
     /// <summary>
     /// Static class that houses networking utilities.
-    /// </summary>
+    /// </summary> 
     public static class NetworkUsage
     {
-        public static (int LowPort, int HighPort)
-            TupleGetFabricApplicationPortRangeForNodeType(string nodeType, string clusterManifestXml)
+        public static (int LowPort, int HighPort) TupleGetFabricApplicationPortRangeForNodeType(string nodeType, string clusterManifestXml)
         {
             if (string.IsNullOrEmpty(nodeType) || string.IsNullOrEmpty(clusterManifestXml))
             {
@@ -52,14 +51,9 @@ namespace FabricObserver.Observers.Utilities
 
                 return ret;
             }
-            catch (XmlException)
+            catch (Exception e) when (e is ArgumentException || e is NullReferenceException || e is XmlException)
             {
-            }
-            catch (ArgumentException)
-            {
-            }
-            catch (NullReferenceException)
-            {
+                // continue
             }
             finally
             {
@@ -77,24 +71,26 @@ namespace FabricObserver.Observers.Utilities
             int count = -1;
 
             // This method is not implemented for Linux yet.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                try
-                {
-                    var scope = new ManagementScope("\\\\.\\ROOT\\StandardCimv2");
-                    var q = new ObjectQuery("SELECT * FROM MSFT_NetFirewallRule WHERE Enabled=1");
-                    searcher = new ManagementObjectSearcher(scope, q);
-                    results = searcher.Get();
-                    count = results.Count;
-                }
-                catch (ManagementException)
-                {
-                }
-                finally
-                {
-                    results?.Dispose();
-                    searcher?.Dispose();
-                }
+                return count;
+            }
+
+            try
+            {
+                var scope = new ManagementScope("\\\\.\\ROOT\\StandardCimv2");
+                var q = new ObjectQuery("SELECT * FROM MSFT_NetFirewallRule WHERE Enabled=1");
+                searcher = new ManagementObjectSearcher(scope, q);
+                results = searcher.Get();
+                count = results.Count;
+            }
+            catch (ManagementException)
+            {
+            }
+            finally
+            {
+                results?.Dispose();
+                searcher?.Dispose();
             }
 
             return count;

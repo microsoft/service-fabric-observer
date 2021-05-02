@@ -45,20 +45,20 @@ namespace FabricObserver.Observers
                     new Endpoint
                     {
                         HostName = "www.microsoft.com",
-                        Port = 443,
+                        Port = 443
                     },
                     new Endpoint
                     {
                         HostName = "www.facebook.com",
-                        Port = 443,
+                        Port = 443
                     },
                     new Endpoint
                     {
                         HostName = "www.google.com",
-                        Port = 443,
-                    },
-                },
-            },
+                        Port = 443
+                    }
+                }
+            }
         };
 
         private readonly string dataPackagePath;
@@ -157,7 +157,7 @@ namespace FabricObserver.Observers
                             ObserverName = ObserverName,
                             Metric = ErrorWarningProperty.InternetConnectionFailure,
                             NodeName = NodeName,
-                            Source = ObserverConstants.FabricObserverName,
+                            Source = ObserverConstants.FabricObserverName
                         };
 
                         if (IsTelemetryEnabled)
@@ -179,7 +179,7 @@ namespace FabricObserver.Observers
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
                             ReportType = HealthReportType.Application,
-                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {conn.HostName}",
+                            ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {conn.HostName}"
                         };
 
                         // Send health report Warning and log event locally.
@@ -202,7 +202,7 @@ namespace FabricObserver.Observers
                                                 ObserverName,
                                                 Metric = ErrorWarningProperty.InternetConnectionFailure,
                                                 NodeName,
-                                                Source = ObserverConstants.FabricObserverName,
+                                                Source = ObserverConstants.FabricObserverName
                                             });
                         }
                     }
@@ -229,7 +229,7 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
-                            ReportType = HealthReportType.Application,
+                            ReportType = HealthReportType.Application
                         };
 
                         HealthReporter.ReportHealthToServiceFabric(report);
@@ -246,7 +246,7 @@ namespace FabricObserver.Observers
                                 ObserverName = ObserverName,
                                 Metric = "Internet Connection State",
                                 NodeName = NodeName,
-                                Source = ObserverConstants.FabricObserverName,
+                                Source = ObserverConstants.FabricObserverName
                             };
 
                             _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
@@ -266,7 +266,7 @@ namespace FabricObserver.Observers
                                                 ObserverName,
                                                 Metric = "Internet Connection State",
                                                 NodeName,
-                                                Source = ObserverConstants.FabricObserverName,
+                                                Source = ObserverConstants.FabricObserverName
                                             });
                         }
 
@@ -609,7 +609,7 @@ namespace FabricObserver.Observers
                                         HostName = endpoint.HostName,
                                         Connected = true,
                                         Health = HealthState.Warning,
-                                        TargetApp = targetApp,
+                                        TargetApp = targetApp
                                     });
                 }
                 else
@@ -620,7 +620,7 @@ namespace FabricObserver.Observers
                                         HostName = endpoint.HostName,
                                         Connected = true,
                                         Health = HealthState.Ok,
-                                        TargetApp = targetApp,
+                                        TargetApp = targetApp
                                     });
                 }
             }
@@ -640,7 +640,7 @@ namespace FabricObserver.Observers
                         HostName = endpoint.HostName,
                         Connected = false,
                         Health = HealthState.Warning,
-                        TargetApp = targetApp,
+                        TargetApp = targetApp
                     });
 
                 if (!AppNames.Contains(targetApp))

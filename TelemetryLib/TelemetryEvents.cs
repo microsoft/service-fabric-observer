@@ -32,7 +32,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             appInsightsTelemetryConf.TelemetryChannel.EndpointAddress = TelemetryConstants.TelemetryEndpoint;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf)
             {
-                InstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey,
+                InstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey
             };
 
             var (item1, item2, item3) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();

@@ -63,7 +63,7 @@ namespace FabricObserver.Observers
                     "FabricHost",
                     "FabricIS.dll",
                     "FabricRM.exe",
-                    "FabricUS.dll",
+                    "FabricUS.dll"
                 };
             }
             else
@@ -79,7 +79,7 @@ namespace FabricObserver.Observers
                     "FabricGateway",
                     "FabricHost",
                     "FabricIS",
-                    "FabricRM",
+                    "FabricRM"
                 };
             }
         }

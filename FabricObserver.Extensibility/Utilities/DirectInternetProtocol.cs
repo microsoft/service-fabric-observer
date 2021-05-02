@@ -20,6 +20,6 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// For endpoints reachable only via direct TCP socket connections, like most Windows database servers.
         /// </summary>
-        Tcp,
+        Tcp
     }
 }

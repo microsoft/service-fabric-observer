@@ -295,7 +295,7 @@ namespace ClusterObserver
                                             HealthState = "Warning",
                                             HealthEventDescription = message,
                                             Metric = "ClusterObserverServiceHealth",
-                                            Source = ObserverConstants.ClusterObserverName,
+                                            Source = ObserverConstants.ClusterObserverName
                                         });
                 }
 
@@ -349,7 +349,7 @@ namespace ClusterObserver
                                             HealthState = "Warning",
                                             HealthEventDescription = $"{e}",
                                             Metric = "ClusterObserverServiceHealth",
-                                            Source = ObserverConstants.ClusterObserverName,
+                                            Source = ObserverConstants.ClusterObserverName
                                         });
                 }
             }
@@ -402,7 +402,7 @@ namespace ClusterObserver
                                                 HealthState = "Warning",
                                                 HealthEventDescription = observerHealthWarning,
                                                 Metric = "ClusterObserverServiceHealth",
-                                                Source = ObserverConstants.ClusterObserverName,
+                                                Source = ObserverConstants.ClusterObserverName
                                             });
                     }
 
@@ -437,7 +437,7 @@ namespace ClusterObserver
                                             HealthState = "Warning",
                                             HealthEventDescription = msg,
                                             Metric = "ClusterObserverServiceHealth",
-                                            Source = ObserverConstants.ClusterObserverName,
+                                            Source = ObserverConstants.ClusterObserverName
                                         });
                 }
 

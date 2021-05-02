@@ -89,7 +89,7 @@ namespace FabricObserver.Observers.Utilities
                         UseShellExecute = false,
                         WindowStyle = ProcessWindowStyle.Hidden,
                         RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
+                        RedirectStandardOutput = true
                     };
 
                     p.StartInfo = ps;
@@ -240,7 +240,7 @@ namespace FabricObserver.Observers.Utilities
                                 osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
                                 break;
                             case "freephysicalmemory":
-                                osInfo.AvailableMemoryKB = ulong.Parse(value);
+                                osInfo.FreePhysicalMemoryKB = ulong.Parse(value);
                                 break;
                             case "freevirtualmemory":
                                 osInfo.FreeVirtualMemoryKB = ulong.Parse(value);
@@ -302,7 +302,7 @@ namespace FabricObserver.Observers.Utilities
                     CreateNoWindow = true,
                     RedirectStandardInput = true,
                     RedirectStandardOutput = true,
-                    RedirectStandardError = true,
+                    RedirectStandardError = true
                 };
 
                 // Capture any error information from netstat.
@@ -422,7 +422,7 @@ namespace FabricObserver.Observers.Utilities
                     CreateNoWindow = true,
                     RedirectStandardInput = true,
                     RedirectStandardOutput = true,
-                    RedirectStandardError = true,
+                    RedirectStandardError = true
                 };
 
                 // Capture any error information from netstat.

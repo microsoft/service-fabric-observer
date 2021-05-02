@@ -50,12 +50,12 @@ namespace FabricObserver.Observers.Utilities
         public bool EnableETWLogging
         {
             get; set;
-        } = false;
+        }
 
         public bool EnableVerboseLogging
         {
             get; set;
-        } = false;
+        }
 
         public string LogFolderBasePath
         {
@@ -64,15 +64,16 @@ namespace FabricObserver.Observers.Utilities
 
         public string FilePath
         {
-            get; set;
+            get;
+            private set;
         }
 
-        public string FolderName
+        private string FolderName
         {
             get;
         }
 
-        public string Filename
+        private string Filename
         {
             get;
         }
@@ -81,9 +82,9 @@ namespace FabricObserver.Observers.Utilities
         /// The maximum number of days that archive files will be stored.
         /// 0 means there is no limit set.
         /// </summary>
-        public int MaxArchiveFileLifetimeDays
+        private int MaxArchiveFileLifetimeDays
         {
-            get; set;
+            get;
         }
 
         /// <summary>
@@ -209,7 +210,7 @@ namespace FabricObserver.Observers.Utilities
             return false;
         }
 
-        public void InitializeLoggers()
+        private void InitializeLoggers()
         {
             // default log directory.
             string logFolderBase;
@@ -282,7 +283,7 @@ namespace FabricObserver.Observers.Utilities
                     ArchiveEvery = FileArchivePeriod.Day,
                     ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     MaxArchiveDays = MaxArchiveFileLifetimeDays <= 0 ? 7 : MaxArchiveFileLifetimeDays,
-                    AutoFlush = true,
+                    AutoFlush = true
                 };
 
                 LogManager.Configuration.AddTarget(loggerName + "LogFile", target);

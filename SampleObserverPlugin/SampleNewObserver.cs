@@ -46,7 +46,7 @@ namespace FabricObserver.Observers
             var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
             {
                 IncludeHealthState = false,
-                MaxResults = 150,
+                MaxResults = 150
             };
 
             // Fabric retry.
@@ -174,7 +174,7 @@ namespace FabricObserver.Observers
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
                 ReportType = HealthReportType.Node,
-                State = HealthState.Ok,
+                State = HealthState.Ok
             };
 
             healthReporter.ReportHealthToServiceFabric(healthReport);
@@ -187,7 +187,7 @@ namespace FabricObserver.Observers
                 HealthState = "Ok",
                 NodeName = NodeName,
                 ObserverName = ObserverName,
-                Source = ObserverConstants.FabricObserverName,
+                Source = ObserverConstants.FabricObserverName
             };
 
             if (IsTelemetryEnabled)
@@ -209,7 +209,7 @@ namespace FabricObserver.Observers
                         HealthState = "Ok",
                         NodeName,
                         ObserverName,
-                        Source = ObserverConstants.FabricObserverName,
+                        Source = ObserverConstants.FabricObserverName
                     });
             }
 

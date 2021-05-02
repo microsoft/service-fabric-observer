@@ -15,7 +15,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private ConfigurationSection section
         {
-            get; set;
+            get;
         }
 
         public TimeSpan RunInterval
@@ -46,12 +46,14 @@ namespace FabricObserver.Observers.Utilities
 
         public bool IsObserverTelemetryEnabled
         {
-            get; set;
+            get;
+            private set;
         }
 
         public TimeSpan AsyncTimeout
         {
-            get; set;
+            get;
+            private set;
         } = TimeSpan.FromSeconds(60);
 
         public int DataCapacity
@@ -59,7 +61,7 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
-        public ConfigurationSettings Settings
+        private ConfigurationSettings Settings
         {
             get; set;
         }
@@ -71,7 +73,8 @@ namespace FabricObserver.Observers.Utilities
 
         public bool IsObserverEtwEnabled
         {
-            get; set;
+            get;
+            private set;
         }
 
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
@@ -82,7 +85,7 @@ namespace FabricObserver.Observers.Utilities
             UpdateConfigSettings();
         }
 
-        public void UpdateConfigSettings(ConfigurationSettings settings = null)
+        private void UpdateConfigSettings(ConfigurationSettings settings = null)
         {
             if (settings != null)
             {
@@ -204,12 +207,7 @@ namespace FabricObserver.Observers.Utilities
                     parameter = section.Parameters[parameterName];
                 }
 
-                if (parameter == null)
-                {
-                    return null;
-                }
-
-                return parameter.Value;
+                return parameter?.Value;
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
             {

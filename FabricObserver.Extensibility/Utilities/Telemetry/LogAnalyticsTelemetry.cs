@@ -28,9 +28,9 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private readonly Logger logger;
         private int retries;
 
-        public string WorkspaceId
+        private string WorkspaceId
         {
-            get; set;
+            get;
         }
 
         public string Key
@@ -38,14 +38,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public string ApiVersion
+        private string ApiVersion
         {
-            get; set;
+            get;
         }
 
-        public string LogType
+        private string LogType
         {
-            get; set;
+            get;
         }
 
         public LogAnalyticsTelemetry(
@@ -85,14 +85,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     datetime = DateTime.UtcNow,
                     clusterId = clusterId ?? string.Empty,
                     clusterType = clusterType ?? string.Empty,
-                    source = ObserverConstants.FabricObserverName,
+                    source,
                     property = propertyName,
                     healthScope = scope.ToString(),
                     healthState = state.ToString(),
                     healthEvaluation = unhealthyEvaluations,
                     serviceName = serviceName ?? string.Empty,
                     instanceName = instanceName ?? string.Empty,
-                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
                 });
 
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
@@ -120,14 +120,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ReportMetricAsync(MachineTelemetryData telemetryData, CancellationToken cancellationToken)
+        public async Task ReportMetricAsync(MachineTelemetryData machineTelemetryData, CancellationToken cancellationToken)
         {
-            if (telemetryData == null)
+            if (machineTelemetryData == null)
             {
                 return;
             }
 
-            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
+            string jsonPayload = JsonConvert.SerializeObject(machineTelemetryData);
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
@@ -150,7 +150,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     clusterId = clusterId ?? string.Empty,
                     source,
                     property = name,
-                    value,
+                    value
                 });
 
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);

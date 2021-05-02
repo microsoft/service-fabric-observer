@@ -8,6 +8,6 @@ namespace ClusterObserver.Utilities.Telemetry
     public enum TelemetryProviderType
     {
         AzureApplicationInsights,
-        AzureLogAnalytics,
+        AzureLogAnalytics
     }
 }

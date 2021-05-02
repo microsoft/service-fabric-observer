@@ -112,7 +112,7 @@ namespace FabricObserver.Observers.Utilities
                     InstanceName = instance,
                     CategoryName = "LogicalDisk",
                     CounterName = "Avg. Disk Queue Length",
-                    ReadOnly = true,
+                    ReadOnly = true
                 };
 
                 // Warm up counter
@@ -168,6 +168,6 @@ namespace FabricObserver.Observers.Utilities
         Kilobytes,
         Megabytes,
         Gigabytes,
-        Terabytes,
+        Terabytes
     }
 }

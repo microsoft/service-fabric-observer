@@ -16,7 +16,10 @@ namespace FabricObserver.Observers.Utilities
         public string InstallDate;
         public string LastBootUpTime;
 
-        // Mem
+        /* Mem */
+
+        // Note: AvailableMemoryKB is only useful for Linux (it is not set for Windows..). For Windows, FreePhysicalMemory suffices.
+        // For Linux, with swap, AvailableMemoryKB is the droid we're looking for.
         public ulong AvailableMemoryKB;
         public ulong FreePhysicalMemoryKB;
         public ulong FreeVirtualMemoryKB;

@@ -159,7 +159,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 Description = $"{message}",
                 TimeToLive = timeToLive,
-                RemoveWhenExpired = true,
+                RemoveWhenExpired = true
             };
 
             // Log health event locally.
