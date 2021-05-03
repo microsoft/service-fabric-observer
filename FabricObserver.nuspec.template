@@ -4,11 +4,11 @@
     <id>%PACKAGE_ID%</id>
     <version>3.1.11</version>
     <releaseNotes>
-      Bug fix in OSObserver. MachineTelemetryData member renaming. Code Improvements.
+      Bug fix in OSObserver. MachineTelemetryData member renaming. Code improvements.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <title>Service Fabric FabricObserver Application</title>
     <icon>icon.png</icon>
     <language>en-US</language>
@@ -20,7 +20,7 @@
       <group targetFramework=".NETStandard2.0" />
     </dependencies>
     <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
-    <tags>azure servicefabric fabricobserver utility watchdog-service observability</tags>
+    <tags>azure service-fabric fabric-observer utility watchdog-service observability</tags>
     <copyright>© Microsoft Corporation. All rights reserved.</copyright>
   </metadata>
   <files>

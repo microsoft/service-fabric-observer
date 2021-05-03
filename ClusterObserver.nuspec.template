@@ -8,7 +8,7 @@
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <title>Service Fabric ClusterObserver Application</title>
     <icon>icon.png</icon>
     <language>en-US</language>
