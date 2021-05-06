@@ -5,6 +5,7 @@
 2. Runs on multiple versions of Windows Server and Ubuntu 16.04 and 18.04
 3. Provides [an easy-to-use extensibility model](/Documentation/Plugins.md) for creating [custom Observers](/SampleObserverPlugin) out of band (so, you don't need to clone the repo to build an Observer). See [ContainerObserver](https://github.com/GitTorre/ContainerObserver) for a complete plugin impl that extends FO with SF container app resource monitoring and alerting.
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
+5. Is actively developed completely in the open. The latest code (generally in flight and not meant for production) lives in the develop branch. It is highly recommended that you only deploy code built from the main branch into your production clusters.
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design.  
 
