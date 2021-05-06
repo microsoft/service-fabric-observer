@@ -85,7 +85,7 @@ namespace FabricObserver.Observers.Utilities
             { AppErrorTooManyActiveEphemeralPorts, "AppErrorTooManyActiveEphemeralPorts" },
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
             { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
-            { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
+            { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" }
         };
 
         public static Dictionary<string, string> NodeErrorCodesDictionary
@@ -117,7 +117,7 @@ namespace FabricObserver.Observers.Utilities
             { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
             { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
             { NodeErrorTooManyOpenFileHandles, "NodeErrorTooManyOpenFileHandles" },
-            { NodeWarningTooManyOpenFileHandles, "NodeWarningTooManyOpenFileHandles" },
+            { NodeWarningTooManyOpenFileHandles, "NodeWarningTooManyOpenFileHandles" }
         };
 
         public static string GetErrorWarningNameFromFOCode(string id)

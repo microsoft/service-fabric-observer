@@ -66,25 +66,27 @@ namespace FabricObserverWeb
                                     .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
                                     .UseUrls("http://localhost:5000") // localhost only, by default.
                                     .Build();
-                    })),
+                    }))
             };
         }
 
         private void Dispose(bool disposing)
         {
-            if (!disposed)
+            if (disposed)
             {
-                if (disposing)
-                {
-                    if (fabricClient != null)
-                    {
-                        fabricClient.Dispose();
-                        fabricClient = null;
-                    }
-                }
-
-                disposed = true;
+                return;
             }
+
+            if (disposing)
+            {
+                if (fabricClient != null)
+                {
+                    fabricClient.Dispose();
+                    fabricClient = null;
+                }
+            }
+
+            disposed = true;
         }
     }
 }

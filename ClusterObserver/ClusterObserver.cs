@@ -90,7 +90,7 @@ namespace ClusterObserver
             ConfigSettings = new ConfigSettings(settings, ObserverConstants.ClusterObserverConfigurationSectionName);
             ObserverLogger = new Logger(ObserverName, ClusterObserverManager.LogPath)
             {
-                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
+                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging
             };
         }
 
@@ -152,7 +152,7 @@ namespace ClusterObserver
                                 HealthState = "Ok",
                                 Description = repairState,
                                 Metric = "AggregatedClusterHealth",
-                                Source = ObserverName,
+                                Source = ObserverName
                             };
 
                             await ObserverTelemetryClient.ReportHealthAsync(telemetry, token);
@@ -169,7 +169,7 @@ namespace ClusterObserver
                                     HealthState = "Ok",
                                     HealthEventDescription = repairState,
                                     Metric = "AggregatedClusterHealth",
-                                    Source = ObserverName,
+                                    Source = ObserverName
                                 });
                         }
                     }
@@ -193,7 +193,7 @@ namespace ClusterObserver
                             HealthState = "Ok",
                             Description = "Cluster has recovered from previous Error/Warning state.",
                             Metric = "AggregatedClusterHealth",
-                            Source = ObserverName,
+                            Source = ObserverName
                         };
 
                         await ObserverTelemetryClient.ReportHealthAsync(telemetry, token);
@@ -210,7 +210,7 @@ namespace ClusterObserver
                                                 HealthState = "Ok",
                                                 HealthEventDescription = "Cluster has recovered from previous Error/Warning state.",
                                                 Metric = "AggregatedClusterHealth",
-                                                Source = ObserverName,
+                                                Source = ObserverName
                                             });
                     }
                 }
@@ -305,7 +305,7 @@ namespace ClusterObserver
                     var telemetryData = new TelemetryData(FabricClientInstance, token)
                     {
                         HealthState = "Warning",
-                        Description = msg,
+                        Description = msg
                     };
 
                     await ObserverTelemetryClient.ReportHealthAsync(telemetryData, token);
@@ -319,7 +319,7 @@ namespace ClusterObserver
                                         new
                                         {
                                             HealthState = "Warning",
-                                            HealthEventDescription = msg,
+                                            HealthEventDescription = msg
                                         });
                 }
 
@@ -444,7 +444,7 @@ namespace ClusterObserver
                                 ApplicationName = appName.OriginalString,
                                 HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
                                 Description = telemetryDescription,
-                                Source = ObserverName,
+                                Source = ObserverName
                             };
 
                             await ObserverTelemetryClient.ReportHealthAsync(telemetryData, token);
@@ -460,7 +460,7 @@ namespace ClusterObserver
                                                     ApplicationName = appName.OriginalString,
                                                     HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
                                                     HealthEventDescription = telemetryDescription,
-                                                    Source = ObserverName,
+                                                    Source = ObserverName
                                                 });
                         }
 
@@ -542,7 +542,7 @@ namespace ClusterObserver
                             Metric = metric ?? "AggregatedClusterHealth",
                             ObserverName = sourceObserver ?? string.Empty,
                             Source = foStats != null ? foStats.Source : ObserverName,
-                            Value = foStats != null ? foStats.Value : string.Empty,
+                            Value = foStats != null ? foStats.Value : string.Empty
                         };
 
                         // Telemetry.
@@ -574,7 +574,7 @@ namespace ClusterObserver
                             Metric = metric ?? "AggregatedClusterHealth",
                             ObserverName = sourceObserver ?? string.Empty,
                             Source = foStats != null ? foStats.Source : ObserverName,
-                            Value = value,
+                            Value = value
                         });
                 }
             }
@@ -591,7 +591,7 @@ namespace ClusterObserver
             {
                 Description = telemetryDescription,
                 HealthState = healthState,
-                Source = ObserverName,
+                Source = ObserverName
             };
 
             // Telemetry.
@@ -609,7 +609,7 @@ namespace ClusterObserver
                                     {
                                         HealthEventDescription = telemetryDescription,
                                         HealthState = healthState,
-                                        Source = ObserverName,
+                                        Source = ObserverName
                                     });
             }
         }
@@ -641,7 +641,7 @@ namespace ClusterObserver
                             Metric = "NodeStatus",
                             NodeName = nodeDictItem.Key,
                             Value = "Up",
-                            Source = ObserverName,
+                            Source = ObserverName
                         };
 
                         await ObserverTelemetryClient.ReportHealthAsync(telemetry, token);
@@ -660,7 +660,7 @@ namespace ClusterObserver
                                                 Metric = "NodeStatus",
                                                 NodeName = nodeDictItem.Key,
                                                 NodeStatus = "Up",
-                                                Source = ObserverName,
+                                                Source = ObserverName
                                             });
                     }
 
@@ -715,7 +715,7 @@ namespace ClusterObserver
                                 Metric = "NodeStatus",
                                 NodeName = kvp.Key,
                                 Value = $"{kvp.Value.NodeStatus}",
-                                Source = ObserverName,
+                                Source = ObserverName
                             };
 
                             await ObserverTelemetryClient.ReportHealthAsync(telemetry, token);
@@ -734,7 +734,7 @@ namespace ClusterObserver
                                                     Metric = "NodeStatus",
                                                     NodeName = kvp.Key,
                                                     NodeStatus = $"{kvp.Value.NodeStatus}",
-                                                    Source = ObserverName,
+                                                    Source = ObserverName
                                                 });
                         }
                     }

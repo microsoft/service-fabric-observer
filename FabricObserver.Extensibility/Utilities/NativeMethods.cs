@@ -56,7 +56,7 @@ namespace FabricObserver.Observers.Utilities
             MiniDumpWithTokenInformation = 0x00040000,
             MiniDumpWithModuleHeaders = 0x00080000,
             MiniDumpFilterTriage = 0x00100000,
-            MiniDumpValidTypeFlags = 0x001fffff,
+            MiniDumpValidTypeFlags = 0x001fffff
         }
 
         public enum NT_STATUS
@@ -64,7 +64,7 @@ namespace FabricObserver.Observers.Utilities
             STATUS_SUCCESS = 0x00000000,
             STATUS_BUFFER_OVERFLOW = unchecked((int)0x80000005L),
             STATUS_INFO_LENGTH_MISMATCH = unchecked((int)0xC0000004L),
-            STATUS_NO_MEMORY = unchecked((int)0xC0000017L),
+            STATUS_NO_MEMORY = unchecked((int)0xC0000017L)
         }
 
         public enum SYSTEM_INFORMATION_CLASS
@@ -78,7 +78,7 @@ namespace FabricObserver.Observers.Utilities
             SystemInterruptInformation = 23,
             SystemExceptionInformation = 33,
             SystemRegistryQuotaInformation = 37,
-            SystemLookasideInformation = 45,
+            SystemLookasideInformation = 45
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]

@@ -12,13 +12,13 @@ namespace FabricObserver.Observers.Utilities
     public enum WindowType
     {
         Max,
-        Min,
+        Min
     }
 
     /// <summary>
     /// Small statistical utilities class.
     /// </summary>
-    public sealed class Statistics
+    public static class Statistics
     {
         /// <summary>
         /// Computes the standard deviation of type T of a List of numeric values of type T.
@@ -39,62 +39,38 @@ namespace FabricObserver.Observers.Utilities
                 case IList<long> value when value.Count > 0:
                     average = value.Average();
                     squaredMeanDifferences.AddRange(
-                        value.Select(
-                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
-
-                    meanOfSquaredDifferences =
-                        (T)Convert.ChangeType((squaredMeanDifferences as List<long>)?.Average(), typeof(T));
-
-                    standardDeviation = (T)Convert.ChangeType(
-                        Math.Sqrt(Convert.ToInt64(meanOfSquaredDifferences)),
-                        typeof(T));
-
+                                            value.Select(
+                                                    n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+                    meanOfSquaredDifferences = (T)Convert.ChangeType((squaredMeanDifferences as List<long>)?.Average(), typeof(T));
+                    standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToInt64(meanOfSquaredDifferences)), typeof(T));
                     break;
 
                 case IList<int> value when value.Count > 0:
                     average = value.Average();
-
                     squaredMeanDifferences.AddRange(
-                        value.Select(
-                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
-
-                    meanOfSquaredDifferences =
-                        (T)Convert.ChangeType((squaredMeanDifferences as List<int>)?.Average(), typeof(T));
-
-                    standardDeviation = (T)Convert.ChangeType(
-                        Math.Sqrt(Convert.ToInt32(meanOfSquaredDifferences)),
-                        typeof(T));
-
+                                            value.Select(
+                                                    n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+                    meanOfSquaredDifferences = (T)Convert.ChangeType((squaredMeanDifferences as List<int>)?.Average(), typeof(T));
+                    standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToInt32(meanOfSquaredDifferences)), typeof(T));
                     break;
 
                 case IList<float> value when value.Count > 0:
                     average = value.Average();
-
                     squaredMeanDifferences.AddRange(
-                        value.Select(
-                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+                                            value.Select(
+                                                    n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
 
-                    meanOfSquaredDifferences =
-                        (T)Convert.ChangeType((squaredMeanDifferences as List<float>)?.Average(), typeof(T));
-
-                    standardDeviation =
-                        (T)Convert.ChangeType(Math.Sqrt(Convert.ToSingle(meanOfSquaredDifferences)), typeof(T));
-
+                    meanOfSquaredDifferences =  (T)Convert.ChangeType((squaredMeanDifferences as List<float>)?.Average(), typeof(T));
+                    standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToSingle(meanOfSquaredDifferences)), typeof(T));
                     break;
 
                 case IList<double> value when value.Count > 0:
                     average = value.Average();
-
                     squaredMeanDifferences.AddRange(
-                        value.Select(
-                            n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
-
-                    meanOfSquaredDifferences =
-                        (T)Convert.ChangeType((squaredMeanDifferences as List<double>)?.Average(), typeof(T));
-
-                    standardDeviation =
-                        (T)Convert.ChangeType(Math.Sqrt(Convert.ToDouble(meanOfSquaredDifferences)), typeof(T));
-
+                                            value.Select(
+                                                    n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
+                    meanOfSquaredDifferences = (T)Convert.ChangeType((squaredMeanDifferences as List<double>)?.Average(), typeof(T));
+                    standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToDouble(meanOfSquaredDifferences)), typeof(T));
                     break;
             }
 
@@ -112,9 +88,9 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="windowType">Minimum or Maximum sliding window sort.</param>
         /// <returns>List of sliding window sorted elements of numeric type T.</returns>
         public static IList<T> SlidingWindow<T>(
-            IList<T> data,
-            int windowWidth,
-            WindowType windowType)
+                                IList<T> data,
+                                int windowWidth,
+                                WindowType windowType) 
             where T : struct
         {
             if (windowWidth < 1 || data.Count == 0)
@@ -150,9 +126,7 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                windowList.Insert(
-                    i - windowWidth + 1,
-                    windowType == WindowType.Max ? bst.Max : bst.Min);
+                windowList.Insert(i - windowWidth + 1, windowType == WindowType.Max ? bst.Max : bst.Min);
             }
 
             return windowList;

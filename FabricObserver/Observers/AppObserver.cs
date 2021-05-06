@@ -364,7 +364,7 @@ namespace FabricObserver.Observers
                 var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
                 {
                     IncludeHealthState = false,
-                    MaxResults = 150,
+                    MaxResults = 150
                 };
 
                 var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -468,7 +468,7 @@ namespace FabricObserver.Observers
                             NetworkWarningEphemeralPorts = application.NetworkWarningEphemeralPorts,
                             DumpProcessOnError = application.DumpProcessOnError,
                             ErrorOpenFileHandles = application.ErrorOpenFileHandles,
-                            WarningOpenFileHandles = application.WarningOpenFileHandles,
+                            WarningOpenFileHandles = application.WarningOpenFileHandles
                         };
 
                         userTargetList.Add(appConfig);
@@ -561,7 +561,7 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");
+                    ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName?.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
                 {
@@ -821,7 +821,7 @@ namespace FabricObserver.Observers
                 var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
                 {
                     IncludeHealthState = false,
-                    MaxResults = 150,
+                    MaxResults = 150
                 };
 
                 var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -959,7 +959,7 @@ namespace FabricObserver.Observers
                             HostProcessId = statefulReplica.HostProcessId,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
-                            ServiceName = statefulReplica.ServiceName,
+                            ServiceName = statefulReplica.ServiceName
                         };
                         break;
                     }
@@ -984,7 +984,7 @@ namespace FabricObserver.Observers
                             HostProcessId = statelessInstance.HostProcessId,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
-                            ServiceName = statelessInstance.ServiceName,
+                            ServiceName = statelessInstance.ServiceName
                         };
                         break;
                     }

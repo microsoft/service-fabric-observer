@@ -9,128 +9,107 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     {
         public string HealthState
         {
-            get;
-            set;
+            get; set;
         }
 
-        public string Node
+        public string NodeName
         {
-            get;
-            set;
+            get; set;
         }
 
-        public string Observer
+        public string ObserverName
         {
-            get;
-            set;
+            get; set;
         }
 
-        public string OS
+        public string OSName
         {
-            get;
-            set;
+            get; set;
         }
 
         public string OSVersion
         {
-            get;
-            set;
+            get; set;
         }
 
         public string OSInstallDate
         {
-            get;
-            set;
+            get; set;
         }
 
         public string LastBootUpTime
         {
-            get;
-            set;
+            get; set;
         }
 
         public int TotalMemorySizeGB
         {
-            get;
-            set;
+            get; set;
         }
 
         public int LogicalProcessorCount
         {
-            get;
-            set;
+            get; set;
         }
 
         public int LogicalDriveCount
         {
-            get;
-            set;
+            get; set;
         }
 
         public int NumberOfRunningProcesses
         {
-            get;
-            set;
+            get; set;
         }
 
         public int ActiveFirewallRules
         {
-            get;
-            set;
+            get; set;
         }
 
-        public int ActivePorts
+        public int ActiveTcpPorts
         {
-            get;
-            set;
+            get; set;
         }
 
-        public int ActiveEphemeralPorts
+        public int ActiveEphemeralTcpPorts
         {
-            get;
-            set;
+            get; set;
         }
 
-        public string WindowsDynamicPortRange
+        public string EphemeralTcpPortRange
         {
-            get;
-            set;
+            get; set;
         }
 
-        public string FabricAppPortRange
+        public string FabricApplicationTcpPortRange
         {
-            get;
-            set;
+            get; set;
         }
 
         public string HotFixes
         {
-            get;
-            set;
+            get; set;
         }
 
         public double AvailablePhysicalMemoryGB
         {
-            get;
-            set;
+            get; set;
         }
 
         public string DriveInfo
         {
-            get;
-            set;
+            get; set;
         }
 
-        public double AvailableVirtualMemoryGB
+        public double FreeVirtualMemoryGB
         {
-            get;
-            set;
+            get; set;
         }
 
         public bool WindowsUpdateAutoDownloadEnabled
         {
-            get;
-            set;
+            get; set;
         }
     }
 }

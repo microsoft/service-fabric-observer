@@ -43,7 +43,7 @@ namespace FabricObserver.Observers.Utilities
                 RedirectStandardInput = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = false,
-                CreateNoWindow = true,
+                CreateNoWindow = true
             };
 
             using (Process process = Process.Start(startInfo))

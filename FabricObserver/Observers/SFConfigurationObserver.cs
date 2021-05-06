@@ -371,7 +371,7 @@ namespace FabricObserver.Observers
                                                         ProcessModel = processModel,
                                                         ServiceManifestVersion = serviceManifestVersion,
                                                         ActivePorts = ports,
-                                                        EphemeralPorts = ephemeralPorts,
+                                                        EphemeralPorts = ephemeralPorts
                                                     });
                                 }
 

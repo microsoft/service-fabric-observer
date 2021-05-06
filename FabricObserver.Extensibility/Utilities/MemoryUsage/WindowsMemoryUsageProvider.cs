@@ -19,7 +19,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     CategoryName = "Memory",
                     CounterName = "Committed Bytes",
-                    ReadOnly = true,
+                    ReadOnly = true
                 };
 
                 // warm up counter.

@@ -26,13 +26,23 @@ namespace FabricObserver.Observers.Utilities
         // This needs to be static to prevent internal EventSource instantiation errors.
         private static EventSource etwLogger;
 
+        private readonly string loggerName;
+
         // Text file logger for observers - info/warn/error.
         private ILogger OLogger
         {
             get; set;
         }
 
-        private readonly string loggerName;
+        private string FolderName
+        {
+            get;
+        }
+
+        private string Filename
+        {
+            get;
+        }
 
         private EventSource EtwLogger
         {
@@ -50,12 +60,12 @@ namespace FabricObserver.Observers.Utilities
         public bool EnableETWLogging
         {
             get; set;
-        } = false;
+        }
 
         public bool EnableVerboseLogging
         {
             get; set;
-        } = false;
+        }
 
         public string LogFolderBasePath
         {
@@ -64,26 +74,17 @@ namespace FabricObserver.Observers.Utilities
 
         public string FilePath
         {
-            get; set;
-        }
-
-        public string FolderName
-        {
             get;
-        }
-
-        public string Filename
-        {
-            get;
+            private set;
         }
 
         /// <summary>
         /// The maximum number of days that archive files will be stored.
         /// 0 means there is no limit set.
         /// </summary>
-        public int MaxArchiveFileLifetimeDays
+        private int MaxArchiveFileLifetimeDays
         {
-            get; set;
+            get;
         }
 
         /// <summary>
@@ -209,7 +210,7 @@ namespace FabricObserver.Observers.Utilities
             return false;
         }
 
-        public void InitializeLoggers()
+        private void InitializeLoggers()
         {
             // default log directory.
             string logFolderBase;
@@ -282,7 +283,7 @@ namespace FabricObserver.Observers.Utilities
                     ArchiveEvery = FileArchivePeriod.Day,
                     ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     MaxArchiveDays = MaxArchiveFileLifetimeDays <= 0 ? 7 : MaxArchiveFileLifetimeDays,
-                    AutoFlush = true,
+                    AutoFlush = true
                 };
 
                 LogManager.Configuration.AddTarget(loggerName + "LogFile", target);

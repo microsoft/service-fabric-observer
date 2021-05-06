@@ -28,11 +28,11 @@ namespace FabricObserver.Observers
     {
         private const int TtlAddMinutes = 5;
         private const string FabricSystemAppName = "fabric:/System";
-        private readonly int maxDumps = 5;
+        private const int MaxDumps = 5;
         private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
         private string SFLogRoot;
         private string dumpsPath;
-        private bool disposedValue;
+        private bool disposed;
 
         public string ObserverName
         {
@@ -122,7 +122,7 @@ namespace FabricObserver.Observers
         public bool IsUnhealthy
         {
             get; set;
-        } = false;
+        }
 
         public ConfigSettings ConfigurationSettings
         {
@@ -322,7 +322,7 @@ namespace FabricObserver.Observers
 
             ObserverLogger = new Logger(ObserverName, logFolderBasePath, MaxLogArchiveFileLifetimeDays)
             {
-                EnableETWLogging = IsEtwProviderEnabled,
+                EnableETWLogging = IsEtwProviderEnabled
             };
 
             if (string.IsNullOrEmpty(dumpsPath))
@@ -645,7 +645,7 @@ namespace FabricObserver.Observers
                     ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
                     ServiceName = serviceName?.OriginalString ?? string.Empty,
                     SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                    Source = ObserverConstants.FabricObserverName,
+                    Source = ObserverConstants.FabricObserverName
                 };
 
                 // If the source issue is from FSO, then set the SystemServiceProcessName on TD instance.
@@ -686,7 +686,7 @@ namespace FabricObserver.Observers
                                         ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
-                                        SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
+                                        SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty
                                     });
                 }
             }
@@ -714,7 +714,7 @@ namespace FabricObserver.Observers
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
                     Source = ObserverConstants.FabricObserverName,
-                    Value = Math.Round(data.AverageDataValue, 0),
+                    Value = Math.Round(data.AverageDataValue, 0)
                 };
 
                 if (IsTelemetryEnabled)
@@ -732,7 +732,7 @@ namespace FabricObserver.Observers
                                         ObserverName,
                                         Metric = $"{drive}{data.Property}",
                                         Source = ObserverConstants.FabricObserverName,
-                                        Value = Math.Round(data.AverageDataValue, 0),
+                                        Value = Math.Round(data.AverageDataValue, 0)
                                     });
                 }
             }
@@ -762,7 +762,7 @@ namespace FabricObserver.Observers
                                 serviceDumpCountDictionary.Add(procName, 0);
                             }
 
-                            if (serviceDumpCountDictionary[procName] < maxDumps)
+                            if (serviceDumpCountDictionary[procName] < MaxDumps)
                             {
                                 // DumpServiceProcess defaults to a Full dump with
                                 // process memory, handles and thread data.
@@ -927,7 +927,7 @@ namespace FabricObserver.Observers
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
                                         SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                                        Value = Math.Round(data.AverageDataValue, 0),
+                                        Value = Math.Round(data.AverageDataValue, 0)
                                     });
                 }
 
@@ -1011,7 +1011,7 @@ namespace FabricObserver.Observers
                                             ServiceName = name ?? string.Empty,
                                             Source = ObserverConstants.FabricObserverName,
                                             SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                                            Value = Math.Round(data.AverageDataValue, 0),
+                                            Value = Math.Round(data.AverageDataValue, 0)
                                         });
                     }
 
@@ -1029,7 +1029,7 @@ namespace FabricObserver.Observers
                         Observer = ObserverName,
                         Property = id,
                         ResourceUsageDataProperty = data.Property,
-                        SourceId = $"{ObserverName}({data.ActiveErrorOrWarningCode})",
+                        SourceId = $"{ObserverName}({data.ActiveErrorOrWarningCode})"
                     };
 
                     // Emit an Ok Health Report to clear Fabric Health warning.
@@ -1084,14 +1084,18 @@ namespace FabricObserver.Observers
         }
 
         // This is here so each Observer doesn't have to implement IDisposable.
+        // Just override in observer impls that do implement IDisposable.
         protected virtual void Dispose(bool disposing)
         {
-            if (disposedValue)
+            if (disposed)
             {
                 return;
             }
 
-            disposedValue = true;
+            if (disposing)
+            {
+                disposed = true;
+            }
         }
 
         private void SetDefaultSfDumpPath()
@@ -1241,7 +1245,7 @@ namespace FabricObserver.Observers
             CsvFileLogger = new DataTableFileLogger
             {
                 FileWriteFormat = CsvWriteFormat,
-                MaxArchiveCsvFileLifetimeDays = MaxCsvArchiveFileLifetimeDays,
+                MaxArchiveCsvFileLifetimeDays = MaxCsvArchiveFileLifetimeDays
             };
 
             string dataLogPath = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.DataLogPathParameter);

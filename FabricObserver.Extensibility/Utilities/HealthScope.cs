@@ -13,6 +13,6 @@ namespace FabricObserver.Observers.Utilities
         Partition,
         Replica,
         Service,
-        SystemApplication,
+        SystemApplication
     }
 }

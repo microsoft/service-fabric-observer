@@ -145,7 +145,7 @@ namespace ClusterObserver.Utilities.Telemetry
                     { "Replica", telemetryData.ReplicaId },
                     { "Source", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OS", telemetryData.OS ?? string.Empty },
+                    { "OS", telemetryData.OS ?? string.Empty }
                 };
 
                 telemetryClient.TrackEvent(ObserverConstants.ClusterObserverETWEventName, properties);
@@ -230,7 +230,7 @@ namespace ClusterObserver.Utilities.Telemetry
             var metricTelemetry = new MetricTelemetry
             {
                 Name = name,
-                Sum = Convert.ToDouble(value),
+                Sum = Convert.ToDouble(value)
             };
 
             telemetryClient?.TrackMetric(metricTelemetry);
@@ -324,7 +324,7 @@ namespace ClusterObserver.Utilities.Telemetry
                 Count = count,
                 Min = min,
                 Max = max,
-                StandardDeviation = deviation,
+                StandardDeviation = deviation
             };
 
             mt.Context.Cloud.RoleName = roleName;

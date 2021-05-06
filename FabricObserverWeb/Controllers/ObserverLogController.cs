@@ -489,7 +489,7 @@ namespace FabricObserverWeb.Controllers
                 {
                     Date = DateTime.UtcNow.ToString("MM-dd-yyyy HH:mm:ss.ffff", CultureInfo.InvariantCulture),
                     HealthState = "Ok",
-                    Message = string.Empty,
+                    Message = string.Empty
                 };
 
                 return JsonSerializer.Serialize(ret);

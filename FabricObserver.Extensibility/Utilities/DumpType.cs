@@ -28,6 +28,6 @@ namespace FabricObserver.Observers.Utilities
         /// NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
         /// NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
         /// </summary>
-        Full,
+        Full
     }
 }

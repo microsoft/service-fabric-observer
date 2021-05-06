@@ -9,6 +9,6 @@ namespace ClusterObserver.Utilities
     {
         Information,
         Warning,
-        Error,
+        Error
     }
 }

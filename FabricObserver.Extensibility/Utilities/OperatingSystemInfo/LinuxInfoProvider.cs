@@ -146,7 +146,7 @@ namespace FabricObserver.Observers.Utilities
                 WindowStyle = ProcessWindowStyle.Hidden,
                 RedirectStandardInput = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = false,
+                RedirectStandardError = false
             };
 
             int count = 0;
@@ -267,7 +267,7 @@ namespace FabricObserver.Observers.Utilities
                 WindowStyle = ProcessWindowStyle.Hidden,
                 RedirectStandardInput = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = false,
+                RedirectStandardError = false
             };
 
             List<string> output = new List<string>();
@@ -307,7 +307,7 @@ namespace FabricObserver.Observers.Utilities
                     Arguments = $"-c \"{escapedArgs}\"",
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
-                    CreateNoWindow = true,
+                    CreateNoWindow = true
                 }
             };
 

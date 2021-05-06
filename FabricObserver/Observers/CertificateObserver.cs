@@ -159,14 +159,14 @@ namespace FabricObserver.Observers
             LastRunDateTime = DateTime.Now;
         }
 
-        public override Task ReportAsync(CancellationToken token)
+        public override async Task ReportAsync(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
             // Someone calling without observing first, must be run after a new run of ObserveAsync
             if (ExpiringWarnings == null || ExpiredWarnings == null || NotFoundWarnings == null)
             {
-                return Task.CompletedTask;
+                return;
             }
 
             HealthReport healthReport;
@@ -181,10 +181,38 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     HealthMessage = "All cluster and monitored app certificates are healthy.",
                     State = HealthState.Ok,
-                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : this.HealthReportTimeToLive,
+                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : this.HealthReportTimeToLive
                 };
 
                 HasActiveFabricErrorOrWarning = false;
+
+                if (IsTelemetryEnabled)
+                {
+                    var telemetryData = new TelemetryData(FabricClientInstance, token)
+                    {
+                        HealthState = "Ok",
+                        NodeName = NodeName,
+                        Description = "All cluster and monitored app certificates are healthy.",
+                        ObserverName = ObserverName,
+                        Source = ObserverConstants.FabricObserverName
+                    };
+
+                    await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                }
+
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        HealthState = "Ok",
+                                        NodeName,
+                                        HealthEventDescription = "All cluster and monitored app certificates are healthy.",
+                                        ObserverName,
+                                        Source = ObserverConstants.FabricObserverName
+                                    });
+                }
             }
             else
             {
@@ -201,7 +229,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     HealthMessage = healthMessage,
                     State = HealthState.Warning,
-                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : HealthReportTimeToLive,
+                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : HealthReportTimeToLive
                 };
 
                 HasActiveFabricErrorOrWarning = true;
@@ -218,10 +246,10 @@ namespace FabricObserver.Observers
                         ObserverName = ObserverName,
                         OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                         Source = ObserverConstants.FabricObserverName,
-                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration),
+                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration)
                     };
 
-                    _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
+                    await TelemetryClient.ReportHealthAsync(telemetryData, Token);
                 }
 
                 if (IsEtwEnabled)
@@ -238,14 +266,12 @@ namespace FabricObserver.Observers
                                         ObserverName,
                                         OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                                         Source = ObserverConstants.FabricObserverName,
-                                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration),
+                                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration)
                                     });
                 }
             }
 
-            HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-            return Task.CompletedTask;
+            HealthReporter?.ReportHealthToServiceFabric(healthReport);
         }
 
         private static bool IsSelfSignedCertificate(X509Certificate2 certificate)
@@ -430,8 +456,8 @@ namespace FabricObserver.Observers
             if (timeUntilExpiry?.TotalMilliseconds < 0)
             {
                 ExpiredWarnings.Add(
-                    $"Certificate expired on {expiry?.ToShortDateString()}: " +
-                    $"[Thumbprint: {newestCertificate?.Thumbprint} " +
+                    $"Certificate expired on {expiry.Value.ToShortDateString()}: " +
+                    $"[Thumbprint: {newestCertificate.Thumbprint} " +
                     "" +
                     $"Issuer {newestCertificate.Issuer}, " +
                     $"Subject: {newestCertificate.Subject}]{Environment.NewLine}{message}");

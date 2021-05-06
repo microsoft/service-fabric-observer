@@ -230,7 +230,7 @@ namespace ClusterObserver.Utilities
                     OpenFileCacheTimeout = 5,
                     ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     ArchiveEvery = FileArchivePeriod.Day,
-                    AutoFlush = true,
+                    AutoFlush = true
                 };
 
                 LogManager.Configuration.AddTarget(loggerName + "LogFile", target);

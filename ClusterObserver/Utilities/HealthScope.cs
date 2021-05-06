@@ -13,6 +13,6 @@ namespace ClusterObserver.Utilities
         Partition,
         Replica,
         Service,
-        SystemApplication,
+        SystemApplication
     }
 }

@@ -10,6 +10,6 @@ namespace FabricObserver.Observers.Utilities
         None,
         Thumbprint,
         CommonName,
-        Windows,
+        Windows
     }
 }

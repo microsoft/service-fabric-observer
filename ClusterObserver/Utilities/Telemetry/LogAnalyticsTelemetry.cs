@@ -191,7 +191,7 @@ namespace ClusterObserver.Utilities.Telemetry
                                                     healthEvaluation = unhealthyEvaluations,
                                                     serviceName = serviceName ?? string.Empty,
                                                     instanceName = instanceName ?? string.Empty,
-                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
                                                 });
 
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
