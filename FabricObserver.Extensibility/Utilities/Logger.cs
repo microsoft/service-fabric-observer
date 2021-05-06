@@ -26,13 +26,23 @@ namespace FabricObserver.Observers.Utilities
         // This needs to be static to prevent internal EventSource instantiation errors.
         private static EventSource etwLogger;
 
+        private readonly string loggerName;
+
         // Text file logger for observers - info/warn/error.
         private ILogger OLogger
         {
             get; set;
         }
 
-        private readonly string loggerName;
+        private string FolderName
+        {
+            get;
+        }
+
+        private string Filename
+        {
+            get;
+        }
 
         private EventSource EtwLogger
         {
@@ -66,16 +76,6 @@ namespace FabricObserver.Observers.Utilities
         {
             get;
             private set;
-        }
-
-        private string FolderName
-        {
-            get;
-        }
-
-        private string Filename
-        {
-            get;
         }
 
         /// <summary>

@@ -15,6 +15,7 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
@@ -436,7 +437,7 @@ namespace FabricObserver.Observers
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
                 // OS info.
-                _ = sb.AppendLine("OS Information:\r\n");
+                _ = sb.AppendLine($"OS Information:{Environment.NewLine}");
                 _ = sb.AppendLine($"Name: {osInfo.Name}");
                 _ = sb.AppendLine($"Version: {osInfo.Version}");
 
@@ -574,7 +575,7 @@ namespace FabricObserver.Observers
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        hotFixes = osHotFixes?.Replace("\r\n", ", ").TrimEnd(',');
+                        hotFixes = osHotFixes?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
                     }
 
                     await TelemetryClient.ReportMetricAsync(
@@ -583,7 +584,7 @@ namespace FabricObserver.Observers
                                                 HealthState = "Ok",
                                                 NodeName = NodeName,
                                                 ObserverName = ObserverName,
-                                                OS = osInfo.Name,
+                                                OSName = osInfo.Name,
                                                 OSVersion = osInfo.Version,
                                                 OSInstallDate = osInfo.InstallDate,
                                                 LastBootUpTime = osInfo.LastBootUpTime,
@@ -599,7 +600,7 @@ namespace FabricObserver.Observers
                                                 ActiveTcpPorts = activePorts,
                                                 ActiveEphemeralTcpPorts = activeEphemeralPorts,
                                                 EphemeralTcpPortRange = osEphemeralPortRange,
-                                                FabricAppPortRange = fabricAppPortRange,
+                                                FabricApplicationTcpPortRange = fabricAppPortRange,
                                                 HotFixes = hotFixes ?? string.Empty
                                             }, Token);
                 }
@@ -609,8 +610,11 @@ namespace FabricObserver.Observers
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && hotFixes == null)
                     {
-                        hotFixes = osHotFixes?.Replace("\r\n", ", ").TrimEnd(',');
+                        hotFixes = osHotFixes?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
                     }
+
+                    // strip out links..
+                    hotFixes = Regex.Replace(hotFixes ?? string.Empty, "</?(a|A).*?>", "");
 
                     ObserverLogger.LogEtw(
                                     ObserverConstants.FabricObserverETWEventName,
@@ -619,7 +623,7 @@ namespace FabricObserver.Observers
                                         HealthState = "Ok",
                                         NodeName,
                                         ObserverName,
-                                        OS = osInfo.Name,
+                                        OSName = osInfo.Name,
                                         OSVersion = osInfo.Version,
                                         OSInstallDate = osInfo.InstallDate,
                                         osInfo.LastBootUpTime,
@@ -634,7 +638,7 @@ namespace FabricObserver.Observers
                                         ActiveFirewallRules = firewalls,
                                         ActiveTcpPorts = activePorts,
                                         ActiveEphemeralTcpPorts = activeEphemeralPorts,
-                                        EphemeralPortRange = osEphemeralPortRange,
+                                        EphemeralTcpPortRange = osEphemeralPortRange,
                                         FabricAppPortRange = fabricAppPortRange,
                                         HotFixes = hotFixes ?? string.Empty
                                     });

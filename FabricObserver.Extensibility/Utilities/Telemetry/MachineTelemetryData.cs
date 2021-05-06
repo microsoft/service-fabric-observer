@@ -22,7 +22,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public string OS
+        public string OSName
         {
             get; set;
         }
@@ -82,7 +82,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public string FabricAppPortRange
+        public string FabricApplicationTcpPortRange
         {
             get; set;
         }

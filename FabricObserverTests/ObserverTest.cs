@@ -430,7 +430,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync().ConfigureAwait(false);
             }).ConfigureAwait(false);
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(false));
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
@@ -457,7 +457,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync().ConfigureAwait(false);
             }).ConfigureAwait(false);
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(false));
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
