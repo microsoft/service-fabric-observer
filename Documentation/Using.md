@@ -45,7 +45,7 @@ You would add this to PackageRoot/Config/AppObserver.config.json:
 Example Output in SFX: 
 
 
-![alt text](/Documentation/Images/AppCpuWarningDescription.jpg "Logo Title Text 1")  
+![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning Output example.")  
 
 
 SF Event Store:  
@@ -151,7 +151,7 @@ Set the DiskSpacePercentUsageWarningThreshold parameter in DiskObserver's config
 
 Example Output in SFX: 
 
-![alt text](/Documentation/Images/DiskWarnDescriptionNode.jpg "Logo Title Text 1")  
+![alt text](/Documentation/Images/DiskObsWarn.png "DiskObserver Warning output example.")  
 
 
 **Memory Usage - Private Working Set as Percentage of Total Physical Memory** 
@@ -359,7 +359,7 @@ NodeObserver doesn't speak JSON (can you believe it!!??....). So, you simply set
 
 Example Output in SFX: 
 
-![alt text](/Documentation/Images/MemoryWarnDescriptionNode.jpg "Logo Title Text 1") 
+![alt text](/Documentation/Images/FODiskNodeObs.png "NodeObserver Warning output example.") 
 
 
 

@@ -447,7 +447,7 @@ this means trouble), a Warning if Windows Update Automatic Update service is con
 
 Example output: 
 
-![alt text](/Documentation/Images/OSObserverOutput.jpg "Logo Title Text 1")  
+![alt text](/Documentation/Images/FONodeDetails.png "OSObserver output example.")  
 
 
 ## SFConfigurationObserver 
