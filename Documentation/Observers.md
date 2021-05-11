@@ -136,15 +136,19 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Warning. |  
 | **errorOpenFileHandles** | Maximum number of open file handles in use by an app process that will generate a Fabric Error. |  
 | **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Fabric Warning. |  
-| **Output**| Log text(Error/Warning), Service Fabric Application Health Report, ETW (EventSource), Telemetry (AppInsights/LogAnalytics) |
+
+**Output** Log text(Error/Warning), Service Fabric Application Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
+
+Example SFX Output (Warning):  
+
+![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning output example.")  
 
 AppObserver also optionally outputs CSV files for each app containing all resource usage data across iterations for use in analysis. Included are Average and Peak measurements. You can turn this on/off in ApplicationManifest.xml. See Settings.xml where there are comments explaining the feature further.  
   
 AppObserver error/warning thresholds are user-supplied-only and bound to specific service instances (processes) as dictated by the user,
 as explained above. Like FabricSystemObserver, all data is stored in in-memory data structures for the lifetime of the run (for example, 60 seconds at 5 second intervals). Like all observers, the last thing this observer does is call its *ReportAsync*, which will then determine the health state based on accumulated data across resources, send a Warning if necessary (clear an existing warning if necessary), then clean out the in-memory data structures to limit impact on the system over time. So, each iteration of this observer accumulates *temporary* data for use in health determination.
   
-This observer also monitors the FabricObserver service itself across
-CPU/Mem/FileHandles/Ports.  
+This observer also monitors the FabricObserver service itself across CPU/Mem/FileHandles/Ports.  
 
 ## CertificateObserver
 Monitors the expiration date of the cluster certificate and any other certificates provided by the user. 
@@ -275,7 +279,11 @@ Again, it is best to Enable this observer only after you have done some experime
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
 ```
-**Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning), ETW, Telemetry
+**Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning/Ok), ETW, Telemetry
+
+Example SFX output (Informational):  
+
+![alt text](/Documentation/Images/FOFSOInfo.png "FabricSystemObserver output example.")  
 
 **This observer also optionally outputs a CSV file containing all resource usage
 data across iterations for use in analysis. Included are Average and
@@ -361,8 +369,7 @@ Example NetworkObserver.config.json configuration:
 ]
 ```
 
-**Output**: Log text(Info/Error/Warning), Service Fabric Health Report
-(Error/Warning), structured telemetry.
+**Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning/Ok), structured telemetry.  
 
 This observer runs 4 checks per supplied hostname with a 3 second delay
 between tests. This is done to help ensure we don't report transient
@@ -438,14 +445,14 @@ all run iterations of the observer) if csv output is enabled, structured telemet
 ## OSObserver
 This observer records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. It creates an OK Health State SF Health Report that is visible in SFX at the node level (Details tab) and by calling http://localhost:5000/api/ObserverManager if you have deployed the FabricObserver Web Api App. It's best to enable this observer in all deployments of FO. OSObserver will check the VM's Windows Update AutoUpdate settings and Warn if Windows AutoUpdate Downloads setting is enabled. It is critical to not install Windows Updates in an unregulated (non-rolling) manner is this can take down multiple VMs concurrently, which can lead to seed node quorum loss in your cluster. Please do not enable Automatic Windows Update downloads. **It is highly recommended that you enable [Azure virtual machine scale set automatic OS image upgrades](https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade).**
 
-**Input**: This observer does not take input. 
+**Input**: For Windows, you can set OSObserverEnableWindowsAutoUpdateCheck setting to true of false. This will let you know if your OS is misconfigured with respect to how Windows Update manages update downloads and installation. In general, you should not configure Windows to automatically download Windows Update binaries. Instead, use VMSS Automatic Image Upgrade service.  
 **Output**: Log text(Error/Warning), Service Fabric Health Report (Ok/Error), structured telemetry, HTML output for API service and SFX (node level Details tab). 
 
 The output of OSObserver is stored in its local log file when the FabricObserverWebApi service is deployed/enabled. The only Fabric health reports generated by this observer 
 is an Error when OS Status is not "OK" (which means something is wrong at the OS level and
 this means trouble), a Warning if Windows Update Automatic Update service is configured to automatically download updates, and long-lived Ok Health Report that contains the information it collected about the VM it's running on.  
 
-Example output: 
+Example SFX output: 
 
 ![alt text](/Documentation/Images/FONodeDetails.png "OSObserver output example.")  
 
