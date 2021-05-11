@@ -360,7 +360,7 @@ namespace FabricObserver.Observers
             {
                 ApplicationInfo application = userTargetList.Find(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
 
-                // Let's make sure that we page through app lists that are huge (like 4MB result set (that's a lot of apps)).
+                // Get info for 50 apps at a time that are deployed to the same node this FO instance is running on.
                 var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
                 {
                     IncludeHealthState = false,
@@ -820,7 +820,7 @@ namespace FabricObserver.Observers
             }
             else if (!string.IsNullOrWhiteSpace(applicationType))
             {
-                // Let's make sure that we page through app lists that are huge (like 4MB result set (that's a lot of apps)).
+                // There is no typename filter (unfortunately), so do a paged query for app data and then filter on supplied typename.
                 var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
                 {
                     IncludeHealthState = false,
@@ -834,13 +834,8 @@ namespace FabricObserver.Observers
                                                                                 Token),
                                     Token);
 
-                // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
-                // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
-                // all-app service process monitoring with a very simple configuration pattern.
                 deployedApps = appList.ToList();
 
-                // The GetDeployedApplicationPagedList api will set a continuation token value if it knows it did not return all the results in one swoop.
-                // Check that it is not null, and make a new query passing back the token it gave you.
                 while (appList.ContinuationToken != null)
                 {
                     Token.ThrowIfCancellationRequested();
