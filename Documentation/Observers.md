@@ -28,9 +28,11 @@ Service Fabric Error Health Events block upgrades and other important Fabric run
 | [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. |
 | [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. |
 
-# Fabric Observers - What they do and how to configure them  
+# Observers - What they do and how to configure them  
 
 You can quickly get started by reading [this](/Documentation/Using.md).  
+
+***Note: All observers that monitor various resources output serialized instances of TelemetryData type (JSON). This JSON string is set as the Description property of a Health Event. This is done for a few reasons: Telemetry support and for consuming services that need to deserialize the data to inform some related workflow. In later versions of SF, SFX will display only the textual pieces of this serialized object instance, making it easier to read in SFX's Details view.***
 
   
 ## AppObserver  

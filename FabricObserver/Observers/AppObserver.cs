@@ -364,7 +364,7 @@ namespace FabricObserver.Observers
                 var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
                 {
                     IncludeHealthState = false,
-                    MaxResults = 150
+                    MaxResults = 50
                 };
 
                 var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -395,6 +395,9 @@ namespace FabricObserver.Observers
                                             Token);
 
                     apps.AddRange(appList.ToList());
+
+                    // TODO: Add random wait (ms) impl, include cluster size in calc.
+                    await Task.Delay(250, Token).ConfigureAwait(false);
                 }
 
                 foreach (var app in apps)
@@ -821,7 +824,7 @@ namespace FabricObserver.Observers
                 var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
                 {
                     IncludeHealthState = false,
-                    MaxResults = 150
+                    MaxResults = 50
                 };
 
                 var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -852,6 +855,7 @@ namespace FabricObserver.Observers
                                     Token);
 
                     deployedApps.AddRange(appList.ToList());
+                    await Task.Delay(250, Token).ConfigureAwait(false);
                 }
 
                 deployedApps = deployedApps.Where(a => a.ApplicationTypeName == applicationType).ToList();

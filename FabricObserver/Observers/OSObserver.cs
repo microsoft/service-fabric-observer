@@ -640,7 +640,7 @@ namespace FabricObserver.Observers
                                         ActiveEphemeralTcpPorts = activeEphemeralPorts,
                                         EphemeralTcpPortRange = osEphemeralPortRange,
                                         FabricAppPortRange = fabricAppPortRange,
-                                        HotFixes = hotFixes ?? string.Empty
+                                        HotFixes = hotFixes
                                     });
                 }
             }

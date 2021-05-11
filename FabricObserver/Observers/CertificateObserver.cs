@@ -373,15 +373,15 @@ namespace FabricObserver.Observers
 
                 var certificateNode = xdoc.SelectNodes($"//sf:NodeType[@Name='{NodeType}']//sf:Certificates", nsmgr);
 
-                if (certificateNode?.Count == 0)
+                if (certificateNode != null ? certificateNode.Count == 0 : false)
                 {
                     SecurityConfiguration.SecurityType = SecurityType.None;
                 }
                 else
                 {
-                    var clusterCertificateNode = certificateNode?.Item(0)?.ChildNodes.Item(0);
+                    var clusterCertificateNode = certificateNode != null ? certificateNode.Item(0) != null ? certificateNode.Item(0).ChildNodes.Item(0) : null : null;
 
-                    var commonNameAttribute = clusterCertificateNode?.Attributes?.GetNamedItem("X509FindType");
+                    var commonNameAttribute = clusterCertificateNode != null ? clusterCertificateNode.Attributes != null ? clusterCertificateNode.Attributes.GetNamedItem("X509FindType") : null : null;
                     if (commonNameAttribute != null)
                     {
                         if (commonNameAttribute.Value == "FindBySubjectName")
@@ -397,8 +397,8 @@ namespace FabricObserver.Observers
                     }
 
                     SecurityConfiguration.SecurityType = SecurityType.Thumbprint;
-                    SecurityConfiguration.ClusterCertThumbprintOrCommonName = clusterCertificateNode?.Attributes?.GetNamedItem("X509FindValue").Value;
-                    var secondaryThumbprintAttribute = clusterCertificateNode?.Attributes?.GetNamedItem("X509FindValueSecondary");
+                    SecurityConfiguration.ClusterCertThumbprintOrCommonName = clusterCertificateNode != null ? clusterCertificateNode.Attributes != null ? clusterCertificateNode.Attributes.GetNamedItem("X509FindValue").Value : null : null;
+                    var secondaryThumbprintAttribute = clusterCertificateNode != null ? clusterCertificateNode.Attributes != null ? clusterCertificateNode.Attributes.GetNamedItem("X509FindValueSecondary") : null : null;
 
                     if (secondaryThumbprintAttribute != null)
                     {
@@ -453,16 +453,15 @@ namespace FabricObserver.Observers
             DateTime? expiry = newestCertificate?.NotAfter; // Expiration time in local time (not UTC)
             TimeSpan? timeUntilExpiry = expiry?.Subtract(DateTime.Now);
 
-            if (timeUntilExpiry?.TotalMilliseconds < 0)
+            if (timeUntilExpiry != null && timeUntilExpiry.Value.TotalMilliseconds < 0)
             {
                 ExpiredWarnings.Add(
                     $"Certificate expired on {expiry.Value.ToShortDateString()}: " +
                     $"[Thumbprint: {newestCertificate.Thumbprint} " +
-                    "" +
                     $"Issuer {newestCertificate.Issuer}, " +
                     $"Subject: {newestCertificate.Subject}]{Environment.NewLine}{message}");
             }
-            else if (timeUntilExpiry?.TotalDays < warningThreshold)
+            else if (timeUntilExpiry != null && timeUntilExpiry.Value.TotalDays < warningThreshold)
             {
                 ExpiringWarnings.Add(
                     $"Certificate expiring in {timeUntilExpiry?.TotalDays} days, on {expiry?.ToShortDateString()}: " +
