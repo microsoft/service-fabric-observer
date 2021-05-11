@@ -25,18 +25,22 @@ You can clone the repo, build, and deploy or simply grab latest tested [SFPKG wi
 
 Application Level Warnings: 
 
-![alt text](/Documentation/Images/AppCpuWarnCluster.jpg "")  
-![alt text](/Documentation/Images/AppDetailsWarning.jpg "")  
+![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning UI")  
+![alt text](/Documentation/Images/ContainerObserver.png "ContainerObserver Warning UI")  
 
 Node Level Warnings: 
 
-![alt text](/Documentation/Images/Chaos3.jpg "")  
-![alt text](/Documentation/Images/MultipleWarningsSFX.jpg "")  
-![alt text](/Documentation/Images/MultipleWarningsOKClearSFX.jpg "")  
+![alt text](/Documentation/Images/DiskObsWarn.png "DiskObserver Warning UI")  
+![alt text](/Documentation/Images/FODiskNodeObs.png "Multiple Observers Warning UI")  
+![alt text](/Documentation/Images/FODiskNodeOkClears.png "Multiple Health Event OK Clearing UI")  
 
 Node Level Machine Info:  
 
-![alt text](/Documentation/Images/OSObsKBLinks.jpg "")  
+![alt text](/Documentation/Images/FONodeDetails.png "Node Details UI")  
+
+When FabricObserver gracefully exits or updates, it will clear all of the health events it created.  
+
+![alt text](/Documentation/Images/EventClearOnUpdateExit.png "All Health Event Clearing UI")  
 
 
 FabricObserver comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
