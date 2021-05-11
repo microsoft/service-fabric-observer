@@ -139,7 +139,7 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 
 **Output** Log text(Error/Warning), Service Fabric Application Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
 
-Example SFX Output (Warning):  
+Example SFX Output (Warning - Ephemeral Ports Usage):  
 
 ![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning output example.")  
 
@@ -231,7 +231,11 @@ Drive Type: Fixed
 
 **This observer also optionally outputs a CSV file containing all resource usage
 data across iterations for use in analysis. Included are Average and
-Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean setting.**
+Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean setting.**  
+
+Example SFX Output (Warning - Disk Space Consumption):  
+
+![alt text](/Documentation/Images/DiskObsWarn.png "DiskObserver output example.")  
 
 
 ## FabricSystemObserver 
@@ -371,10 +375,8 @@ Example NetworkObserver.config.json configuration:
 
 **Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning/Ok), structured telemetry.  
 
-This observer runs 4 checks per supplied hostname with a 3 second delay
-between tests. This is done to help ensure we don't report transient
-network failures which will result in Fabric Health warnings that live
-until the observer runs again.  
+This observer runs 4 checks per supplied hostname with a 3 second delay between tests. This is done to help ensure we don't report transient
+network failures which will result in Fabric Health warnings that live until the observer runs again.  
 
 
 ## NodeObserver
@@ -436,10 +438,14 @@ until the observer runs again.
 | **LinuxFileHandlesErrorLimitTotal** | Total number of allocated file handles in use on Linux virtual machine that will generate an Error. | 
 | **LinuxFileHandlesWarningLimitTotal** | Total number of allocated file handles in use on Linux virtual machine that will generate a Warning. |
 
-**Output**:\
+**Output**:
 SFX Warnings when min/max thresholds are reached. CSV file,
 CpuMemDiskPorts\_\[nodeName\].csv, containing long-running data (across
-all run iterations of the observer) if csv output is enabled, structured telemetry.
+all run iterations of the observer) if csv output is enabled, structured telemetry.  
+
+Example SFX Output (Warning - Memory Consumption):  
+
+![alt text](/Documentation/Images/FODiskNodeObs.png "NodeObserver output example.")  
 
 
 ## OSObserver
@@ -452,7 +458,7 @@ The output of OSObserver is stored in its local log file when the FabricObserver
 is an Error when OS Status is not "OK" (which means something is wrong at the OS level and
 this means trouble), a Warning if Windows Update Automatic Update service is configured to automatically download updates, and long-lived Ok Health Report that contains the information it collected about the VM it's running on.  
 
-Example SFX output: 
+Example SFX output (Informational): 
 
 ![alt text](/Documentation/Images/FONodeDetails.png "OSObserver output example.")  
 
