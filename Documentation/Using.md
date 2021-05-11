@@ -42,16 +42,16 @@ You would add this to PackageRoot/Config/AppObserver.config.json:
 ]
 ```
 
-Example Output in SFX: 
+Example Output in SFX (Warning): 
 
 
 ![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning Output example.")  
 
 
-SF Event Store:  
+SF Event Store (Warning and Clear (Ok)):  
 
 
-![alt text](/Documentation/Images/CpuWarnEventsClear.jpg "Logo Title Text 1")  
+![alt text](/Documentation/Images/CpuWarnEventsClear.jpg "AppObserver Health Event example.")  
 
 <a name="targetType"></a>You can also supply a targetType parameter instead of a target in AppObserver.config.json. This instructs FO to monitor all applications of a given ApplicationType (this is an advanced SF deployment scenario, generally, but it is very useful for large or complex systems with many apps). All app services of a given type will be observed and reported on with specified Warning thresholds.
 When you use this property, you can also use either serviceExcludeList or serviceIncludeList JSON property settings to further filter what you want observed and reported.
@@ -149,7 +149,7 @@ Set the DiskSpacePercentUsageWarningThreshold parameter in DiskObserver's config
     <Parameter Name="AverageQueueLengthWarningThreshold" DefaultValue="15" />
 ```  
 
-Example Output in SFX: 
+Example Output in SFX (Warning): 
 
 ![alt text](/Documentation/Images/DiskObsWarn.png "DiskObserver Warning output example.")  
 
@@ -357,7 +357,7 @@ NodeObserver doesn't speak JSON (can you believe it!!??....). So, you simply set
     <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="85" />
 ```  
 
-Example Output in SFX: 
+Example Output in SFX (Warning): 
 
 ![alt text](/Documentation/Images/FODiskNodeObs.png "NodeObserver Warning output example.") 
 
@@ -419,7 +419,7 @@ In NetworkObserver's configuration file (PackageRoot/Config/NetworkObserver.conf
 ]
 ```  
 
-Example Output in SFX: 
+Example Output in SFX (Warning) : 
 
 
 ![alt text](/Documentation/Images/NetworkEndpointWarningDesc.jpg "Logo Title Text 1")   
