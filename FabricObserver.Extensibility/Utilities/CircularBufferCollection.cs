@@ -277,9 +277,7 @@ namespace FabricObserver.Observers.Utilities
         {
             if (index < 0 || index >= Count)
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(index),
-                    $"invalid index supplied: {index}");
+                throw new ArgumentOutOfRangeException(nameof(index), $"invalid index supplied: {index}");
             }
 
             for (var i = index; i > 0; --i)

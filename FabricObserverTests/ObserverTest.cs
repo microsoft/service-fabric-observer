@@ -275,7 +275,7 @@ namespace FabricObserverTests
                 ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>()
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -286,7 +286,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
             
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
         }
 
         [TestMethod]
@@ -300,7 +300,7 @@ namespace FabricObserverTests
             ClusterObserverManager.EtwEnabled = true;
 
             var obs = new ClusterObserver.ClusterObserver();
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -328,11 +328,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                await obsMgr.StartObserversAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -380,7 +380,7 @@ namespace FabricObserverTests
             });
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -396,11 +396,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartAsync().ConfigureAwait(false);
+                await obsMgr.StartAsync().ConfigureAwait(true);
             });
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopAsync().ConfigureAwait(false);
+            await obsMgr.StopAsync().ConfigureAwait(true);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -427,11 +427,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                await obsMgr.StartObserversAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(false));
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(true));
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -454,11 +454,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                await obsMgr.StartObserversAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(false));
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(true));
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -486,11 +486,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                await obsMgr.StartObserversAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -517,11 +517,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                await obsMgr.StartObserversAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -577,7 +577,7 @@ namespace FabricObserverTests
                     ClusterCertSecondaryThumbprint = string.Empty
                 };
 
-                await obs.ObserveAsync(token).ConfigureAwait(false);
+                await obs.ObserveAsync(token).ConfigureAwait(true);
 
                 // observer ran to completion with no errors.
                 Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -638,7 +638,7 @@ namespace FabricObserverTests
                 ClusterCertSecondaryThumbprint = string.Empty
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -648,8 +648,8 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
-            await Task.Delay(1000).ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            await Task.Delay(1000).ConfigureAwait(true);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -680,15 +680,9 @@ namespace FabricObserverTests
                 CpuWarningUsageThresholdPct = 10000
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
-            // Verify that a data container instance was created for the supplied metric.
-            Assert.IsTrue(obs.CpuTimeData != null);
-
-            // Verify that the type of data structure is the default type, IList<T>.
-            Assert.IsTrue(obs.CpuTimeData.Data.GetType() == typeof(List<float>));
-
-            // observer ran to completion with no errors.
+            // observer ran to completion.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             // observer detected no error conditions (so, it ignored meaningless percentage value).
@@ -729,7 +723,7 @@ namespace FabricObserverTests
                 ActivePortsWarningThreshold = -100
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // Bad values don't crash Initialize.
             Assert.IsFalse(obs.IsUnhealthy);
@@ -769,7 +763,7 @@ namespace FabricObserverTests
                 ActivePortsWarningThreshold = -100
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // Bad values don't crash Initialize.
             Assert.IsFalse(obs.IsUnhealthy);
@@ -813,7 +807,7 @@ namespace FabricObserverTests
 
             // This is required since output files are only created if fo api app is also deployed to cluster..
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -863,7 +857,7 @@ namespace FabricObserverTests
             };
 
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -920,7 +914,7 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0"
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -966,7 +960,7 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
 
             using var obs = new NetworkObserver(client, context);
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // Observer ran to completion with no errors.
             // The supplied config does not include deployed app network configs, so
@@ -1006,7 +1000,7 @@ namespace FabricObserverTests
                 IsObserverWebApiAppDeployed = true
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // Observer ran to completion with no errors.
             // The supplied config does not include deployed app network configs, so
@@ -1062,11 +1056,14 @@ namespace FabricObserverTests
 
             using var obsMgr = new ObserverManager(obs, client);
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
+            // Verify that the data container which contains a warning in the frud instance that held the CPU metric data is not null.
+            Assert.IsTrue(obs.CpuTimeData != null);
+            
             // Verify that the type of data structure is CircularBufferCollection.
             Assert.IsTrue(obs.CpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
 
@@ -1107,7 +1104,7 @@ namespace FabricObserverTests
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml")
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1142,7 +1139,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient(FabricClientRole.User);
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1165,7 +1162,7 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(1)
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1192,7 +1189,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient(FabricClientRole.User);
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1220,7 +1217,7 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0"
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1231,7 +1228,7 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1249,7 +1246,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient(FabricClientRole.User);
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1276,7 +1273,7 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0"
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1287,7 +1284,11 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+
+            // Verify that all health reports have been cleared after StopObserversAsync runs.
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+
+            // Verify that all health reports have been cleared after StopObserversAsync runs.
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1304,7 +1305,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient(FabricClientRole.User);
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1331,7 +1332,7 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0"
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1342,8 +1343,8 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
-            await Task.Delay(1000).ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            await Task.Delay(1000).ConfigureAwait(true);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1360,7 +1361,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient(FabricClientRole.User);
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1387,7 +1388,7 @@ namespace FabricObserverTests
                 ApplicationName = "fabric:/TestApp0"
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1398,8 +1399,8 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
-            await Task.Delay(1000).ConfigureAwait(false);
+            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            await Task.Delay(1000).ConfigureAwait(true);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1416,7 +1417,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient(FabricClientRole.User);
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
             
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1438,7 +1439,7 @@ namespace FabricObserverTests
                 CpuWarnUsageThresholdPct = -42
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1463,7 +1464,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient(FabricClientRole.User);
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1485,7 +1486,7 @@ namespace FabricObserverTests
                 CpuWarnUsageThresholdPct = 420
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1518,7 +1519,7 @@ namespace FabricObserverTests
 
             while (stopwatch.Elapsed < TimeSpan.FromSeconds(timeoutInSeconds) && !predicate())
             {
-                await Task.Delay(1).ConfigureAwait(false);
+                await Task.Delay(1).ConfigureAwait(true);
             }
 
             return predicate();

@@ -7,6 +7,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public sealed class ObserverConstants
     {
+        // ObserverManager settings.
         public const string ObserverManagerName = "ObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
         public const string ObserverWebApiEnabled = "ObserverWebApiEnabled";

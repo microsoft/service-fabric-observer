@@ -11,8 +11,7 @@ namespace FabricObserver.Observers.Utilities
 {
     // Why the generic constraint on struct? Because this type only works on numeric types,
     // which are all structs in .NET so it's really a partial constraint, but useful just the same.
-    public class FabricResourceUsageData<T>
-            where T : struct
+    public class FabricResourceUsageData<T> where T : struct
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricResourceUsageData{T}"/> class.
@@ -22,10 +21,10 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="dataCapacity">Max element capacity of instance's data container.</param>
         /// <param name="useCircularBuffer">Whether to hold data in a Circular Buffer or not.</param>
         public FabricResourceUsageData(
-            string property,
-            string id,
-            int dataCapacity = 30,
-            bool useCircularBuffer = false)
+                     string property,
+                     string id,
+                     int dataCapacity,
+                     bool useCircularBuffer = false)
         {
             if (string.IsNullOrEmpty(property))
             {
@@ -40,7 +39,7 @@ namespace FabricObserver.Observers.Utilities
             // This can be either a straight List<T> or a CircularBufferCollection<T>.
             if (useCircularBuffer)
             {
-                Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 30);
+                Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 5);
             }
             else
             {
@@ -190,25 +189,16 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the standard deviation of the data held in the Data collection.
         /// </summary>
-        public T StandardDeviation =>
-            Data?.Count > 0 ? Statistics.StandardDeviation(Data) : default;
+        public T StandardDeviation => Data?.Count > 0 ? Statistics.StandardDeviation(Data) : default;
 
         /// <summary>
         /// Gets SlidingWindow Max: A sorted list of sliding window maximums.
         /// </summary>
-        public IList<T> SlidingWindowMax =>
-            Data?.Count > 0 ? Statistics.SlidingWindow(
-                Data,
-                3,
-                WindowType.Max) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
+        public IList<T> SlidingWindowMax => Data?.Count > 0 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : new List<T>(1);
 
         /// <summary>
         ///  Gets SlidingWindow Min: A sorted list of sliding window minimums.
         /// </summary>
-        public IList<T> SlidingWindowMin =>
-            Data?.Count > 0 ? Statistics.SlidingWindow(
-                Data,
-                3,
-                WindowType.Min) : new List<T> { (T)Convert.ChangeType(-1, typeof(T)) };
+        public IList<T> SlidingWindowMin => Data?.Count > 0 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : new List<T>(1);
     }
 }

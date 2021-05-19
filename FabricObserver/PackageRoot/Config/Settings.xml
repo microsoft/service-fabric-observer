@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of observers run loop. 
-         0 means run continuously with no pausing. ***NOTE: If you only enable one observer, you really should set this to a number greater than 0.***
-         SF Error/Warning Reports have TTLs that are computed in part with this value. -->
+    <!-- Required: Amount of time, in seconds, for FO to sleep before the next iteration of the sequential observers run loop. 
+         0 means run continuously with no pausing - not recommended. If you only enable one observer, FO will sleep for 10 seconds between runs, regardless
+         of this setting. SF Error/Warning Reports have TTLs that are computed in part with this value. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     
     <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
@@ -78,7 +78,7 @@
     
     <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object in Logger instances that will emit 
          FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
-    <Parameter Name="EnableETWProvider" Value="false" />
+    <Parameter Name="EnableETWProvider" Value="true" />
     
     <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII.  
          We just want to know if FO is running somewhere and that it is healthy. We collect no personal identifiable information, 

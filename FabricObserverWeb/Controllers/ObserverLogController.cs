@@ -72,7 +72,8 @@ namespace FabricObserverWeb.Controllers
             // Note: FO produces Json output for health report messages/logs..
             ContentResult ret = Content(string.Empty);
 
-            string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, certObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
+            string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, 
+                   certObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null, containerObserverLogText = null;
             string logFolder = string.Empty;
             var configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
 
@@ -120,6 +121,7 @@ namespace FabricObserverWeb.Controllers
             string networkObserverLogPath = Path.Combine(logFolder, "NetworkObserver", "NetworkObserver.log");
             string fabricSystemObserverLogPath = Path.Combine(logFolder, "FabricSystemObserver", "FabricSystemObserver.log");
             string nodeObserverLogPath = Path.Combine(logFolder, "NodeObserver", "NodeObserver.log");
+            string containerObserverLogPath = Path.Combine(logFolder, "ContainerObserver", "ContainerObserver.log");
 
             // Implicit retry loop. Will run only once if no exceptions arise.
             // Can only run at most MaxRetries times.
@@ -169,6 +171,12 @@ namespace FabricObserverWeb.Controllers
                         osObserverLogText = System.IO.File.ReadAllText(osObserverLogPath, Encoding.UTF8);
                     }
 
+                    if (System.IO.File.Exists(containerObserverLogPath)
+                       && System.IO.File.GetCreationTimeUtc(containerObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
+                    {
+                        containerObserverLogText = System.IO.File.ReadAllText(containerObserverLogPath, Encoding.UTF8);
+                    }
+
                     string reportItems = string.Empty;
 
                     switch (name.ToLower())
@@ -179,6 +187,10 @@ namespace FabricObserverWeb.Controllers
 
                         case "certificateobserver":
                             reportItems = GetObserverErrWarnLogEntryListFromLogText(certObserverLogText);
+                            break;
+
+                        case "containerobserver":
+                            reportItems = GetObserverErrWarnLogEntryListFromLogText(containerObserverLogText);
                             break;
 
                         case "diskobserver":
@@ -289,7 +301,8 @@ namespace FabricObserverWeb.Controllers
             string html = string.Empty;
             string nodeName = serviceContext.NodeContext.NodeName;
             ConfigurationSettings configSettings = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Settings;
-            string networkObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null, fabricSystemObserverLogText = null, diskObserverLogText = null;
+            string networkObserverLogText = null, certObserverLogText = null, osObserverLogText = null, nodeObserverLogText = null, appObserverLogText = null,
+                   fabricSystemObserverLogText = null, diskObserverLogText = null, containerObserverLogText = null;
             string logFolder = string.Empty;
 
             if (configSettings != null)
@@ -322,11 +335,13 @@ namespace FabricObserverWeb.Controllers
 
             // Observer log paths.
             string appObserverLogPath = Path.Combine(logFolder, "AppObserver", "AppObserver.log");
+            string certObserverLogPath = Path.Combine(logFolder, "CertificateObserver", "CertificateObserver.log");
             string osObserverLogPath = Path.Combine(logFolder, "OSObserver", "OSObserver.log");
             string diskObserverLogPath = Path.Combine(logFolder, "DiskObserver", "DiskObserver.log");
             string networkObserverLogPath = Path.Combine(logFolder, "NetworkObserver", "NetworkObserver.log");
             string fabricSystemObserverLogPath = Path.Combine(logFolder, "FabricSystemObserver", "FabricSystemObserver.log");
             string nodeObserverLogPath = Path.Combine(logFolder, "NodeObserver", "NodeObserver.log");
+            string containerObserverLogPath = Path.Combine(logFolder, "ContainerObserver", "ContainerObserver.log");
 
             // Implicit retry loop. Will run only once if no exceptions arise.
             // Can only run at most MaxRetries times.
@@ -338,6 +353,12 @@ namespace FabricObserverWeb.Controllers
                         && System.IO.File.GetCreationTimeUtc(appObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
                     {
                         appObserverLogText = System.IO.File.ReadAllText(appObserverLogPath, Encoding.UTF8).Replace(Environment.NewLine, "<br/>");
+                    }
+
+                    if (System.IO.File.Exists(certObserverLogPath)
+                        && System.IO.File.GetCreationTimeUtc(certObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
+                    {
+                        certObserverLogText = System.IO.File.ReadAllText(certObserverLogPath, Encoding.UTF8).Replace(Environment.NewLine, "<br/>");
                     }
 
                     if (System.IO.File.Exists(diskObserverLogPath)
@@ -370,8 +391,13 @@ namespace FabricObserverWeb.Controllers
                         osObserverLogText = System.IO.File.ReadAllText(osObserverLogPath, Encoding.UTF8).Trim();
                     }
 
-                    string host = Request.Host.Value;
+                    if (System.IO.File.Exists(containerObserverLogPath)
+                        && System.IO.File.GetCreationTimeUtc(containerObserverLogPath).ToShortDateString() == DateTime.UtcNow.ToShortDateString())
+                    {
+                        containerObserverLogText = System.IO.File.ReadAllText(containerObserverLogPath, Encoding.UTF8).Trim();
+                    }
 
+                    string host = Request.Host.Value;
                     string nodeLinks = string.Empty;
 
                     // Request originating from ObserverWeb node hyperlinks.
@@ -416,47 +442,63 @@ namespace FabricObserverWeb.Controllers
                     switch (name.ToLower())
                     {
                         case "appobserver":
-                            if (!string.IsNullOrEmpty(appObserverLogText))
+                            if (!string.IsNullOrWhiteSpace(appObserverLogText))
                             {
                                 _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + appObserverLogText + "<br/><br/>");
                             }
-
                             break;
+
+                        case "certificateobserver":
+                            if (!string.IsNullOrWhiteSpace(certObserverLogText))
+                            {
+                                _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + certObserverLogText + "<br/><br/>");
+                            }
+                            break;
+
                         case "diskobserver":
-                            if (!string.IsNullOrEmpty(diskObserverLogText))
+                            if (!string.IsNullOrWhiteSpace(diskObserverLogText))
                             {
                                 _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + diskObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "fabricsystemobserver":
-                            if (!string.IsNullOrEmpty(fabricSystemObserverLogText))
+                            if (!string.IsNullOrWhiteSpace(fabricSystemObserverLogText))
                             {
                                 _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + fabricSystemObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "networkobserver":
-                            if (!string.IsNullOrEmpty(networkObserverLogText))
+                            if (!string.IsNullOrWhiteSpace(networkObserverLogText))
                             {
                                 _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + networkObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "nodeobserver":
-                            if (!string.IsNullOrEmpty(nodeObserverLogText))
+                            if (!string.IsNullOrWhiteSpace(nodeObserverLogText))
                             {
                                 _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + nodeObserverLogText + "<br/><br/>");
                             }
 
                             break;
                         case "osobserver":
-                            if (!string.IsNullOrEmpty(osObserverLogText))
+                            if (!string.IsNullOrWhiteSpace(osObserverLogText))
                             {
                                 _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + osObserverLogText + "<br/><br/>");
                             }
 
                             break;
+
+                        case "containerobserver":
+                            if (!string.IsNullOrWhiteSpace(containerObserverLogText))
+                            {
+                                _ = sb.AppendLine("\n\t\t\t<br/><br/>" + "\n\t\t\t" + containerObserverLogText + "<br/><br/>");
+                            }
+
+                            break;
+
                         default:
                             _ = sb.AppendLine("\n\t\t\t<br/>Specified Observer, " + name + ", does not exist.");
                             break;
@@ -483,7 +525,7 @@ namespace FabricObserverWeb.Controllers
 
         private static string GetObserverErrWarnLogEntryListFromLogText(string observerLogText)
         {
-            if (string.IsNullOrEmpty(observerLogText))
+            if (string.IsNullOrWhiteSpace(observerLogText))
             {
                 var ret = new ObserverLogEntry
                 {

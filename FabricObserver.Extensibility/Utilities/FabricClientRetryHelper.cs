@@ -29,10 +29,10 @@ namespace FabricObserver.Observers.Utilities
         public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(Func<Task<T>> function, CancellationToken cancellationToken)
         {
             return await ExecuteFabricActionWithRetryAsync(
-                            function,
-                            new FabricClientRetryErrors(),
-                            DefaultOperationTimeout,
-                            cancellationToken).ConfigureAwait(false);
+                          function,
+                          new FabricClientRetryErrors(),
+                          DefaultOperationTimeout,
+                          cancellationToken).ConfigureAwait(true);
         }
 
         /// <summary>
@@ -59,12 +59,12 @@ namespace FabricObserver.Observers.Utilities
 
                 if (needToWait)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(true);
                 }
 
                 try
                 {
-                    return await function().ConfigureAwait(false);
+                    return await function().ConfigureAwait(true);
                 }
                 catch (Exception e)
                 {

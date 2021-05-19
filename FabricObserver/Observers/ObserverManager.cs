@@ -9,6 +9,7 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
+using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -188,7 +189,12 @@ namespace FabricObserver.Observers
             serviceCollection = serviceProvider.GetServices<ObserverBase>();
 
             // Populate the Observer list for the sequential run loop.
-            observers = serviceCollection.Where(o => o.IsEnabled).ToList();
+            int capacity = serviceCollection.Count(o => o.IsEnabled);
+            if (capacity > 0)
+            {
+                observers = new List<ObserverBase>(capacity);
+                observers.AddRange(serviceCollection.Where(o => o.IsEnabled));
+            }
 
             // FabricObserver Internal Diagnostic Telemetry (Non-PII).
             // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
@@ -235,7 +241,7 @@ namespace FabricObserver.Observers
             try
             {
                 // Nothing to do here.
-                if (observers.Count == 0)
+                if (observers?.Count == 0)
                 {
                     return;
                 }
@@ -248,20 +254,39 @@ namespace FabricObserver.Observers
                 {
                     if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                     {
-                        await ShutDownAsync().ConfigureAwait(false);
+                        await ShutDownAsync().ConfigureAwait(true);
                         break;
                     }
 
-                    if (!await RunObserversAsync().ConfigureAwait(false))
+                    if (!await RunObserversAsync().ConfigureAwait(true))
                     {
                         continue;
                     }
+
+                 /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
+                    make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
+                    As always, measure and understand what impact your code has on memory before employing the GC API in your own projects.
+                    This is only used here to ensure gen0 and gen1 do not hold unecessary objects for any amount of time before FO goes to sleep and to compact the LOH. 
+                    
+                    All observers clear and null their internal lists, objects that maintain internal lists, and dispose/null disposable objects, etc before this code runs.
+                    This is a micro "optimization" and not really necessary. However, it does modestly decrease the already reasonable memory footprint of FO. 
+                    Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
+                    FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
+                    
+                    GCSettings.LatencyMode = GCLatencyMode.Batch;
+                    GC.Collect(0, GCCollectionMode.Forced, true, false);
+                    GC.Collect(1, GCCollectionMode.Forced, true, false);
+
+                    // Compact LOH
+                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    GCSettings.LatencyMode = GCLatencyMode.Interactive;
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
                     }
-                    else if (observers.Count == 1)
+                    else if (observers.Count == 1) // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
                     {
                         await Task.Delay(TimeSpan.FromSeconds(15), token);
                     }
@@ -271,7 +296,7 @@ namespace FabricObserver.Observers
             {
                 if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                 {
-                    await ShutDownAsync().ConfigureAwait(false);
+                    await ShutDownAsync().ConfigureAwait(true);
                 }
             }
             catch (Exception e)
@@ -353,7 +378,7 @@ namespace FabricObserver.Observers
                         try
                         {
                             Uri appName = new Uri(app);
-                            var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
+                            var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(true);
                             var fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                             foreach (var evt in fabricObserverAppHealthEvents)
@@ -365,7 +390,7 @@ namespace FabricObserver.Observers
                                 var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                 healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                await Task.Delay(250).ConfigureAwait(false);
+                                await Task.Delay(250).ConfigureAwait(true);
                             }
                         }
                         catch (FabricException)
@@ -373,14 +398,14 @@ namespace FabricObserver.Observers
 
                         }
 
-                        await Task.Delay(250).ConfigureAwait(false);
+                        await Task.Delay(250).ConfigureAwait(true);
                     }
                 }
                 else
                 {
                     try
                     {
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
+                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(true);
                         var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
                         healthReport.ReportType = HealthReportType.Node;
 
@@ -392,7 +417,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            await Task.Delay(250).ConfigureAwait(false);
+                            await Task.Delay(250).ConfigureAwait(true);
                         }
                             
                     }
@@ -401,7 +426,7 @@ namespace FabricObserver.Observers
 
                     }
 
-                    await Task.Delay(250).ConfigureAwait(false);
+                    await Task.Delay(250).ConfigureAwait(true);
                 }
 
                 obs.HasActiveFabricErrorOrWarning = false;
@@ -479,7 +504,7 @@ namespace FabricObserver.Observers
 
         private async Task ShutDownAsync()
         {
-            await StopObserversAsync().ConfigureAwait(false);
+            await StopObserversAsync().ConfigureAwait(true);
 
             if (cts != null)
             {
@@ -528,7 +553,7 @@ namespace FabricObserver.Observers
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     // Graceful stop.
-                    await StopObserversAsync(true, true).ConfigureAwait(false);
+                    await StopObserversAsync(true, true).ConfigureAwait(true);
 
                     // Bye.
                     Environment.Exit(42);
@@ -669,25 +694,22 @@ namespace FabricObserver.Observers
             {
                 case TelemetryProviderType.AzureLogAnalytics:
                 {
-                    var logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter);
-
-                    var logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
-
-                    var logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter);
+                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
+                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
 
                     if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                     {
                         TelemetryEnabled = false;
-
                         return;
                     }
 
                     TelemetryClient = new LogAnalyticsTelemetry(
-                        logAnalyticsWorkspaceId,
-                        logAnalyticsSharedKey,
-                        logAnalyticsLogType,
-                        FabricClientInstance,
-                        token);
+                                            logAnalyticsWorkspaceId,
+                                            logAnalyticsSharedKey,
+                                            logAnalyticsLogType,
+                                            FabricClientInstance,
+                                            token);
 
                     break;
                 }
@@ -699,19 +721,15 @@ namespace FabricObserver.Observers
                     if (string.IsNullOrEmpty(aiKey))
                     {
                         TelemetryEnabled = false;
-
                         return;
                     }
 
                     TelemetryClient = new AppInsightsTelemetry(aiKey);
-
                     break;
                 }
 
                 default:
-
                     TelemetryEnabled = false;
-
                     break;
             }
         }

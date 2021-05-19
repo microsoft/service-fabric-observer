@@ -135,8 +135,8 @@ namespace ClusterObserver.Utilities.Telemetry
                 }
 
                 retries++;
-                await Task.Delay(1000).ConfigureAwait(false);
-                await SendTelemetryAsync(payload, token).ConfigureAwait(false);
+                await Task.Delay(1000).ConfigureAwait(true);
+                await SendTelemetryAsync(payload, token).ConfigureAwait(true);
             }
             else
             {
@@ -194,7 +194,7 @@ namespace ClusterObserver.Utilities.Telemetry
                                                     osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
                                                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
         public async Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -206,7 +206,7 @@ namespace ClusterObserver.Utilities.Telemetry
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
         // TODO - Implement functions below as you need them.

@@ -29,7 +29,7 @@ namespace FabricObserver.Observers
         private const int TtlAddMinutes = 5;
         private const string FabricSystemAppName = "fabric:/System";
         private const int MaxDumps = 5;
-        private readonly Dictionary<string, int> serviceDumpCountDictionary = new Dictionary<string, int>();
+        private Dictionary<string, int> serviceDumpCountDictionary;
         private string SFLogRoot;
         private string dumpsPath;
         private bool disposed;
@@ -225,7 +225,7 @@ namespace FabricObserver.Observers
 
         public int DataCapacity
         {
-            get => ConfigurationSettings?.DataCapacity ?? 30;
+            get => ConfigurationSettings?.DataCapacity ?? 10;
 
             set
             {
@@ -575,13 +575,13 @@ namespace FabricObserver.Observers
         /// <param name="replicaOrInstance">Replica or Instance information contained in a type.</param>
         /// <param name="dumpOnError">Whether or not to dump process if Error threshold has been reached.</param>
         public void ProcessResourceDataReportHealth<T>(
-                        FabricResourceUsageData<T> data,
-                        T thresholdError,
-                        T thresholdWarning,
-                        TimeSpan healthReportTtl,
-                        HealthReportType healthReportType = HealthReportType.Node,
-                        ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
-                        bool dumpOnError = false) where T : struct
+                           FabricResourceUsageData<T> data,
+                           T thresholdError,
+                           T thresholdWarning,
+                           TimeSpan healthReportTtl,
+                           HealthReportType healthReportType = HealthReportType.Node,
+                           ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
+                           bool dumpOnError = false) where T : struct
         {
             if (data == null)
             {
@@ -664,7 +664,7 @@ namespace FabricObserver.Observers
                 // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
                 if (IsTelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(false);
+                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(true);
                 }
 
                 // ETW - This is informational, per reading EventSource tracing, healthstate is irrelevant here.
@@ -719,7 +719,7 @@ namespace FabricObserver.Observers
 
                 if (IsTelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(false);
+                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(true);
                 }
 
                 if (IsEtwEnabled)
@@ -749,6 +749,11 @@ namespace FabricObserver.Observers
                 // part of the base class for future use, like for FSO.
                 if (replicaOrInstance != null && dumpOnError && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
+                    if (serviceDumpCountDictionary == null)
+                    {
+                        serviceDumpCountDictionary = new Dictionary<string, int>(5);
+                    }
+
                     try
                     {
                         int pid = (int)replicaOrInstance.HostProcessId;
@@ -775,9 +780,6 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
-
-                    // Ignore these, it just means no dmp will be created.This is not
-                    // critical to FO. Log as info, not warning.
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
                         ObserverLogger.LogInfo($"Unable to generate dmp file:{Environment.NewLine}{e}");
@@ -906,7 +908,7 @@ namespace FabricObserver.Observers
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token).ConfigureAwait(false);
+                    _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token).ConfigureAwait(true);
                 }
 
                 // ETW.
@@ -965,6 +967,7 @@ namespace FabricObserver.Observers
 
                 // Clean up sb.
                 _ = healthMessage.Clear();
+                healthMessage = null;
             }
             else
             {
@@ -1046,8 +1049,8 @@ namespace FabricObserver.Observers
             if (data.Data is List<T> list)
             {
                 // List<T> impl.
-                list.Clear();
                 list.TrimExcess();
+                list.Clear();
             }
             else
             {

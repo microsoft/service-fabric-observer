@@ -177,7 +177,7 @@ namespace FabricObserverWeb
                     _ = sb.AppendLine("\n\t<body>");
                     _ = sb.AppendLine("\n\t\t\t <br/>");
 
-                    if (!string.IsNullOrEmpty(sysInfofileText))
+                    if (!string.IsNullOrWhiteSpace(sysInfofileText))
                     {
                         _ = sb.AppendLine("\n\t\t\t<div class=\"container\"><div style=\"position: relative; width: 80%; margin-left: auto; margin-right: auto; font-family: Consolas;\"><br/>" +
                                        "<h2>Host Machine and Service Fabric Information: Node " + serviceContext.NodeContext.NodeName + "</h2>" + nodeLinks + "<pre>" +
@@ -187,7 +187,7 @@ namespace FabricObserverWeb
                     _ = sb.AppendLine("\n\t\t\t\t<div class=\"container\"><div style=\"position: relative; width: 100%; margin-left: auto; margin-right: auto;\">" +
                                        "<br/><strong>Daily Errors and Warnings on " + nodeName + " - " + DateTime.UtcNow.ToString("MM/dd/yyyy") + " UTC</strong><br/><br/>" + log + appHealthText + "</div>");
 
-                    if (!string.IsNullOrEmpty(evtVwrErrorsText))
+                    if (!string.IsNullOrWhiteSpace(evtVwrErrorsText))
                     {
                         _ = sb.AppendLine("\n\t\t\t" + evtVwrErrorsText);
                     }

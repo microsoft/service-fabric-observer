@@ -25,43 +25,50 @@ namespace FabricObserver.Observers.Utilities
         {
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
+            long visibleTotal = -1;
+            long freePhysical = -1;
 
             try
             {
                 win32OsInfo = new ManagementObjectSearcher("SELECT FreePhysicalMemory, TotalVisibleMemorySize FROM Win32_OperatingSystem");
                 results = win32OsInfo.Get();
 
-                foreach (var prop in results)
+                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
                 {
-                    long visibleTotal = -1;
-                    long freePhysical = -1;
-
-                    foreach (var p in prop.Properties)
+                    while (enumerator.MoveNext())
                     {
-                        string n = p.Name;
-                        object v = p.Value;
-
-                        if (n.Contains("TotalVisible"))
+                        using (ManagementObject mObj = (ManagementObject)enumerator.Current)
                         {
-                            visibleTotal = Convert.ToInt64(v);
-                        }
+                            PropertyDataCollection.PropertyDataEnumerator propEnumerator = mObj.Properties.GetEnumerator();
 
-                        if (n.Contains("FreePhysical"))
-                        {
-                            freePhysical = Convert.ToInt64(v);
+                            while (propEnumerator.MoveNext())
+                            {
+                                PropertyData prop = propEnumerator.Current;
+                                string name = prop.Name;
+                                string value = prop.Value.ToString();
+
+                                if (name.Contains("TotalVisible"))
+                                {
+                                    visibleTotal = !string.IsNullOrWhiteSpace(value) ? long.Parse(value) : -1L;
+                                }
+                                else
+                                {
+                                    freePhysical = !string.IsNullOrWhiteSpace(value) ? long.Parse(value) : -1L;
+                                }
+                            }
                         }
                     }
-
-                    if (visibleTotal <= -1 || freePhysical <= -1)
-                    {
-                        continue;
-                    }
-
-                    double used = ((double)(visibleTotal - freePhysical)) / visibleTotal;
-                    double usedPct = used * 100;
-
-                    return (visibleTotal / 1024 / 1024, Math.Round(usedPct, 2));
                 }
+
+                if (visibleTotal == -1L || freePhysical == -1L)
+                {
+                    return (-1L, -1);
+                }
+
+                double used = ((double)(visibleTotal - freePhysical)) / visibleTotal;
+                double usedPct = used * 100;
+
+                return (visibleTotal / 1024 / 1024, Math.Round(usedPct, 2));
             }
             catch (Exception e) when (e is FormatException || e is InvalidCastException || e is ManagementException)
             {
@@ -145,7 +152,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                count = Retry.Do(() => GetEphemeralPortCount(processId), TimeSpan.FromSeconds(3), CancellationToken.None);
+                count = Retry.Do(() => GetTcpPortCount(processId, true), TimeSpan.FromSeconds(3), CancellationToken.None);
             }
             catch (AggregateException ae)
             {
@@ -184,79 +191,100 @@ namespace FabricObserver.Observers.Utilities
         {
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
-
             OSInfo osInfo = default;
 
             try
             {
-                win32OsInfo = new ManagementObjectSearcher("SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory,TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+                win32OsInfo = new ManagementObjectSearcher(
+                                    "SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory," +
+                                            "TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+
                 results = win32OsInfo.Get();
 
-                foreach (var prop in results)
+                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    foreach (var p in prop.Properties)
+                    while (enumerator.MoveNext())
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        string name = p.Name;
-                        string value = p.Value.ToString();
-
-                        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
+                        try
                         {
-                            continue;
+                            using (ManagementObject mObj = (ManagementObject)enumerator.Current)
+                            {
+                                PropertyDataCollection.PropertyDataEnumerator propEnumerator = mObj.Properties.GetEnumerator();
+
+                                while (propEnumerator.MoveNext())
+                                {
+                                    PropertyData prop = propEnumerator.Current;
+                                    string name = prop.Name;
+                                    string value = prop.Value?.ToString();
+
+                                    if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(value))
+                                    {
+                                        continue;
+                                    }
+
+                                    switch (name.ToLowerInvariant())
+                                    {
+                                        case "caption":
+                                            osInfo.Name = value;
+                                            break;
+
+                                        case "numberofprocesses":
+                                            if (int.TryParse(value, out int numProcesses))
+                                            {
+                                                osInfo.NumberOfProcesses = numProcesses;
+                                            }
+                                            else
+                                            {
+                                                osInfo.NumberOfProcesses = -1;
+                                            }
+
+                                            break;
+
+                                        case "status":
+                                            osInfo.Status = value;
+                                            break;
+
+                                        case "oslanguage":
+                                            osInfo.Language = value;
+                                            break;
+
+                                        case "version":
+                                            osInfo.Version = value;
+                                            break;
+
+                                        case "installdate":
+                                            osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
+                                            break;
+
+                                        case "lastbootuptime":
+                                            osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
+                                            break;
+
+                                        case "freephysicalmemory":
+                                            osInfo.FreePhysicalMemoryKB = ulong.Parse(value);
+                                            break;
+
+                                        case "freevirtualmemory":
+                                            osInfo.FreeVirtualMemoryKB = ulong.Parse(value);
+                                            break;
+
+                                        case "totalvirtualmemorysize":
+                                            osInfo.TotalVirtualMemorySizeKB = ulong.Parse(value);
+                                            break;
+
+                                        case "totalvisiblememorysize":
+                                            osInfo.TotalVisibleMemorySizeKB = ulong.Parse(value);
+                                            break;
+                                    }
+                                }
+                            }
                         }
-
-                        switch (name.ToLowerInvariant())
+                        catch (ManagementException me)
                         {
-                            case "caption":
-                                osInfo.Name = value;
-                                break;
-                            case "numberofprocesses":
-                                if (int.TryParse(value, out int numProcesses))
-                                {
-                                    osInfo.NumberOfProcesses = numProcesses;
-                                }
-                                else
-                                {
-                                    osInfo.NumberOfProcesses = -1;
-                                }
-
-                                break;
-                            case "status":
-                                osInfo.Status = value;
-                                break;
-                            case "oslanguage":
-                                osInfo.Language = value;
-                                break;
-                            case "version":
-                                osInfo.Version = value;
-                                break;
-                            case "installdate":
-                                osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
-                                break;
-                            case "lastbootuptime":
-                                osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
-                                break;
-                            case "freephysicalmemory":
-                                osInfo.FreePhysicalMemoryKB = ulong.Parse(value);
-                                break;
-                            case "freevirtualmemory":
-                                osInfo.FreeVirtualMemoryKB = ulong.Parse(value);
-                                break;
-                            case "totalvirtualmemorysize":
-                                osInfo.TotalVirtualMemorySizeKB = ulong.Parse(value);
-                                break;
-                            case "totalvisiblememorysize":
-                                osInfo.TotalVisibleMemorySizeKB = ulong.Parse(value);
-                                break;
+                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me}");
                         }
                     }
                 }
-            }
-            catch (ManagementException)
-            {
             }
             finally
             {
@@ -279,13 +307,17 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        /* TODO: These functions are redundant. Add another optional param (bool) for ephemeral port range filtering. Get rid of extra function..*/
-
-        private int GetEphemeralPortCount(int processId = -1)
+        private int GetTcpPortCount(int processId = -1, bool ephemeral = false)
         {
             var tempLocalPortData = new List<(int Pid, int Port)>();
             string findStrProc = string.Empty;
             string error = string.Empty;
+            (int lowPortRange, int highPortRange) = (-1, -1);
+
+            if (ephemeral)
+            {
+                (lowPortRange, highPortRange) = TupleGetDynamicPortRange();
+            }
 
             if (processId > 0)
             {
@@ -314,8 +346,6 @@ namespace FabricObserver.Observers.Utilities
                 // Start asynchronous read operation on error stream.  
                 p.BeginErrorReadLine();
 
-                (int lowPortRange, int highPortRange) = TupleGetDynamicPortRange();
-
                 string portRow;
                 while ((portRow = stdOutput.ReadLine()) != null)
                 {
@@ -324,39 +354,24 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    int localPort = GetLocalPortFromNetstatOutputLine(portRow);
+                    (int localPort, int pid) = TupleGetLocalPortPidPairFromNetStatString(portRow);
 
-                    if (localPort == -1)
+                    if (localPort == -1 || pid == -1)
                     {
                         continue;
                     }
 
-                    // Only add unique pid and port data to list. This would filter out cases where BOUND and ESTABLISHED states have the same Pid and Port, which
-                    // would artificially increase the count of ports that FO computes.
                     if (processId > 0)
                     {
-                        /* A pid could be a subset of a port number, so make sure that we only match pid. */
-
-                        List<string> stats = portRow.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).ToList();
-
-                        if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
+                        if (processId != pid)
                         {
                             continue;
                         }
 
-                        if (processId != pidPart)
+                        // Only add unique pid (if supplied in call) and local port data to list.
+                        if (tempLocalPortData.Any(t => t.Pid == pid && t.Port == localPort))
                         {
                             continue;
-                        }
-
-                        if (tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
-                        {
-                            continue;
-                        }
-
-                        if (localPort >= lowPortRange && localPort <= highPortRange)
-                        {
-                            tempLocalPortData.Add((processId, localPort));
                         }
                     }
                     else
@@ -365,121 +380,15 @@ namespace FabricObserver.Observers.Utilities
                         {
                             continue;
                         }
-
-                        if (localPort >= lowPortRange && localPort <= highPortRange)
-                        {
-                            tempLocalPortData.Add((processId, localPort));
-                        }
                     }
-                }
 
-                p.WaitForExit();
-
-                int exitStatus = p.ExitCode;
-                int count = tempLocalPortData.Count;
-                tempLocalPortData.Clear();
-                stdOutput.Close();
-
-                if (exitStatus == 0)
-                {
-                    return count;
-                }
-
-                // find will exit with a non-zero exit code if it doesn't find any matches in the case where a pid was supplied.
-                // Do not throw in this case. 0 is the right answer.
-                if (processId > 0 && error == string.Empty)
-                {
-                    return 0;
-                }
-
-                // there was an error associated with the non-zero exit code. Log it and throw.
-                string msg = $"netstat -qno -p {TcpProtocol}{findStrProc} exited with {exitStatus}: {error}";
-                Logger.LogWarning(msg);
-
-                // this will be handled by Retry.Do().
-                throw new Exception(msg);
-            }
-        }
-
-        private int GetTcpPortCount(int processId = -1)
-        {
-            var tempLocalPortData = new List<(int Pid, int Port)>();
-            string findStrProc = string.Empty;
-            string error = string.Empty;
-
-            if (processId > 0)
-            {
-                findStrProc = $" | find \"{processId}\"";
-            }
-
-            using (var p = new Process())
-            {
-                var ps = new ProcessStartInfo
-                {
-                    Arguments = $"/c netstat -qno -p {TcpProtocol}{findStrProc}",
-                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
-
-                // Capture any error information from netstat.
-                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                p.StartInfo = ps;
-                _ = p.Start();
-                var stdOutput = p.StandardOutput;
-
-                // Start asynchronous read operation on error stream.  
-                p.BeginErrorReadLine();
-
-                string portRow;
-                while ((portRow = stdOutput.ReadLine()) != null)
-                {
-                    if (string.IsNullOrWhiteSpace(portRow))
+                    // Ephemeral ports query?
+                    if (ephemeral && (localPort < lowPortRange || localPort > highPortRange))
                     {
                         continue;
                     }
-
-                    int localPort = GetLocalPortFromNetstatOutputLine(portRow);
-
-                    if (localPort == -1)
-                    {
-                        continue;
-                    }
-
-                    // Only add unique pid (if supplied in call) and local port data to list.
-                    if (processId > 0)
-                    {
-                        /* A pid could be a subset of a port number, so make sure that we only match pid. */
-
-                        List<string> stats = portRow.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-
-                        if (stats.Count != 5 || !int.TryParse(stats[4], out int pidPart))
-                        {
-                            continue;
-                        }
-
-                        if (processId != pidPart)
-                        {
-                            continue;
-                        }
-
-                        if (tempLocalPortData.Any(t => t.Pid == processId && t.Port == localPort))
-                        {
-                            continue;
-                        }
-
-                        tempLocalPortData.Add((processId, localPort));
-                    }
-                    else
-                    {
-                        if (tempLocalPortData.All(t => t.Port != localPort))
-                        {
-                            tempLocalPortData.Add((processId, localPort));
-                        }
-                    }
+                    
+                    tempLocalPortData.Add((pid, localPort));
                 }
 
                 p.WaitForExit();
@@ -511,41 +420,46 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Gets local port number from netstat standard output line.
+        /// Gets local port number and associated process ID from netstat standard output line.
         /// </summary>
-        /// <param name="outputLine">Single line (row) of text from netstat output.</param>
-        /// <returns>Local port number</returns>
-        private static int GetLocalPortFromNetstatOutputLine(string outputLine)
+        /// <param name="netstatOutputLine">Single line (row) of text from netstat output.</param>
+        /// <returns>Integer Tuple: (port, pid)</returns>
+        private static (int, int) TupleGetLocalPortPidPairFromNetStatString(string netstatOutputLine)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(outputLine))
+                if (string.IsNullOrWhiteSpace(netstatOutputLine))
                 {
-                    return -1;
+                    return (-1, -1);
                 }
 
-                List<string> stats = outputLine.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).ToList();
+                string[] stats = netstatOutputLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-                if (stats.Count == 0)
+                if (stats.Length != 5 || !int.TryParse(stats[4], out int pid))
                 {
-                    return -1;
+                    return (-1, -1);
                 }
 
                 string localIpAndPort = stats[1];
 
-                if (!localIpAndPort.Contains(":"))
+                if (string.IsNullOrWhiteSpace(localIpAndPort) || !localIpAndPort.Contains(":"))
                 {
-                    return -1;
+                    return (-1, -1);
                 }
 
                 // We *only* care about the local IP.
                 string localPort = localIpAndPort.Split(':')[1];
 
-                return int.Parse(localPort);
+                if (!int.TryParse(localPort, out int port))
+                {
+                    return (-1, -1);
+                }
+
+                return (port, pid);
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException)
             {
-                return -1;
+                return (-1, -1);
             }
         }
     }

@@ -29,7 +29,7 @@ namespace FabricObserver.Observers
     // As with all observers, you should first determine the good (normal) states across resource usage before you set thresholds for the bad ones.
     public class FabricSystemObserver : ObserverBase
     {
-        private readonly List<string> processWatchList;
+        private List<string> processWatchList;
         private Stopwatch stopwatch;
 
         // Health Report data container - For use in analysis to determine health state.
@@ -49,39 +49,7 @@ namespace FabricObserver.Observers
         public FabricSystemObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            // Linux
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                processWatchList = new List<string>
-                {
-                    "Fabric",
-                    "FabricDCA.dll",
-                    "FabricDnsService",
-                    "FabricCAS.dll",
-                    "FabricFAS.dll",
-                    "FabricGateway.exe",
-                    "FabricHost",
-                    "FabricIS.dll",
-                    "FabricRM.exe",
-                    "FabricUS.dll"
-                };
-            }
-            else
-            {
-                // Windows
-                processWatchList = new List<string>
-                {
-                    "Fabric",
-                    "FabricApplicationGateway",
-                    "FabricDCA",
-                    "FabricDnsService",
-                    "FabricFAS",
-                    "FabricGateway",
-                    "FabricHost",
-                    "FabricIS",
-                    "FabricRM"
-                };
-            }
+           
         }
 
         public int CpuErrorUsageThresholdPct
@@ -185,7 +153,7 @@ namespace FabricObserver.Observers
                             dotnet = "dotnet ";
                         }
 
-                        await GetProcessInfoAsync($"{dotnet}{procName}").ConfigureAwait(false);
+                        await GetProcessInfoAsync($"{dotnet}{procName}").ConfigureAwait(true);
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
@@ -209,6 +177,7 @@ namespace FabricObserver.Observers
             }
 
             await ReportAsync(token).ConfigureAwait(true);
+            CleanUp();
 
             // The time it took to run this observer to completion.
             stopwatch.Stop();
@@ -517,90 +486,134 @@ namespace FabricObserver.Observers
 
         private void Initialize()
         {
-            stopwatch ??= new Stopwatch();
-
             Token.ThrowIfCancellationRequested();
+            
+            // Linux
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                processWatchList = new List<string>
+                {
+                    "Fabric",
+                    "FabricDCA.dll",
+                    "FabricDnsService",
+                    "FabricCAS.dll",
+                    "FabricFAS.dll",
+                    "FabricGateway.exe",
+                    "FabricHost",
+                    "FabricIS.dll",
+                    "FabricRM.exe",
+                    "FabricUS.dll"
+                };
+            }
+            else
+            {
+                // Windows
+                processWatchList = new List<string>
+                {
+                    "Fabric",
+                    "FabricApplicationGateway",
+                    "FabricDCA",
+                    "FabricDnsService",
+                    "FabricFAS",
+                    "FabricGateway",
+                    "FabricHost",
+                    "FabricIS",
+                    "FabricRM"
+                };
+            }
 
+            int listcapacity = processWatchList.Count;
+            int frudCapacity = 4;
+
+            if (UseCircularBuffer)
+            {
+                frudCapacity = DataCapacity > 0 ? DataCapacity : 5;
+            }
+            else if (MonitorDuration > TimeSpan.MinValue)
+            {
+                frudCapacity = (int)MonitorDuration.TotalSeconds * 4;
+            }
+
+            stopwatch ??= new Stopwatch();
             stopwatch.Start();
-
             SetThresholdSFromConfiguration();
 
             // CPU data
             if (allCpuData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0))
             {
-                allCpuData = new List<FabricResourceUsageData<int>>(processWatchList.Count);
+                allCpuData = new List<FabricResourceUsageData<int>>(listcapacity);
 
                 foreach (var proc in processWatchList)
                 {
                     allCpuData.Add(
                         new FabricResourceUsageData<int>(
-                            ErrorWarningProperty.TotalCpuTime,
-                            proc,
-                            DataCapacity,
-                            UseCircularBuffer));
+                                ErrorWarningProperty.TotalCpuTime,
+                                proc,
+                                frudCapacity,
+                                UseCircularBuffer));
                 }
             }
 
             // Memory data
             if (allMemData == null && (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0))
             {
-                allMemData = new List<FabricResourceUsageData<float>>(processWatchList.Count);
+                allMemData = new List<FabricResourceUsageData<float>>(listcapacity);
 
                 foreach (var proc in processWatchList)
                 {
                     allMemData.Add(
                         new FabricResourceUsageData<float>(
-                            ErrorWarningProperty.TotalMemoryConsumptionMb,
-                            proc,
-                            DataCapacity,
-                            UseCircularBuffer));
+                                ErrorWarningProperty.TotalMemoryConsumptionMb,
+                                proc,
+                                frudCapacity,
+                                UseCircularBuffer));
                 }
             }
 
             // Ports
             if (allActiveTcpPortData == null && (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0))
             {
-                allActiveTcpPortData = new List<FabricResourceUsageData<int>>(processWatchList.Count);
+                allActiveTcpPortData = new List<FabricResourceUsageData<int>>(listcapacity);
 
                 foreach (var proc in processWatchList)
                 {
                     allActiveTcpPortData.Add(
                         new FabricResourceUsageData<int>(
-                            ErrorWarningProperty.TotalActivePorts,
-                            proc,
-                            DataCapacity,
-                            UseCircularBuffer));
+                                ErrorWarningProperty.TotalActivePorts,
+                                proc,
+                                frudCapacity,
+                                UseCircularBuffer));
                 }
             }
 
             if (allEphemeralTcpPortData == null && (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0))
             {
-                allEphemeralTcpPortData = new List<FabricResourceUsageData<int>>(processWatchList.Count);
+                allEphemeralTcpPortData = new List<FabricResourceUsageData<int>>(listcapacity);
 
                 foreach (var proc in processWatchList)
                 {
                     allEphemeralTcpPortData.Add(
                         new FabricResourceUsageData<int>(
-                            ErrorWarningProperty.TotalEphemeralPorts,
-                            proc,
-                            DataCapacity,
-                            UseCircularBuffer));
+                                ErrorWarningProperty.TotalEphemeralPorts,
+                                proc,
+                                frudCapacity,
+                                UseCircularBuffer));
                 }
             }
 
             // Handles
             if (allHandlesData == null && (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0))
             {
-                allHandlesData = new List<FabricResourceUsageData<float>>(processWatchList.Count);
+                allHandlesData = new List<FabricResourceUsageData<float>>(listcapacity);
 
                 foreach (var proc in processWatchList)
                 {
                     allHandlesData.Add(
                         new FabricResourceUsageData<float>(
-                            ErrorWarningProperty.TotalFileHandles,
-                            proc,
-                            DataCapacity,
-                            UseCircularBuffer));
+                                ErrorWarningProperty.TotalFileHandles,
+                                proc,
+                                frudCapacity,
+                                UseCircularBuffer));
                 }
             }
 
@@ -817,7 +830,7 @@ namespace FabricObserver.Observers
                         _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
                     }
 
-                    TimeSpan duration = TimeSpan.FromSeconds(5);
+                    TimeSpan duration = TimeSpan.FromSeconds(1);
 
                     if (MonitorDuration > TimeSpan.MinValue)
                     {
@@ -853,7 +866,7 @@ namespace FabricObserver.Observers
                                 allHandlesData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(handleCount);
                             }
 
-                            await Task.Delay(250, Token).ConfigureAwait(false);
+                            await Task.Delay(250, Token).ConfigureAwait(true);
                         }
                         catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                         {
@@ -901,10 +914,10 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessResourceDataList<T>(
-                        IReadOnlyCollection<FabricResourceUsageData<T>> data,
-                        T thresholdError,
-                        T thresholdWarning)
-                            where T : struct
+                            IReadOnlyCollection<FabricResourceUsageData<T>> data,
+                            T thresholdError,
+                            T thresholdWarning)
+                                where T : struct
         {
             string fileName = null;
 
@@ -967,11 +980,35 @@ namespace FabricObserver.Observers
 
                 // This function will clear Data items in list (will call Clear() on the supplied FabricResourceUsageData instance's Data field..)
                 ProcessResourceDataReportHealth(
-                    dataItem,
-                    thresholdError,
-                    thresholdWarning,
-                    GetHealthReportTimeToLive(),
-                    HealthReportType.Application);
+                       dataItem,
+                       thresholdError,
+                       thresholdWarning,
+                       GetHealthReportTimeToLive(),
+                       HealthReportType.Application);
+            }
+        }
+
+        private void CleanUp()
+        {
+            processWatchList.Clear();
+            processWatchList = null;
+
+            if (!HasActiveFabricErrorOrWarning)
+            {
+                allCpuData?.Clear();
+                allCpuData = null;
+
+                allHandlesData?.Clear();
+                allHandlesData = null;
+
+                allMemData?.Clear();
+                allMemData = null;
+
+                allEphemeralTcpPortData?.Clear();
+                allEphemeralTcpPortData = null;
+
+                allActiveTcpPortData?.Clear();
+                allActiveTcpPortData = null;
             }
         }
     }

@@ -123,12 +123,12 @@ namespace ClusterObserver
             try
             {
                 // Monitor node status.
-                await MonitorNodeStatusAsync(token).ConfigureAwait(false);
+                await MonitorNodeStatusAsync(token).ConfigureAwait(true);
 
                 // Check for active repairs in the cluster.
                 if (ConfigSettings.MonitorRepairJobStatus)
                 {
-                    var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
+                    var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(true);
                     string repairState = string.Empty;
 
                     if (repairsInProgress?.Count > 0)
@@ -246,7 +246,7 @@ namespace ClusterObserver
                             case HealthEvaluationKind.Nodes:
                                 try
                                 {
-                                    await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates, token).ConfigureAwait(false);
+                                    await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates, token).ConfigureAwait(true);
                                 }
                                 catch (Exception e) when (e is FabricException || e is TimeoutException)
                                 {
@@ -259,7 +259,7 @@ namespace ClusterObserver
                             case HealthEvaluationKind.SystemApplication:
                                 try
                                 {
-                                    await ProcessApplicationHealthAsync(clusterHealth.ApplicationHealthStates, token).ConfigureAwait(false);
+                                    await ProcessApplicationHealthAsync(clusterHealth.ApplicationHealthStates, token).ConfigureAwait(true);
                                 }
                                 catch (Exception e) when (e is FabricException || e is TimeoutException)
                                 {
@@ -270,7 +270,7 @@ namespace ClusterObserver
                             default:
                                 try
                                 {
-                                    await ProcessGenericEntityHealthAsync(evaluation, token).ConfigureAwait(false);
+                                    await ProcessGenericEntityHealthAsync(evaluation, token).ConfigureAwait(true);
                                 }
                                 catch (Exception e) when (e is FabricException || e is TimeoutException)
                                 {
@@ -345,7 +345,7 @@ namespace ClusterObserver
                 ApplicationHealth appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
                                                                                         healthState.ApplicationName,
                                                                                         ConfigSettings.AsyncTimeout,
-                                                                                        token).ConfigureAwait(false);
+                                                                                        token).ConfigureAwait(true);
                 if (appHealth == null)
                 {
                     continue;
@@ -474,7 +474,7 @@ namespace ClusterObserver
         private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates, CancellationToken token)
         {
             // Check cluster upgrade status.
-            int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(FabricClientInstance, token).ConfigureAwait(false);
+            int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(FabricClientInstance, token).ConfigureAwait(true);
             var supportedNodeHealthStates = nodeHealthStates.Where( a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
             foreach (var node in supportedNodeHealthStates)
@@ -523,7 +523,7 @@ namespace ClusterObserver
                     }
 
                     var targetNodeList =
-                        await FabricClientInstance.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, token).ConfigureAwait(false);
+                        await FabricClientInstance.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, token).ConfigureAwait(true);
 
                     Node targetNode = null;
 
@@ -619,7 +619,7 @@ namespace ClusterObserver
             // If a node's NodeStatus is Disabling, Disabled, or Down 
             // for at or above the specified maximum time (in Settings.xml),
             // then CO will emit a Warning signal.
-            var nodeList = await FabricClientInstance.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, token).ConfigureAwait(false);
+            var nodeList = await FabricClientInstance.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, token).ConfigureAwait(true);
 
             // Are any of the nodes that were previously in non-Up status, now Up?
             if (NodeStatusDictionary.Count > 0)

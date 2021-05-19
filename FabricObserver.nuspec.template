@@ -2,9 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.11</version>
+    <version>3.1.12</version>
     <releaseNotes>
-      Bug fix in OSObserver. MachineTelemetryData member renaming. Code improvements.
+      Performance optimizations - most changes impact private workingset. This is a performance-focused release with one bug fix (regression) in OSObserver Windows hotfix data for telemetry.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
