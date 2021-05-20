@@ -58,10 +58,10 @@
     <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
 
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:03" />
-    <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:03" />
-    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:03" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:03" />
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:02" />
 
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />

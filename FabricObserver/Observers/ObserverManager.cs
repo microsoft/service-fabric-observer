@@ -268,19 +268,17 @@ namespace FabricObserver.Observers
                     As always, measure and understand what impact your code has on memory before employing the GC API in your own projects.
                     This is only used here to ensure gen0 and gen1 do not hold unecessary objects for any amount of time before FO goes to sleep and to compact the LOH. 
                     
-                    All observers clear and null their internal lists, objects that maintain internal lists, and dispose/null disposable objects, etc before this code runs.
+                    All observers clear and null their internal lists, objects that maintain internal lists. They also dispose/null disposable objects, etc before this code runs.
                     This is a micro "optimization" and not really necessary. However, it does modestly decrease the already reasonable memory footprint of FO. 
                     Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
                     FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
                     
-                    GCSettings.LatencyMode = GCLatencyMode.Batch;
                     GC.Collect(0, GCCollectionMode.Forced, true, false);
                     GC.Collect(1, GCCollectionMode.Forced, true, false);
 
                     // Compact LOH
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
                     GC.Collect(2, GCCollectionMode.Forced, true, true);
-                    GCSettings.LatencyMode = GCLatencyMode.Interactive;
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {

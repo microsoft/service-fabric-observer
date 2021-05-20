@@ -1005,28 +1005,41 @@ namespace FabricObserver.Observers
             ReplicaOrInstanceList?.Clear();
             ReplicaOrInstanceList = null;
 
-            if (!HasActiveFabricErrorOrWarning)
+            if (AllAppCpuData != null && !AllAppCpuData.Any(frud => frud.ActiveErrorOrWarning))
             {
                 AllAppCpuData?.Clear();
                 AllAppCpuData = null;
+            }
 
+            if (AllAppEphemeralPortsData != null && !AllAppEphemeralPortsData.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 AllAppEphemeralPortsData?.Clear();
                 AllAppEphemeralPortsData = null;
+            }
 
+            if (AllAppHandlesData != null && !AllAppHandlesData.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 AllAppHandlesData?.Clear();
                 AllAppHandlesData = null;
+            }
 
+            if (AllAppMemDataMb != null && !AllAppMemDataMb.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 AllAppMemDataMb?.Clear();
                 AllAppMemDataMb = null;
+            }
 
+            if (AllAppMemDataPercent != null && !AllAppMemDataPercent.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 AllAppMemDataPercent?.Clear();
                 AllAppMemDataPercent = null;
+            }
 
+            if (AllAppTotalActivePortsData != null && !AllAppTotalActivePortsData.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 AllAppTotalActivePortsData?.Clear();
                 AllAppTotalActivePortsData = null;
             }
-
-            GC.Collect(0);
         }
 
         private void LogAllAppResourceDataToCsv(string appName)

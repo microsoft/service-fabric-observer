@@ -993,20 +993,32 @@ namespace FabricObserver.Observers
             processWatchList.Clear();
             processWatchList = null;
 
-            if (!HasActiveFabricErrorOrWarning)
+            if (allCpuData != null && !allCpuData.Any(frud => frud.ActiveErrorOrWarning))
             {
                 allCpuData?.Clear();
                 allCpuData = null;
+            }
 
+            if (allHandlesData != null && !allHandlesData.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 allHandlesData?.Clear();
                 allHandlesData = null;
+            }
 
+            if (allMemData != null && !allMemData.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 allMemData?.Clear();
                 allMemData = null;
+            }
 
+            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 allEphemeralTcpPortData?.Clear();
                 allEphemeralTcpPortData = null;
+            }
 
+            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.ActiveErrorOrWarning))
+            {
                 allActiveTcpPortData?.Clear();
                 allActiveTcpPortData = null;
             }

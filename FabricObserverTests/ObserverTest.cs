@@ -1049,7 +1049,7 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(10),
                 DataCapacity = 5,
                 UseCircularBuffer = true,
-                CpuWarningUsageThresholdPct = 10,
+                CpuWarningUsageThresholdPct = 1, // This will generate Warning for sure.
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
                 ActivePortsWarningThreshold = 100 // This will generate Warning for sure.
             };
@@ -1060,13 +1060,9 @@ namespace FabricObserverTests
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // Verify that the data container which contains a warning in the frud instance that held the CPU metric data is not null.
-            Assert.IsTrue(obs.CpuTimeData != null);
             
             // Verify that the type of data structure is CircularBufferCollection.
             Assert.IsTrue(obs.CpuTimeData.Data.GetType() == typeof(CircularBufferCollection<float>));
-
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
             // observer did not have any internal errors during run.

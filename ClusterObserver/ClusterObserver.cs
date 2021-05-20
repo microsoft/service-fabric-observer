@@ -58,7 +58,6 @@ namespace ClusterObserver
             get;
         }
 
-
         private StatelessServiceContext FabricServiceContext
         {
             get;
