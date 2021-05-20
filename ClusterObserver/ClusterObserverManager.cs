@@ -70,7 +70,7 @@ namespace ClusterObserver
 
         public static bool EtwEnabled
         {
-            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableEventSourceProvider), out etwEnabled) && etwEnabled;
+            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider), out etwEnabled) && etwEnabled;
 
             set => etwEnabled = value;
         }
@@ -146,7 +146,7 @@ namespace ClusterObserver
                 return;
             }
 
-            await Task.Delay(shutdownGracePeriodInSeconds).ConfigureAwait(false);
+            await Task.Delay(shutdownGracePeriodInSeconds).ConfigureAwait(true);
 
             shutdownSignaled = true;
             await StopAsync();
@@ -253,14 +253,12 @@ namespace ClusterObserver
                     if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                     {
                         Logger.LogInfo("Shutdown signaled. Stopping.");
-                        await StopAsync().ConfigureAwait(false);
+                        await StopAsync().ConfigureAwait(true);
                         break;
                     }
 
-                    await RunObserverAync().ConfigureAwait(false);
+                    await RunObserverAync().ConfigureAwait(true);
                     await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10), token);
-
-                    Logger.Flush();
                 }
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
@@ -311,7 +309,7 @@ namespace ClusterObserver
                 shutdownSignaled = true;
             }
 
-            await SignalAbortToRunningObserverAsync().ConfigureAwait(false);
+            await SignalAbortToRunningObserverAsync().ConfigureAwait(true);
         }
 
         private Task SignalAbortToRunningObserverAsync()
@@ -377,7 +375,7 @@ namespace ClusterObserver
                 {
                     string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. Aborting.";
                     
-                    await SignalAbortToRunningObserverAsync().ConfigureAwait(false);
+                    await SignalAbortToRunningObserverAsync().ConfigureAwait(true);
 
                     Logger.LogWarning(observerHealthWarning);
 

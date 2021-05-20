@@ -73,12 +73,14 @@ namespace FabricObserver.Observers
 
                 if (IsAUCheckSettingEnabled)
                 {
-                    await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(false);  
+                    await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(true);  
                 }
             }
 
-            await GetComputerInfoAsync(token).ConfigureAwait(false);
-            await ReportAsync(token).ConfigureAwait(false);
+            await GetComputerInfoAsync(token).ConfigureAwait(true);
+            await ReportAsync(token).ConfigureAwait(true);
+            osReport = null;
+            osStatus = null;
 
             LastRunDateTime = DateTime.Now;
         }
@@ -127,16 +129,16 @@ namespace FabricObserver.Observers
                     if (IsEtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.FabricObserverETWEventName,
-                                        new
-                                        {
-                                            Description = healthMessage,
-                                            HealthState = "Error",
-                                            Metric = "OS Health",
-                                            NodeName,
-                                            ObserverName,
-                                            Source = ObserverConstants.FabricObserverName
-                                        });
+                                          ObserverConstants.FabricObserverETWEventName,
+                                          new
+                                          {
+                                              Description = healthMessage,
+                                              HealthState = "Error",
+                                              Metric = "OS Health",
+                                              NodeName,
+                                              ObserverName,
+                                              Source = ObserverConstants.FabricObserverName
+                                          });
                     }
                 }
                 else if (HasActiveFabricErrorOrWarning && string.Equals(osStatus, "OK", StringComparison.OrdinalIgnoreCase))
@@ -176,16 +178,16 @@ namespace FabricObserver.Observers
                     if (IsEtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.FabricObserverETWEventName,
-                                        new
-                                        {
-                                            Description = healthMessage,
-                                            HealthState = "Ok",
-                                            Metric = "OS Health",
-                                            NodeName,
-                                            ObserverName,
-                                            Source = ObserverConstants.FabricObserverName
-                                        });
+                                         ObserverConstants.FabricObserverETWEventName,
+                                         new
+                                         {
+                                             Description = healthMessage,
+                                             HealthState = "Ok",
+                                             Metric = "OS Health",
+                                             NodeName,
+                                             ObserverName,
+                                             Source = ObserverConstants.FabricObserverName
+                                         });
                     }
 
                     // Reset internal health state.
@@ -200,10 +202,10 @@ namespace FabricObserver.Observers
                     if (!ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow:M/d/yyyy HH:mm:ss} UTC<br/>{osReport}"))
                     {
                         HealthReporter.ReportFabricObserverServiceHealth(
-                                        FabricServiceContext.ServiceName.OriginalString,
-                                        ObserverName,
-                                        HealthState.Warning,
-                                        "Unable to create SysInfo.txt file.");
+                                            FabricServiceContext.ServiceName.OriginalString,
+                                            ObserverName,
+                                            HealthState.Warning,
+                                            "Unable to create SysInfo.txt file.");
                     }
                 }
 
@@ -266,26 +268,26 @@ namespace FabricObserver.Observers
                     if (IsEtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.FabricObserverETWEventName,
-                                        new
-                                        {
-                                            HealthState = "Warning",
-                                            HealthEventDescription = auServiceEnabledMessage,
-                                            ObserverName,
-                                            Metric = "WUAutoDownloadEnabled",
-                                            Value = isAUAutomaticDownloadEnabled,
-                                            NodeName
-                                        });
+                                          ObserverConstants.FabricObserverETWEventName,
+                                          new
+                                          {
+                                              HealthState = "Warning",
+                                              HealthEventDescription = auServiceEnabledMessage,
+                                              ObserverName,
+                                              Metric = "WUAutoDownloadEnabled",
+                                              Value = isAUAutomaticDownloadEnabled,
+                                              NodeName
+                                          });
                     }
                 }
             }
             catch (Exception e) when (!(e is OperationCanceledException))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
-                                FabricServiceContext.ServiceName.OriginalString,
-                                ObserverName,
-                                HealthState.Error,
-                                $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
+                                    FabricServiceContext.ServiceName.OriginalString,
+                                    ObserverName,
+                                    HealthState.Error,
+                                    $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
                 // Fix the bug..
                 throw;
@@ -300,7 +302,7 @@ namespace FabricObserver.Observers
             }
 
             var checkAU = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableWindowsAutoUpdateCheck);
-            var infraServices = await GetInfrastructureServiceInstancesAsync().ConfigureAwait(false);
+            var infraServices = await GetInfrastructureServiceInstancesAsync().ConfigureAwait(true);
 
             if (!string.IsNullOrEmpty(checkAU) && bool.TryParse(checkAU, out bool auChk) && infraServices?.Count() > 0)
             {
@@ -318,7 +320,7 @@ namespace FabricObserver.Observers
                                                                                         null,
                                                                                         ConfigurationSettings.AsyncTimeout,
                                                                                         Token),
-                                                Token).ConfigureAwait(false);
+                                                Token).ConfigureAwait(true);
 
             var infraInstances = allSystemServices.Where(
                                     i => i.ServiceTypeName.Equals(
@@ -328,11 +330,13 @@ namespace FabricObserver.Observers
             return infraInstances;
         }
 
-        private static string GetWindowsHotFixes(CancellationToken token, bool generateUrl = true)
+        private static string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
             ManagementObjectSearcher searcher = null;
             ManagementObjectCollection results = null;
+            ManagementObject[] resultsOrdered;
             string ret = string.Empty;
+
             token.ThrowIfCancellationRequested();
 
             try
@@ -345,23 +349,36 @@ namespace FabricObserver.Observers
                     return string.Empty;
                 }
 
-                var resultsOrdered = results.Cast<ManagementObject>()
-                                            .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
-                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty));
+                resultsOrdered = results.Cast<ManagementObject>()
+                                        .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
+                                        .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";
 
-                foreach (var obj in resultsOrdered)
+                for (int i = 0; i < resultsOrdered.Length; ++i)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    _ = generateUrl ? sb.AppendLine(
-                        $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower().Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   {obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
+                    ManagementObject obj = resultsOrdered[i];
+
+                    try
+                    {
+                        _ = generateKbUrl ? sb.AppendLine(
+                            $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower().Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   " +
+                            $"{obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
+                    }
+                    finally
+                    {
+                        obj?.Dispose();
+                        obj = null;
+                    }
                 }
 
+                resultsOrdered = null;
                 ret = sb.ToString().Trim();
                 _ = sb.Clear();
+                sb = null;
             }
             catch (Exception e) when (
                     e is ArgumentException ||
@@ -375,7 +392,9 @@ namespace FabricObserver.Observers
             finally
             {
                 results?.Dispose();
+                results = null;
                 searcher?.Dispose();
+                searcher = null;
             }
 
             return ret;
@@ -429,7 +448,7 @@ namespace FabricObserver.Observers
                 string fabricAppPortRange = string.Empty;
                 string clusterManifestXml = !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(
                                                                 ClusterManifestPath, token) : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                                                                                                AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
+                                                                                                AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
 
                 (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
@@ -557,7 +576,7 @@ namespace FabricObserver.Observers
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    osHotFixes = GetWindowsHotFixes(token);
+                    osHotFixes = GetWindowsHotFixes(true, token);
 
                     if (!string.IsNullOrWhiteSpace(osHotFixes))
                     {
@@ -568,53 +587,50 @@ namespace FabricObserver.Observers
                 // Dynamic info qualifier (*)
                 _ = sb.AppendLine($"{Environment.NewLine}* Dynamic data.");
                 osReport = sb.ToString();
-                string hotFixes = null;
+                string kbOnlyHotFixes = null;
 
                 // Telemetry
                 if (IsTelemetryEnabled)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        hotFixes = osHotFixes?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
+                        kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
                     }
 
                     await TelemetryClient.ReportMetricAsync(
-                                            new MachineTelemetryData
-                                            {
-                                                HealthState = "Ok",
-                                                NodeName = NodeName,
-                                                ObserverName = ObserverName,
-                                                OSName = osInfo.Name,
-                                                OSVersion = osInfo.Version,
-                                                OSInstallDate = osInfo.InstallDate,
-                                                LastBootUpTime = osInfo.LastBootUpTime,
-                                                WindowsUpdateAutoDownloadEnabled = isAUAutomaticDownloadEnabled,
-                                                TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
-                                                AvailablePhysicalMemoryGB = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
-                                                FreeVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
-                                                LogicalProcessorCount = logicalProcessorCount,
-                                                LogicalDriveCount = logicalDriveCount,
-                                                DriveInfo = driveInfo,
-                                                NumberOfRunningProcesses = osInfo.NumberOfProcesses,
-                                                ActiveFirewallRules = firewalls,
-                                                ActiveTcpPorts = activePorts,
-                                                ActiveEphemeralTcpPorts = activeEphemeralPorts,
-                                                EphemeralTcpPortRange = osEphemeralPortRange,
-                                                FabricApplicationTcpPortRange = fabricAppPortRange,
-                                                HotFixes = hotFixes ?? string.Empty
-                                            }, Token);
+                                                new MachineTelemetryData
+                                                {
+                                                    HealthState = "Ok",
+                                                    NodeName = NodeName,
+                                                    ObserverName = ObserverName,
+                                                    OSName = osInfo.Name,
+                                                    OSVersion = osInfo.Version,
+                                                    OSInstallDate = osInfo.InstallDate,
+                                                    LastBootUpTime = osInfo.LastBootUpTime,
+                                                    WindowsUpdateAutoDownloadEnabled = isAUAutomaticDownloadEnabled,
+                                                    TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
+                                                    AvailablePhysicalMemoryGB = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
+                                                    FreeVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
+                                                    LogicalProcessorCount = logicalProcessorCount,
+                                                    LogicalDriveCount = logicalDriveCount,
+                                                    DriveInfo = driveInfo?.Replace(Environment.NewLine, ""),
+                                                    NumberOfRunningProcesses = osInfo.NumberOfProcesses,
+                                                    ActiveFirewallRules = firewalls,
+                                                    ActiveTcpPorts = activePorts,
+                                                    ActiveEphemeralTcpPorts = activeEphemeralPorts,
+                                                    EphemeralTcpPortRange = osEphemeralPortRange,
+                                                    FabricApplicationTcpPortRange = fabricAppPortRange,
+                                                    HotFixes = kbOnlyHotFixes ?? string.Empty
+                                                }, Token);
                 }
 
                 // ETW.
                 if (IsEtwEnabled)
                 {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && hotFixes == null)
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && kbOnlyHotFixes == null)
                     {
-                        hotFixes = osHotFixes?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
+                        kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
                     }
-
-                    // strip out links..
-                    hotFixes = Regex.Replace(hotFixes ?? string.Empty, "</?(a|A).*?>", "");
 
                     ObserverLogger.LogEtw(
                                     ObserverConstants.FabricObserverETWEventName,
@@ -633,16 +649,19 @@ namespace FabricObserver.Observers
                                         FreeVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
                                         LogicalProcessorCount = logicalProcessorCount,
                                         LogicalDriveCount = logicalDriveCount,
-                                        DriveInfo = driveInfo,
+                                        DriveInfo = driveInfo?.Replace(Environment.NewLine, ""),
                                         NumberOfRunningProcesses = osInfo.NumberOfProcesses,
                                         ActiveFirewallRules = firewalls,
                                         ActiveTcpPorts = activePorts,
                                         ActiveEphemeralTcpPorts = activeEphemeralPorts,
                                         EphemeralTcpPortRange = osEphemeralPortRange,
                                         FabricAppPortRange = fabricAppPortRange,
-                                        HotFixes = hotFixes
+                                        HotFixes = kbOnlyHotFixes ?? string.Empty
                                     });
                 }
+
+                _ = sb.Clear();
+                sb = null;
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {

@@ -118,7 +118,6 @@ namespace FabricObserver.Observers
             token.ThrowIfCancellationRequested();
 
             var sb = new StringBuilder();
-
             _ = sb.AppendLine($"{Environment.NewLine}Service Fabric information:{Environment.NewLine}");
 
             if (!string.IsNullOrEmpty(SFVersion))
@@ -177,10 +176,10 @@ namespace FabricObserver.Observers
             if (!ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
             {
                 HealthReporter.ReportFabricObserverServiceHealth(
-                                FabricServiceContext.ServiceName.OriginalString,
-                                ObserverName,
-                                HealthState.Warning,
-                                "Unable to create SFInfraInfo.txt file.");
+                                     FabricServiceContext.ServiceName.OriginalString,
+                                     ObserverName,
+                                     HealthState.Warning,
+                                     "Unable to create SFInfraInfo.txt file.");
             }
 
             _ = sb.Clear();

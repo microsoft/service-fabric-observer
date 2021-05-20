@@ -147,12 +147,16 @@ namespace FabricObserver.Observers
 
             ExpiredWarnings?.Clear();
             ExpiredWarnings = null;
+
             ExpiringWarnings?.Clear();
             ExpiringWarnings = null;
+
             NotFoundWarnings?.Clear();
             NotFoundWarnings = null;
+
             AppCertificateCommonNamesToObserve?.Clear();
             AppCertificateCommonNamesToObserve = null;
+
             AppCertificateThumbprintsToObserve?.Clear();
             AppCertificateThumbprintsToObserve = null;
 

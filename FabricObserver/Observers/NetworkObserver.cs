@@ -349,10 +349,10 @@ namespace FabricObserver.Observers
                 if (!ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(cancellationToken)))
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
-                                    FabricServiceContext.ServiceName.OriginalString,
-                                    ObserverName,
-                                    HealthState.Warning,
-                                    "Unable to create NetInfo.txt file.");
+                                         FabricServiceContext.ServiceName.OriginalString,
+                                         ObserverName,
+                                         HealthState.Warning,
+                                         "Unable to create NetInfo.txt file.");
                 }
             }
 
@@ -383,7 +383,7 @@ namespace FabricObserver.Observers
 
             foreach (var netConfig in configs)
             {
-                var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, new Uri(netConfig.TargetApp)).ConfigureAwait(false);
+                var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, new Uri(netConfig.TargetApp)).ConfigureAwait(true);
 
                 if (deployedApps == null || deployedApps.Count < 1)
                 {

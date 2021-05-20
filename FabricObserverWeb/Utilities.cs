@@ -12,11 +12,11 @@ namespace FabricObserverWeb
     public static class Utilities
     {
         internal static string GetConfigurationSetting(
-            ConfigurationSettings configurationSettings,
-            string configurationSectionName,
-            string parameterName)
+                                  ConfigurationSettings configurationSettings,
+                                  string configurationSectionName,
+                                  string parameterName)
         {
-            if (string.IsNullOrEmpty(parameterName) || configurationSettings == null)
+            if (string.IsNullOrWhiteSpace(parameterName) || configurationSettings == null)
             {
                 return null;
             }
@@ -35,7 +35,7 @@ namespace FabricObserverWeb
             string parameterValue = configurationSettings.Sections[configurationSectionName].Parameters[parameterName].Value;
 
             if (!configurationSettings.Sections[configurationSectionName].Parameters[parameterName].IsEncrypted ||
-                string.IsNullOrEmpty(parameterValue))
+                string.IsNullOrWhiteSpace(parameterValue))
             {
                 return parameterValue;
             }

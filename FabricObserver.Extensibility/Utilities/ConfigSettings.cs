@@ -167,18 +167,18 @@ namespace FabricObserver.Observers.Utilities
 
             // Resource usage data collection item capacity.
             if (int.TryParse(
-                   GetConfigSettingValue(
-                   ObserverConstants.DataCapacityParameter),
-                   out int dataCapacity))
+                    GetConfigSettingValue(
+                    ObserverConstants.DataCapacityParameter),
+                    out int dataCapacity))
             {
                 DataCapacity = dataCapacity;
             }
 
             // Resource usage data collection type.
             if (bool.TryParse(
-                    GetConfigSettingValue(
-                    ObserverConstants.UseCircularBufferParameter),
-                    out bool useCircularBuffer))
+                     GetConfigSettingValue(
+                     ObserverConstants.UseCircularBufferParameter),
+                     out bool useCircularBuffer))
             {
                 UseCircularBuffer = useCircularBuffer;
             }

@@ -95,7 +95,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
         public async Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -106,7 +106,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
         public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -117,7 +117,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
         public async Task ReportMetricAsync(MachineTelemetryData machineTelemetryData, CancellationToken cancellationToken)
@@ -128,7 +128,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(machineTelemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -153,9 +153,9 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     value
                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
 
-            return await Task.FromResult(true).ConfigureAwait(false);
+            return await Task.FromResult(true).ConfigureAwait(true);
         }
 
         // Implement functions below as you need.
@@ -285,8 +285,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
 
                 retries++;
-                await Task.Delay(1000).ConfigureAwait(false);
-                await SendTelemetryAsync(payload, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(1000).ConfigureAwait(true);
+                await SendTelemetryAsync(payload, cancellationToken).ConfigureAwait(true);
             }
             else
             {

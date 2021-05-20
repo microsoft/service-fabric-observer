@@ -2,13 +2,14 @@
 // We employ Capabilities to solve this problem. This is the proxy binary we run that can call "docker stats" as a normal user.
 
 // Build/Run Instructions.
-// ***NOTE: This binary has already been built on an Ubuntu OS machine and is located in this repo: elevated_docker_stats
+// ***NOTE: This binary has already been built on Ubuntu 18.04.5 LTS OS machine and is located in this repo: elevated_docker_stats.
+// When you run the Build-FabricObserver.ps1 script, all modifications necessary to run FO on Linux are done for you and copied to the output folder.
 
 /* To build yourself:
 
 1. On Ubuntu: Install libcap library: sudo apt-get install -y libcap-dev
-2. Compile : gcc elevated_docker.c -lcap -o elevated_docker_stats
-3. Assign CAP_DAC_OVERRIDE and DAC_READ_SEARCH capabilities to elevated_docker_stats : "sudo setcap CAP_DAC_READ_SEARCH,CAP_DAC_OVERRIDE+p ./elevated_docker_stats"
+2. Compile : gcc elevated_docker_stats.c -lcap -o elevated_docker_stats
+3. Assign CAP_DAC_OVERRIDE and DAC_READ_SEARCH capabilities to elevated_docker_stats: sudo setcap CAP_DAC_READ_SEARCH,CAP_DAC_OVERRIDE+p ./elevated_docker_stats
 4. Run elevated_docker_stats as a regular user: ./elevated_docker_stats
 */
 
@@ -44,15 +45,15 @@ int main()
 
     // Add capabilities in the Inheritable set.
     cap_t caps = cap_get_proc();
-    printf("Capabilities: %s\n", cap_to_text(caps, NULL));
+    //printf("Capabilities: %s\n", cap_to_text(caps, NULL));
     cap_set_flag(caps, CAP_INHERITABLE, 2, newcaps, CAP_SET);
     cap_set_proc(caps);
-    printf("Capabilities: %s\n", cap_to_text(caps, NULL));
+    //printf("Capabilities: %s\n", cap_to_text(caps, NULL));
     cap_free(caps);
 
     // Set ambient capabilities.    
     set_ambient_caps(newcaps, sizeof(newcaps) / sizeof(newcaps[0]));
 
-    char* param[] = { "docker", "stats", "--no-stream", NULL };
+    char* param[] = { "docker", "stats", "--no-stream", "--format", "table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}", NULL };
     execv("/usr/bin/docker", param);
 }
