@@ -4,9 +4,9 @@
     <id>%PACKAGE_ID%</id>
     <version>3.1.13</version>
     <releaseNotes>
-      - New EventSource implementation to support ETW event listening impls (important for those who want to implement EventListener-derived types in plugins to capture FO ETW event data). 
+      - New EventSource impl to better support ETW event listening impls (important for plugins that need to capture FO ETW event data). 
       - ServiceEventSource class modified with new functions, moved to Extensibility library. 
-      - Changes to Logger and TelemetryData classes to support new ServiceEventSource impl. 
+      - Changes to Logger (removed EtwLogger EventSource) and TelemetryData classes to support new ServiceEventSource impl. 
       - NetworkUsage class code change: replaced try-finally explicit disposal pattern with using blocks. 
     </releaseNotes>
     <authors>Microsoft</authors>
