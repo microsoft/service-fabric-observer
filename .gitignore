@@ -335,3 +335,4 @@ ASALocalRun/
 **/PublishProfiles/Cloud.xml
 /FabricObserver/observer_logs
 /FabricObserver/PackageRoot/Data/Plugins/SampleNewObserver.dll
+/nuget.exe
