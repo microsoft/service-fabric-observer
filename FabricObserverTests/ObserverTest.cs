@@ -336,7 +336,8 @@ namespace FabricObserverTests
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
-        /* NOTE: These tests are flaky. Run them one by one or, even better, make them better. */
+        /* NOTE: The below tests are *flaky* (not the feature they test, though... :-). 
+         * Run them one by one or, even better, make them better.. */
 
         [TestMethod]
         public async Task Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
