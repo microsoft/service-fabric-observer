@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.ServiceFabric.Services.Runtime;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver
 {
@@ -19,19 +20,15 @@ namespace FabricObserver
         {
             try
             {
-                ServiceRuntime.RegisterServiceAsync(
-                    "FabricObserverType",
-                    context => new FabricObserver(context)).GetAwaiter().GetResult();
-
-                ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, nameof(FabricObserver));
+                ServiceRuntime.RegisterServiceAsync("FabricObserverType", context => new FabricObserver(context)).GetAwaiter().GetResult();
+                ServiceEventSource.Current?.ServiceTypeRegistered(Process.GetCurrentProcess().Id, nameof(FabricObserver));
 
                 // Prevents this host process from terminating so services keep running.
                 Thread.Sleep(Timeout.Infinite);
             }
             catch (Exception e)
             {
-                ServiceEventSource.Current.ServiceHostInitializationFailed(e.ToString());
-
+                ServiceEventSource.Current?.ServiceHostInitializationFailed(e.ToString());
                 throw;
             }
         }

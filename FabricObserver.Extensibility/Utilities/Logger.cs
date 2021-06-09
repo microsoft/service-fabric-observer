@@ -4,11 +4,12 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Tracing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
+using FabricObserver.Observers.Utilities.Telemetry;
+using Newtonsoft.Json;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
@@ -24,7 +25,7 @@ namespace FabricObserver.Observers.Utilities
         private const int Retries = 5;
 
         // This needs to be static to prevent internal EventSource instantiation errors.
-        private static EventSource etwLogger;
+        //private static EventSource etwLogger;
 
         private readonly string loggerName;
 
@@ -42,19 +43,6 @@ namespace FabricObserver.Observers.Utilities
         private string Filename
         {
             get;
-        }
-
-        private EventSource EtwLogger
-        {
-            get
-            {
-                if (EnableETWLogging && etwLogger == null)
-                {
-                    etwLogger = new EventSource(ObserverConstants.EventSourceProviderName);
-                }
-
-                return etwLogger;
-            }
         }
 
         public bool EnableETWLogging
@@ -143,9 +131,37 @@ namespace FabricObserver.Observers.Utilities
             OLogger.Warn(format, parameters);
         }
 
+        /// <summary>
+        /// Logs EventSource events and automatically determines Level based on object (T data) content inspection.
+        /// </summary>
+        /// <typeparam name="T">Anonymous/generic type.</typeparam>
+        /// <param name="eventName">Name of the event.</param>
+        /// <param name="data">Anonymous object instance.</param>
         public void LogEtw<T>(string eventName, T data)
         {
-            EtwLogger?.Write(eventName, data);
+            if (!EnableETWLogging)
+            {
+                return;
+            }
+
+            // All FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties)
+            // housed in FabricObserverDataEvent events of FabricObserverETWProvider EventSource provider. This means they 
+            // are JSON serializable for use in content inspection.
+            string s = JsonConvert.SerializeObject(data);
+
+            if (!string.IsNullOrWhiteSpace(s) && s.Contains("Warning"))
+            {
+                ServiceEventSource.Current.DataTypeWriteWarning(eventName, data);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(s) && s.Contains("Error"))
+            {
+                ServiceEventSource.Current.DataTypeWriteError(eventName, data);
+                return;
+            }
+
+            ServiceEventSource.Current.DataTypeWriteInfo(eventName, data);
         }
 
         public bool TryWriteLogFile(string path, string content)
@@ -172,11 +188,9 @@ namespace FabricObserver.Observers.Utilities
                     File.WriteAllText(path, content);
                     return true;
                 }
-                catch (IOException)
+                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
                 {
-                }
-                catch (UnauthorizedAccessException)
-                {
+
                 }
 
                 Thread.Sleep(1000);

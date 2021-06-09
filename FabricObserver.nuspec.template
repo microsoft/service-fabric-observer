@@ -2,9 +2,12 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.12</version>
+    <version>3.1.13</version>
     <releaseNotes>
-      Performance optimizations - most changes impact private workingset. This is a performance-focused release with one bug fix (regression) in OSObserver Windows hotfix data for telemetry.
+      - New EventSource implementation to support ETW event listening impls (important for those who want to implement EventListener-derived types in plugins to capture FO ETW event data). 
+      - ServiceEventSource class modified with new functions, moved to Extensibility library. 
+      - Changes to Logger and TelemetryData classes to support new ServiceEventSource impl. 
+      - NetworkUsage class code change: replaced try-finally explicit disposal pattern with using blocks. 
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

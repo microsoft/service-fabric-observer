@@ -8,6 +8,7 @@ using System.Fabric;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.ServiceFabric.TelemetryLib;
+using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -96,6 +97,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public object Value
         {
             get; set;
+        }
+
+        [JsonConstructor]
+        public TelemetryData()
+        {
+
         }
 
         public TelemetryData(FabricClient fabricClient, CancellationToken cancellationToken)
