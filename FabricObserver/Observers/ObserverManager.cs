@@ -209,10 +209,10 @@ namespace FabricObserver.Observers
             }
 
             string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
-            string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext
-                .GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
+            string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
             string filepath = Path.Combine(Logger.LogFolderBasePath,
-                $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
+                $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_" +
+                $"{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
 
 #if !DEBUG
             // If this has already been sent for this activated version (code/config) of node type x
@@ -222,16 +222,16 @@ namespace FabricObserver.Observers
             }
 #endif
             var telemetryEvents = new TelemetryEvents(
-                FabricClientInstance,
-                FabricServiceContext,
-                ServiceEventSource.Current,
-                this.token);
+                                        FabricClientInstance,
+                                        FabricServiceContext,
+                                        ServiceEventSource.Current,
+                                        this.token);
 
             if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion,
                 GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
             {
                 // Log a file to prevent re-sending this in case of process restart(s).
-                // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates.).
+                // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
                 _ = Logger.TryWriteLogFile(filepath, GetFabricObserverInternalConfiguration());
             }
         }
