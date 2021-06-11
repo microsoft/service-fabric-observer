@@ -268,13 +268,20 @@ namespace FabricObserver.Observers.Utilities
             LogFolderBasePath = logFolderBase;
             string file = Path.Combine(logFolderBase, "fabric_observer.log");
 
-            if (!string.IsNullOrEmpty(FolderName) && !string.IsNullOrEmpty(Filename))
+            if (!string.IsNullOrWhiteSpace(FolderName) && !string.IsNullOrWhiteSpace(Filename))
             {
                 string folderPath = Path.Combine(logFolderBase, FolderName);
                 file = Path.Combine(folderPath, Filename);
             }
 
             FilePath = file;
+
+            // Clean out old log files. This is to ensure the supplied policy is enforced if FO is restarted before the MaxArchiveFileLifetimeDays has been reached.
+            // This is because Logger FileTarget settings are not preserved across FO deployments.
+            if (MaxArchiveFileLifetimeDays > 0)
+            {
+                TryCleanLogFolder(Path.Combine(logFolderBase, FolderName), TimeSpan.FromDays(MaxArchiveFileLifetimeDays));
+            }
 
             var targetName = loggerName + "LogFile";
 
@@ -310,6 +317,31 @@ namespace FabricObserver.Observers.Utilities
 
             TimeSource.Current = new AccurateUtcTimeSource();
             OLogger = LogManager.GetLogger(loggerName);
+        }
+
+        private static void TryCleanLogFolder(string folderPath, TimeSpan maxAge)
+        {
+            if (!Directory.Exists(folderPath))
+            {
+                return;
+            }
+
+            string[] files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories);
+
+            foreach (string file in files)
+            {
+                try
+                {
+                    if (DateTime.UtcNow.Subtract(File.GetCreationTime(file)) >= maxAge)
+                    {
+                        File.Delete(file);
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                {
+
+                }
+            }
         }
     }
 }

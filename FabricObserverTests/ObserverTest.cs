@@ -1542,7 +1542,7 @@ namespace FabricObserverTests
                 // App reports
                 if (obs is {HasActiveFabricErrorOrWarning: true} && obs.ObserverName != ObserverConstants.NetworkObserverName)
                 { 
-                    if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrEmpty(a) && a.Contains("fabric:/")))
+                    if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
                     {
                         foreach (var app in obs.AppNames)
                         {
