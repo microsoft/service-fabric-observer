@@ -777,21 +777,13 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                 {
-#if DEBUG
-                    WriteToLogWithLevel(
-                         ObserverName,
-                         $"MonitorDeployedAppsAsync: failed to find current service process or target process " +
-                         $"is running at a higher privilege than FO for " +
-                         $"{repOrInst.ApplicationName?.OriginalString ?? repOrInst.ApplicationTypeName}{Environment.NewLine}{e}",
-                         LogLevel.Warning);
-#endif
+                    ObserverLogger.LogWarning(
+                         $"Handled exception in MonitorDeployedAppsAsync: process {processId} is not running or it's running at a higher privilege than FabricObserver.{Environment.NewLine}" +
+                         $"ServiceName: {repOrInst.ServiceName?.OriginalString ?? "unknown"}{Environment.NewLine}Error message: {e.Message}");
                 }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
-                    WriteToLogWithLevel(
-                         ObserverName,
-                         $"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}",
-                         LogLevel.Warning);
+                    ObserverLogger.LogWarning($"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}");
 
                     // Fix the bug..
                     throw;

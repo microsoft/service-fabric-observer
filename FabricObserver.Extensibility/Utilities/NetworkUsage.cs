@@ -23,42 +23,38 @@ namespace FabricObserver.Observers.Utilities
                 return (-1, -1);
             }
 
-            StringReader sreader = null;
-            XmlReader xreader = null;
-
             try
             {
-                // Safe XML pattern - *Do not use LoadXml*.
-                var xdoc = new XmlDocument { XmlResolver = null };
-                sreader = new StringReader(clusterManifestXml);
-                xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null });
-                xdoc.Load(xreader);
-
-                // Cluster Information.
-                var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
-                nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
-
-                // SF Application Port Range.
-                var applicationEndpointsNode = xdoc.SelectSingleNode($"//sf:NodeTypes//sf:NodeType[@Name='{nodeType}']//sf:ApplicationEndpoints", nsmgr);
-
-                if (applicationEndpointsNode == null)
+                using (var sreader = new StringReader(clusterManifestXml))
                 {
-                    return (-1, -1);
+                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
+                    {
+                        // Safe XML pattern - *Do not use LoadXml*.
+                        var xdoc = new XmlDocument { XmlResolver = null };
+                        xdoc.Load(xreader);
+
+                        // Cluster Information.
+                        var nsmgr = new XmlNamespaceManager(xdoc.NameTable);
+                        nsmgr.AddNamespace("sf", "http://schemas.microsoft.com/2011/01/fabric");
+
+                        // SF Application Port Range.
+                        var applicationEndpointsNode = xdoc.SelectSingleNode($"//sf:NodeTypes//sf:NodeType[@Name='{nodeType}']//sf:ApplicationEndpoints", nsmgr);
+
+                        if (applicationEndpointsNode == null)
+                        {
+                            return (-1, -1);
+                        }
+
+                        var ret = (int.Parse(applicationEndpointsNode.Attributes?.Item(0)?.Value ?? "-1"),
+                                   int.Parse(applicationEndpointsNode.Attributes?.Item(1)?.Value ?? "-1"));
+
+                        return ret;
+                    }
                 }
-
-                var ret = (int.Parse(applicationEndpointsNode.Attributes?.Item(0)?.Value ?? "-1"),
-                           int.Parse(applicationEndpointsNode.Attributes?.Item(1)?.Value ?? "-1"));
-
-                return ret;
             }
             catch (Exception e) when (e is ArgumentException || e is NullReferenceException || e is XmlException)
             {
                 // continue
-            }
-            finally
-            {
-                sreader?.Dispose();
-                xreader?.Dispose();
             }
 
             return (-1, -1);
@@ -66,8 +62,6 @@ namespace FabricObserver.Observers.Utilities
 
         public static int GetActiveFirewallRulesCount()
         {
-            ManagementObjectCollection results = null;
-            ManagementObjectSearcher searcher = null;
             int count = -1;
 
             // This method is not implemented for Linux yet.
@@ -80,17 +74,18 @@ namespace FabricObserver.Observers.Utilities
             {
                 var scope = new ManagementScope("\\\\.\\ROOT\\StandardCimv2");
                 var q = new ObjectQuery("SELECT * FROM MSFT_NetFirewallRule WHERE Enabled=1");
-                searcher = new ManagementObjectSearcher(scope, q);
-                results = searcher.Get();
-                count = results.Count;
+
+                using (var searcher = new ManagementObjectSearcher(scope, q))
+                {
+                    using (var results = searcher.Get())
+                    {
+                        count = results.Count;
+                    }
+                }
             }
             catch (ManagementException)
             {
-            }
-            finally
-            {
-                results?.Dispose();
-                searcher?.Dispose();
+
             }
 
             return count;

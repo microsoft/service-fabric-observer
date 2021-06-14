@@ -34,7 +34,13 @@ You can quickly get started by reading [this](/Documentation/Using.md).
 
 ***Note: All observers that monitor various resources output serialized instances of TelemetryData type (JSON). This JSON string is set as the Description property of a Health Event. This is done for a few reasons: Telemetry support and for consuming services that need to deserialize the data to inform some related workflow. In later versions of SF, SFX will display only the textual pieces of this serialized object instance, making it easier to read in SFX's Details view.***
 
-  
+```
+The vast majority of settings for any observer are provided in ApplicationManifest.xml 
+as required overridden parameters. For AppObserver and NetworkObserver, 
+all thresholds/settings are housed in json files, not XML.
+For every other observer, it's XML as per usual.
+```  
+
 ## AppObserver  
 Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application services (processes). This
 observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring**.
@@ -51,71 +57,21 @@ will be ignored (they are not omitted below so you can see what a fully specifie
 We recommend you omit all Error thresholds until you become more 
 comfortable with the behavior of your services and the side effects they have on machine resources**.
 
-Example JSON config file located in **PackageRoot\\Config**
-folder (AppObserver.config.json):
+Example JSON config file located in **PackageRoot\\Config** folder (AppObserver.config.json). This is an example of a configuration that applies
+to all Service Fabric user (non-System) application service processes running on the virtual machine.
 ```JSON
 [
   {
-    "targetApp": "fabric:/MyApp",
-    "cpuErrorLimitPercent": 0,
-    "dumpProcessOnError": false,
-    "memoryErrorLimitPercent": 0,
-    "memoryWarningLimitPercent": 60,
-    "networkErrorActivePorts": 0,
-    "networkErrorEphemeralPorts": 0,
-    "networkWarningActivePorts": 800,
-    "networkWarningEphemeralPorts": 400,
-    "errorOpenFileHandles": 0,
-    "warningOpenFileHandles": 5000
-  },
-  {
-    "targetApp": "fabric:/MyApp1",
-    "serviceIncludeList": "MyService42, MyOtherService42",
-    "cpuErrorLimitPercent": 0,
-    "cpuWarningLimitPercent": 8,
-    "dumpProcessOnError": false,
-    "memoryErrorLimitPercent": 0,
-    "memoryWarningLimitPercent": 60,
-    "networkErrorActivePorts": 0,
-    "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 0,
-    "networkWarningEphemeralPorts": 400,
-    "errorOpenFileHandles": 0,
-    "warningOpenFileHandles": 2500
-  },
-  {
-    "targetApp": "fabric:/FabricObserver",
-    "cpuErrorLimitPercent": 0,
-    "cpuWarningLimitPercent": 30,
-    "dumpProcessOnError": false,
-    "memoryErrorLimitPercent": 0,
-    "memoryWarningLimitPercent": 30,
-    "networkErrorActivePorts": 0,
-    "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 0,
-    "networkWarningEphemeralPorts": 400,
-    "errorOpenFileHandles": 0,
-    "warningOpenFileHandles": 1000
-  },
-  {
-    "targetApp": "fabric:/FabricObserverWebApi",
-    "cpuErrorLimitPercent": 0,
-    "cpuWarningLimitPercent": 30,
-    "dumpProcessOnError": false,
-    "memoryErrorLimitPercent": 0,
-    "memoryWarningLimitPercent": 30,
-    "networkErrorActivePorts": 0,
-    "networkWarningActivePorts": 800,
-    "networkErrorEphemeralPorts": 0,
-    "networkWarningEphemeralPorts": 400,
-    "errorOpenFileHandles": 0,
-    "warningOpenFileHandles": 1000
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 80,
+    "memoryWarningLimitMb": 1048,
+    "networkWarningEphemeralPorts": 7000
   }
 ]
 ```
 Settings descriptions: 
 
-All settings are optional, ***except target OR targetType***, and can be omitted if you don't want to track. Or, you can leave the values blank ("") or set to 0 for numeric values. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer).
+All settings are optional, ***except target OR targetType***, and can be omitted if you don't want to track. For process memory use, you can supply either MB values (a la 1024 for 1GB) for Working Set (Private) or percentage of total memory in use by process (as an integer, 1 - 100).
 
 | Setting | Description |
 | :--- | :--- |
@@ -243,46 +199,43 @@ This observer monitors Fabric system service processes e.g., Fabric, FabricAppli
 FabricDCA, FabricDnsService, FabricFAS, FabricGateway, FabricHost, etc...
 
 **NOTE:**
-Only enable FabricSystemObserver ***after*** you get a sense of what impact your services have on the SF runtime. 
+Only enable FabricSystemObserver ***after*** you get a sense of what impact your services have on the SF runtime, in particular Fabric.exe. 
 This is very important because there is no "one threshold fits all" across warning/error thresholds for any of the SF system services. 
-That is, we (the SF team) do not have a fixed set of guaranteed problematic warning thresholds for SF infrastructure services. Your code can cause Fabric.exe to eat a lot of CPU, for example, but this is not a Fabric.exe bug. 
- 
-Again, it is best to Enable this observer only after you have done some experimentation with monitoring how your service code impacts Service Fabric system services. Otherwise, you may end up generating noise and creating support tickets when there is in fact nothing wrong with SF, but that your service code is just stressing SF services (e.g., Fabric.exe). This is of course useful to know, but FabricSystemObserver can't tell you that your code is the problem and we do not want you to create a support ticket because FSO warned you about something SF engineers can't fix for you...  
+By default, FabricObserver runs as NetworkUser on Windows and sfappsuser on Linux. These are non-privileged accounts and therefore for any service
+running as System or root, default FabricObserver can't monitor process behavior (this is always true on Windows). That said, there are only a few system
+services you would care about: Fabric.exe and FabricGateway.exe. Fabric.exe is generally the system service that your code can directly impact with respect to machine resource usage.
 
-**Input**: Settings defined in Settings.xml with required overridable settings specified in ApplicationManifest.xml.
+**Input - Settings.xml**: Only ClusterOperationTimeoutSeconds is set in Settings.xml.
 
 ```xml
   <Section Name="FabricSystemObserverConfiguration">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
-    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
-    <Parameter Name="RunInterval" Value="" MustOverride="true" />
-    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
-         It just depends upon how much data you are collecting per observer run and if you only care about
-         the most recent data (where number of most recent items in collection 
-         type equals the ResourceUsageDataCapacity you specify). -->
-    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
-    <!-- Required-If UseCircularBuffer = True -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
-    <!-- Optional: SF Event Log can be noisy and full of non-error errors., 
-         so it's recommended that you only enable this for debugging purposes. This
-         only works if you deploy the FabricObserverWebApi service and enable it above (ObserverWebApiEnabled). -->
-    <Parameter Name="MonitorWindowsEventLog" Value="" MustOverride="true" />
-    <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
-    <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
-    <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
-    <Parameter Name="MemoryWarningLimitMb" Value="" MustOverride="true" />
-    <Parameter Name="NetworkErrorActivePorts" Value="" MustOverride="true"  />
-    <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true"  />
-    <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
-    <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
-    <Parameter Name="AllocatedHandlesErrorLimit" Value="" MustOverride="true" />
-    <Parameter Name="AllocatedHandlesWarningLimit" Value="" MustOverride="true" />
+    ...
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
 ```
+
+**Input - ApplicationManifest.xml**: Threshold settings are defined (overriden) in ApplicationManifest.xml.
+
+```xml
+<!-- FabricSystemObserver -->
+<Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
+<!-- Required-If UseCircularBuffer = True -->
+<Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
+<!-- FabricSystemObserver Warning/Error Thresholds -->
+<Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
+<Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
+<Parameter Name="FabricSystemObserverMemoryErrorLimitMb" DefaultValue="" />
+<Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="4096" />
+<Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
+<Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="" />
+<Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="4000" />
+<Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="" />
+<Parameter Name="FabricSystemObserverAllocatedHandlesErrorLimit" DefaultValue="" />
+<Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="5000" />
+<!-- Whether to monitor Windows Event Log. -->
+<Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
+```
+
 **Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning/Ok), ETW, Telemetry
 
 Example SFX output (Informational):  
@@ -331,44 +284,29 @@ Example NetworkObserver.config.json configuration:
 ```javascript
 [
   {
-      "targetApp": "fabric:/MyApp",
-      "endpoints": [
-        {
-          "hostname": "google.com",
-          "port": 443,
-          "protocol": "http"
-        },
-        {
-          "hostname": "facebook.com",
-          "port": 443,
-          "protocol": "http"
-        },
-        {
-          "hostname": "westusserver001.database.windows.net",
-          "port": 1433,
-          "protocol": "tcp"
-        }
-     ]
+    "targetApp": "fabric:/MyApp0",
+    "endpoints": [
+      {
+        "hostname": "https://myazuresrvice42.westus2.cloudapp.azure.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "somesqlservername.database.windows.net",
+        "port": 1433,
+        "protocol": "tcp"
+      }
+    ]
   },
   {
-      "targetApp": "fabric:/MyApp2",
-      "endpoints": [
-        {
-          "hostname": "google.com",
-          "port": 443,
-          "protocol": "http"
-        },
-        {
-          "hostname": "microsoft.com",
-          "port": 443,
-          "protocol": "http"
-        },
-        {
-          "hostname": "eastusserver007.database.windows.net",
-          "port": 1433,
-          "protocol": "tcp"
-        }
-     ]
+    "targetApp": "fabric:/MyApp1",
+    "endpoints": [
+      {
+        "hostname": "somesqlservername.database.windows.net",
+        "port": 1433,
+        "protocol": "tcp"
+      }
+    ]
   }
 ]
 ```
@@ -381,42 +319,36 @@ network failures which will result in Fabric Health warnings that live until the
 
 ## NodeObserver
  This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports).
- Thresholds for Erorr and Warning signals are user-supplied in PackageRoot/Config/Settings.xml.
+ Thresholds for Erorr and Warning signals are user-supplied in ApplicationManifest.xml.  
 
-**Input**:
+**Input - ApplicationManifest.xml**:
 ```xml
- <Section Name="NodeObserverConfiguration">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    <Parameter Name="EnableLongRunningCSVLogging" Value="false" />
-    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
-    <Parameter Name="RunInterval" Value="" MustOverride="true" />
-    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
-    <!-- Required-If UseCircularBuffer = True -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
-    <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
-    <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
-    <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
-    <Parameter Name="MemoryWarningLimitMb" Value ="" MustOverride="true" />
-    <Parameter Name="MemoryErrorLimitPercent" Value="" MustOverride="true" />
-    <Parameter Name="MemoryWarningLimitPercent" Value ="" MustOverride="true" />
-    <Parameter Name="NetworkErrorActivePorts" Value="" MustOverride="true" />
-    <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true" />
-    <Parameter Name="NetworkErrorFirewallRules" Value="" MustOverride="true" />
-    <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
-    <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
-    <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
-    <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
-    <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
-    <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
-    <Parameter Name="LinuxFileHandlesErrorLimitTotal" Value="" MustOverride="true"/>
-    <Parameter Name="LinuxFileHandlesWarningLimitTotal" Value="" MustOverride="true"/>
-  </Section>
+<!-- NodeObserver -->
+<Parameter Name="NodeObserverUseCircularBuffer" DefaultValue="false" />
+<!-- Required-If UseCircularBuffer = True -->
+<Parameter Name="NodeObserverResourceUsageDataCapacity" DefaultValue="" />
+<!-- NodeObserver Warning/Error Thresholds -->
+<Parameter Name="NodeObserverCpuErrorLimitPercent" DefaultValue="" />
+<Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="90" />
+<Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
+<Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
+<Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
+<Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="95" />
+<Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
+<Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
+<Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
+<Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
+<Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
+<Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
+<!-- The below settings only make sense for Linux. -->
+<Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
+<Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
+<Parameter Name="NodeObserverLinuxFileHandlesErrorLimitTotal" DefaultValue="" />
+<Parameter Name="NodeObserverLinuxFileHandlesWarningLimitTotal" DefaultValue="" />
 ```  
+
 | Setting | Description |
 | :--- | :--- | 
-| **ClusterOperationTimeoutSeconds** | Number of seconds for timeout for making SF async API calls. | 
 | **CpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |  
 | **CpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning | 
 | **EnableTelemetry** | Whether or not to send Observer data to diagnostics/log analytics service. |  

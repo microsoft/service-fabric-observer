@@ -336,7 +336,8 @@ namespace FabricObserverTests
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
-        /* NOTE: These tests are flaky. Run them one by one or, even better, make them better. */
+        /* NOTE: The below tests are *flaky* (not the feature they test, though... :-). 
+         * Run them one by one or, even better, make them better.. */
 
         [TestMethod]
         public async Task Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
@@ -1541,7 +1542,7 @@ namespace FabricObserverTests
                 // App reports
                 if (obs is {HasActiveFabricErrorOrWarning: true} && obs.ObserverName != ObserverConstants.NetworkObserverName)
                 { 
-                    if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrEmpty(a) && a.Contains("fabric:/")))
+                    if (obs.AppNames.Count > 0 && obs.AppNames.All(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
                     {
                         foreach (var app in obs.AppNames)
                         {

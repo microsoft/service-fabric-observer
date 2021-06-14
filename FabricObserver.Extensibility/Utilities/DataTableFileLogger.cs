@@ -94,8 +94,8 @@ namespace FabricObserver.Observers.Utilities
 
             var csvPath = Path.Combine(logFullPath, filename + ".csv");
 
-            // Clean out old files if written as MultipleFilesNoArchives.
-            if (MaxArchiveCsvFileLifetimeDays > 0 && FileWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives)
+            // Clean out old files.
+            if (MaxArchiveCsvFileLifetimeDays > 0)
             {
                 TryCleanLogFolder(logFullPath, TimeSpan.FromDays(MaxArchiveCsvFileLifetimeDays));
             }
@@ -162,8 +162,7 @@ namespace FabricObserver.Observers.Utilities
 
         private static void TryCleanLogFolder(string folderPath, TimeSpan maxAge)
         {
-            if (!Directory.Exists(folderPath) ||
-                DateTime.UtcNow.Subtract(Directory.GetLastWriteTimeUtc(folderPath)) < maxAge)
+            if (!Directory.Exists(folderPath))
             {
                 return;
             }

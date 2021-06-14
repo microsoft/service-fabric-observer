@@ -9,23 +9,23 @@ using System.Fabric;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.TelemetryLib;
 
-namespace FabricObserver
+namespace FabricObserver.Observers.Utilities.Telemetry
 {
-    [EventSource(Name = "Service-Fabric-FabricObserver", Guid = "373f2a64-4823-518a-32d1-78e36f922c24")]
-    internal sealed class ServiceEventSource : EventSource, ITelemetryEventSource
+    public sealed class ServiceEventSource : EventSource, ITelemetryEventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
         static ServiceEventSource()
         {
             // A workaround for the problem where ETW activities do not get tracked until Tasks infrastructure is initialized.
-            // This problem will be fixed in .NET Framework 4.6.2.
+            // This problem is fixed in .NET Framework 4.6.2. If you are running this version or greater, then delete the below code.
             _ = Task.Run(() => { });
         }
 
         // Instance constructor is private to enforce singleton semantics
-        private ServiceEventSource()
+        private ServiceEventSource() : base(ObserverConstants.EventSourceProviderName)
         {
+            
         }
 
         // Define an instance method for each event you want to record and apply an [Event] attribute to it.
@@ -45,6 +45,48 @@ namespace FabricObserver
 
             string finalMessage = string.Format(message, args);
             Message(finalMessage);
+        }
+
+        [NonEvent]
+        public void DataTypeWriteInfo<T>(string eventName, T data)
+        {
+            var options = new EventSourceOptions
+            {
+                ActivityOptions = EventActivityOptions.None,
+                Keywords = Keywords.ResourceUsage,
+                Opcode = EventOpcode.Info,
+                Level = EventLevel.Verbose,
+            };
+
+            Write(eventName, options, data);
+        }
+
+        [NonEvent]
+        public void DataTypeWriteWarning<T>(string eventName, T data)
+        {
+            var options = new EventSourceOptions
+            {
+                ActivityOptions = EventActivityOptions.None,
+                Keywords = Keywords.ErrorOrWarning,
+                Opcode = EventOpcode.Info,
+                Level = EventLevel.Warning,
+            };
+
+            Write(eventName, options, data);
+        }
+
+        [NonEvent]
+        public void DataTypeWriteError<T>(string eventName, T data)
+        {
+            var options = new EventSourceOptions
+            {
+                ActivityOptions = EventActivityOptions.None,
+                Keywords = Keywords.ErrorOrWarning,
+                Opcode = EventOpcode.Info,
+                Level = EventLevel.Error,
+            };
+
+            Write(eventName, options, data);
         }
 
         private const int MessageEventId = 1;
@@ -180,19 +222,19 @@ namespace FabricObserver
             "fabricObserverConfiguration = {2}, " +
             "fabricObserverHealthState = {3}")]
         public void FabricObserverRuntimeNodeEvent(
-            string clusterId,
-            string applicationVersion,
-            string foConfigInfo,
-            string foHealthInfo)
+                            string clusterId,
+                            string applicationVersion,
+                            string foConfigInfo,
+                            string foHealthInfo)
         {
             if (IsEnabled())
             {
                 WriteEvent(
-                    FabricObserverTelemetryEventId,
-                    clusterId,
-                    applicationVersion,
-                    foConfigInfo,
-                    foHealthInfo);
+                     FabricObserverTelemetryEventId,
+                     clusterId,
+                     applicationVersion,
+                     foConfigInfo,
+                     foHealthInfo);
             }
         }
 
@@ -217,6 +259,8 @@ namespace FabricObserver
         {
             public const EventKeywords Requests = (EventKeywords)0x1L;
             public const EventKeywords ServiceInitialization = (EventKeywords)0x2L;
+            public const EventKeywords ResourceUsage = (EventKeywords)0x4L;
+            public const EventKeywords ErrorOrWarning = (EventKeywords)0x8L;
         }
     }
 }

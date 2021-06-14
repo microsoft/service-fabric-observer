@@ -99,7 +99,7 @@ namespace FabricObserver.Observers.Utilities
         private bool isInWarningState;
 
         /// <summary>
-        /// Gets count of warnings per observer instance across iterations for the lifetime of the Observer.
+        /// Gets count of total warnings for the lifetime of this instance.
         /// </summary>
         public int LifetimeWarningCount
         {
@@ -144,8 +144,8 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether there is an active warning state on this instance.
-        /// Set to false when warning state changes to Ok.
+        /// Gets or sets a value indicating whether there is an active Error or Warning health state on this instance.
+        /// Set to false when health state changes to Ok.
         /// </summary>
         public bool ActiveErrorOrWarning
         {
@@ -192,13 +192,13 @@ namespace FabricObserver.Observers.Utilities
         public T StandardDeviation => Data?.Count > 0 ? Statistics.StandardDeviation(Data) : default;
 
         /// <summary>
-        /// Gets SlidingWindow Max: A sorted list of sliding window maximums.
+        /// Gets SlidingWindow Max: A sorted list of sliding window maximums. This is only availabe when Data is CircularBufferCollection.
         /// </summary>
-        public IList<T> SlidingWindowMax => Data?.Count > 0 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : new List<T>(1);
+        public IList<T> SlidingWindowMax =>  Data?.Count >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : null;
 
         /// <summary>
-        ///  Gets SlidingWindow Min: A sorted list of sliding window minimums.
+        ///  Gets SlidingWindow Min: A sorted list of sliding window minimums. This is only availabe when Data is CircularBufferCollection.
         /// </summary>
-        public IList<T> SlidingWindowMin => Data?.Count > 0 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : new List<T>(1);
+        public IList<T> SlidingWindowMin => Data?.Count >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : null;
     }
 }
