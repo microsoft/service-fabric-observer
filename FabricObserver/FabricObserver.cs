@@ -82,7 +82,7 @@ namespace FabricObserver
                 return;
             }
 
-            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.TopDirectoryOnly);
+            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
 
             if (pluginDlls.Length == 0)
             {
@@ -101,7 +101,28 @@ namespace FabricObserver
 
             foreach (PluginLoader pluginLoader in pluginLoaders)
             {
-                Assembly pluginAssembly = pluginLoader.LoadDefaultAssembly();
+                Assembly pluginAssembly;
+
+                try
+                {
+                    // If your plugin has native deps, this will fail at this call. That's OK.
+                    // We only want to load your plugin eventually, anyway (see startupObject code below).
+                    // Since your plugin's deps (managed and native) all live in the same folder, there will be no dll resolution failures
+                    // when your plugin needs to access some dependency (and it needs to access some dependency...).
+                    pluginAssembly = pluginLoader.LoadDefaultAssembly();
+                }
+                catch (Exception e)
+                {
+                    string s = e.Message;
+                    if (e.HResult == -2147024885 || e.Message.ToLower().Contains("bad il"))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
 
                 // Note: This is a micro-optimization (including the for below it). It could just as well be left as IEnumerable and then foreach'd over.
                 // It is unlikely that there will be 1000s of plugins...
