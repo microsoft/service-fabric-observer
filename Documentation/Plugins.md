@@ -37,6 +37,26 @@ FrameworkDependent = Requires that .NET Core 3.1 is already installed on target 
 
 SelfContained = Includes all the binaries necessary for running .NET Core 3.1 applications on target machine. ***This is what you will want to use for your Azure deployments.***
 
+**Plugins and Dependencies** 
+
+- You MUST place all plugin dependency libraries in the same folder as your plugin dll.
+- Plugins (and their dependencies) can live in child folders in the Plugins directory, which will keep things cleaner for folks with multiple plugins.
+
+The Plugins folder/file structure MUST be: 
+
+- Config/Data/Plugins/MyPlugin/MyPlugin.dll (required), MyPlugin.pdb (optional), [ALL of MyPlugin.dll's private dependencies] (required) 
+
+OR 
+
+- Config/Data/Plugins/MyPlugin.dll (required), MyPlugin.pdb(optional), [ALL of MyPlugin.dll's private dependencies] (required).  
+
+A private plugin dependency is any file (typically a dll) that you reference in your plugin project that is not already referenced by FabricObserver. 
+
+So, things like Nuget packages or Project References or COM References that are only used by your plugin. It is important to stress that if a dependency dll has dependencies, then you MUST also place those in the plugin's directory.
+When you build your plugin project you will see the dependencies (if any) in the bin folder. Make sure ALL of them are placed into FO's Plugins folder or your plugin will not work. 
+
+**Build and Publish**  
+
 - Write your observer plugin!
 
 - Build your observer project, drop the output dll into the Data/Plugins folder in FabricObserver/PackageRoot.

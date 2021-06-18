@@ -29,9 +29,9 @@ so you just program as you did before and everything will work as it used to.
 
 Install .Net Core 3.1.
 
-Grab the latest FO nupkg from Releases section that suits your target OS (Linux or Windows).
-In general, you will want the SelfContained package, not the FrameworkDependent (for example, Azure OS images do not ship with .NET Core 3.1 aboard,
-so you need self-contained build which has all the binaries needed to run a .NET Core 3.1 app.)
+Grab the latest FabricObserver nupkg from https://www.nuget.org/profiles/ServiceFabricApps that suits your target OS (Linux or Windows).
+In general, you will want the SelfContained package, not FrameworkDependent (for example, Azure OS images do not ship with .NET Core 3.1 aboard,
+so you need SelfContained build which has all the binaries needed to run a .NET Core 3.1 app.)
 
 If you want to build your own nupkgs from FO source, then:
 
@@ -43,7 +43,9 @@ Navigate to top level directory (where the SLN lives, for example), then:
 	Target OS - Framework-dependent  = .NET Core 3.1 is already installed on target server
 	Target OS - Self-contained = includes all the files necessary for running .NET Core 3.1 applications
 4. Write an observer plugin!
-5. Build your observer project, drop the output dll into the Data/Plugins folder in FabricObserver/PackageRoot.
+5. Build your observer project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Config/Data/Plugins folder in FabricObserver/PackageRoot. 
+   You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
+   Again, ALL plugin dll dependencies need to live in the *same* folder as the plugin dll. :)
 6. Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file)
    Update ApplicationManifest.xml with Parameters if you want to support Application Parameter Updates for your plugin.
    (Look at both FabricObserver/PackageRoot/Config/Settings.xml and FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml for several examples of how to do this.)

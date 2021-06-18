@@ -82,7 +82,7 @@ namespace FabricObserver
                 return;
             }
 
-            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.TopDirectoryOnly);
+            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
 
             if (pluginDlls.Length == 0)
             {
@@ -90,35 +90,50 @@ namespace FabricObserver
             }
 
             var pluginLoaders = new List<PluginLoader>(pluginDlls.Length);
-
             Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
 
-            foreach (string pluginDll in pluginDlls)
+            foreach (string dll in pluginDlls)
             {
-                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(pluginDll, sharedTypes);
+                // This does not create an Assembly. It creates a PluginLoader instance for each dll in the Plugins folder.
+                // TODO: Figure out how to only load the plugin dll in an efficient way. For now, this is fine. This is not resource intensive.
+                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes);
                 pluginLoaders.Add(loader);
             }
 
             foreach (PluginLoader pluginLoader in pluginLoaders)
             {
-                Assembly pluginAssembly = pluginLoader.LoadDefaultAssembly();
+                Assembly pluginAssembly;
 
-                // Note: This is a micro-optimization (including the for below it). It could just as well be left as IEnumerable and then foreach'd over.
-                // It is unlikely that there will be 1000s of plugins...
-                FabricObserverStartupAttribute[] startupAttributes = pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
-
-                for (int i = 0; i < startupAttributes.Length; ++i)
+                try
                 {
-                    object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
+                    // If your plugin has native library dependencies (that's fine), then we will land in the catch (BadImageFormatException).
+                    // This is by design. The Managed FO plugin assembly will successfully load, of course.
+                    pluginAssembly = pluginLoader.LoadDefaultAssembly();
 
-                    if (startupObject is IFabricObserverStartup fabricObserverStartup)
+                    FabricObserverStartupAttribute[] startupAttributes = pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
+
+                    for (int i = 0; i < startupAttributes.Length; ++i)
                     {
-                        fabricObserverStartup.ConfigureServices(services, fabricClient, Context);
+                        object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
+
+                        if (startupObject is IFabricObserverStartup fabricObserverStartup)
+                        {
+                            fabricObserverStartup.ConfigureServices(services, fabricClient, Context);
+                        }
+                        else
+                        {
+                            // This will bring down FO, which it should: This means your plugin is not supported. Fix your bug.
+                            throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
+                        }
                     }
-                    else
-                    {
-                        throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
-                    }
+                }
+                catch (BadImageFormatException)
+                {
+                    continue;
+                }
+                finally
+                {
+                    pluginLoader?.Dispose();
                 }
             }
         }
