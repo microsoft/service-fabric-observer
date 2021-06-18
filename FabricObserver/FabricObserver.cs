@@ -90,12 +90,13 @@ namespace FabricObserver
             }
 
             var pluginLoaders = new List<PluginLoader>(pluginDlls.Length);
-
             Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
 
-            foreach (string pluginDll in pluginDlls)
+            foreach (string dll in pluginDlls)
             {
-                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(pluginDll, sharedTypes);
+                // This does not create an Assembly. It creates a PluginLoader instance for each dll in the Plugins folder.
+                // TODO: Figure out how to only load the plugin dll in an efficient way. For now, this is fine. This is not resource intensive.
+                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes);
                 pluginLoaders.Add(loader);
             }
 
@@ -105,41 +106,34 @@ namespace FabricObserver
 
                 try
                 {
-                    // If your plugin has native deps, this will fail at this call. That's OK.
-                    // We only want to load your plugin eventually, anyway (see startupObject code below).
-                    // Since your plugin's deps (managed and native) all live in the same folder, there will be no dll resolution failures
-                    // when your plugin needs to access some dependency (and it needs to access some dependency...).
+                    // If your plugin has native library dependencies (that's fine), then we will land in the catch (BadImageFormatException).
+                    // This is by design. The Managed FO plugin assembly will successfully load, of course.
                     pluginAssembly = pluginLoader.LoadDefaultAssembly();
+
+                    FabricObserverStartupAttribute[] startupAttributes = pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
+
+                    for (int i = 0; i < startupAttributes.Length; ++i)
+                    {
+                        object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
+
+                        if (startupObject is IFabricObserverStartup fabricObserverStartup)
+                        {
+                            fabricObserverStartup.ConfigureServices(services, fabricClient, Context);
+                        }
+                        else
+                        {
+                            // This will bring down FO, which it should: This means your plugin is not supported. Fix your bug.
+                            throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
+                        }
+                    }
                 }
-                catch (Exception e)
+                catch (BadImageFormatException)
                 {
-                    string s = e.Message;
-                    if (e.HResult == -2147024885 || e.Message.ToLower().Contains("bad il"))
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    continue;
                 }
-
-                // Note: This is a micro-optimization (including the for below it). It could just as well be left as IEnumerable and then foreach'd over.
-                // It is unlikely that there will be 1000s of plugins...
-                FabricObserverStartupAttribute[] startupAttributes = pluginAssembly.GetCustomAttributes<FabricObserverStartupAttribute>().ToArray();
-
-                for (int i = 0; i < startupAttributes.Length; ++i)
+                finally
                 {
-                    object startupObject = Activator.CreateInstance(startupAttributes[i].StartupType);
-
-                    if (startupObject is IFabricObserverStartup fabricObserverStartup)
-                    {
-                        fabricObserverStartup.ConfigureServices(services, fabricClient, Context);
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"{startupAttributes[i].StartupType.FullName} must implement IFabricObserverStartup.");
-                    }
+                    pluginLoader?.Dispose();
                 }
             }
         }
