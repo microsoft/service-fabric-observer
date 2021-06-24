@@ -3,8 +3,11 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
+using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -63,6 +66,48 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return result;
+        }
+
+        public override List<Process> GetChildProcesses(Process process)
+        {
+            // https://askubuntu.com/questions/512871/find-children-of-the-process
+            string cmdResult = "ps -o ppid= -o pid= -A | awk '$1 == " + process.Id.ToString() + " {print $2}'".Bash();
+            List<Process> childProcesses = new List<Process>();
+
+            if (!string.IsNullOrWhiteSpace(cmdResult))
+            {
+                var sPids = cmdResult.Split('\n')?.ToList();
+
+                if (sPids.Count > 0)
+                {
+                    foreach (string pid in sPids)
+                    {
+                        if (int.TryParse(pid, out int proc))
+                        {
+                            try
+                            {
+                                Process p = Process.GetProcessById(proc);
+                                childProcesses.Add(p);
+                            }
+                            catch (ArgumentException)
+                            {
+                                // ignore -> process may no longer exist
+                            }
+                            catch (InvalidOperationException ie)
+                            {
+                                Logger.LogWarning("GetFlattenedProcessFamilyTree: Unsuccessful bash cmd (ps - o ppid = -o pid = -A | awk '$1 == " + process.Id.ToString() + " {print $2}')" + ie.ToString());
+                            }
+                        }
+                    }
+                }
+            }
+
+            return childProcesses;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            // nothing to do here.
         }
     }
 }

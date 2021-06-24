@@ -288,7 +288,7 @@ namespace FabricObserver.Observers.Utilities
     }
 
     // https://loune.net/2017/06/running-shell-bash-commands-in-net-core/
-    internal static class LinuxShellHelper
+    public static class LinuxShellHelper
     {
         /// <summary>
         /// This string extension will run a supplied linux bash command and return the console output.

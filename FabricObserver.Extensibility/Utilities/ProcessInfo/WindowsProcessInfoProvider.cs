@@ -4,21 +4,37 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
+using System.Management;
 
 namespace FabricObserver.Observers.Utilities
 {
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
-        const string CategoryName = "Process";
+        const string ProcessCategoryName = "Process";
+        const string WorkingSetCounterName = "Working Set - Private";
+        const string FileHandlesCounterName = "Handle Count";
         private readonly object memPerfCounterLock = new object();
         private readonly object fileHandlesPerfCounterLock = new object();
+        private PerformanceCounter memProcessPrivateWorkingSetCounter = new PerformanceCounter
+        {
+            CategoryName = ProcessCategoryName,
+            CounterName = WorkingSetCounterName,
+            ReadOnly = true
+        };
+
+        private PerformanceCounter processFileHandleCounter = new PerformanceCounter
+        {
+            CategoryName = ProcessCategoryName,
+            CounterName = FileHandlesCounterName,
+            ReadOnly = true
+        };
 
         public override float GetProcessPrivateWorkingSetInMB(int processId)
         {
-            const string WorkingSetCounterName = "Working Set - Private";
             string processName;
 
             try
@@ -37,36 +53,23 @@ namespace FabricObserver.Observers.Utilities
 
             lock (memPerfCounterLock)
             {
-                PerformanceCounter memProcessPrivateWorkingSetCounter = null;
-
                 try
                 {
-                    memProcessPrivateWorkingSetCounter = new PerformanceCounter
-                    {
-                        CategoryName = CategoryName,
-                        CounterName = WorkingSetCounterName,
-                        InstanceName = processName
-                    };
-
+                    memProcessPrivateWorkingSetCounter.InstanceName = processName;
                     return memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
                 }
                 catch (Exception e) when (e is ArgumentNullException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    Logger.LogWarning($"{CategoryName} {WorkingSetCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
+                    Logger.LogWarning($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
 
                     // Don't throw.
                     return 0F;
                 }
                 catch (Exception e)
                 { 
-                    Logger.LogError($"{CategoryName} {WorkingSetCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
+                    Logger.LogError($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
 
                     throw;
-                }
-                finally
-                {
-                    memProcessPrivateWorkingSetCounter?.Dispose();
-                    memProcessPrivateWorkingSetCounter = null;
                 }
             }
         }
@@ -79,7 +82,6 @@ namespace FabricObserver.Observers.Utilities
                 return -1F;
             }
 
-            const string FileHandlesCounterName = "Handle Count";
             string processName;
 
             try
@@ -98,38 +100,98 @@ namespace FabricObserver.Observers.Utilities
 
             lock (fileHandlesPerfCounterLock)
             {
-                PerformanceCounter processFileHandleCounter = null;
-
                 try
                 {
-                    processFileHandleCounter = new PerformanceCounter
-                    {
-                        CategoryName = CategoryName,
-                        CounterName = FileHandlesCounterName,
-                        InstanceName = processName
-                    };
-
+                    processFileHandleCounter.InstanceName = processName;
                     return processFileHandleCounter.NextValue();
                 }
                 catch (Exception e) when (e is InvalidOperationException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    Logger.LogWarning($"{CategoryName} {FileHandlesCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
+                    Logger.LogWarning($"{ProcessCategoryName} {FileHandlesCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
 
                     // Don't throw.
                     return -1F;
                 }
                 catch (Exception e)
                 {
-                    Logger.LogError($"{CategoryName} {FileHandlesCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
+                    Logger.LogError($"{ProcessCategoryName} {FileHandlesCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
 
                     throw;
                 }
-                finally
+            }
+        }
+
+        public override List<Process> GetChildProcesses(Process process)
+        {
+            List<Process> childProcesses = new List<Process>();
+            string query = $"select processid from win32_process where parentprocessid = {process.Id}";
+
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher(query))
                 {
-                    processFileHandleCounter?.Dispose();
-                    processFileHandleCounter = null;
+                    var results = searcher.Get();
+
+                    using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
+                    {
+                        while (enumerator.MoveNext())
+                        {
+                            try
+                            {
+                                using (ManagementObject mObj = (ManagementObject)enumerator.Current)
+                                {
+                                    object childProcessObj = mObj.Properties["processid"].Value;
+
+                                    if (childProcessObj == null)
+                                    {
+                                        continue;
+                                    }
+
+                                    Process childProcess = Process.GetProcessById(Convert.ToInt32(childProcessObj));
+                                    
+                                    if (childProcess != null)
+                                    {
+                                        if (childProcess.ProcessName == "conhost")
+                                        {
+                                            continue;
+                                        }
+
+                                        childProcesses.Add(childProcess);
+
+                                        // Now get child of child, if exists.
+                                        List<Process> grandChildren = GetChildProcesses(childProcess);
+
+                                        if (grandChildren?.Count > 0)
+                                        {
+                                            childProcesses.AddRange(grandChildren);
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception e) when (e is ArgumentException || e is ManagementException)
+                            {
+                                Logger.LogWarning($"[Inner try-catch (enumeration)] Handled Exception in GetChildProcesses: {e}");
+                                continue;
+                            }
+                        }
+                    }
                 }
             }
+            catch (ManagementException me)
+            {
+                Logger.LogWarning($"[Containing try-catch] Handled Exception in GetChildProcesses: {me}");
+            }
+
+            return childProcesses;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            this.memProcessPrivateWorkingSetCounter?.Dispose();
+            this.memProcessPrivateWorkingSetCounter = null;
+
+            this.processFileHandleCounter?.Dispose();
+            this.processFileHandleCounter = null;
         }
     }
 }

@@ -3,6 +3,8 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Fabric;
 
 namespace FabricObserver.Observers.Utilities
@@ -18,5 +20,14 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="context">StatelessServiceContext instance.</param>
         /// <returns>float value representing number of allocated file handles for the process.</returns>
         float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
+
+        /// <summary>
+        /// Returns a list of Process objects that are active descendants (e.g., children and grandchildren) of the provided Process object.
+        /// </summary>
+        /// <param name="process"></param>
+        /// <returns></returns>
+        List<Process> GetChildProcesses(Process process);
+
+        void Dispose();
     }
 }
