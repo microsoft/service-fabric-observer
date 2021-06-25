@@ -887,9 +887,22 @@ namespace FabricObserver.Observers
                 }
 
                 var healthMessage = new StringBuilder();
+                string childProcMsg = string.Empty;
+
+                if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
+                {
+                    childProcMsg = $"Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
+                                   $"Their cumulative impact on {name}'s resource usage has been applied.";
+                }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 0)}{data.Units}");
+                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 0)}{data.Units} ");
+                
+                if (childProcMsg != string.Empty)
+                {
+                    _ = healthMessage.AppendLine();
+                    _ = healthMessage.AppendLine(childProcMsg);
+                }
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
