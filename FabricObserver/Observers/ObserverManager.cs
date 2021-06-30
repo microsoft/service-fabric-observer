@@ -912,7 +912,6 @@ namespace FabricObserver.Observers
                     if (isConfigurationUpdateInProgress)
                     {
                         IsObserverRunning = false;
-
                         return true;
                     }
 
@@ -922,10 +921,10 @@ namespace FabricObserver.Observers
                 catch (Exception e)
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
-                        ObserverConstants.ObserverManagerName,
-                        ApplicationName,
-                        HealthState.Error,
-                        $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                                         ObserverConstants.ObserverManagerName,
+                                         ApplicationName,
+                                         HealthState.Error,
+                                         $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
 
                     allExecuted = false;
                 }
@@ -939,15 +938,12 @@ namespace FabricObserver.Observers
             }
             else
             {
-                if (Logger.EnableVerboseLogging)
-                {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                                    ObserverConstants.ObserverManagerName,
-                                    ApplicationName,
-                                    HealthState.Warning,
-                                    exceptionBuilder.ToString());
-                }
-
+                HealthReporter.ReportFabricObserverServiceHealth(
+                                     ObserverConstants.ObserverManagerName,
+                                     ApplicationName,
+                                     HealthState.Warning,
+                                     exceptionBuilder.ToString());
+                
                 _ = exceptionBuilder.Clear();
             }
 

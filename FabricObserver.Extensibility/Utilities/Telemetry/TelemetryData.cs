@@ -19,6 +19,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string ChildProcessName
+        {
+            get; set;
+        }
+
         public string ClusterId
         {
             get; set;

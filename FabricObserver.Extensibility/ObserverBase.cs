@@ -889,9 +889,9 @@ namespace FabricObserver.Observers
                 var healthMessage = new StringBuilder();
                 string childProcMsg = string.Empty;
 
-                if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
+                if (replicaOrInstance != null && replicaOrInstance.ChildProcessIds != null)
                 {
-                    childProcMsg = $"Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
+                    childProcMsg = $"Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcessIds.Count}). " +
                                    $"Their cumulative impact on {name}'s resource usage has been applied.";
                 }
 

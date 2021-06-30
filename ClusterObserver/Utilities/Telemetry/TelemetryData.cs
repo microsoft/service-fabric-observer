@@ -17,6 +17,11 @@ namespace ClusterObserver.Utilities.Telemetry
             get; set;
         }
 
+        public string ChildProcessName
+        {
+            get; set;
+        }
+
         public string ClusterId
         {
             get; set;
@@ -100,9 +105,10 @@ namespace ClusterObserver.Utilities.Telemetry
         [JsonConstructor]
         public TelemetryData()
         {
+
         }
 
-        public TelemetryData( FabricClient fabricClient, CancellationToken cancellationToken)
+        public TelemetryData(FabricClient fabricClient, CancellationToken cancellationToken)
         {
             var (clusterId, _) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
             ClusterId = clusterId;

@@ -218,9 +218,10 @@ namespace FabricObserver.Observers
                 var timeToLiveWarning = GetHealthReportTimeToLive();
 
                 // User-supplied Disk Space Usage % thresholds from ApplicationManifest.xml.
-                foreach (var data in DiskSpaceUsagePercentageData)
+                for (int i = 0; i < DiskSpaceUsagePercentageData.Count; ++i)
                 {
                     token.ThrowIfCancellationRequested();
+                    var data = DiskSpaceUsagePercentageData[i];
 
                     ProcessResourceDataReportHealth(
                         data,
@@ -232,9 +233,10 @@ namespace FabricObserver.Observers
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    foreach (var data in DiskAverageQueueLengthData)
+                    for (int i = 0; i <  DiskAverageQueueLengthData.Count; ++i)
                     {
                         token.ThrowIfCancellationRequested();
+                        var data = DiskAverageQueueLengthData[i];
 
                         ProcessResourceDataReportHealth(
                             data,
@@ -249,27 +251,21 @@ namespace FabricObserver.Observers
                 if (IsEtwEnabled)
                 {
                     // Disk Space Available
-                    foreach (var data in DiskSpaceAvailableMbData)
+                    for (int i = 0; i < DiskSpaceAvailableMbData.Count; ++i)
                     {
                         token.ThrowIfCancellationRequested();
+                        var data = DiskSpaceAvailableMbData[i];
 
-                        ProcessResourceDataReportHealth(
-                            data,
-                            0,
-                            0,
-                            timeToLiveWarning);
+                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning);
                     }
 
                     // Disk Space Total
-                    foreach (var data in DiskSpaceTotalMbData)
+                    for (int i = 0; i < DiskSpaceTotalMbData.Count; ++i)
                     {
                         token.ThrowIfCancellationRequested();
+                        var data = DiskSpaceTotalMbData[i];
 
-                        ProcessResourceDataReportHealth(
-                            data,
-                            0,
-                            0,
-                            timeToLiveWarning);
+                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning);
                     }
                 }
 

@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="process"></param>
         /// <returns></returns>
-        List<Process> GetChildProcesses(Process process);
+        List<int> GetChildProcessIds(int pid);
 
         void Dispose();
     }

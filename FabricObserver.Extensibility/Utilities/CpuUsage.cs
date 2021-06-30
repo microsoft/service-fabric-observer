@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace FabricObserver.Observers.Utilities
@@ -21,28 +22,38 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="p">Target Process object</param>
         /// <returns>CPU percentage in use as double value</returns>
-        public double GetCpuUsagePercentageProcess(Process p)
+        public double GetCpuUsagePercentageProcess(int procId)
         {
-            if (p == null || p.HasExited)
+            try
             {
-                return 0;
-            }
+                using (Process p = Process.GetProcessById(procId))
+                {
+                    if (p.HasExited)
+                    {
+                        return 0.0;
+                    }
 
-            if (prevTime == DateTime.MinValue)
-            {
-                prevTime = DateTime.Now;
-                prevTotalProcessorTime = p.TotalProcessorTime;
-            }
-            else
-            {
-                currentTimeTime = DateTime.Now;
-                currentTotalProcessorTime = p.TotalProcessorTime;
-                double currentUsage = (currentTotalProcessorTime.TotalMilliseconds - prevTotalProcessorTime.TotalMilliseconds) / currentTimeTime.Subtract(prevTime).TotalMilliseconds;
-                double cpuUsage = currentUsage / Environment.ProcessorCount;
-                prevTime = currentTimeTime;
-                prevTotalProcessorTime = currentTotalProcessorTime;
+                    if (prevTime == DateTime.MinValue)
+                    {
+                        prevTime = DateTime.Now;
+                        prevTotalProcessorTime = p.TotalProcessorTime;
+                    }
+                    else
+                    {
+                        currentTimeTime = DateTime.Now;
+                        currentTotalProcessorTime = p.TotalProcessorTime;
+                        double currentUsage = (currentTotalProcessorTime.TotalMilliseconds - prevTotalProcessorTime.TotalMilliseconds) / currentTimeTime.Subtract(prevTime).TotalMilliseconds;
+                        double cpuUsage = currentUsage / Environment.ProcessorCount;
+                        prevTime = currentTimeTime;
+                        prevTotalProcessorTime = currentTotalProcessorTime;
 
-                return cpuUsage * 100.0;
+                        return cpuUsage * 100.0;
+                    }
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is Win32Exception || e is InvalidOperationException || e is NotSupportedException)
+            {
+
             }
 
             return 0.0;

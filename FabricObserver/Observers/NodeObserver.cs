@@ -22,48 +22,24 @@ namespace FabricObserver.Observers
         private readonly Stopwatch stopwatch;
 
         // These are public properties because they are used in unit tests.
-        public FabricResourceUsageData<float> MemDataCommittedBytes
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<float> MemDataCommittedBytes;
 
-        public FabricResourceUsageData<int> FirewallData
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<int> FirewallData;
 
-        public FabricResourceUsageData<int> ActivePortsData
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<int> ActivePortsData;
 
-        public FabricResourceUsageData<int> EphemeralPortsData
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<int> EphemeralPortsData;
 
-        public FabricResourceUsageData<double> MemDataPercentUsed
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<double> MemDataPercentUsed;
 
-        public FabricResourceUsageData<float> CpuTimeData
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<float> CpuTimeData;
 
         // These are only useful for Linux.\\
 
         // Holds data for percentage of total configured file descriptors that are in use.
-        public FabricResourceUsageData<double> LinuxFileHandlesDataPercentAllocated
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<double> LinuxFileHandlesDataPercentAllocated;
 
-        public FabricResourceUsageData<int> LinuxFileHandlesDataTotalAllocated
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<int> LinuxFileHandlesDataTotalAllocated;
 
         public float CpuErrorUsageThresholdPct
         {
@@ -716,6 +692,17 @@ namespace FabricObserver.Observers
                     }
                 }
 
+                if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                {
+                    float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
+                    MemDataCommittedBytes.Data.Add(committedMegaBytes);
+                }
+
+                if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                {
+                    MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
+                }
+
                 timer.Start();
                 
                 while (timer.Elapsed <= duration)
@@ -727,18 +714,7 @@ namespace FabricObserver.Observers
                         CpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
                     }
 
-                    if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
-                    {
-                        float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
-                        MemDataCommittedBytes.Data.Add(committedMegaBytes);
-                    }
-
-                    if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
-                    {
-                        MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
-                    }
-
-                    await Task.Delay(250, Token).ConfigureAwait(true);
+                    await Task.Delay(500, Token).ConfigureAwait(true);
                 }
 
                 timer.Stop();

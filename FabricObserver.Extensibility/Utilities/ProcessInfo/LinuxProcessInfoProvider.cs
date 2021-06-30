@@ -68,11 +68,11 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        public override List<Process> GetChildProcesses(Process process)
+        public override List<int> GetChildProcessIds(int processId)
         {
             // https://askubuntu.com/questions/512871/find-children-of-the-process
-            string cmdResult = "ps -o ppid= -o pid= -A | awk '$1 == " + process.Id.ToString() + " {print $2}'".Bash();
-            List<Process> childProcesses = new List<Process>();
+            string cmdResult = "ps -o ppid= -o pid= -A | awk '$1 == " + processId.ToString() + " {print $2}'".Bash();
+            List<int> childProcesses = new List<int>();
 
             if (!string.IsNullOrWhiteSpace(cmdResult))
             {
@@ -80,23 +80,11 @@ namespace FabricObserver.Observers.Utilities
 
                 if (sPids.Count > 0)
                 {
-                    foreach (string pid in sPids)
+                    for (int i = 0; i < sPids.Count; ++i)
                     {
-                        if (int.TryParse(pid, out int proc))
+                        if (int.TryParse(sPids[i], out int childProcId))
                         {
-                            try
-                            {
-                                Process p = Process.GetProcessById(proc);
-                                childProcesses.Add(p);
-                            }
-                            catch (ArgumentException)
-                            {
-                                // ignore -> process may no longer exist
-                            }
-                            catch (InvalidOperationException ie)
-                            {
-                                Logger.LogWarning("GetFlattenedProcessFamilyTree: Unsuccessful bash cmd (ps - o ppid = -o pid = -A | awk '$1 == " + process.Id.ToString() + " {print $2}')" + ie.ToString());
-                            }
+                            childProcesses.Add(childProcId); 
                         }
                     }
                 }

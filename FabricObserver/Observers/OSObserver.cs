@@ -15,7 +15,6 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
@@ -670,9 +669,6 @@ namespace FabricObserver.Observers
                                    ObserverName,
                                    HealthState.Error,
                                    $"Unhandled Exception processing OS information:{Environment.NewLine}{e}");
-
-                // Fix the bug..
-                throw;
             }
         }
     }

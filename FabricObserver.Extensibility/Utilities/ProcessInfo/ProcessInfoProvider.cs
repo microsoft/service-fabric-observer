@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Fabric;
 using System.Runtime.InteropServices;
 
@@ -57,7 +56,7 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
 
-        public abstract List<Process> GetChildProcesses(Process process);
+        public abstract List<int> GetChildProcessIds(int processId);
 
         protected abstract void Dispose(bool disposing);
     }

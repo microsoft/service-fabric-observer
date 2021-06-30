@@ -39,28 +39,21 @@ namespace FabricObserver.Observers.Utilities
                     {
                         using (ManagementObject mObj = (ManagementObject)enumerator.Current)
                         {
-                            PropertyDataCollection.PropertyDataEnumerator propEnumerator = mObj.Properties.GetEnumerator();
+                            object visibleTotalObj = mObj.Properties["TotalVisibleMemorySize"].Value;
+                            object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
 
-                            while (propEnumerator.MoveNext())
+                            if (visibleTotalObj == null || freePhysicalObj == null)
                             {
-                                PropertyData prop = propEnumerator.Current;
-                                string name = prop.Name;
-                                string value = prop.Value.ToString();
-
-                                if (name.Contains("TotalVisible"))
-                                {
-                                    visibleTotal = !string.IsNullOrWhiteSpace(value) ? long.Parse(value) : -1L;
-                                }
-                                else
-                                {
-                                    freePhysical = !string.IsNullOrWhiteSpace(value) ? long.Parse(value) : -1L;
-                                }
+                                continue;
                             }
+
+                            visibleTotal = Convert.ToInt64(visibleTotalObj);
+                            freePhysical = Convert.ToInt64(freePhysicalObj);
                         }
                     }
                 }
 
-                if (visibleTotal == -1L || freePhysical == -1L)
+                if (visibleTotal < 1)
                 {
                     return (-1L, -1);
                 }
@@ -197,7 +190,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 win32OsInfo = new ManagementObjectSearcher(
                                     "SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory," +
-                                            "TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+                                    "TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
 
                 results = win32OsInfo.Get();
 
@@ -209,79 +202,47 @@ namespace FabricObserver.Observers.Utilities
                         {
                             using (ManagementObject mObj = (ManagementObject)enumerator.Current)
                             {
-                                PropertyDataCollection.PropertyDataEnumerator propEnumerator = mObj.Properties.GetEnumerator();
+                                object captionObj = mObj.Properties["Caption"].Value;
+                                object versionObj = mObj.Properties["Version"].Value;
+                                object statusObj = mObj.Properties["Status"].Value;
+                                object osLanguageObj = mObj.Properties["OSLanguage"].Value;
+                                object numProcsObj = mObj.Properties["NumberOfProcesses"].Value;
+                                object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
+                                object freeVirtualTotalObj = mObj.Properties["FreeVirtualMemory"].Value;
+                                object totalVirtualObj = mObj.Properties["TotalVirtualMemorySize"].Value;
+                                object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
+                                object installDateObj = mObj.Properties["InstallDate"].Value;
+                                object lastBootDateObj = mObj.Properties["LastBootUpTime"].Value;
+                                
+                                osInfo.Name = captionObj?.ToString();
 
-                                while (propEnumerator.MoveNext())
+                                if (int.TryParse(numProcsObj?.ToString(), out int numProcesses))
                                 {
-                                    PropertyData prop = propEnumerator.Current;
-                                    string name = prop.Name;
-                                    string value = prop.Value?.ToString();
-
-                                    if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(value))
-                                    {
-                                        continue;
-                                    }
-
-                                    switch (name.ToLowerInvariant())
-                                    {
-                                        case "caption":
-                                            osInfo.Name = value;
-                                            break;
-
-                                        case "numberofprocesses":
-                                            if (int.TryParse(value, out int numProcesses))
-                                            {
-                                                osInfo.NumberOfProcesses = numProcesses;
-                                            }
-                                            else
-                                            {
-                                                osInfo.NumberOfProcesses = -1;
-                                            }
-
-                                            break;
-
-                                        case "status":
-                                            osInfo.Status = value;
-                                            break;
-
-                                        case "oslanguage":
-                                            osInfo.Language = value;
-                                            break;
-
-                                        case "version":
-                                            osInfo.Version = value;
-                                            break;
-
-                                        case "installdate":
-                                            osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
-                                            break;
-
-                                        case "lastbootuptime":
-                                            osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(value).ToUniversalTime().ToString("o");
-                                            break;
-
-                                        case "freephysicalmemory":
-                                            osInfo.FreePhysicalMemoryKB = ulong.Parse(value);
-                                            break;
-
-                                        case "freevirtualmemory":
-                                            osInfo.FreeVirtualMemoryKB = ulong.Parse(value);
-                                            break;
-
-                                        case "totalvirtualmemorysize":
-                                            osInfo.TotalVirtualMemorySizeKB = ulong.Parse(value);
-                                            break;
-
-                                        case "totalvisiblememorysize":
-                                            osInfo.TotalVisibleMemorySizeKB = ulong.Parse(value);
-                                            break;
-                                    }
+                                    osInfo.NumberOfProcesses = numProcesses;
                                 }
-                            }
+                                else
+                                {
+                                    osInfo.NumberOfProcesses = -1;
+                                }
+
+                                osInfo.Status = statusObj?.ToString();      
+                                osInfo.Language = osLanguageObj?.ToString();        
+                                osInfo.Version = versionObj?.ToString();     
+                                osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");        
+                                osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");        
+                                osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;  
+                                osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;         
+                                osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;      
+                                osInfo.TotalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
+                            }  
                         }
                         catch (ManagementException me)
                         {
                             Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me}");
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogInfo($"Bug? => Exception in GetOSInfoAsync:{Environment.NewLine}{e}");
                         }
                     }
                 }

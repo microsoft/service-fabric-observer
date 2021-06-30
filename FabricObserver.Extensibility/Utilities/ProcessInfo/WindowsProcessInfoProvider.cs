@@ -121,10 +121,68 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public override List<Process> GetChildProcesses(Process process)
+        public override List<int> GetChildProcessIds(int processId)
         {
-            List<Process> childProcesses = new List<Process>();
-            string query = $"select processid from win32_process where parentprocessid = {process.Id}";
+            if (processId < 1)
+            {
+                return null;
+            }
+
+            // Get child procs.
+            List<int> childProcesses = GetProcessTreeIds(processId);
+
+            if (childProcesses == null)
+            {
+                return null;
+            }
+
+            // Get grandchild procs.
+            for (var i = 0; i < childProcesses.Count; ++i)
+            {
+                List<int> grandChildren = GetProcessTreeIds(childProcesses[i]);
+
+                if (grandChildren?.Count > 0)
+                {
+                    childProcesses.AddRange(grandChildren);
+                }
+            }
+
+            return childProcesses;
+        }
+
+        public float GetProcessPrivateWorkingSetInMB(string processName)
+        {
+            if (string.IsNullOrWhiteSpace(processName))
+            {
+                return 0F;
+            }
+
+            lock (memPerfCounterLock)
+            {
+                try
+                {
+                    memProcessPrivateWorkingSetCounter.InstanceName = processName;
+                    return memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
+                }
+                catch (Exception e) when (e is ArgumentNullException || e is Win32Exception || e is UnauthorizedAccessException)
+                {
+                    Logger.LogWarning($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
+
+                    // Don't throw.
+                    return 0F;
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
+                    throw;
+                }
+            }
+        }
+
+        private List<int> GetProcessTreeIds(int processId)
+        {
+            List<int> childProcesses = null;
+            string query = $"select caption,processid from win32_process where parentprocessid = {processId}";
 
             try
             {
@@ -140,32 +198,27 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 using (ManagementObject mObj = (ManagementObject)enumerator.Current)
                                 {
-                                    object childProcessObj = mObj.Properties["processid"].Value;
+                                    object childProcessIdObj = mObj.Properties["processid"].Value;
+                                    object childProcessNameObj = mObj.Properties["caption"].Value;
 
-                                    if (childProcessObj == null)
+                                    if (childProcessIdObj == null || childProcessNameObj == null)
                                     {
                                         continue;
                                     }
 
-                                    Process childProcess = Process.GetProcessById(Convert.ToInt32(childProcessObj));
-                                    
-                                    if (childProcess != null)
+                                    if (childProcessNameObj.ToString() == "conhost.exe")
                                     {
-                                        if (childProcess.ProcessName == "conhost")
-                                        {
-                                            continue;
-                                        }
-
-                                        childProcesses.Add(childProcess);
-
-                                        // Now get child of child, if exists.
-                                        List<Process> grandChildren = GetChildProcesses(childProcess);
-
-                                        if (grandChildren?.Count > 0)
-                                        {
-                                            childProcesses.AddRange(grandChildren);
-                                        }
+                                        continue;
                                     }
+
+                                    int childProcessId = Convert.ToInt32(childProcessIdObj);
+
+                                    if (childProcesses == null)
+                                    {
+                                        childProcesses = new List<int>();
+                                    }
+
+                                    childProcesses.Add(childProcessId);
                                 }
                             }
                             catch (Exception e) when (e is ArgumentException || e is ManagementException)

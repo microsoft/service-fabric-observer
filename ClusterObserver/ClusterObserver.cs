@@ -372,7 +372,7 @@ namespace ClusterObserver
                             udText = $"in UD {udsInAppUpgrade.First(ud => ud > -1 && ud < int.MaxValue)}";
                         }
 
-                        telemetryDescription += $"{appName} is upgrading {udText}.{Environment.NewLine}";
+                        telemetryDescription += $" Note: {appName} is upgrading {udText}.{Environment.NewLine}";
                     }
                 }
 
@@ -390,9 +390,12 @@ namespace ClusterObserver
                     // From FabricObserver?
                     if (foTelemetryData != null)
                     {
+                        foTelemetryData.Description += telemetryDescription;
+
                         // Telemetry.
                         if (TelemetryEnabled && ObserverTelemetryClient != null)
                         {
+                            
                             await ObserverTelemetryClient.ReportHealthAsync(foTelemetryData, token);
                         }
 
@@ -407,6 +410,7 @@ namespace ClusterObserver
                                                 {
                                                     foTelemetryData.ApplicationName,
                                                     foTelemetryData.ServiceName,
+                                                    foTelemetryData.ChildProcessName,
                                                     foTelemetryData.HealthState,
                                                     foTelemetryData.Description,
                                                     foTelemetryData.Metric,
