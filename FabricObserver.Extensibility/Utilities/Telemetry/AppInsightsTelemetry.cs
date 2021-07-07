@@ -184,7 +184,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "HealthState", telemetryData.HealthState ?? string.Empty },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ChildProcessName", telemetryData.ChildProcessName ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId ?? string.Empty },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
@@ -261,7 +260,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ChildProcessName", telemetryData.ChildProcessName ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
@@ -280,6 +278,44 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e}");
             }
 
+            return Task.CompletedTask;
+        }
+
+        public Task ReportMetricAsync(List<ChildProcessTelemetryData> telemetryData, CancellationToken cancellationToken)
+        {
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
+            {
+                return Task.CompletedTask;
+            }
+
+            // TODO...
+            /*
+            try
+            {
+                var properties = new Dictionary<string, string>
+                {
+                    { "ClusterId", telemetryData.ClusterId ?? string.Empty },
+                    { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
+                    { "ServiceName", telemetryData.ServiceName ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
+                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
+                    { "Metric", telemetryData.Metric ?? string.Empty },
+                    { "Value", value ?? string.Empty },
+                    { "PartitionId", telemetryData.PartitionId },
+                    { "ReplicaId", telemetryData.ReplicaId },
+                    { "Source", telemetryData.ObserverName },
+                    { "NodeName", telemetryData.NodeName ?? string.Empty },
+                    { "OS", telemetryData.OS ?? string.Empty }
+                };
+
+                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
+            
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e}");
+            }
+            */
             return Task.CompletedTask;
         }
 

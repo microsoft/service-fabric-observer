@@ -116,6 +116,15 @@ namespace FabricObserver.Observers.Interfaces
         /// <summary>
         /// Calls telemetry provider to report a metric.
         /// </summary>
+        /// <param name="telemetryData">List of ChildProcessTelemetry.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        Task ReportMetricAsync(
+          List<ChildProcessTelemetryData> telemetryData,
+          CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Calls telemetry provider to report a metric.
+        /// </summary>
         /// <param name="name">Name of the metric.</param>
         /// <param name="value">Value of the property.</param>
         /// <param name="properties">IDictionary&lt;string&gt;,&lt;string&gt; containing name/value pairs of additional properties.</param>

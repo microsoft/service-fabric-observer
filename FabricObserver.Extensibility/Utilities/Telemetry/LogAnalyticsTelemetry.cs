@@ -120,6 +120,17 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
+        public async Task ReportMetricAsync(List<ChildProcessTelemetryData> telemetryData, CancellationToken cancellationToken)
+        {
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+        }
+
         public async Task ReportMetricAsync(MachineTelemetryData machineTelemetryData, CancellationToken cancellationToken)
         {
             if (machineTelemetryData == null || cancellationToken.IsCancellationRequested)

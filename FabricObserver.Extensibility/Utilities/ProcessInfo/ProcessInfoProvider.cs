@@ -56,7 +56,7 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
 
-        public abstract List<int> GetChildProcessIds(int processId);
+        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int processId);
 
         protected abstract void Dispose(bool disposing);
     }

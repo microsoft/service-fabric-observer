@@ -121,7 +121,7 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public override List<int> GetChildProcessIds(int processId)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
         {
             if (processId < 1)
             {
@@ -129,21 +129,41 @@ namespace FabricObserver.Observers.Utilities
             }
 
             // Get child procs.
-            List<int> childProcesses = GetProcessTreeIds(processId);
+            List<(string procName, int pid)> childProcesses = TupleGetChildProcessInfo(processId);
 
             if (childProcesses == null)
             {
                 return null;
             }
 
-            // Get grandchild procs.
-            for (var i = 0; i < childProcesses.Count; ++i)
+            // Get descendent procs, max depth = 3.
+            for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<int> grandChildren = GetProcessTreeIds(childProcesses[i]);
+                List<(string procName, int pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].pid);
 
-                if (grandChildren?.Count > 0)
+                if (c1?.Count > 0)
                 {
-                    childProcesses.AddRange(grandChildren);
+                    childProcesses.AddRange(c1);
+
+                    for (int j = 0; j < c1.Count; ++j)
+                    {
+                        List<(string procName, int pid)> c2 = TupleGetChildProcessInfo(c1[j].pid);
+
+                        if (c2?.Count > 0)
+                        {
+                            childProcesses.AddRange(c2);
+
+                            for (int k = 0; k < c2.Count; ++k)
+                            {
+                                List<(string procName, int pid)> c3 = TupleGetChildProcessInfo(c2[k].pid);
+
+                                if (c3?.Count > 0)
+                                {
+                                    childProcesses.AddRange(c3);
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -179,9 +199,9 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        private List<int> GetProcessTreeIds(int processId)
+        private List<(string procName, int pid)> TupleGetChildProcessInfo(int processId)
         {
-            List<int> childProcesses = null;
+            List<(string procName, int pid)> childProcesses = null;
             string query = $"select caption,processid from win32_process where parentprocessid = {processId}";
 
             try
@@ -211,14 +231,15 @@ namespace FabricObserver.Observers.Utilities
                                         continue;
                                     }
 
-                                    int childProcessId = Convert.ToInt32(childProcessIdObj);
-
                                     if (childProcesses == null)
                                     {
-                                        childProcesses = new List<int>();
+                                        childProcesses = new List<(string procName, int pid)>();
                                     }
 
-                                    childProcesses.Add(childProcessId);
+                                    int childProcessId = Convert.ToInt32(childProcessIdObj);
+                                    string procName = childProcessNameObj.ToString();
+
+                                    childProcesses.Add((procName, childProcessId));
                                 }
                             }
                             catch (Exception e) when (e is ArgumentException || e is ManagementException)

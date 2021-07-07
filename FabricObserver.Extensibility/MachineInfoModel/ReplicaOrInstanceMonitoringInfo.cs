@@ -51,7 +51,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public List<int> ChildProcessIds
+        public List<(string procName, int Pid)> ChildProcessInfo
         {
             get; set;
         }

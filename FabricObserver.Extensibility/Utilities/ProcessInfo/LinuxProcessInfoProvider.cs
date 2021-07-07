@@ -68,23 +68,24 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        public override List<int> GetChildProcessIds(int processId)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
         {
-            // https://askubuntu.com/questions/512871/find-children-of-the-process
-            string cmdResult = "ps -o ppid= -o pid= -A | awk '$1 == " + processId.ToString() + " {print $2}'".Bash();
-            List<int> childProcesses = new List<int>();
+            string pidCmdResult = $"ps -o pid= --ppid {processId}".Bash();
+            string procNameCmdResult = $"ps -o comm= --ppid {processId}".Bash();
+            List<(string procName, int Pid)> childProcesses = new List<(string procName, int Pid)>();
 
-            if (!string.IsNullOrWhiteSpace(cmdResult))
+            if (!string.IsNullOrWhiteSpace(pidCmdResult) && !string.IsNullOrWhiteSpace(procNameCmdResult))
             {
-                var sPids = cmdResult.Split('\n')?.ToList();
+                var sPids = pidCmdResult.Trim().Split('\n');
+                var sProcNames = procNameCmdResult.Trim().Split('\n');
 
-                if (sPids.Count > 0)
+                if (sPids?.Length > 0 && sProcNames.Length > 0)
                 {
-                    for (int i = 0; i < sPids.Count; ++i)
+                    for (int i = 0; i < sPids.Length; ++i)
                     {
                         if (int.TryParse(sPids[i], out int childProcId))
                         {
-                            childProcesses.Add(childProcId); 
+                            childProcesses.Add((sProcNames[i], childProcId)); 
                         }
                     }
                 }
