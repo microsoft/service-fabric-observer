@@ -55,6 +55,7 @@ namespace FabricObserver.Observers.Utilities
         // AppObserver.
         public const string AppObserverName = "AppObserver";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
+        public const string MaxChildProcessesToMonitorParameter = "MaxChildProcessesToMonitor";
 
         // Certificate Observer
         public const string CertificateObserverName = "CertificateObserver";

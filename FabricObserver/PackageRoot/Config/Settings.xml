@@ -143,6 +143,10 @@
          the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
          like 0 or a negative number (or omit the parameter altogether). -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    <!-- The maximum number of child processes to monitor. AppObserver can monitor up to 4 generations of processes spawned by monitored app service instances.
+         If not set, AppObserver defaults to 15 spawned processes it will monitor. In either case, the impact of the child processes on the resource usage of the service
+         is calculated and it the sum of usage (children + parent) exceeds a supplied warning threshold, then the containing app will be put into Warning, as you would expect.-->
+    <Parameter Name="MaxChildProcessesToMonitor" Value="" MustOverride="true"/>
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
@@ -281,12 +285,12 @@
        [ObserverName]Configuration.
        Example: SampleNewObserverConfiguration where SampleNewObserver is the type name of the observer plugin.
        See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
-  <!--<Section Name="SampleNewObserverConfiguration">
+  <!--<Section Name="FabricObserverMdmConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
-  </Section> -->
+  </Section>-->
 </Settings>

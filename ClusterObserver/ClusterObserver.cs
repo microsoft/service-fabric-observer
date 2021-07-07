@@ -410,7 +410,6 @@ namespace ClusterObserver
                                                 {
                                                     foTelemetryData.ApplicationName,
                                                     foTelemetryData.ServiceName,
-                                                    foTelemetryData.ChildProcessName,
                                                     foTelemetryData.HealthState,
                                                     foTelemetryData.Description,
                                                     foTelemetryData.Metric,

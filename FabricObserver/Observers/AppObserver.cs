@@ -45,6 +45,11 @@ namespace FabricObserver.Observers
         private string fileName;
         private readonly Stopwatch stopwatch;
 
+        public int MaxChildProcessesToMonitor
+        {
+            get; set;
+        } = 15;
+
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
             get; set;
@@ -85,7 +90,8 @@ namespace FabricObserver.Observers
                                 FabricServiceContext.ServiceName.OriginalString,
                                 ObserverName,
                                 HealthState.Warning,
-                                "This observer was unable to initialize correctly due to missing configuration info.");
+                                "AppObserver was unable to initialize correctly due to misconfiguration. " +
+                                "Please check your AppObserver configuration settings.");
 
                 stopwatch.Stop();
                 stopwatch.Reset();
@@ -93,8 +99,17 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            await MonitorDeployedAppsAsync(token).ConfigureAwait(true);
-            await ReportAsync(token).ConfigureAwait(true);
+            // For child process monitoring.
+            if (int.TryParse(
+                       GetSettingParameterValue(
+                          ConfigurationSectionName,
+                          ObserverConstants.MaxChildProcessesToMonitorParameter), out int maxChildProcs))
+            {
+                MaxChildProcessesToMonitor = maxChildProcs;
+            }
+
+            await MonitorDeployedAppsAsync(token);
+            await ReportAsync(token);
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -335,7 +350,7 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessChildProcs<T>(
-            ref List<FabricResourceUsageData<T>> allAppEphemeralPortsData,
+            ref List<FabricResourceUsageData<T>> fruds,
             ref List<ChildProcessTelemetryData> childProcessTelemetryDataList, 
             ReplicaOrInstanceMonitoringInfo repOrInst, 
             ApplicationInfo app, 
@@ -348,7 +363,7 @@ namespace FabricObserver.Observers
             {
                 string metric = parentFrud.Property;
                 var parentDataAvg = Math.Round(parentFrud.AverageDataValue, 0);
-                var (childProcInfo, Sum) = ProcessChildFrudsGetDataSum(ref allAppEphemeralPortsData, repOrInst, app, token);
+                var (childProcInfo, Sum) = ProcessChildFrudsGetDataSum(ref fruds, repOrInst, app, token);
                 double sumAllValues = Sum + parentDataAvg;
                 childProcInfo.Metric = metric;
                 childProcInfo.Value = sumAllValues;
@@ -415,7 +430,7 @@ namespace FabricObserver.Observers
 
                             if (IsEtwEnabled || IsTelemetryEnabled)
                             {
-                                if (j < 15)
+                                if (j < MaxChildProcessesToMonitor)
                                 {
                                     var childProcInfo = new ChildProcessInfo { ProcessName = childProcName, Value = frud.AverageDataValue };
                                     childProcessInfoData.ChildProcessInfo.Add(childProcInfo);
@@ -507,6 +522,11 @@ namespace FabricObserver.Observers
                 {
                     continue;
                 }
+                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                {
+                    ObserverLogger.LogWarning($"Error processing child processes:{Environment.NewLine}{e}");
+                    continue;
+                }
             }
 
             return (childProcessInfoData, sumValues);
@@ -532,7 +552,7 @@ namespace FabricObserver.Observers
                                                                                  ObserverConstants.ObserverConfigurationPackageName)?.Settings,
                                                                                  ConfigurationSectionName,
                                                                                  "AppObserverDataFileName");
-            
+
             // Unit tests may have null path and filename, thus the null equivalence operations.
             var appObserverConfigFileName = Path.Combine(ConfigPackagePath ?? string.Empty, configSettings.AppObserverConfigFileName ?? string.Empty);
 
@@ -598,7 +618,7 @@ namespace FabricObserver.Observers
                     apps.AddRange(appList.ToList());
 
                     // TODO: Add random wait (ms) impl, include cluster size in calc.
-                    await Task.Delay(250, Token).ConfigureAwait(true);
+                    await Task.Delay(250, Token);
                 }
 
                 for (int i = 0; i < apps.Count; ++i)
@@ -746,11 +766,11 @@ namespace FabricObserver.Observers
 
                 if (!string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
-                    await SetDeployedApplicationReplicaOrInstanceListAsync(null, application.TargetAppType).ConfigureAwait(true);
+                    await SetDeployedApplicationReplicaOrInstanceListAsync(null, application.TargetAppType);
                 }
                 else
                 {
-                    await SetDeployedApplicationReplicaOrInstanceListAsync(appUri).ConfigureAwait(true);
+                    await SetDeployedApplicationReplicaOrInstanceListAsync(appUri);
                 }
             }
 
@@ -1120,7 +1140,7 @@ namespace FabricObserver.Observers
 
             if (applicationNameFilter != null)
             {
-                var app = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter).ConfigureAwait(true);
+                var app = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter);
                 deployedApps.AddRange(app.ToList());
             }
             else if (!string.IsNullOrWhiteSpace(applicationType))
@@ -1155,7 +1175,7 @@ namespace FabricObserver.Observers
                                     Token);
 
                     deployedApps.AddRange(appList.ToList());
-                    await Task.Delay(250, Token).ConfigureAwait(true);
+                    await Task.Delay(250, Token);
                 }
 
                 deployedApps = deployedApps.Where(a => a.ApplicationTypeName == applicationType).ToList();
@@ -1189,11 +1209,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
-                                                   deployedApp.ApplicationName,
-                                                   filteredServiceList,
-                                                   filterType,
-                                                   applicationType).ConfigureAwait(true);
+                var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType);
 
                 ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
