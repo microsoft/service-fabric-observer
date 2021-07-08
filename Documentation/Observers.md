@@ -19,7 +19,7 @@ Service Fabric Error Health Events can block upgrades and other important Fabric
 
 | Observer | Description |
 | :--- | :--- |
-| [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes). Alerts when user-supplied thresholds are reached. |
+| [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes) and their spawn (child processes). Alerts when user-supplied thresholds are reached. |
 | [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
 | [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are reached. |
 | [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric System services (compare to AppObserver) |
@@ -42,8 +42,8 @@ For every other observer, it's XML as per usual.
 ```  
 
 ## AppObserver  
-Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application services (processes). This
-observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring**.
+Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application service processes and the child processes they spawn. If a service process creates child processes, then these processes will be monitored and their summed resource usage for some metric you are observing will be applied to the parent process (added) and a threshold breach will be determined based on the sum of children and parent resource usage.
+This observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring**.
 
 ### Input
 JSON config file supplied by user, stored in
@@ -77,6 +77,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | :--- | :--- |
 | **targetApp** | App URI string to observe. Optional (Required if targetType not specified). | 
 | **targetAppType** | ApplicationType name (this is not a Uri format). FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
+| **appExcludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) | 
+| **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
 | **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log) |  
@@ -94,6 +96,9 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Fabric Warning. |  
 
 **Output** Log text(Error/Warning), Service Fabric Application Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
+
+AppObserver also supports non-JSON parameters for configuration unrelated to thresholds. Like all observers these settings are located in ApplicationManifest.xml to support versionless configuration updates via application upgrade. 
+One of these settings is the maximum number of child processes to monitor (AppObserverMaxChildProcessesToMonitor). Note that there is a cap on generations. Up to 4 generations of child processes will be monitored. The resulting set will be ordered by resource usage from high to low for a given metric. This list size is determined by this setting.
 
 Example SFX Output (Warning - Ephemeral Ports Usage):  
 

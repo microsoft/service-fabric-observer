@@ -136,7 +136,8 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
-            // Get descendent procs, max depth = 3.
+            // Get descendent procs, max depth = 4. *Not* an optimal algo... This is fine. It is much better than increased StackOverflow exception potential
+            // due to recursive calls which are FailFast and will take FO down. Most services will never reach c3, let alone c4, anyway...
             for (int i = 0; i < childProcesses.Count; ++i)
             {
                 List<(string procName, int pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].pid);
@@ -160,6 +161,16 @@ namespace FabricObserver.Observers.Utilities
                                 if (c3?.Count > 0)
                                 {
                                     childProcesses.AddRange(c3);
+
+                                    for (int l = 0; l < c3.Count; ++l)
+                                    {
+                                        List<(string procName, int pid)> c4 = TupleGetChildProcessInfo(c3[l].pid);
+
+                                        if (c4?.Count > 0)
+                                        {
+                                            childProcesses.AddRange(c4);
+                                        }
+                                    }
                                 }
                             }
                         }
