@@ -4,6 +4,10 @@
     <id>%PACKAGE_ID%</id>
     <version>3.1.15</version>
     <releaseNotes>
+      This release adds support for process tree monitoring by AppObserver:
+      Any child process (and descendants at max depth = 4) launched by a service process that is being monitored by AppObserver will also be monitored and its resource usage will be added to the parent's for use in threshold violation checks for an observed (configured) metric.
+      Added support for new child process monitoring data in ETW, AppInsights and LogAnalytics telemetry provider impls.
+      Minor bug fix in AppObserver monitor duration logic.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

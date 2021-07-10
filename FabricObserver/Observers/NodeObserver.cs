@@ -616,19 +616,6 @@ namespace FabricObserver.Observers
 
             try
             {
-                // Ports.
-                if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
-                {
-                    int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
-                    ActivePortsData.Data.Add(activePortCountTotal);
-                }
-
-                if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
-                {
-                    int ephemeralPortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
-                    EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
-                }
-
                 // Firewall rules.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && FirewallData != null)
                 {
@@ -692,29 +679,44 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
-                {
-                    float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
-                    MemDataCommittedBytes.Data.Add(committedMegaBytes);
-                }
-
-                if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
-                {
-                    MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
-                }
-
                 timer.Start();
                 
                 while (timer.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
 
+                    // CPU
                     if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
                         CpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
                     }
 
-                    await Task.Delay(500, Token).ConfigureAwait(true);
+                    // Memory
+                    if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                    {
+                        float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
+                        MemDataCommittedBytes.Data.Add(committedMegaBytes);
+                    }
+
+                    if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                    {
+                        MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
+                    }
+
+                    // Ports.
+                    if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
+                    {
+                        int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
+                        ActivePortsData.Data.Add(activePortCountTotal);
+                    }
+
+                    if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
+                    {
+                        int ephemeralPortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
+                        EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
+                    }
+
+                    await Task.Delay(250, Token).ConfigureAwait(true);
                 }
 
                 timer.Stop();
@@ -733,6 +735,7 @@ namespace FabricObserver.Observers
             finally
             {
                 cpuUtilizationProvider?.Dispose();
+                cpuUtilizationProvider = null;
             }
         }
 

@@ -13,6 +13,7 @@ using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
@@ -45,10 +46,10 @@ namespace FabricObserver.Observers
         private string fileName;
         private readonly Stopwatch stopwatch;
 
-        public int MaxChildProcessesToMonitor
+        public int MaxChildProcTelemetryDataCount
         {
             get; set;
-        } = 15;
+        }
 
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
@@ -99,13 +100,13 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            // For child process monitoring.
+            // For child process reporting via telemetry.
             if (int.TryParse(
                        GetSettingParameterValue(
                           ConfigurationSectionName,
-                          ObserverConstants.MaxChildProcessesToMonitorParameter), out int maxChildProcs))
+                          ObserverConstants.MaxChildProcTelemetryDataCountParameter), out int maxChildProcs))
             {
-                MaxChildProcessesToMonitor = maxChildProcs;
+                MaxChildProcTelemetryDataCount = maxChildProcs;
             }
 
             await MonitorDeployedAppsAsync(token);
@@ -144,7 +145,8 @@ namespace FabricObserver.Observers
                 string processName = null;
                 int processId = 0;
                 ApplicationInfo app = null;
-                bool hasChildProcs = repOrInst.ChildProcessInfo != null;
+                bool hasChildProcs = repOrInst.ChildProcesses != null && MaxChildProcTelemetryDataCount > 0;
+                
                 if (hasChildProcs)
                 {
                     childProcessTelemetryDataList = new List<ChildProcessTelemetryData>();
@@ -327,8 +329,8 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError);
                 }
 
-                // Child proc info telemetry..
-                if (IsEtwEnabled && childProcessTelemetryDataList != null)
+                // Child proc info telemetry.
+                if (IsEtwEnabled && hasChildProcs)
                 {
                     var data = new
                     {
@@ -338,7 +340,7 @@ namespace FabricObserver.Observers
                     ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, data);
                 }
 
-                if (IsTelemetryEnabled && childProcessTelemetryDataList != null)
+                if (IsTelemetryEnabled && hasChildProcs)
                 {
                     _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList, token);
                 }
@@ -383,7 +385,7 @@ namespace FabricObserver.Observers
                                                                         ApplicationInfo app,
                                                                         CancellationToken token) where T : struct
         {
-            var childProcs = repOrInst.ChildProcessInfo;
+            var childProcs = repOrInst.ChildProcesses;
 
             if (childProcs == null || childProcs.Count == 0 || token.IsCancellationRequested)
             {
@@ -418,23 +420,18 @@ namespace FabricObserver.Observers
                         var childFruds = fruds.Where(x => x.Id.Contains(childProcName)).ToList();
                         metric = childFruds[0].Property;
 
-                        // re-order the list by data value so we can emit raw telemetry for the top 10.
-                        var childFrudsOrdered = childFruds.OrderByDescending(x => x.AverageDataValue).ToList();
-
-                        for (int j = 0; j < childFrudsOrdered.Count; ++j)
+                        for (int j = 0; j < childFruds.Count; ++j)
                         {
                             token.ThrowIfCancellationRequested();
                             
-                            var frud = childFrudsOrdered[j];
-                            sumValues += Math.Round(frud.AverageDataValue, 0);
+                            var frud = childFruds[j];
+                            double value = frud.AverageDataValue;
+                            sumValues += Math.Round(value, 0);
 
                             if (IsEtwEnabled || IsTelemetryEnabled)
                             {
-                                if (j < MaxChildProcessesToMonitor)
-                                {
-                                    var childProcInfo = new ChildProcessInfo { ProcessName = childProcName, Value = frud.AverageDataValue };
-                                    childProcessInfoData.ChildProcessInfo.Add(childProcInfo);
-                                }
+                                var childProcInfo = new ChildProcessInfo { ProcessName = childProcName, Value = value };
+                                childProcessInfoData.ChildProcessInfo.Add(childProcInfo); 
                             }
 
                             if (frud.IsUnhealthy(app.CpuWarningLimitPercent) ||frud.IsUnhealthy(app.MemoryWarningLimitMb) ||
@@ -512,8 +509,6 @@ namespace FabricObserver.Observers
                             fruds.Remove(frud);
                         }
 
-                        childFrudsOrdered?.Clear();
-                        childFrudsOrdered = null;
                         childFruds?.Clear();
                         childFruds = null;
                     }
@@ -527,6 +522,15 @@ namespace FabricObserver.Observers
                     ObserverLogger.LogWarning($"Error processing child processes:{Environment.NewLine}{e}");
                     continue;
                 }
+            }
+
+            // Order List<ChildProcessInfo> by Value descending.
+            childProcessInfoData.ChildProcessInfo = childProcessInfoData.ChildProcessInfo.OrderByDescending(v => v.Value).ToList();
+
+            // Cap size of List<ChildProcessInfo> to MaxChildProcTelemetryDataCount.
+            if (childProcessInfoData.ChildProcessInfo.Count >= MaxChildProcTelemetryDataCount)
+            {
+                childProcessInfoData.ChildProcessInfo = childProcessInfoData.ChildProcessInfo.Take(MaxChildProcTelemetryDataCount).ToList();
             }
 
             return (childProcessInfoData, sumValues);
@@ -668,7 +672,7 @@ namespace FabricObserver.Observers
                         existingAppConfig.NetworkWarningActivePorts = existingAppConfig.NetworkWarningActivePorts == 0 && application.NetworkWarningActivePorts > 0 ? application.NetworkWarningActivePorts : existingAppConfig.NetworkWarningActivePorts;
                         existingAppConfig.NetworkErrorEphemeralPorts = existingAppConfig.NetworkErrorEphemeralPorts == 0 && application.NetworkErrorEphemeralPorts > 0 ? application.NetworkErrorEphemeralPorts : existingAppConfig.NetworkErrorEphemeralPorts;
                         existingAppConfig.NetworkWarningEphemeralPorts = existingAppConfig.NetworkWarningEphemeralPorts == 0 && application.NetworkWarningEphemeralPorts > 0 ? application.NetworkWarningEphemeralPorts : existingAppConfig.NetworkWarningEphemeralPorts;
-                        existingAppConfig.DumpProcessOnError = application.DumpProcessOnError != existingAppConfig.DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig.DumpProcessOnError;
+                        existingAppConfig.DumpProcessOnError = application.DumpProcessOnError == existingAppConfig.DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig.DumpProcessOnError;
                         existingAppConfig.ErrorOpenFileHandles = existingAppConfig.ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig.ErrorOpenFileHandles;
                         existingAppConfig.WarningOpenFileHandles = existingAppConfig.WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig.WarningOpenFileHandles;
                     }
@@ -751,7 +755,7 @@ namespace FabricObserver.Observers
                                              ObserverName,
                                              HealthState.Warning,
                                              $"InitializeAsync() | {application.TargetApp}: Invalid TargetApp value. " +
-                                             $"Value must be a valid Uri string of format \"fabric:/MyApp\", for example.");
+                                             $"Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\"");
 
                         settingsFail++;
                         continue;
@@ -795,6 +799,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
                 {
+
                 }
             }
 
@@ -928,18 +933,15 @@ namespace FabricObserver.Observers
                         (parentProc.ProcessName, parentProc.Id)
                     };
 
-                    if (repOrInst.ChildProcessInfo != null && repOrInst.ChildProcessInfo.Count > 0)
+                    if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
                     {
-                        procTree.AddRange(repOrInst.ChildProcessInfo);
+                        procTree.AddRange(repOrInst.ChildProcesses);
                     }
 
                     for (int j = 0; j < procTree.Count; ++j)
                     {
                         int procId = procTree[j].Pid;
                         string procName = procTree[j].procName;
-
-                        
-
                         TimeSpan duration = TimeSpan.FromSeconds(1);
 
                         if (MonitorDuration > TimeSpan.MinValue)
@@ -953,21 +955,30 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        /* Warm up counters. */
+                        /* Warm up Windows perf counters. */
 
                         if (checkCpu)
                         {
-                            _ = cpuUsage.GetCpuUsagePercentageProcess(procId);
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                _ = cpuUsage.GetCpuUsagePercentageProcess(procId);
+                            }
                         }
 
                         if (checkHandles)
                         {
-                            _ = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                _ = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
+                            }
                         }
 
                         if (checkMemMb || checkMemPct)
                         {
-                            _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(procId);
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(procId);
+                            }
                         }
 
                         // Monitor Duration applies to the code below.
@@ -1179,6 +1190,9 @@ namespace FabricObserver.Observers
                 }
 
                 deployedApps = deployedApps.Where(a => a.ApplicationTypeName == applicationType).ToList();
+
+                appList.Clear();
+                appList = null;
             }
 
             for (int i = 0; i < deployedApps.Count; ++i)
@@ -1292,7 +1306,7 @@ namespace FabricObserver.Observers
                         
                         if (childPids != null && childPids.Count > 0)
                         {
-                            replicaInfo.ChildProcessInfo = childPids;
+                            replicaInfo.ChildProcesses = childPids;
                         }
                         break;
                     }
@@ -1324,7 +1338,7 @@ namespace FabricObserver.Observers
                         
                         if (childProcs != null && childProcs.Count > 0)
                         {
-                            replicaInfo.ChildProcessInfo = childProcs;
+                            replicaInfo.ChildProcesses = childProcs;
                         }
                         break;
                     }

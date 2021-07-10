@@ -52,11 +52,10 @@
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:01" />
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:02" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:02" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
@@ -74,8 +73,10 @@
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    <!-- Max number of a service process's spawned (child) processes to monitor. -->
-    <Parameter Name="AppObserverMaxChildProcessesToMonitor" DefaultValue="15" />
+    <!-- Max number of a service process's spawned (child) processes to report on via telemetry (ordered by descending value - so, top n consumers).
+         **If not set, or set to 0, then AppObserver will *not* monitor a service's descendant processes**. The recommended value range for this setting is 5 to 10.
+         See Observers.md for more details on AppObserver's service process family tree monitoring. -->
+    <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -152,7 +153,7 @@
             <Parameter Name="UseCircularBuffer" Value="[AppObserverUseCircularBuffer]" />
             <!-- Required-If UseCircularBuffer = True -->
             <Parameter Name="ResourceUsageDataCapacity" Value="[AppObserverResourceUsageDataCapacity]" />
-            <Parameter Name="MaxChildProcessesToMonitor" Value="[AppObserverMaxChildProcessesToMonitor]" />
+            <Parameter Name="MaxChildProcTelemetryDataCount" Value="[AppObserverMaxChildProcTelemetryDataCount]" />
           </Section>
           <Section Name="CertificateObserverConfiguration">
             <Parameter Name="Enabled" Value="[CertificateObserverEnabled]" />
@@ -171,7 +172,6 @@
             <Parameter Name="EnableTelemetry" Value="[DiskObserverEnableTelemetry]" />
             <Parameter Name="EnableEtw" Value="[DiskObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[DiskObserverEnableVerboseLogging]" />
-            <Parameter Name="MonitorDuration" Value="[DiskObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[DiskObserverRunInterval]" />
             <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="[DiskSpacePercentUsageErrorThreshold]" />
             <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="[DiskSpacePercentUsageWarningThreshold]" />
@@ -265,9 +265,9 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!--<Policies>
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Main" />
-    </Policies>-->
+    <Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
+    </Policies>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -280,9 +280,9 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!--<Principals>
+  <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals>-->
+  </Principals>
 </ApplicationManifest>

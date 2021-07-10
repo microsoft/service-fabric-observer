@@ -825,9 +825,10 @@ namespace FabricObserver.Observers
                     if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                     {
                         // Warm up the perf counters.
-                        _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
-                        float mem = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
-                        allMemData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(mem);
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
+                        }
                     }
 
                     // Allocated Handles
@@ -857,6 +858,13 @@ namespace FabricObserver.Observers
                             {
                                 int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process.Id);
                                 allCpuData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(cpu);
+                            }
+
+                            // Mem
+                            if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
+                            {
+                                float mem = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
+                                allMemData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(mem);
                             }
 
                             await Task.Delay(250, Token).ConfigureAwait(true);

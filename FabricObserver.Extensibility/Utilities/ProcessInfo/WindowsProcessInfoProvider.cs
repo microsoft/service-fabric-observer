@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
+using System.Linq;
 using System.Management;
 
 namespace FabricObserver.Observers.Utilities
@@ -19,6 +20,7 @@ namespace FabricObserver.Observers.Utilities
         const string FileHandlesCounterName = "Handle Count";
         private readonly object memPerfCounterLock = new object();
         private readonly object fileHandlesPerfCounterLock = new object();
+        private const int MaxDescendants = 50;
         private PerformanceCounter memProcessPrivateWorkingSetCounter = new PerformanceCounter
         {
             CategoryName = ProcessCategoryName,
@@ -47,7 +49,6 @@ namespace FabricObserver.Observers.Utilities
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
             {
                 // "Process with an Id of 12314 is not running."
-                Logger.LogWarning($"Handled Exception in GetProcessPrivateWorkingSetInMB: {e.Message}");
                 return 0F;
             }
 
@@ -60,15 +61,12 @@ namespace FabricObserver.Observers.Utilities
                 }
                 catch (Exception e) when (e is ArgumentNullException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    Logger.LogWarning($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
-
                     // Don't throw.
                     return 0F;
                 }
                 catch (Exception e)
                 { 
                     Logger.LogError($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
-
                     throw;
                 }
             }
@@ -94,7 +92,6 @@ namespace FabricObserver.Observers.Utilities
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
             {
                 // "Process with an Id of 12314 is not running."
-                Logger.LogWarning($"Handled Exception in GetProcessAllocatedHandles: {e.Message}");
                 return -1F;
             }
 
@@ -107,15 +104,12 @@ namespace FabricObserver.Observers.Utilities
                 }
                 catch (Exception e) when (e is InvalidOperationException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    Logger.LogWarning($"{ProcessCategoryName} {FileHandlesCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
-
                     // Don't throw.
                     return -1F;
                 }
                 catch (Exception e)
                 {
                     Logger.LogError($"{ProcessCategoryName} {FileHandlesCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
-
                     throw;
                 }
             }
@@ -136,8 +130,12 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
-            // Get descendent procs, max depth = 4. *Not* an optimal algo... This is fine. It is much better than increased StackOverflow exception potential
-            // due to recursive calls which are FailFast and will take FO down. Most services will never reach c3, let alone c4, anyway...
+            if (childProcesses.Count >= MaxDescendants)
+            {
+                return childProcesses.Take(MaxDescendants).ToList();
+            }
+
+            // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
                 List<(string procName, int pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].pid);
@@ -146,13 +144,23 @@ namespace FabricObserver.Observers.Utilities
                 {
                     childProcesses.AddRange(c1);
 
-                    for (int j = 0; j < c1.Count; ++j)
+                    if (childProcesses.Count >= MaxDescendants)
+                    {
+                        return childProcesses.Take(MaxDescendants).ToList();
+                    }
+
+                    for (int j = 0; j < c1.Count; ++j)  
                     {
                         List<(string procName, int pid)> c2 = TupleGetChildProcessInfo(c1[j].pid);
 
                         if (c2?.Count > 0)
                         {
                             childProcesses.AddRange(c2);
+
+                            if (childProcesses.Count >= MaxDescendants)
+                            {
+                                return childProcesses.Take(MaxDescendants).ToList();
+                            }
 
                             for (int k = 0; k < c2.Count; ++k)
                             {
@@ -162,6 +170,11 @@ namespace FabricObserver.Observers.Utilities
                                 {
                                     childProcesses.AddRange(c3);
 
+                                    if (childProcesses.Count >= MaxDescendants)
+                                    {
+                                        return childProcesses.Take(MaxDescendants).ToList();
+                                    }
+
                                     for (int l = 0; l < c3.Count; ++l)
                                     {
                                         List<(string procName, int pid)> c4 = TupleGetChildProcessInfo(c3[l].pid);
@@ -169,6 +182,11 @@ namespace FabricObserver.Observers.Utilities
                                         if (c4?.Count > 0)
                                         {
                                             childProcesses.AddRange(c4);
+
+                                            if (childProcesses.Count >= MaxDescendants)
+                                            {
+                                                return childProcesses.Take(MaxDescendants).ToList();
+                                            }
                                         }
                                     }
                                 }
@@ -197,8 +215,6 @@ namespace FabricObserver.Observers.Utilities
                 }
                 catch (Exception e) when (e is ArgumentNullException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    Logger.LogWarning($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter handled error:{Environment.NewLine}{e}");
-
                     // Don't throw.
                     return 0F;
                 }
