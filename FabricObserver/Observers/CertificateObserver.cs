@@ -250,7 +250,6 @@ namespace FabricObserver.Observers
                         ObserverName = ObserverName,
                         OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                         Source = ObserverConstants.FabricObserverName,
-                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration)
                     };
 
                     await TelemetryClient.ReportHealthAsync(telemetryData, Token);

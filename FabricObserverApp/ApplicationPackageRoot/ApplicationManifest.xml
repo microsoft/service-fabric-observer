@@ -27,9 +27,9 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
+    <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" />-->
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />
@@ -37,7 +37,7 @@
     <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" /> -->
+    <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" />-->
     <!-- CSV Logging -->
     <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
@@ -51,7 +51,7 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
+    <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" />-->
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:02" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
@@ -65,7 +65,7 @@
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
+    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" />-->
     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
@@ -73,9 +73,8 @@
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    <!-- Max number of a service process's spawned (child) processes to report on via telemetry (ordered by descending value - so, top n consumers).
-         **If not set, or set to 0, then AppObserver will *not* monitor a service's descendant processes**. The recommended value range for this setting is 5 to 10.
-         See Observers.md for more details on AppObserver's service process family tree monitoring. -->
+     <!-- Process family tree monitoring. -->
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
@@ -153,6 +152,7 @@
             <Parameter Name="UseCircularBuffer" Value="[AppObserverUseCircularBuffer]" />
             <!-- Required-If UseCircularBuffer = True -->
             <Parameter Name="ResourceUsageDataCapacity" Value="[AppObserverResourceUsageDataCapacity]" />
+            <Parameter Name="EnableChildProcessMonitoring" Value="[AppObserverEnableChildProcessMonitoring]" />
             <Parameter Name="MaxChildProcTelemetryDataCount" Value="[AppObserverMaxChildProcTelemetryDataCount]" />
           </Section>
           <Section Name="CertificateObserverConfiguration">
@@ -265,9 +265,9 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!--<Policies>
+    <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies>-->
+    </Policies>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -280,9 +280,9 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!--<Principals>
+  <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals>-->
+  </Principals>
 </ApplicationManifest>

@@ -143,10 +143,11 @@
          the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
          like 0 or a negative number (or omit the parameter altogether). -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
-    <!-- The maximum number of descendant processes (where this setting is n in top n descendant processes resource consumers for some observed metric) to report on in a Telemetry event (ETW, LogAnalytics, AppInsights..). 
-         **If not set, or set to 0, then AppObserver will not monitor descendant processes**. A reasonable value (set in ApplicationManifest.xml) is 5 to 10. 
-         Assuming this setting is greater than 0, the culmative impact of descendant processes on the resource usage of a user service process (parent) is calculated 
-         and if the sum of all usage (children + parent) exceeds a supplied warning threshold for some metric, then the containing app will be put into Warning, as you would expect.-->
+    <!-- AppObserver will automatically monitor a service process's descendants (max depth = 5, max procs = 50). You should only disable this if you know the services
+         that you want AppObserver to monitor do not launch child processes. -->
+    <Parameter Name="EnableChildProcessMonitoring" Value ="" MustOverride="true" />
+    <!-- Max number of a service process's spawned (child) processes to report via telemetry (ordered by descending value - so, top n consumers).
+         The recommended value range for this setting is 5 to 10. See Observers.md for more details on AppObserver's child process monitoring. -->
     <Parameter Name="MaxChildProcTelemetryDataCount" Value="" MustOverride="true"/>
   </Section>
   <Section Name="CertificateObserverConfiguration">
@@ -285,7 +286,7 @@
        [ObserverName]Configuration.
        Example: SampleNewObserverConfiguration where SampleNewObserver is the type name of the observer plugin.
        See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
-  <!--<Section Name="FabricObserverMdmConfiguration">
+  <!--<Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />

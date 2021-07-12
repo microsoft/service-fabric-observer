@@ -606,7 +606,8 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Minimum";
             bool warningOrError = false;
-            string name = string.Empty, id, drive = string.Empty, procId = string.Empty;
+            string name = string.Empty, id, drive = string.Empty;
+            int procId = 0;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
             Uri appName = null;
@@ -621,7 +622,7 @@ namespace FabricObserver.Observers
                     appName = replicaOrInstance.ApplicationName;
                     serviceName = replicaOrInstance.ServiceName;
                     name = serviceName.OriginalString.Replace($"{appName.OriginalString}/", string.Empty);
-                    procId = replicaOrInstance.HostProcessId.ToString();
+                    procId = (int)replicaOrInstance.HostProcessId;
                 }
                 else // System service report from FabricSystemObserver.
                 {
@@ -630,9 +631,9 @@ namespace FabricObserver.Observers
 
                     try
                     {
-                        procId = Process.GetProcessesByName(name).First()?.Id.ToString();
+                        procId = (int)Process.GetProcessesByName(name).First()?.Id;
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException)
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
                     {
 
                     }
@@ -652,7 +653,7 @@ namespace FabricObserver.Observers
                     Value = Math.Round(data.AverageDataValue, 0),
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ProcessId = procId,
-                    ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
+                    ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ServiceName = serviceName?.OriginalString ?? string.Empty,
                     SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
                     Source = ObserverConstants.FabricObserverName
@@ -695,7 +696,7 @@ namespace FabricObserver.Observers
                                         Value = Math.Round(data.AverageDataValue, 0),
                                         PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                         ProcessId = procId,
-                                        ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
+                                        ReplicaId = replicaOrInstance?.ReplicaOrInstanceId,
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
                                         SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty

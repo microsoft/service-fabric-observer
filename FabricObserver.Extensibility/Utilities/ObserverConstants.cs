@@ -55,6 +55,7 @@ namespace FabricObserver.Observers.Utilities
         // AppObserver.
         public const string AppObserverName = "AppObserver";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
+        public const string EnableChildProcessMonitoring = "EnableChildProcessMonitoring";
         public const string MaxChildProcTelemetryDataCountParameter = "MaxChildProcTelemetryDataCount";
 
         // Certificate Observer

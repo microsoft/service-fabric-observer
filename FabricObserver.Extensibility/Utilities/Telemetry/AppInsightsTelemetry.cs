@@ -174,13 +174,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                string value = null;
-
-                if (telemetryData.Value != null)
-                {
-                    value = telemetryData.Value.ToString();
-                }
-
                 var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
@@ -188,13 +181,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId.ToString() },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", value ?? string.Empty },
+                    { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId ?? string.Empty },
-                    { "ReplicaId", telemetryData.ReplicaId ?? string.Empty },
+                    { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }
@@ -249,13 +242,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.CompletedTask;
             }
 
-            string value = null;
-
-            if (telemetryData.Value != null)
-            {
-                value = telemetryData.Value.ToString();
-            }
-
             try
             {
                 var properties = new Dictionary<string, string>
@@ -263,12 +249,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId.ToString() },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", value ?? string.Empty },
+                    { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId },
-                    { "ReplicaId", telemetryData.ReplicaId },
+                    { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "Source", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }

@@ -51,6 +51,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        public bool EnableChildProcessMonitoring
+        {
+            get; set;
+        }
+
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
             get; set;
@@ -100,15 +105,6 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            // For child process reporting via telemetry.
-            if (int.TryParse(
-                       GetSettingParameterValue(
-                          ConfigurationSectionName,
-                          ObserverConstants.MaxChildProcTelemetryDataCountParameter), out int maxChildProcs))
-            {
-                MaxChildProcTelemetryDataCount = maxChildProcs;
-            }
-
             await MonitorDeployedAppsAsync(token);
             await ReportAsync(token);
 
@@ -133,7 +129,7 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
 
-            // For use in family tree monitoring.
+            // For use in process family tree monitoring.
             List<ChildProcessTelemetryData> childProcessTelemetryDataList = null;
             TimeSpan healthReportTimeToLive = GetHealthReportTimeToLive();
 
@@ -145,7 +141,7 @@ namespace FabricObserver.Observers
                 string processName = null;
                 int processId = 0;
                 ApplicationInfo app = null;
-                bool hasChildProcs = repOrInst.ChildProcesses != null && MaxChildProcTelemetryDataCount > 0;
+                bool hasChildProcs = EnableChildProcessMonitoring && repOrInst.ChildProcesses != null;
                 
                 if (hasChildProcs)
                 {
@@ -330,7 +326,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Child proc info telemetry.
-                if (IsEtwEnabled && hasChildProcs)
+                if (IsEtwEnabled && hasChildProcs && MaxChildProcTelemetryDataCount > 0)
                 {
                     var data = new
                     {
@@ -340,7 +336,7 @@ namespace FabricObserver.Observers
                     ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, data);
                 }
 
-                if (IsTelemetryEnabled && hasChildProcs)
+                if (IsTelemetryEnabled && hasChildProcs && MaxChildProcTelemetryDataCount > 0)
                 {
                     _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList, token);
                 }
@@ -399,7 +395,7 @@ namespace FabricObserver.Observers
                 ApplicationName = repOrInst.ApplicationName.OriginalString,
                 ServiceName = repOrInst.ServiceName.OriginalString,
                 NodeName = NodeName,
-                ProcessId = repOrInst.HostProcessId,
+                ProcessId = (int)repOrInst.HostProcessId,
                 PartitionId = repOrInst.PartitionId.ToString(),
                 ReplicaId = repOrInst.ReplicaOrInstanceId.ToString(),
                 ChildProcessCount = childProcs.Count,
@@ -472,8 +468,8 @@ namespace FabricObserver.Observers
                                         NodeName = NodeName,
                                         ObserverName = ObserverName,
                                         PartitionId = repOrInst.PartitionId.ToString(),
-                                        ProcessId = childPid.ToString(),
-                                        ReplicaId = repOrInst.ReplicaOrInstanceId.ToString(),
+                                        ProcessId = childPid,
+                                        ReplicaId = repOrInst.ReplicaOrInstanceId,
                                         ServiceName = repOrInst.ServiceName.OriginalString,
                                         Source = ObserverConstants.FabricObserverName,
                                         Value = frud.AverageDataValue
@@ -550,6 +546,24 @@ namespace FabricObserver.Observers
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             userTargetList = new List<ApplicationInfo>();
             deployedTargetList = new List<ApplicationInfo>();
+
+            /* For descendant proc monitoring */
+            if (bool.TryParse(
+                     GetSettingParameterValue(
+                        ConfigurationSectionName,
+                        ObserverConstants.EnableChildProcessMonitoring), out bool enableDescendantMonitoring))
+            {
+                EnableChildProcessMonitoring = enableDescendantMonitoring;
+            }
+
+            if (int.TryParse(
+                       GetSettingParameterValue(
+                          ConfigurationSectionName,
+                          ObserverConstants.MaxChildProcTelemetryDataCountParameter), out int maxChildProcs))
+            {
+                MaxChildProcTelemetryDataCount = maxChildProcs;
+            }
+            /* End descendant proc monitoring */
 
             configSettings.Initialize(
                             FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
@@ -1302,12 +1316,16 @@ namespace FabricObserver.Observers
                             ServiceName = statefulReplica.ServiceName
                         };
 
-                        var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
-                        
-                        if (childPids != null && childPids.Count > 0)
+                        if (EnableChildProcessMonitoring)
                         {
-                            replicaInfo.ChildProcesses = childPids;
+                            var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
+                            }
                         }
+
                         break;
                     }
                     case DeployedStatelessServiceInstance statelessInstance:
@@ -1334,12 +1352,16 @@ namespace FabricObserver.Observers
                             ServiceName = statelessInstance.ServiceName
                         };
 
-                        var childProcs = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
-                        
-                        if (childProcs != null && childProcs.Count > 0)
+                        if (EnableChildProcessMonitoring)
                         {
-                            replicaInfo.ChildProcesses = childProcs;
+                            var childProcs = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
+
+                            if (childProcs != null && childProcs.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childProcs;
+                            }
                         }
+
                         break;
                     }
                 }

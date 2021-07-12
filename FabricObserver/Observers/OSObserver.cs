@@ -254,7 +254,6 @@ namespace FabricObserver.Observers
                             Description = auServiceEnabledMessage,
                             HealthState = "Warning",
                             Metric = "WUAutoDownloadEnabled",
-                            Value = isAUAutomaticDownloadEnabled,
                             NodeName = NodeName,
                             ObserverName = ObserverName,
                             Source = ObserverConstants.FabricObserverName

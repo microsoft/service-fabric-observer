@@ -43,19 +43,29 @@ For every other observer, it's XML as per usual.
 
 ## AppObserver  
 Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application service processes and the child processes they spawn. If a service process creates child processes, then these processes will be monitored and their summed resource usage for some metric you are observing will be applied to the parent process (added) and a threshold breach will be determined based on the sum of children and parent resource usage.
-This observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring**.
+This observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring**. 
+
+#### A note on child process monitoring
+
+AppObserver (FO version >= 3.1.15) will automatically monitor up to 50 process descendants of your primary service process (50 is extreme. You should not design services that own that many descendant processes..). If your services launch child processes, then AppObserver will automatically monitor them for the same metrics and thresholds you supply for the containing Application. 
+Their culmative impact on some monitored metric will be added to that of the parent process (your service process) and this combined (sum) value will be used to determine health state based on supplied threshold for the related metric.  
+
+You can disable this feature (you shouldn't if you **do** launch child processes from your service and they run for a while or for the lifetime of your service and compute (use resources)) by setting AppObserverEnableChildProcessMonitoring to false. For telemetry, you can control how many offspring are present in the event data by setting AppObserverMaxChildProcTelemetryDataCount (default is 5). Both of these settings are located in ApplicationManifest.xml.
+The AppObserverMaxChildProcTelemetryDataCount setting determines the size of the list used in family tree process data telemetry transmission, which corresponds to the size of the telemetry data event. You should keep this below 10. AppObserver will order the list of ChildProcessInfo (a member of ChildProcessTelemetryData) by resoure usage value, from highest to lowest. 
+
+In the vast majority of cases, your services are not going to launch 50 descendant processes, but FO is designed to support such an extreme edge case scenario, which frankly should not be in your service design playbook. Also note that if you do spawn a lot of child processes and 
+you have AppObserverMonitorDuration set to, say, 10 seconds, then you will be running AppObserver for n * 10 seconds, where n is the number of descendant proceses plus the parent service process that owns them for each metric for each service with descendants. Please keep this in mind as you design your configuration.  
+
+Finally, you can ignore this feature if you do not launch child processes from your services. Just disable it. This is important because if AppObserver will run code that checks to see if some process id has children. If you know this is not the case, then save CPU cycles and disable the feature.
+
 
 ### Input
-JSON config file supplied by user, stored in
-PackageRoot/Observers.Data folder. This data contains JSON arrays
-objects which constitute Service Fabric Apps (identified by service
-URI's). Users supply Error/Warning thresholds for CPU use, Memory use and Disk
-IO, ports. Memory values are supplied as number of megabytes... CPU and
-Disk Space values are provided as percentages (integers: so, 80 = 80%...)... 
+JSON config file supplied by user, stored in PackageRoot/Observers.Data folder. This data contains JSON arrays
+objects which constitute Service Fabric Apps (identified by service URI's). Users supply Error/Warning thresholds for CPU use, Memory use and Disk
+IO, ports. Memory values are supplied as number of megabytes... CPU and Disk Space values are provided as percentages (integers: so, 80 = 80%...)... 
 **Please note that you can omit any of these properties. You can also supply 0 as the value, which means that threshold
 will be ignored (they are not omitted below so you can see what a fully specified object looks like). 
-We recommend you omit all Error thresholds until you become more 
-comfortable with the behavior of your services and the side effects they have on machine resources**.
+We recommend you omit all Error thresholds until you become more comfortable with the behavior of your services and the side effects they have on machine resources**.
 
 Example JSON config file located in **PackageRoot\\Config** folder (AppObserver.config.json). This is an example of a configuration that applies
 to all Service Fabric user (non-System) application service processes running on the virtual machine.
@@ -87,7 +97,7 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) | 
 | **cpuErrorLimitPercent** | Maximum CPU percentage that should generate a Fabric Error |
 | **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Fabric Warning |
-| **dumpProcessOnError** | Instructs whether or not FabricObserver should   dump your service process when service health is detected to be in an  Error (critical) state... |  
+| **dumpProcessOnError** | Instructs whether or not FabricObserver should dump your service process when service health is detected to be in an  Error (critical) state... |  
 | **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate a Fabric Error. |
 | **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning. |
 | **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Error. |
@@ -98,9 +108,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 **Output** Log text(Error/Warning), Service Fabric Application Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
 
 AppObserver also supports non-JSON parameters for configuration unrelated to thresholds. Like all observers these settings are located in ApplicationManifest.xml to support versionless configuration updates via application upgrade. 
-One of these settings is the maximum number of child processes to monitor (AppObserverMaxChildProcessesToMonitor). Note that there is a cap on generations. Up to 4 generations of child processes will be monitored. The resulting set will be ordered by resource usage from high to low for a given metric. This list size is determined by this setting.
 
-Example SFX Output (Warning - Ephemeral Ports Usage):  
+Example AppObserver Output (Warning - Ephemeral Ports Usage):  
 
 ![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning output example.")  
 
