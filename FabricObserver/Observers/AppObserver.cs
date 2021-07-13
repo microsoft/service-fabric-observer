@@ -430,11 +430,14 @@ namespace FabricObserver.Observers
                                 childProcessInfoData.ChildProcessInfo.Add(childProcInfo); 
                             }
 
-                            if (frud.IsUnhealthy(app.CpuWarningLimitPercent) ||frud.IsUnhealthy(app.MemoryWarningLimitMb) ||
-                                frud.IsUnhealthy(app.MemoryWarningLimitPercent) || frud.IsUnhealthy(app.NetworkWarningEphemeralPorts) || 
-                                frud.IsUnhealthy(app.WarningOpenFileHandles))
+                            if ((frud.Property == ErrorWarningProperty.TotalCpuTime && frud.IsUnhealthy(app.CpuWarningLimitPercent)) ||
+                                (frud.Property == ErrorWarningProperty.TotalMemoryConsumptionMb && frud.IsUnhealthy(app.MemoryWarningLimitMb)) ||
+                                (frud.Property == ErrorWarningProperty.TotalMemoryConsumptionPct && frud.IsUnhealthy(app.MemoryWarningLimitPercent)) ||
+                                (frud.Property == ErrorWarningProperty.TotalActivePorts && frud.IsUnhealthy(app.NetworkWarningActivePorts)) ||
+                                (frud.Property == ErrorWarningProperty.TotalEphemeralPorts && frud.IsUnhealthy(app.NetworkWarningEphemeralPorts)) || 
+                                (frud.Property == ErrorWarningProperty.TotalFileHandles && frud.IsUnhealthy(app.WarningOpenFileHandles)))
                             {
-                                if (IsEtwEnabled)
+                                /*if (IsEtwEnabled)
                                 {
                                     var warningdata = new
                                     {
@@ -476,7 +479,7 @@ namespace FabricObserver.Observers
                                     };
 
                                     _ = TelemetryClient?.ReportHealthAsync(telemWarnData, token);
-                                }
+                                }*/
 
                                 // This provides information in SFX to help you understand that your App is in Warning because one of its services' child processes
                                 // is misbehaving. Now you know exactly which one you need to fix.
@@ -486,7 +489,7 @@ namespace FabricObserver.Observers
                                     Code = FOErrorWarningCodes.Ok,
                                     EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
                                     HealthMessage = $"Note that service {repOrInst.ServiceName.OriginalString} spawned a child process, {childProcName}({childPid}), " +
-                                                    $"that has exceeded your supplied threshold for {frud.Property} for Application {repOrInst.ApplicationName.OriginalString}.",
+                                                    $"that has exceeded your supplied Warning or Error threshold for {frud.Property} for Application {repOrInst.ApplicationName.OriginalString}.",
                                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                                     ReportType = HealthReportType.Application,
                                     State = HealthState.Ok,
