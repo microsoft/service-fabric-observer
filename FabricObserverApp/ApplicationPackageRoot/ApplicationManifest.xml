@@ -73,7 +73,7 @@
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-     <!-- Process family tree monitoring. -->
+    <!-- Process family tree monitoring. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- CertificateObserver-->
@@ -265,9 +265,9 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <Policies>
+    <!--<Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies>
+    </Policies>-->
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -280,9 +280,9 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <Principals>
+  <!--<Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals>
+  </Principals>-->
 </ApplicationManifest>
