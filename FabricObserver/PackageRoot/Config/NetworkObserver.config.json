@@ -8,9 +8,9 @@
         "protocol": "http"
       },
       {
-        "hostname": "somesqlservername.database.windows.net",
-        "port": 1433,
-        "protocol": "tcp"
+        "hostname": "https://mycosmosdb.documents.azure.com/dbs/mydb",
+        "port": 443,
+        "protocol": "http"
       }
     ]
   },

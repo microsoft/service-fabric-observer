@@ -455,11 +455,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(true);
-            }).ConfigureAwait(true);
+                await obsMgr.StartObserversAsync();
+            });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(true));
-            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
+            await obsMgr.StopObserversAsync();
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 

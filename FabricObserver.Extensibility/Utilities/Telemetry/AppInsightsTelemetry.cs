@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -14,6 +15,8 @@ using FabricObserver.Observers.Interfaces;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ServiceFabric.TelemetryLib;
+using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -171,13 +174,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                string value = null;
-
-                if (telemetryData.Value != null)
-                {
-                    value = telemetryData.Value.ToString();
-                }
-
                 var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
@@ -185,13 +181,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId.ToString() },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", value ?? string.Empty },
+                    { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId ?? string.Empty },
-                    { "ReplicaId", telemetryData.ReplicaId ?? string.Empty },
+                    { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }
@@ -246,13 +242,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.CompletedTask;
             }
 
-            string value = null;
-
-            if (telemetryData.Value != null)
-            {
-                value = telemetryData.Value.ToString();
-            }
-
             try
             {
                 var properties = new Dictionary<string, string>
@@ -260,12 +249,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId.ToString() },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", value ?? string.Empty },
+                    { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId },
-                    { "ReplicaId", telemetryData.ReplicaId },
+                    { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "Source", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }
@@ -278,6 +267,61 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e}");
             }
 
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Reports metric for a collection (List) of ChildProcessTelemetryData instances.
+        /// </summary>
+        /// <param name="telemetryDataList">List of ChildProcessTelemetryData.</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <returns></returns>
+        public Task ReportMetricAsync(List<ChildProcessTelemetryData> telemetryDataList, CancellationToken cancellationToken)
+        {
+            if (telemetryDataList == null || cancellationToken.IsCancellationRequested)
+            {
+                return Task.CompletedTask;
+            }
+
+            string clusterid = string.Empty;
+            
+            using (FabricClient fabClient = new FabricClient())
+            {
+                var (clusterId, _, _) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabClient, cancellationToken).Result;
+                clusterid = clusterId;
+            }
+
+            string OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+
+            foreach (var telemData in telemetryDataList)
+            {
+                try
+                {
+                    var properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", clusterid },
+                        { "ApplicationName", telemData.ApplicationName ?? string.Empty },
+                        { "ServiceName", telemData.ServiceName ?? string.Empty },
+                        { "ProcessId", telemData.ProcessId.ToString() },
+                        { "Metric", telemData.Metric ?? string.Empty },
+                        { "Value", telemData.Value.ToString() },
+                        { "ChildProcessCount", telemData.ChildProcessCount.ToString() },
+                        { "ChildProcessInfo", JsonConvert.SerializeObject(telemData.ChildProcessInfo) },
+                        { "PartitionId", telemData.PartitionId },
+                        { "ReplicaId", telemData.ReplicaId },
+                        { "Source", ObserverConstants.AppObserverName },
+                        { "NodeName", telemData.NodeName },
+                        { "OS", OS }
+                    };
+
+                    telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
+                }
+                catch (Exception e)
+                {
+                    logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e}");
+                }
+            }
+            
             return Task.CompletedTask;
         }
 

@@ -64,27 +64,27 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Gets the name of the machine resource property this instance represents.
+        /// Gets or sets the name of the machine resource property this instance represents.
         /// </summary>
         public string Property
         {
-            get;
+            get; set;
         }
 
         /// <summary>
-        /// Gets the unique Id of this instance.
+        /// Gets or sets the unique Id of this instance.
         /// </summary>
         public string Id
         {
-            get;
+            get; set;
         }
 
         /// <summary>
-        /// Gets the unit of measure for the data (%, MB/GB, etc).
+        /// Gets or sets the unit of measure for the data (%, MB/GB, etc).
         /// </summary>
         public string Units
         {
-            get;
+            get; set;
         }
 
         /// <summary>
@@ -93,7 +93,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public IList<T> Data
         {
-            get;
+            get; set;
         }
 
         private bool isInWarningState;

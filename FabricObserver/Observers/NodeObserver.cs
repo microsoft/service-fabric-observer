@@ -22,48 +22,24 @@ namespace FabricObserver.Observers
         private readonly Stopwatch stopwatch;
 
         // These are public properties because they are used in unit tests.
-        public FabricResourceUsageData<float> MemDataCommittedBytes
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<float> MemDataCommittedBytes;
 
-        public FabricResourceUsageData<int> FirewallData
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<int> FirewallData;
 
-        public FabricResourceUsageData<int> ActivePortsData
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<int> ActivePortsData;
 
-        public FabricResourceUsageData<int> EphemeralPortsData
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<int> EphemeralPortsData;
 
-        public FabricResourceUsageData<double> MemDataPercentUsed
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<double> MemDataPercentUsed;
 
-        public FabricResourceUsageData<float> CpuTimeData
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<float> CpuTimeData;
 
         // These are only useful for Linux.\\
 
         // Holds data for percentage of total configured file descriptors that are in use.
-        public FabricResourceUsageData<double> LinuxFileHandlesDataPercentAllocated
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<double> LinuxFileHandlesDataPercentAllocated;
 
-        public FabricResourceUsageData<int> LinuxFileHandlesDataTotalAllocated
-        {
-            get; set;
-        }
+        public FabricResourceUsageData<int> LinuxFileHandlesDataTotalAllocated;
 
         public float CpuErrorUsageThresholdPct
         {
@@ -640,19 +616,6 @@ namespace FabricObserver.Observers
 
             try
             {
-                // Ports.
-                if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
-                {
-                    int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
-                    ActivePortsData.Data.Add(activePortCountTotal);
-                }
-
-                if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
-                {
-                    int ephemeralPortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
-                    EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
-                }
-
                 // Firewall rules.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && FirewallData != null)
                 {
@@ -722,11 +685,13 @@ namespace FabricObserver.Observers
                 {
                     token.ThrowIfCancellationRequested();
 
+                    // CPU
                     if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
                         CpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
                     }
 
+                    // Memory
                     if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                     {
                         float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
@@ -736,6 +701,19 @@ namespace FabricObserver.Observers
                     if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                     {
                         MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
+                    }
+
+                    // Ports.
+                    if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
+                    {
+                        int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
+                        ActivePortsData.Data.Add(activePortCountTotal);
+                    }
+
+                    if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
+                    {
+                        int ephemeralPortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
+                        EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
                     }
 
                     await Task.Delay(250, Token).ConfigureAwait(true);
@@ -757,6 +735,7 @@ namespace FabricObserver.Observers
             finally
             {
                 cpuUtilizationProvider?.Dispose();
+                cpuUtilizationProvider = null;
             }
         }
 

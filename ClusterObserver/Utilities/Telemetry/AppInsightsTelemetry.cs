@@ -122,13 +122,6 @@ namespace ClusterObserver.Utilities.Telemetry
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                string value = null;
-
-                if (telemetryData.Value != null)
-                {
-                    value = telemetryData.Value.ToString();
-                }
-
                 Dictionary<string, string> properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
@@ -136,13 +129,13 @@ namespace ClusterObserver.Utilities.Telemetry
                     { "Application", telemetryData.ApplicationName ?? string.Empty },
                     { "Service", telemetryData.ServiceName ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId.ToString() },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", value ?? string.Empty },
+                    { "Value", telemetryData.Value.ToString() },
                     { "Partition", telemetryData.PartitionId },
-                    { "Replica", telemetryData.ReplicaId },
+                    { "Replica", telemetryData.ReplicaId.ToString() },
                     { "Source", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }

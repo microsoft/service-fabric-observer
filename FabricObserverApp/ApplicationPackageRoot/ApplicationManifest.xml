@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.14" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.15" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
              simple configuration updates for them. By design, any observer you make using our 
              extensibility model will employ the same basic config parameters as all observers do.
@@ -18,7 +18,6 @@
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
     <!--Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />-->
-    
     <!-- Telemetry - AppInsights or LogAnalytics -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
@@ -28,8 +27,7 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" /> -->
-    
+    <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" />-->
     <!-- ETW - Custom EventSource Tracing -->
     <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
@@ -39,13 +37,11 @@
     <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" /> -->
-    
+    <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" />-->
     <!-- CSV Logging -->
     <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
-    
     <!-- Verbose Logging -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
@@ -55,14 +51,11 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" /> -->
-    
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00) -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="DiskObserverMonitorDuration" DefaultValue="00:00:01" />
+    <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" />-->
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:02" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:02" />
-    
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
@@ -72,28 +65,28 @@
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" /> -->
-    
+    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" />-->
     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
+    <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    
+    <!-- Process family tree monitoring. -->
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['mythumb1', 'mythumb2', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
     <Parameter Name="AppCertThumbprintsToObserve" DefaultValue="[]" />
     <Parameter Name="AppCertCommonNamesToObserve" DefaultValue="[]" />
-    
     <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="85" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthWarningThreshold" DefaultValue="15" />
-    
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
@@ -111,7 +104,6 @@
     <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="5000" />
     <!-- Whether to monitor Windows Event Log. -->
     <Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
-    
     <!-- NodeObserver -->
     <Parameter Name="NodeObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
@@ -134,10 +126,8 @@
     <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
     <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitTotal" DefaultValue="" />
     <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitTotal" DefaultValue="" />
-    
     <!-- OSObserver Windows AutoUpdate Settings Check -->
     <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
-    
     <!-- NetworkObserver -->
     <Parameter Name="NetworkObserverConfigurationFile" DefaultValue="NetworkObserver.config.json" />
   </Parameters>
@@ -145,7 +135,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.14" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.15" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -162,6 +152,8 @@
             <Parameter Name="UseCircularBuffer" Value="[AppObserverUseCircularBuffer]" />
             <!-- Required-If UseCircularBuffer = True -->
             <Parameter Name="ResourceUsageDataCapacity" Value="[AppObserverResourceUsageDataCapacity]" />
+            <Parameter Name="EnableChildProcessMonitoring" Value="[AppObserverEnableChildProcessMonitoring]" />
+            <Parameter Name="MaxChildProcTelemetryDataCount" Value="[AppObserverMaxChildProcTelemetryDataCount]" />
           </Section>
           <Section Name="CertificateObserverConfiguration">
             <Parameter Name="Enabled" Value="[CertificateObserverEnabled]" />
@@ -180,7 +172,6 @@
             <Parameter Name="EnableTelemetry" Value="[DiskObserverEnableTelemetry]" />
             <Parameter Name="EnableEtw" Value="[DiskObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[DiskObserverEnableVerboseLogging]" />
-            <Parameter Name="MonitorDuration" Value="[DiskObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[DiskObserverRunInterval]" />
             <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="[DiskSpacePercentUsageErrorThreshold]" />
             <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="[DiskSpacePercentUsageWarningThreshold]" />
@@ -274,6 +265,9 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
+    <!--<Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
+    </Policies>-->
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -286,4 +280,9 @@
       </StatelessService>
     </Service>
   </DefaultServices>
+  <!--<Principals>
+    <Users>
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
+  </Principals>-->
 </ApplicationManifest>

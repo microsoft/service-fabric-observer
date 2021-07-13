@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
 
@@ -63,6 +64,37 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return result;
+        }
+
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
+        {
+            string pidCmdResult = $"ps -o pid= --ppid {processId}".Bash();
+            string procNameCmdResult = $"ps -o comm= --ppid {processId}".Bash();
+            List<(string procName, int Pid)> childProcesses = new List<(string procName, int Pid)>();
+
+            if (!string.IsNullOrWhiteSpace(pidCmdResult) && !string.IsNullOrWhiteSpace(procNameCmdResult))
+            {
+                var sPids = pidCmdResult.Trim().Split('\n');
+                var sProcNames = procNameCmdResult.Trim().Split('\n');
+
+                if (sPids?.Length > 0 && sProcNames.Length > 0)
+                {
+                    for (int i = 0; i < sPids.Length; ++i)
+                    {
+                        if (int.TryParse(sPids[i], out int childProcId))
+                        {
+                            childProcesses.Add((sProcNames[i], childProcId)); 
+                        }
+                    }
+                }
+            }
+
+            return childProcesses;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            // nothing to do here.
         }
     }
 }

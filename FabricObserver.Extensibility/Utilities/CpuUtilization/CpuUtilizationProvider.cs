@@ -13,11 +13,6 @@ namespace FabricObserver.Observers.Utilities
     {
         public abstract Task<float> NextValueAsync();
 
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-        }
-
         public static CpuUtilizationProvider Create()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -26,6 +21,11 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return new LinuxCpuUtilizationProvider();
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
         }
 
         protected abstract void Dispose(bool disposing);

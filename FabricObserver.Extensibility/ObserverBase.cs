@@ -29,9 +29,9 @@ namespace FabricObserver.Observers
         private const int TtlAddMinutes = 5;
         private const string FabricSystemAppName = "fabric:/System";
         private const int MaxDumps = 5;
-        private Dictionary<string, int> serviceDumpCountDictionary;
+        private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> serviceDumpCountDictionary;
         private string SFLogRoot;
-        private string dumpsPath;
+        private string SFDumpsPath;
         private bool disposed;
 
         public string ObserverName
@@ -310,7 +310,7 @@ namespace FabricObserver.Observers
             string logFolderBasePath;
             string observerLogPath = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.ObserverLogPathParameter);
             
-            if (!string.IsNullOrEmpty(observerLogPath))
+            if (!string.IsNullOrWhiteSpace(observerLogPath))
             {
                 logFolderBasePath = observerLogPath;
             }
@@ -325,9 +325,10 @@ namespace FabricObserver.Observers
                 EnableETWLogging = IsEtwProviderEnabled
             };
 
-            if (string.IsNullOrEmpty(dumpsPath))
+            // Only supported on Windows (dump on error).
+            if (string.IsNullOrWhiteSpace(SFDumpsPath) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                SetDefaultSfDumpPath();
+                SetDefaultSFWindowsDumpPath();
             }
 
             ConfigurationSettings = new ConfigSettings(
@@ -401,7 +402,7 @@ namespace FabricObserver.Observers
         /// <returns>parameter value.</returns>
         public string GetSettingParameterValue(string sectionName, string parameterName, string defaultValue = null)
         {
-            if (string.IsNullOrEmpty(sectionName) || string.IsNullOrEmpty(parameterName))
+            if (string.IsNullOrWhiteSpace(sectionName) || string.IsNullOrWhiteSpace(parameterName))
             {
                 return null;
             }
@@ -427,7 +428,7 @@ namespace FabricObserver.Observers
 
                 string setting = serviceConfiguration.Settings.Sections[sectionName].Parameters[parameterName]?.Value;
 
-                if (string.IsNullOrEmpty(setting) && defaultValue != null)
+                if (string.IsNullOrWhiteSpace(setting) && defaultValue != null)
                 {
                     return defaultValue;
                 }
@@ -454,23 +455,22 @@ namespace FabricObserver.Observers
         /// </summary>
         /// <param name="processId">Process id of the target process to dump.</param>
         /// <param name="dumpType">Optional: The type of dump to generate. Default is DumpType.Full.</param>
-        /// <param name="filePath">Optional: The full path to store dump file. Default is %SFLogRoot%\CrashDumps</param>
+        /// <param name="folderPath">Optional: The full path to store dump file. Default is %SFLogRoot%\CrashDumps</param>
         /// <returns>true or false if the operation succeeded.</returns>
-        public bool DumpServiceProcessWindows(int processId, DumpType dumpType = DumpType.Full, string filePath = null)
+        private bool DumpServiceProcessWindows(int processId, DumpType dumpType = DumpType.Full, string folderPath = null, string fileName = null)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return false;
             }
 
-            if (string.IsNullOrEmpty(dumpsPath) && string.IsNullOrEmpty(filePath))
+            if (string.IsNullOrWhiteSpace(SFDumpsPath) && string.IsNullOrWhiteSpace(folderPath))
             {
                 return false;
             }
 
-            string path = !string.IsNullOrEmpty(filePath) ? filePath : dumpsPath;
-            string processName = string.Empty;
-
+            string path = !string.IsNullOrWhiteSpace(folderPath) ? folderPath : SFDumpsPath;
+            string processName = !string.IsNullOrWhiteSpace(fileName) ? fileName : string.Empty;
             NativeMethods.MINIDUMP_TYPE miniDumpType;
 
             switch (dumpType)
@@ -503,31 +503,41 @@ namespace FabricObserver.Observers
 
             try
             {
-                // This is to ensure friendly-name of resulting dmp file.
                 using (Process process = Process.GetProcessById(processId))
                 {
-                    processName = process.ProcessName;
-
-                    if (string.IsNullOrEmpty(processName))
+                    if (processName == string.Empty)
                     {
-                        return false;
+                        processName = process.ProcessName;
                     }
 
-                    processName += $"_{DateTime.Now:ddMMyyyyHHmmss}.dmp";
                     IntPtr processHandle = process.Handle;
+                    processName += $"_{DateTime.Now:ddMMyyyyHHmmss}.dmp";
 
                     // Check disk space availability before writing dump file.
                     string driveName = path.Substring(0, 2);
-                    
+
                     if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
                     {
                         HealthReporter.ReportFabricObserverServiceHealth(
-                            FabricServiceContext.ServiceName.OriginalString,
-                            ObserverName,
-                            HealthState.Warning,
-                            "Not enough disk space available for dump file creation.");
+                                                FabricServiceContext.ServiceName.OriginalString,
+                                                ObserverName,
+                                                HealthState.Warning,
+                                                "Not enough disk space available for dump file creation.");
 
                         return false;
+                    }
+
+                    if (!Directory.Exists(path))
+                    {
+                        try
+                        {
+                            Directory.CreateDirectory(path);
+                        }
+                        catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+                        {
+                            // Can't create directory in SF dumps folder, so dump into top level directory..
+                            path = SFDumpsPath;
+                        }
                     }
 
                     using (FileStream file = File.Create(Path.Combine(path, processName)))
@@ -596,7 +606,8 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Minimum";
             bool warningOrError = false;
-            string name = string.Empty, id, drive = string.Empty, procId = string.Empty;
+            string name = string.Empty, id, drive = string.Empty;
+            int procId = 0;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
             Uri appName = null;
@@ -611,7 +622,7 @@ namespace FabricObserver.Observers
                     appName = replicaOrInstance.ApplicationName;
                     serviceName = replicaOrInstance.ServiceName;
                     name = serviceName.OriginalString.Replace($"{appName.OriginalString}/", string.Empty);
-                    procId = replicaOrInstance.HostProcessId.ToString();
+                    procId = (int)replicaOrInstance.HostProcessId;
                 }
                 else // System service report from FabricSystemObserver.
                 {
@@ -620,9 +631,9 @@ namespace FabricObserver.Observers
 
                     try
                     {
-                        procId = Process.GetProcessesByName(name).First()?.Id.ToString();
+                        procId = (int)Process.GetProcessesByName(name).First()?.Id;
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException)
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
                     {
 
                     }
@@ -642,7 +653,7 @@ namespace FabricObserver.Observers
                     Value = Math.Round(data.AverageDataValue, 0),
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ProcessId = procId,
-                    ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
+                    ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ServiceName = serviceName?.OriginalString ?? string.Empty,
                     SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
                     Source = ObserverConstants.FabricObserverName
@@ -655,22 +666,24 @@ namespace FabricObserver.Observers
                 }
 
                 // Container
-                if (!string.IsNullOrEmpty(replicaOrInstance?.ContainerId))
+                if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
                 {
                     telemetryData.ContainerId = replicaOrInstance.ContainerId;
                 }
 
-                // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here.
+                // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
+                // be contained in the ChildProcessTelemetry data instances and AppObserver will have already emitted it.
                 // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
-                if (IsTelemetryEnabled)
+                if (IsTelemetryEnabled && replicaOrInstance.ChildProcesses == null)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(true);
+                     _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(true);
                 }
 
-                // ETW - This is informational, per reading EventSource tracing, healthstate is irrelevant here.
+                // ETW - This is informational, per reading EventSource tracing, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
+                // be contained in the ChildProcessTelemetry data instances and AppObserver will have already emitted it.
                 // Enable this for your observer if you want to log etw (which can then be read by some agent that will send it to some endpoint)
                 // for each resource usage observation it makes per specified metric.
-                if (IsEtwEnabled)
+                if (IsEtwEnabled && replicaOrInstance.ChildProcesses == null)
                 {
                     ObserverLogger.LogEtw(
                                     ObserverConstants.FabricObserverETWEventName,
@@ -683,7 +696,7 @@ namespace FabricObserver.Observers
                                         Value = Math.Round(data.AverageDataValue, 0),
                                         PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                         ProcessId = procId,
-                                        ReplicaId = replicaOrInstance?.ReplicaOrInstanceId.ToString(),
+                                        ReplicaId = replicaOrInstance?.ReplicaOrInstanceId,
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
                                         SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty
@@ -745,13 +758,13 @@ namespace FabricObserver.Observers
                 warningOrError = true;
                 healthState = HealthState.Error;
 
-                // **Windows-only**. This is primarily useful for AppObserver, but makes sense to be
-                // part of the base class for future use, like for FSO.
+                // **Windows-only**. This is used by AppObserver, but makes sense to be
+                // part of the base class for future use, like for plugins that manage service processes.
                 if (replicaOrInstance != null && dumpOnError && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     if (serviceDumpCountDictionary == null)
                     {
-                        serviceDumpCountDictionary = new Dictionary<string, int>(5);
+                        serviceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
                     }
 
                     try
@@ -761,21 +774,33 @@ namespace FabricObserver.Observers
                         using (var proc = Process.GetProcessById(pid))
                         {
                             string procName = proc?.ProcessName;
+                            StringBuilder sb = new StringBuilder(data.Property);
+                            string metricName = sb.Replace(" ", string.Empty)
+                                                  .Replace("Total", string.Empty)
+                                                  .Replace("MB", string.Empty)
+                                                  .Replace("%", string.Empty)
+                                                  .Replace("Active", string.Empty)
+                                                  .Replace("TCP", string.Empty).ToString();
+                            sb.Clear();
+                            string dumpKey = $"{procName}_{metricName}";
 
-                            if (!serviceDumpCountDictionary.ContainsKey(procName))
+                            if (!serviceDumpCountDictionary.ContainsKey(dumpKey))
                             {
-                                serviceDumpCountDictionary.Add(procName, 0);
+                                serviceDumpCountDictionary.Add(dumpKey, (0, DateTime.UtcNow));
+                            }
+                            else if (DateTime.UtcNow.Subtract(serviceDumpCountDictionary[dumpKey].LastDumpDate) >= TimeSpan.FromDays(1))
+                            {
+                                serviceDumpCountDictionary[dumpKey] = (0, DateTime.UtcNow);
                             }
 
-                            if (serviceDumpCountDictionary[procName] < MaxDumps)
+                            if (serviceDumpCountDictionary[dumpKey].DumpCount < MaxDumps)
                             {
-                                // DumpServiceProcess defaults to a Full dump with
-                                // process memory, handles and thread data.
-                                bool success = DumpServiceProcessWindows(pid);
+                                // DumpServiceProcess defaults to a Full dump with process memory, handles and thread data.
+                                bool success = DumpServiceProcessWindows(pid, DumpType.Full, Path.Combine(SFDumpsPath, procName), dumpKey);
 
                                 if (success)
                                 {
-                                    serviceDumpCountDictionary[procName]++;
+                                    serviceDumpCountDictionary[dumpKey] = (serviceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
                                 }
                             }
                         }
@@ -887,9 +912,22 @@ namespace FabricObserver.Observers
                 }
 
                 var healthMessage = new StringBuilder();
+                string childProcMsg = string.Empty;
+
+                if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
+                {
+                    childProcMsg = $"Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
+                                   $"Their cumulative impact on {name}'s resource usage has been applied.";
+                }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 0)}{data.Units}");
+                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 0)}{data.Units} ");
+                
+                if (childProcMsg != string.Empty)
+                {
+                    _ = healthMessage.AppendLine();
+                    _ = healthMessage.AppendLine(childProcMsg);
+                }
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
@@ -897,7 +935,7 @@ namespace FabricObserver.Observers
                 telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
                 telemetryData.Code = errorWarningCode;
 
-                if (replicaOrInstance != null && !string.IsNullOrEmpty(replicaOrInstance.ContainerId))
+                if (replicaOrInstance != null && !string.IsNullOrWhiteSpace(replicaOrInstance.ContainerId))
                 {
                     telemetryData.ContainerId = replicaOrInstance.ContainerId;
                 }
@@ -979,7 +1017,7 @@ namespace FabricObserver.Observers
                     telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
                     telemetryData.Code = FOErrorWarningCodes.Ok;
 
-                    if (replicaOrInstance != null && !string.IsNullOrEmpty(replicaOrInstance.ContainerId))
+                    if (replicaOrInstance != null && !string.IsNullOrWhiteSpace(replicaOrInstance.ContainerId))
                     {
                         telemetryData.ContainerId = replicaOrInstance.ContainerId;
                     }
@@ -1101,38 +1139,47 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void SetDefaultSfDumpPath()
+        private void SetDefaultSFWindowsDumpPath()
         {
             // This only needs to be set once.
-            if (string.IsNullOrEmpty(dumpsPath))
+            if (string.IsNullOrWhiteSpace(SFDumpsPath))
             {
                 SFLogRoot = ServiceFabricConfiguration.Instance.FabricLogRoot;
 
-                if (!string.IsNullOrEmpty(SFLogRoot))
+                if (string.IsNullOrWhiteSpace(SFLogRoot))
                 {
-                    dumpsPath = Path.Combine(SFLogRoot, "CrashDumps");
+                    SFDumpsPath = null;
+                    return;
                 }
             }
 
-            if (Directory.Exists(dumpsPath))
+            SFDumpsPath = Path.Combine(SFLogRoot, "ApplicationCrashDumps");
+
+            if (Directory.Exists(SFDumpsPath))
             {
                 return;
             }
 
-            try
-            {
-                _ = Directory.CreateDirectory(dumpsPath);
-            }
-            catch (IOException e)
-            {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                FabricServiceContext.ServiceName.ToString(),
-                                ObserverName,
-                                HealthState.Warning,
-                                $"Unable to create dumps directory:{Environment.NewLine}{e}");
+            HealthReporter.ReportFabricObserverServiceHealth(
+                                 FabricServiceContext.ServiceName.ToString(),
+                                 ObserverName,
+                                 HealthState.Warning,
+                                 $"Unable to locate dump directory {SFDumpsPath}. Trying another one...");
 
-                dumpsPath = null;
+            SFDumpsPath = Path.Combine(SFLogRoot, "CrashDumps");
+
+            if (Directory.Exists(SFDumpsPath))
+            {
+                return;
             }
+
+            SFDumpsPath = null;
+            HealthReporter.ReportFabricObserverServiceHealth(
+                                 FabricServiceContext.ServiceName.ToString(),
+                                 ObserverName,
+                                 HealthState.Warning,
+                                 $"Unable to locate dump directory {SFDumpsPath}. Aborting. Will not generate application service dumps.");
+            return; 
         }
 
         private void SetObserverConfiguration()
@@ -1162,7 +1209,7 @@ namespace FabricObserver.Observers
 
             string telemetryProviderType = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryProviderType);
 
-            if (string.IsNullOrEmpty(telemetryProviderType))
+            if (string.IsNullOrWhiteSpace(telemetryProviderType))
             {
                 IsTelemetryProviderEnabled = false;
 
@@ -1189,7 +1236,7 @@ namespace FabricObserver.Observers
                     string logAnalyticsWorkspaceId =
                         GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
 
-                    if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                    if (string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId) || string.IsNullOrWhiteSpace(logAnalyticsSharedKey))
                     {
                         IsTelemetryProviderEnabled = false;
                         return;
@@ -1209,7 +1256,7 @@ namespace FabricObserver.Observers
                         
                     string aiKey = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.AiKey);
 
-                    if (string.IsNullOrEmpty(aiKey))
+                    if (string.IsNullOrWhiteSpace(aiKey))
                     {
                         IsTelemetryProviderEnabled = false;
                         return;
@@ -1253,7 +1300,7 @@ namespace FabricObserver.Observers
 
             string dataLogPath = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.DataLogPathParameter);
 
-            CsvFileLogger.BaseDataLogFolderPath = !string.IsNullOrEmpty(dataLogPath) ? Path.Combine(dataLogPath, ObserverName) : Path.Combine(Environment.CurrentDirectory, "fabric_observer_csvdata", ObserverName);
+            CsvFileLogger.BaseDataLogFolderPath = !string.IsNullOrWhiteSpace(dataLogPath) ? Path.Combine(dataLogPath, ObserverName) : Path.Combine(Environment.CurrentDirectory, "fabric_observer_csvdata", ObserverName);
         }
 
         private bool IsObserverWebApiAppInstalled()

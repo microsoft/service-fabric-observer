@@ -372,7 +372,7 @@ namespace ClusterObserver
                             udText = $"in UD {udsInAppUpgrade.First(ud => ud > -1 && ud < int.MaxValue)}";
                         }
 
-                        telemetryDescription += $"{appName} is upgrading {udText}.{Environment.NewLine}";
+                        telemetryDescription += $" Note: {appName} is upgrading {udText}.{Environment.NewLine}";
                     }
                 }
 
@@ -390,17 +390,18 @@ namespace ClusterObserver
                     // From FabricObserver?
                     if (foTelemetryData != null)
                     {
+                        foTelemetryData.Description += telemetryDescription;
+
                         // Telemetry.
                         if (TelemetryEnabled && ObserverTelemetryClient != null)
                         {
+                            
                             await ObserverTelemetryClient.ReportHealthAsync(foTelemetryData, token);
                         }
 
                         // ETW.
                         if (EtwEnabled)
                         {
-                            double value = double.TryParse(foTelemetryData.Value?.ToString(), out double val) ? val : -1;
-
                             Logger.EtwLogger?.Write(
                                                 ObserverConstants.ClusterObserverETWEventName,
                                                 new
@@ -417,7 +418,7 @@ namespace ClusterObserver
                                                     foTelemetryData.ProcessId,
                                                     foTelemetryData.ReplicaId,
                                                     foTelemetryData.SystemServiceProcessName,
-                                                    Value = value
+                                                    foTelemetryData.Value
                                                 });
                         }
 
@@ -541,7 +542,7 @@ namespace ClusterObserver
                             Metric = metric ?? "AggregatedClusterHealth",
                             ObserverName = sourceObserver ?? string.Empty,
                             Source = foStats != null ? foStats.Source : ObserverName,
-                            Value = foStats != null ? foStats.Value : string.Empty
+                            Value = foStats != null ? foStats.Value : 0
                         };
 
                         // Telemetry.
@@ -552,13 +553,6 @@ namespace ClusterObserver
                     if (!EtwEnabled)
                     {
                         continue;
-                    }
-
-                    double value = 0;
-
-                    if (foStats != null)
-                    {
-                        value = double.TryParse(foStats.Value?.ToString(), out double val) ? val : -1;
                     }
 
                     Logger.EtwLogger?.Write(
@@ -573,7 +567,7 @@ namespace ClusterObserver
                             Metric = metric ?? "AggregatedClusterHealth",
                             ObserverName = sourceObserver ?? string.Empty,
                             Source = foStats != null ? foStats.Source : ObserverName,
-                            Value = value
+                            Value = foStats != null ? foStats.Value : 0
                         });
                 }
             }
@@ -639,7 +633,6 @@ namespace ClusterObserver
                             Description = $"{nodeDictItem.Key} is now Up.",
                             Metric = "NodeStatus",
                             NodeName = nodeDictItem.Key,
-                            Value = "Up",
                             Source = ObserverName
                         };
 
@@ -713,7 +706,6 @@ namespace ClusterObserver
                                 Description = message,
                                 Metric = "NodeStatus",
                                 NodeName = kvp.Key,
-                                Value = $"{kvp.Value.NodeStatus}",
                                 Source = ObserverName
                             };
 

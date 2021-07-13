@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -26,7 +27,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private readonly FabricClient fabricClient;
         private readonly CancellationToken token;
         private readonly Logger logger;
-        private int retries;
 
         private string WorkspaceId
         {
@@ -100,7 +100,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         public async Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
-            if (telemetryData == null)
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
@@ -111,7 +111,18 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
-            if (telemetryData == null)
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+        }
+
+        public async Task ReportMetricAsync(List<ChildProcessTelemetryData> telemetryData, CancellationToken cancellationToken)
+        {
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
@@ -122,7 +133,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         public async Task ReportMetricAsync(MachineTelemetryData machineTelemetryData, CancellationToken cancellationToken)
         {
-            if (machineTelemetryData == null)
+            if (machineTelemetryData == null || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
@@ -226,11 +237,16 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <returns>A completed task or task containing exception info.</returns>
         private async Task SendTelemetryAsync(string payload, CancellationToken cancellationToken)
         {
-            var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
+            if (string.IsNullOrWhiteSpace(payload) || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            Uri requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
             string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
-
-            var request = (HttpWebRequest)WebRequest.Create(requestUri);
+            
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(requestUri);
             request.ContentType = "application/json";
             request.Method = "POST";
             request.Headers["Log-Type"] = LogType;
@@ -256,10 +272,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             return;
                         }
 
-                        if (responseAsync != null && (responseAsync.StatusCode == HttpStatusCode.OK ||
-                                                      responseAsync.StatusCode == HttpStatusCode.Accepted))
+                        if (responseAsync != null && (responseAsync.StatusCode == HttpStatusCode.OK || responseAsync.StatusCode == HttpStatusCode.Accepted))
                         {
-                            retries = 0;
                             return;
                         }
 
@@ -271,37 +285,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     }
                 }
             }
+            catch (Exception e) when (e is SocketException || e is WebException)
+            {
+                logger.LogInfo($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e}");
+            }
             catch (Exception e)
             {
-                // An Exception during telemetry data submission should never take down FO process. Log it.
-                logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
-            }
-
-            if (retries < MaxRetries)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                retries++;
-                await Task.Delay(1000).ConfigureAwait(true);
-                await SendTelemetryAsync(payload, cancellationToken).ConfigureAwait(true);
-            }
-            else
-            {
-                // Exhausted retries. Reset counter.
-                logger.LogWarning($"Exhausted request retries in LogAnalyticsTelemetry.SendTelemetryAsync: {MaxRetries}. See logs for error details.");
-                retries = 0;
+                // Do not take down FO with a telemetry fault. Log it. Warning level will always log.
+                // This means there is either a bug in this code or something else that needs your attention..
+                logger.LogWarning($"Unhandled exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e}");
             }
         }
 
         private string GetSignature(
-                        string method,
-                        int contentLength,
-                        string contentType,
-                        string date,
-                        string resource)
+                          string method,
+                          int contentLength,
+                          string contentType,
+                          string date,
+                          string resource)
         {
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);

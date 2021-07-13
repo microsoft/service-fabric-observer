@@ -143,6 +143,12 @@
          the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
          like 0 or a negative number (or omit the parameter altogether). -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    <!-- AppObserver will automatically monitor a service process's descendants (max depth = 5, max procs = 50). You should only disable this if you know the services
+         that you want AppObserver to monitor do not launch child processes. -->
+    <Parameter Name="EnableChildProcessMonitoring" Value ="" MustOverride="true" />
+    <!-- Max number of a service process's spawned (child) processes to report via telemetry (ordered by descending value - so, top n consumers).
+         The recommended value range for this setting is 5 to 10. See Observers.md for more details on AppObserver's child process monitoring. -->
+    <Parameter Name="MaxChildProcTelemetryDataCount" Value="" MustOverride="true"/>
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
@@ -169,7 +175,6 @@
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="" MustOverride="true" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" MustOverride="true" />
@@ -288,5 +293,5 @@
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
-  </Section> -->
+  </Section>-->
 </Settings>

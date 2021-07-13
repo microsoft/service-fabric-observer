@@ -300,7 +300,7 @@ namespace FabricObserver.Observers
             catch (Exception e)
             {
                 var message =
-                    $"Unhanded Exception in {ObserverConstants.ObserverManagerName} on node " +
+                    $"Unhandled Exception in {ObserverConstants.ObserverManagerName} on node " +
                     $"{nodeName}. Taking down FO process. " +
                     $"Error info:{Environment.NewLine}{e}";
 
@@ -379,6 +379,13 @@ namespace FabricObserver.Observers
                             var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(true);
                             var fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
+                            if (isConfigurationUpdateInProgress)
+                            {
+                                fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                                                        && s.HealthInformation.HealthState == HealthState.Warning 
+                                                                                        || s.HealthInformation.HealthState == HealthState.Error);
+                            }
+
                             foreach (var evt in fabricObserverAppHealthEvents)
                             {
                                 healthReport.AppName = appName;
@@ -405,6 +412,14 @@ namespace FabricObserver.Observers
                     {
                         var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(true);
                         var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+
+                        if (isConfigurationUpdateInProgress)
+                        {
+                            fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                                                      && s.HealthInformation.HealthState == HealthState.Warning
+                                                                                      || s.HealthInformation.HealthState == HealthState.Error);
+                        }
+
                         healthReport.ReportType = HealthReportType.Node;
 
                         foreach (var evt in fabricObserverNodeHealthEvents)
@@ -762,8 +777,10 @@ namespace FabricObserver.Observers
             var exceptionBuilder = new StringBuilder();
             bool allExecuted = true;
 
-            foreach (var observer in observers)
+            for (int i = 0; i < observers.Count(); ++i)
             {
+                var observer = observers[i];
+
                 if (isConfigurationUpdateInProgress)
                 {
                     return true;
@@ -865,6 +882,7 @@ namespace FabricObserver.Observers
                         }
                         catch (IOException)
                         {
+
                         }
                     }
                 }
@@ -894,7 +912,6 @@ namespace FabricObserver.Observers
                     if (isConfigurationUpdateInProgress)
                     {
                         IsObserverRunning = false;
-
                         return true;
                     }
 
@@ -904,10 +921,10 @@ namespace FabricObserver.Observers
                 catch (Exception e)
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
-                        ObserverConstants.ObserverManagerName,
-                        ApplicationName,
-                        HealthState.Error,
-                        $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                                         ObserverConstants.ObserverManagerName,
+                                         ApplicationName,
+                                         HealthState.Error,
+                                         $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
 
                     allExecuted = false;
                 }
@@ -921,15 +938,12 @@ namespace FabricObserver.Observers
             }
             else
             {
-                if (Logger.EnableVerboseLogging)
-                {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                                    ObserverConstants.ObserverManagerName,
-                                    ApplicationName,
-                                    HealthState.Warning,
-                                    exceptionBuilder.ToString());
-                }
-
+                HealthReporter.ReportFabricObserverServiceHealth(
+                                     ObserverConstants.ObserverManagerName,
+                                     ApplicationName,
+                                     HealthState.Warning,
+                                     exceptionBuilder.ToString());
+                
                 _ = exceptionBuilder.Clear();
             }
 
