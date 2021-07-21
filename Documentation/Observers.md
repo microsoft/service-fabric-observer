@@ -46,7 +46,7 @@ For every other observer, it's XML as per usual.
 Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application service processes and the child processes they spawn. If a service process creates child processes, then these processes will be monitored and their summed resource usage for some metric you are observing will be applied to the parent process (added) and a threshold breach will be determined based on the sum of children and parent resource usage.
 This observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring**. 
 
-#### A note on child process monitoring
+### A note on child process monitoring
 
 AppObserver (FO version >= 3.1.15) will automatically monitor up to 50 process descendants of your primary service process (50 is extreme. You should not design services that own that many descendant processes..). If your services launch child processes, then AppObserver will automatically monitor them for the same metrics and thresholds you supply for the containing Application. 
 Their culmative impact on some monitored metric will be added to that of the parent process (your service process) and this combined (sum) value will be used to determine health state based on supplied threshold for the related metric.  
@@ -55,9 +55,9 @@ You can disable this feature (you shouldn't if you **do** launch child processes
 The AppObserverMaxChildProcTelemetryDataCount setting determines the size of the list used in family tree process data telemetry transmission, which corresponds to the size of the telemetry data event. You should keep this below 10. AppObserver will order the list of ChildProcessInfo (a member of ChildProcessTelemetryData) by resoure usage value, from highest to lowest. 
 
 In the vast majority of cases, your services are not going to launch 50 descendant processes, but FO is designed to support such an extreme edge case scenario, which frankly should not be in your service design playbook. Also note that if you do spawn a lot of child processes and 
-you have AppObserverMonitorDuration set to, say, 10 seconds, then you will be running AppObserver for n * 10 seconds, where n is the number of descendant proceses plus the parent service process that owns them for each metric for each service with descendants. Please keep this in mind as you design your configuration.  
+you have AppObserverMonitorDuration set to, say, 10 seconds, then you will be running AppObserver for (n + 1) * 10 seconds, where n is total number of processes related to a service instance (n = child procs, +1 to account for the parent..) for every service that launches children. If your Service A spawns 20 descendants, then that would be 21 * 10 = 210 seconds of monitoring time. If Service B launches 10 descendants, then add 110 seconds to that. Etc... Please keep this in mind as you design your configuration. And, please don't design services that launch 50 descendant processes. Why do that?
 
-Finally, you can ignore this feature if you do not launch child processes from your services. Just disable it. This is important because if AppObserver will run code that checks to see if some process id has children. If you know this is not the case, then save CPU cycles and disable the feature.
+Finally, if you do not launch child processes from your services please disable this feature by setting ```AppObserverEnableChildProcessMonitoring``` to false in ApplicationManifest.xml. This is important because AppObserver will run code that checks to see if some process has children. If you know this is not the case, then save electrons and disable the feature.
 
 
 ### Input
