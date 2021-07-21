@@ -280,7 +280,7 @@ namespace FabricObserver.Observers.Utilities
             // This is because Logger FileTarget settings are not preserved across FO deployments.
             if (MaxArchiveFileLifetimeDays > 0)
             {
-                TryCleanLogFolder(Path.Combine(logFolderBase, FolderName), TimeSpan.FromDays(MaxArchiveFileLifetimeDays));
+                TryCleanFolder(Path.Combine(logFolderBase, FolderName), "*.log", TimeSpan.FromDays(MaxArchiveFileLifetimeDays));
             }
 
             var targetName = loggerName + "LogFile";
@@ -319,7 +319,7 @@ namespace FabricObserver.Observers.Utilities
             OLogger = LogManager.GetLogger(loggerName);
         }
 
-        private static void TryCleanLogFolder(string folderPath, TimeSpan maxAge)
+        public static void TryCleanFolder(string folderPath, string searchPattern, TimeSpan maxAge)
         {
             if (!Directory.Exists(folderPath))
             {

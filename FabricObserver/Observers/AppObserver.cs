@@ -74,7 +74,6 @@ namespace FabricObserver.Observers
         {
             configSettings = new ConfigSettings(FabricServiceContext);
             ConfigPackagePath = configSettings.ConfigPackagePath;
-
             stopwatch = new Stopwatch();
         }
 
@@ -101,7 +100,6 @@ namespace FabricObserver.Observers
 
                 stopwatch.Stop();
                 stopwatch.Reset();
-
                 return;
             }
 
@@ -217,7 +215,7 @@ namespace FabricObserver.Observers
                             healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
-                            app.DumpProcessOnError);
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // Memory MB - Parent process
@@ -238,7 +236,7 @@ namespace FabricObserver.Observers
                             healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
-                            app.DumpProcessOnError);
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // Memory Percent - Parent process
@@ -259,7 +257,7 @@ namespace FabricObserver.Observers
                             healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
-                            app.DumpProcessOnError);   
+                            app.DumpProcessOnError && EnableProcessDumps);   
                 }
 
                 // TCP Ports - Active - Parent process
@@ -280,7 +278,7 @@ namespace FabricObserver.Observers
                             healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
-                            app.DumpProcessOnError);
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // TCP Ports - Ephemeral (port numbers fall in the dynamic range) - Parent process
@@ -301,7 +299,7 @@ namespace FabricObserver.Observers
                             healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
-                            app.DumpProcessOnError);
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // Allocated (in use) Handles - Parent process
@@ -322,7 +320,7 @@ namespace FabricObserver.Observers
                             healthReportTimeToLive,
                             HealthReportType.Application,
                             repOrInst,
-                            app.DumpProcessOnError);
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // Child proc info telemetry.
@@ -480,7 +478,7 @@ namespace FabricObserver.Observers
             if (bool.TryParse(
                      GetSettingParameterValue(
                         ConfigurationSectionName,
-                        ObserverConstants.EnableChildProcessMonitoring), out bool enableDescendantMonitoring))
+                        ObserverConstants.EnableChildProcessMonitoringParameter), out bool enableDescendantMonitoring))
             {
                 EnableChildProcessMonitoring = enableDescendantMonitoring;
             }
@@ -493,6 +491,23 @@ namespace FabricObserver.Observers
                 MaxChildProcTelemetryDataCount = maxChildProcs;
             }
             /* End descendant proc monitoring */
+
+            /* Start dumpProcessOnError config */
+            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableProcessDumpsParameter), out bool enableDumps))
+            {
+                EnableProcessDumps = enableDumps;
+            }
+
+            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxDumpsParameter), out int maxDumps))
+            {
+                MaxDumps = maxDumps;
+            }
+
+            if (Enum.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DumpTypeParameter), out DumpType dumpType))
+            {
+                DumpType = dumpType;
+            }
+            /* End dumpProcessOnError config */
 
             configSettings.Initialize(
                             FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(

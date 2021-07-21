@@ -137,18 +137,28 @@
          It just depends upon how much data you are collecting per observer run and if you only care about
          the most recent data (where number of most recent items in collection 
          type equals the ResourceUsageDataCapacity you specify). -->
-    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true"/>
+    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
     
     <!-- Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for
          the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
          like 0 or a negative number (or omit the parameter altogether). -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true" />
     <!-- AppObserver will automatically monitor a service process's descendants (max depth = 5, max procs = 50). You should only disable this if you know the services
          that you want AppObserver to monitor do not launch child processes. -->
     <Parameter Name="EnableChildProcessMonitoring" Value ="" MustOverride="true" />
     <!-- Max number of a service process's spawned (child) processes to report via telemetry (ordered by descending value - so, top n consumers).
          The recommended value range for this setting is 5 to 10. See Observers.md for more details on AppObserver's child process monitoring. -->
-    <Parameter Name="MaxChildProcTelemetryDataCount" Value="" MustOverride="true"/>
+    <Parameter Name="MaxChildProcTelemetryDataCount" Value="" MustOverride="true" />
+    <!-- dumpProcessOnError related configuration. -->
+    <!-- This setting will override dumpProcessOnError in AppObserver.config.json. This is a big red button to disable/enable the feature 
+         without having to deploy a new json config file for AppObserver as part of a configuration update or App redeployment. This feature will only work
+         if you have "dumpProcessOnError"=true setting for your app target(s) in AppObserver.config.json. 
+         AppObserver's dumpProcessOnError feature is currently only supported for Windows. -->
+    <Parameter Name="EnableProcessDumps" Value="" MustOverride="true" />
+    <!-- Supported values are: Mini, MiniPlus, Full. Default is MiniPlus. Full can create giant files - be careful there.. -->
+    <Parameter Name="DumpType" Value="" MustOverride="true" />
+    <!-- The maximum number of dumps per day per service process per metric. Default is 3. -->
+    <Parameter Name="MaxDumps" Value="" MustOverride="true" />
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
@@ -236,10 +246,8 @@
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
-    
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
-    
     <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
@@ -276,17 +284,25 @@
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
   </Section>
-  <!-- Plugin model sample. Just add the configuration info here that your observer needs. Also, follow the pattern
-       of all the other observers in this file. 
-       Required: Enabled. 
-       Optional: ClusterOperationTimeoutSeconds, EnableVerboseLogging, EnableTelemetry, etc..
-       Then, you can create settings specific to your observer and store them below.
-       Whatever makes sense for your implementation.
-       **NOTE**: You must name these Sections in the following way: 
-       [ObserverName]Configuration.
-       Example: SampleNewObserverConfiguration where SampleNewObserver is the type name of the observer plugin.
-       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
-  <!--<Section Name="SampleNewObserverConfiguration">
+  <Section Name="AzureStorageObserverConfiguration">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    <!-- Azure Blob store container name. -->
+    <Parameter Name="BlobContainerName" Value="" MustOverride="true" />
+    <!-- This must be an encrypted string. It is not a good idea to place an unencrypted ConnectionString here. 
+         Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
+         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
+    <Parameter Name="AzureStorageConnectionString" IsEncrypted="true" Value="" />
+  </Section>
+  <!-- Plugin model sample. Just add the configuration info here that your observer needs.
+       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
+       Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
+       See the SampleObserverPlugin project for a complete example of implementing an observer plugin.
+   <Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />

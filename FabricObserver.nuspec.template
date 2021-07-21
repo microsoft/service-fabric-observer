@@ -2,14 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.15</version>
-    <releaseNotes>
-      This release adds support for process tree monitoring by AppObserver:
-      Any child process (and descendants at max depth = 4) launched by a service process that is being monitored by AppObserver will also be monitored and its resource usage will be added to the parent's for use in threshold violation checks for an observed (configured) metric.
-      Added support for new child process monitoring data in ETW, AppInsights and LogAnalytics telemetry provider impls.
-      Minor bug fix in AppObserver monitor duration logic.
-      Added lifetime management to DumpOnError feature (max 5 dumps per process per metric for 24 hour period. Then, new cycle)
-    </releaseNotes>
+    <version>3.1.16</version>
+    <releaseNotes>Added support for uploading dmp files created by AppObserver to your specified Azure Storage account (blob). This is a Windows-only feature today.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>

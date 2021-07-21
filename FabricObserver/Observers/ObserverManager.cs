@@ -176,8 +176,7 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDays),
-                out int maxArchivedLogFileLifetimeDays))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDays), out int maxArchivedLogFileLifetimeDays))
             {
                 MaxArchivedLogFileLifetimeDays = maxArchivedLogFileLifetimeDays;
             }
@@ -203,16 +202,11 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (FabricServiceContext == null)
-            {
-                return;
-            }
-
             string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
             string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
             string filepath = Path.Combine(Logger.LogFolderBasePath,
-                $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_" +
-                $"{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
+                                           $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_" +                                                   
+                                           $"{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
 
 #if !DEBUG
             // If this has already been sent for this activated version (code/config) of node type x
@@ -221,18 +215,20 @@ namespace FabricObserver.Observers
                 return;
             }
 #endif
-            var telemetryEvents = new TelemetryEvents(
-                                        FabricClientInstance,
-                                        FabricServiceContext,
-                                        ServiceEventSource.Current,
-                                        this.token);
-
-            if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion,
-                GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
+            try
             {
-                // Log a file to prevent re-sending this in case of process restart(s).
-                // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
-                _ = Logger.TryWriteLogFile(filepath, GetFabricObserverInternalConfiguration());
+                var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, ServiceEventSource.Current, this.token);
+
+                if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion, GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
+                {
+                    // Log a file to prevent re-sending this in case of process restart(s).
+                    // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
+                    _ = Logger.TryWriteLogFile(filepath, GetFabricObserverInternalConfiguration());
+                }
+            }
+            catch
+            {
+                
             }
         }
 
@@ -277,8 +273,8 @@ namespace FabricObserver.Observers
                     GC.Collect(1, GCCollectionMode.Forced, true, false);
 
                     // Compact LOH
-                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    //GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                    //GC.Collect(2, GCCollectionMode.Forced, true, true);
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
@@ -804,7 +800,7 @@ namespace FabricObserver.Observers
                     IsObserverRunning = true;
 
                     // Synchronous call.
-                    var isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(observerExecTimeout);
+                    bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(observerExecTimeout);
 
                     // The observer is taking too long (hung?), move on to next observer.
                     // Currently, this observer will not run again for the lifetime of this FO service instance.

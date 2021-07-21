@@ -67,7 +67,7 @@ namespace FabricObserver.Observers
 
         public override async Task ObserveAsync(CancellationToken token)
         {
-            if (!IsObserverWebApiAppDeployed || RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (!IsObserverWebApiAppDeployed || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
             }
@@ -76,6 +76,8 @@ namespace FabricObserver.Observers
             {
                 return;
             }
+
+            Token = token;
 
             try
             {

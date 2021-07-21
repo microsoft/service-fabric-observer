@@ -18,10 +18,10 @@
     <PackageReference Include="Microsoft.ServiceFabric.Data.Interfaces" Version="4.2.452" />
     <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="4.2.452" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="NLog" Version="4.7.9" />
+    <PackageReference Include="NLog" Version="4.7.10" />
     <PackageReference Include="System.Management" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>

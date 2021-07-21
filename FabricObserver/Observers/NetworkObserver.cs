@@ -69,7 +69,6 @@ namespace FabricObserver.Observers
         private readonly ConfigSettings configSettings;
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;
-        private CancellationToken cancellationToken;
         private int tcpConnTestRetried;
 
         /// <summary>
@@ -96,22 +95,19 @@ namespace FabricObserver.Observers
                 stopwatch.Stop();
                 stopwatch.Reset();
                 LastRunDateTime = DateTime.Now;
-
                 return;
             }
 
-            cancellationToken = token;
-
-            if (cancellationToken.IsCancellationRequested)
+            if (token.IsCancellationRequested)
             {
                 return;
             }
 
+            Token = token;
             stopwatch.Start();
             
             // Run conn tests.
             Retry.Do(InternetConnectionStateIsConnected, TimeSpan.FromSeconds(10), token);
-
             await ReportAsync(token).ConfigureAwait(true);
 
             // The time it took to run this observer.
@@ -336,7 +332,7 @@ namespace FabricObserver.Observers
 
         private async Task<bool> InitializeAsync()
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            Token.ThrowIfCancellationRequested();
 
             // This only needs to be logged once.
             // This file is used by the ObserverWebApi application.
@@ -346,7 +342,7 @@ namespace FabricObserver.Observers
 
                 Console.WriteLine($"logPath: {logPath}");
 
-                if (!ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(cancellationToken)))
+                if (!ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(Token)))
                 {
                     HealthReporter.ReportFabricObserverServiceHealth(
                                          FabricServiceContext.ServiceName.OriginalString,
@@ -407,11 +403,11 @@ namespace FabricObserver.Observers
 
             foreach (var config in configList)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                Token.ThrowIfCancellationRequested();
 
                 foreach (var endpoint in config.Endpoints)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    Token.ThrowIfCancellationRequested();
 
                     if (string.IsNullOrEmpty(endpoint.HostName))
                     {
@@ -439,7 +435,7 @@ namespace FabricObserver.Observers
                         // E.g., REST endpoints, etc.
                         try
                         {
-                            cancellationToken.ThrowIfCancellationRequested();
+                            Token.ThrowIfCancellationRequested();
 
                             ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
                             string prefix = endpoint.Port == 443 ? "https://" : "http://";

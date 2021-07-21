@@ -8,7 +8,6 @@ using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers;
@@ -57,6 +56,7 @@ namespace FabricObserver
         private void ConfigureServices(IServiceCollection services)
         {
             _ = services.AddScoped(typeof(ObserverBase), s => new AppObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new AzureStorageObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new CertificateObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new DiskObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new FabricSystemObserver(fabricClient, Context));
@@ -95,7 +95,7 @@ namespace FabricObserver
             for (int i = 0; i < pluginDlls.Length; ++i)
             {
                 string dll = pluginDlls[i];
-                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = true);
+                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
                 pluginLoaders[i] = loader;
             }
 
@@ -128,7 +128,6 @@ namespace FabricObserver
                 }
                 catch (Exception e) when (e is ArgumentException || e is BadImageFormatException || e is IOException)
                 {
-                    pluginLoader?.Dispose();
                     continue;
                 }
             }

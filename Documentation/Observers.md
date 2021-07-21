@@ -20,6 +20,7 @@ Service Fabric Error Health Events can block upgrades and other important Fabric
 | Observer | Description |
 | :--- | :--- |
 | [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes) and their spawn (child processes). Alerts when user-supplied thresholds are reached. |
+| [AzureStorageObserver](#azurestorageobserver) | Runs periodically (do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true. It will clean up files after successful upload. |
 | [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
 | [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are reached. |
 | [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric System services (compare to AppObserver) |
@@ -119,6 +120,47 @@ AppObserver error/warning thresholds are user-supplied-only and bound to specifi
 as explained above. Like FabricSystemObserver, all data is stored in in-memory data structures for the lifetime of the run (for example, 60 seconds at 5 second intervals). Like all observers, the last thing this observer does is call its *ReportAsync*, which will then determine the health state based on accumulated data across resources, send a Warning if necessary (clear an existing warning if necessary), then clean out the in-memory data structures to limit impact on the system over time. So, each iteration of this observer accumulates *temporary* data for use in health determination.
   
 This observer also monitors the FabricObserver service itself across CPU/Mem/FileHandles/Ports.  
+
+## AzureStorageObserver 
+Runs periodically (please do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true to a specified Azure Storage Account (blob storage only) and blob container name. It will delete dmp files from local storage after each successful upload. 
+For authentication to AzStorage, only ConnectionString auth is supported today. Since there is currently only support for Windows process dumps (by AppObserver only), there is no need to run this Observer on Linux (today..).
+The dumps created are *not* crash dumps, they are live dumps of a process's memory, handles, threads. The target process will not be killed or blow up in memory size. The offending service will keep on doing what it's doing wrong.
+By default, the dmp files are MiniPlus mini dumps, so they will roughly be as large as the target process's private working set and stack. You can set to Mini (similar size) or 
+Full, which is much larger. You probably do not need to create Full dumps in most cases. 
+
+It is very important that you generate an encrypted ConnectionString string in a supported way: Use Service Fabric's Invoke-ServiceFabricEncryptText PowerShell cmdlet with your Cluster thumbprint or cert name/location. 
+Please see the [related documentation with samples](https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps). It is really easy to do! 
+
+Also, since FO runs as NetworkUser by default, you will need to supply a SecretsCertificate setting in ApplicationManifest.xml which will enable FO to run as unprivileged user and access your private key for the cert installed on the local machine.
+This section is already present in ApplicationManifest.xml. Just add the thumbprint you used to create your encrypted connection string and a friendly name for the cert.
+If you do not do this, then you will need to run FO as System in order for decryption of your connection string to work and for blob uploads to succeed. 
+
+SecretsCertificate configuration in ApplicationManifest.xml:
+
+```XML
+...
+  <!-- This is important to set so that FO can run as NetworkUser if you want to upload AppObserver user service process dumps to your Azure Storage account. 
+       Just supply the same thumbprint you used to encrypt your ConnectionString. Of course, the certificate's private key will also need to be installed on the VM.
+       You should already understand this. -->
+  <Certificates>
+    <SecretsCertificate X509FindValue="[your thumbprint]" Name="[cert friendly name]" />
+  </Certificates>
+</ApplicationManifest>
+```
+
+Example AzureStorageObserver configuration in ApplicationManifest.xml:  
+
+```XML
+<!-- AzureStorageObserver -->
+    <Parameter Name="AzureStorageObserverBlobContainerName" DefaultValue="fodumps" />
+    <!-- This must be an encrypted string. It is not a good idea to place an unencrypted ConnectionString in an XML file.. FO will ignore unencrypted strings. 
+         Use Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here. 
+         The encrypted string must not contain any line breaks or spaces. This is very important. If you copy the the string incorrectly, then FO will not upload dumps.
+         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps  
+         for details. Follow the directions in the sample for creating an encryted secret. Note the use of thumbprint in the cmd. -->
+    <Parameter Name="AzureStorageObserverAzureStorageConnectionString" DefaultValue="NNIDTgYJKoZIhvcNAFcDoIGDPzCCAzsCAQAxggGCMIIBfgIBADBmME8xCzAJBgNVBAYTAlVTMR4wHAYDVQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb84xIDAeBgNVBAMTF01pY3Jvc99mdCBSU0EgVExTIENBIDAxAhNrAABpknf9Fp92KoLyAAAAAGmSMA0GCSqGSIb3DQEBBzAABIIBAHLN+RthM0os/UHSSx6jBtyQIGSxZhG9rX49UQyETcS5FM0obkD7uvURvPpmebucL2GibdN2E/UxY/L35Ny9GLwnG1eoytwVZInHwc8ac3Q8UDC+L0LSL3+OEYcwxqOO5kRBmYAwP7C44S5q/KoHCTqgNRPIeB4CwahMIhhq5e0RpOoq5cQqm5a8CfOoWiY4muu7ep82dBP2SMkgGy9zU6L3lbekz7PD0OytvJs2OGj4wfzEy+ofbtml/ErAqbC7ZV7RwmfjiF2VLdxRbqhWya7H0nozlU2u4zohm91W6QZbvQxoWMovWHlLO8gzG4dJDoASg/fcryWZgXFX5azh/TAwggGuBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAsjDpiIewvf97MwI7RY8fdgIIBgBiwK5XBq/yLoP3Rs6h8jZKSsuriiPAB46L8FoFKxfk1t0voP6nJVIYf/meOToHFCvZxPvxIZ/WFJO/mRq32XWWO8YH1EW5RpfHUamKqQKjgXCWsyVOX1nLMjiON9Jm0Llq8Ws632QeOBW/E3e3MQQgZv9is5m2LBv5rMKBZq+QM6kFO45fTsaIcRFLnFi2py4EiZs7C5yHMqHWDbfCIFCJaWXSulWmLbJJc1wVyIv5KqfdDS55Q3dISshiLtcfiHjMW4a3bRE8Jfi2aBU/CQrBut6P3aRW1bOOGE4VA8znhQUpkAqlw6JoCDP/s7E5AA7vaA/9LPd63Yax3mfUBfmfszBYTcv3VV1r1HJV1ylOxshC6FD3I9BXbyRPj4PSAx3+jc0HQHy6iX3UfaRTYYf0fupc1Fl5e6RdMwk/+f1i4ET82psssOMaADbrV/jnPrWCwMGlWecg5mPOyMPBXN4szmxEmbYK5tiLT2l3XHXXszSyF+QrQ1WJgh+4m/IU81g==" />
+```
+  
 
 ## CertificateObserver
 Monitors the expiration date of the cluster certificate and any other certificates provided by the user. 

@@ -133,7 +133,7 @@ namespace ClusterObserver.Utilities.Telemetry
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", telemetryData.Value.ToString() },
+                    { "Value", telemetryData.Value == 0 ? "Up" : "Down" },
                     { "Partition", telemetryData.PartitionId },
                     { "Replica", telemetryData.ReplicaId.ToString() },
                     { "Source", telemetryData.ObserverName },

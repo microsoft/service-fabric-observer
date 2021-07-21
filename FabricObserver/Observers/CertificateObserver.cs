@@ -78,7 +78,6 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // Only run once per specified time in Settings.xml. (default is already set to 1 day for CertificateObserver)
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter.
             if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
@@ -88,6 +87,8 @@ namespace FabricObserver.Observers
             {
                 return;
             }
+
+            Token = token;
 
             await Initialize(token).ConfigureAwait(true);
             

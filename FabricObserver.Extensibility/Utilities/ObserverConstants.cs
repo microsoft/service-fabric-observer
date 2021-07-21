@@ -55,8 +55,15 @@ namespace FabricObserver.Observers.Utilities
         // AppObserver.
         public const string AppObserverName = "AppObserver";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
-        public const string EnableChildProcessMonitoring = "EnableChildProcessMonitoring";
+        public const string EnableChildProcessMonitoringParameter = "EnableChildProcessMonitoring";
         public const string MaxChildProcTelemetryDataCountParameter = "MaxChildProcTelemetryDataCount";
+        public const string EnableProcessDumpsParameter = "EnableProcessDumps";
+        public const string DumpTypeParameter = "DumpType";
+        public const string MaxDumpsParameter = "MaxDumps";
+
+        // AzureStorageObserver
+        public const string AzureStorageConnectionStringParameter = "AzureStorageConnectionString";
+        public const string AzureBlobContainerNameParameter = "BlobContainerName";
 
         // Certificate Observer
         public const string CertificateObserverName = "CertificateObserver";
