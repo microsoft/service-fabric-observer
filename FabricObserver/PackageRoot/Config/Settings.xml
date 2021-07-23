@@ -14,7 +14,7 @@
          setting EnableVerboseLogging to true on AppObserver, for example, and it will log how long it takes to run each time it runs to completion. Any observer
          that monitors stuff supports run duration logging. Use this these values to determine what constitutes too long and that an observer needs to be fixed. 
          No Observer should ever take 2 hours to run, so the below setting is an extreme maximum. Vary the number to meet your actual needs. -->
-    <Parameter Name="ObserverExecutionTimeout" Value="1800" />
+    <Parameter Name="ObserverExecutionTimeout" Value="7200" />
     
     <!-- How long to wait, in seconds, after a shutdown is signaled. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
@@ -88,6 +88,10 @@
     
     <!-- Optional: If you deploy the FabricObserverWebApi app, set this to true.-->
     <Parameter Name="ObserverWebApiEnabled" Value="false" />
+
+    <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded), then put FO into Warning or Error state.
+         Supported values are Error, Warning or None (which means don't put FO into Warning or Error state..).-->
+    <Parameter Name="ObserverFailureHealthStateLevel" Value="Warning" />
   </Section>
   
   <!-- Observer Configuration Settings - *NOTE*: These are overridable settings, see ApplicationManifest.xml. 
@@ -297,13 +301,13 @@
     <!-- This must be an encrypted string. It is not a good idea to place an unencrypted ConnectionString here. 
          Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
          See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
-    <Parameter Name="AzureStorageConnectionString" IsEncrypted="true" Value="" />
+    <Parameter Name="AzureStorageConnectionString" Value="" IsEncrypted="true" />
     <!-- OR -->
     <Parameter Name="AzureStorageAccountName" Value="" MustOverride="true" />
     <!-- This must be an encrypted string. It is not a good idea to place an unencrypted key here. 
          Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
          See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
-    <Parameter Name="AzureStorageAccountKey" IsEncrypted="true" Value="" MustOverride="true" />
+    <Parameter Name="AzureStorageAccountKey" Value="" IsEncrypted="true" MustOverride="true" />
     <!-- Compression level for dmp file. Default is Optimal. If you have limited cores, than decrease the value. 
          Supported values are: Fastest, Optimal. Optimal creates the smallest zip files. Fastest runs for less time with non-optimal compressed size. -->
     <Parameter Name="ZipFileCompressionLevel" Value="" MustOverride="true" />

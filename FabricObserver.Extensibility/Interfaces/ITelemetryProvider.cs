@@ -63,7 +63,6 @@ namespace FabricObserver.Observers.Interfaces
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>a Task.</returns>
         Task ReportHealthAsync(
-            HealthScope scope,
             string propertyName,
             HealthState state,
             string unhealthyEvaluations,

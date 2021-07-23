@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
+using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
@@ -140,26 +141,17 @@ namespace FabricObserver.Observers
                     childProcessTelemetryDataList = new List<ChildProcessTelemetryData>();
                 }
 
+                app = deployedTargetList.Find(
+                        a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
+                             (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
                 try
                 {
-                    app = deployedTargetList.Find(
-                        a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) || 
-                             (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
-                    
                     using Process p = Process.GetProcessById((int)repOrInst.HostProcessId);
-
-                    // If the process is no longer running, then don't report on it.
-                    if (p.HasExited)
-                    {
-                        continue;
-                    }
-
                     processName = p.ProcessName;
                     processId = p.Id;
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                 {
-                    ObserverLogger.LogWarning($"Handled Exception in ReportAsync:{Environment.NewLine}{e}");
                     continue;
                 }
 
@@ -842,12 +834,78 @@ namespace FabricObserver.Observers
 
                 try
                 {
-                    using Process parentProc = Process.GetProcessById(parentPid);
-                    string parentProcName = parentProc.ProcessName;
+                    Process parentProc = null;
+
+                    try
+                    {
+                        parentProc = Process.GetProcessById(parentPid);
+
+                        // This will throw Win32Exception if process is running at higher elevation than FO.
+                        // If it is not, then this would mean the process has exited so move on to next process.
+                        if (parentProc.HasExited)
+                        {
+                            continue;
+                        }
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                    {
+                        if (e is Win32Exception exception && exception.NativeErrorCode == 5 || e.Message.ToLower().Contains("access is denied"))
+                        {
+                            string message = $"Host process {parentProc?.ProcessName} for service {repOrInst?.ServiceName?.OriginalString} is running at a higher user privilege than FabricObserver.{Environment.NewLine}" +
+                                             $"Note: you must run FabricObserver as System user if you want to monitor services that run as System or Admin user.";
+
+                            var healthReport = new Utilities.HealthReport
+                            {
+                                AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                                EmitLogEvent = EnableVerboseLogging,
+                                HealthMessage = message,
+                                HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                                Property = $"PermissionViolation({parentProc?.ProcessName})",
+                                ReportType = HealthReportType.Application,
+                                State = HealthState.Warning,
+                                NodeName = NodeName,
+                                Observer = ObserverConstants.AppObserverName,
+                            };
+
+                            // Generate a Service Fabric Health Report.
+                            HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                            // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                            if (IsTelemetryEnabled)
+                            {
+                                _ = TelemetryClient?.ReportHealthAsync(
+                                                           $"PermissionViolation({parentProc?.ProcessName})",
+                                                           HealthState.Warning,
+                                                           message,
+                                                           ObserverName,
+                                                           token,
+                                                           repOrInst?.ServiceName?.OriginalString);
+                            }
+
+                            // ETW.
+                            if (IsEtwEnabled)
+                            {
+                                ObserverLogger.LogEtw(
+                                                ObserverConstants.FabricObserverETWEventName,
+                                                new
+                                                {
+                                                    Property = $"PermissionViolation({parentProc?.ProcessName})",
+                                                    Level = "Warning",
+                                                    Message = message,
+                                                    ObserverName,
+                                                    ServiceName = repOrInst?.ServiceName?.OriginalString
+                                                });
+                            }
+                        }
+
+                        continue;
+                    }
+
+                    string parentProcName = parentProc?.ProcessName;
 
                     // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
                     // Please use ContainerObserver for SF container app service monitoring.
-                    if (parentProcName == "Fabric")
+                    if (parentProcName == null || parentProcName == "Fabric")
                     {
                         continue;
                     }
@@ -1132,15 +1190,9 @@ namespace FabricObserver.Observers
                         timer.Reset();
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-                {
-                    ObserverLogger.LogWarning(
-                         $"Handled exception in MonitorDeployedAppsAsync: Process {parentPid} is not running or it's running at a higher privilege than FabricObserver.{Environment.NewLine}" +
-                         $"ServiceName: {repOrInst.ServiceName?.OriginalString ?? "unknown"}{Environment.NewLine}Error message: {e.Message}");
-                }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
-                    ObserverLogger.LogWarning($"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}");
+                    ObserverLogger.LogError($"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{e}");
 
                     // Fix the bug..
                     throw;

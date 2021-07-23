@@ -9,7 +9,6 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
-using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -95,6 +94,12 @@ namespace FabricObserver.Observers
             get;
             private set;
         }
+
+        public HealthState ObserverFailureHealthStateLevel
+        {
+            get;
+            set;
+        } = HealthState.Warning;
 
         private ObserverHealthReporter HealthReporter
         {
@@ -679,6 +684,17 @@ namespace FabricObserver.Observers
             // ObserverWebApi.
             ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
 
+            // ObserverFailure HealthState Level
+            string state = GetConfigSettingValue(ObserverConstants.ObserverFailureHealthStateLevelParameter);
+            if (string.IsNullOrWhiteSpace(state) || state?.ToLower() == "none")
+            {
+                ObserverFailureHealthStateLevel = HealthState.Unknown;
+            }
+            else if (Enum.TryParse(state, out HealthState healthState))
+            {
+                ObserverFailureHealthStateLevel = healthState;
+            }
+
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
@@ -813,8 +829,8 @@ namespace FabricObserver.Observers
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
                     if (!isCompleted && !(TaskCancelled || shutdownSignaled))
                     {
-                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. " +
-                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it.";
+                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified Maximum run time of {observerExecTimeout.TotalSeconds} seconds. " +
+                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Please look into it.";
 
                         Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
@@ -826,7 +842,7 @@ namespace FabricObserver.Observers
                             {
                                 Description = observerHealthWarning,
                                 HealthState = "Error",
-                                Metric = $"{observer.ObserverName}_ServiceHealth",
+                                Metric = $"{observer.ObserverName}_HealthState",
                                 NodeName = nodeName,
                                 ObserverName = ObserverConstants.ObserverManagerName,
                                 Source = ObserverConstants.FabricObserverName
@@ -839,16 +855,36 @@ namespace FabricObserver.Observers
                         if (EtwEnabled)
                         {
                             Logger.LogEtw(
-                                ObserverConstants.FabricObserverETWEventName,
-                                new
-                                {
-                                    Description = observerHealthWarning,
-                                    HealthState = "Error",
-                                    Metric = $"{observer.ObserverName}_ServiceHealth",
-                                    NodeName = nodeName,
-                                    ObserverName = ObserverConstants.ObserverManagerName,
-                                    Source = ObserverConstants.FabricObserverName
-                                });
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Description = observerHealthWarning,
+                                        HealthState = "Error",
+                                        Metric = $"{observer.ObserverName}_HealthState",
+                                        NodeName = nodeName,
+                                        ObserverName = ObserverConstants.ObserverManagerName,
+                                        Source = ObserverConstants.FabricObserverName
+                                    });
+                        }
+
+                        // Put FO into Warning or Error (health state is configurable in Settings.xml)
+                        if (ObserverFailureHealthStateLevel != HealthState.Unknown)
+                        {
+                            var healthReport = new HealthReport
+                            {
+                                AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                                EmitLogEvent = false,
+                                HealthMessage = observerHealthWarning,
+                                HealthReportTimeToLive = TimeSpan.MaxValue,
+                                Property = $"{observer.ObserverName}_HealthState",
+                                ReportType = HealthReportType.Application,
+                                State = ObserverFailureHealthStateLevel,
+                                NodeName = this.nodeName,
+                                Observer = ObserverConstants.ObserverManagerName,
+                            };
+
+                            // Generate a Service Fabric Health Report.
+                            HealthReporter.ReportHealthToServiceFabric(healthReport);
                         }
 
                         continue;

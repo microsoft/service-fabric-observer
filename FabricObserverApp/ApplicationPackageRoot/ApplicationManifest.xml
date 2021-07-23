@@ -18,7 +18,7 @@
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
     <!-- AzureStorageObserver is only useful for Windows today. Disable it for Linux. -->
-    <Parameter Name="AzureStorageObserverEnabled" DefaultValue="false" />
+    <Parameter Name="AzureStorageObserverEnabled" DefaultValue="true" />
     <Parameter Name="SampleNewObserverEnabled" DefaultValue="false" />
     <!-- Telemetry - AppInsights or LogAnalytics -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
@@ -32,7 +32,7 @@
     <Parameter Name="AzureStorageObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" />
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />
@@ -143,13 +143,13 @@
     <Parameter Name="AzureStorageObserverBlobContainerName" DefaultValue="fodumps" />
     <!-- This must be an encrypted string. It is not a good idea to place an unencrypted ConnectionString in an XML file.. FO will ignore unencrypted strings. 
          Use Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here. 
-         The encrypted string must not contain any line breaks or spaces. This is very important. If you copy the the string incorrectly, then FO will not upload dumps.
+         The encrypted string must NOT contain any line breaks or spaces. This is very important. If you copy the the string incorrectly, then FO will not upload dumps.
          See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps  
          for details. Follow the directions in the sample for creating an encryted secret. Note the use of thumbprint in the cmd. -->
     <Parameter Name="AzureStorageObserverAzureStorageConnectionString" DefaultValue="" />
     <!-- OR -->
     <Parameter Name="AzureStorageObserverAzureStorageAccountName" DefaultValue="" />
-    <!-- This must be an encrypted string. -->
+    <!-- This must be an encrypted string. Make sure there are no line breaks and no blank spaces between any characters. This is very important. -->
     <Parameter Name="AzureStorageObserverAzureStorageAccountKey" DefaultValue="" />
     <!-- Zip file compression level to use. -->
     <Parameter Name="AzureStorageObserverZipFileCompressionLevel" DefaultValue="Optimal" />
@@ -288,9 +288,12 @@
             <Parameter Name="EnableVerboseLogging" Value="[AzureStorageObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[AzureStorageObserverRunInterval]" />
             <Parameter Name="BlobContainerName" Value="[AzureStorageObserverBlobContainerName]" />
+            <!-- Azure Storage Connection String -->
+            <!-- Note that you *can* use plain text values that are unencrypted strings. This is NOT recommended, but the decision is yours. If you choose to do this,
+                 then you must set IsEncrypted to false both in the below settings and the corresponding settings in Settings.xml. -->
             <!-- Azure Storage Auth: Either supply an encrypted Connection String or an account name and encrypted shared key. -->
             <Parameter Name="AzureStorageConnectionString" Value="[AzureStorageObserverAzureStorageConnectionString]" IsEncrypted="true" />
-            <!-- OR -->
+            <!-- OR use Account Name/Account Key pair if NOT using Connection String.. -->
             <Parameter Name="AzureStorageAccountName" Value="[AzureStorageObserverAzureStorageAccountName]" />
             <Parameter Name="AzureStorageAccountKey" Value="[AzureStorageObserverAzureStorageAccountKey]" IsEncrypted="true" />
             <!-- File compression level -->
@@ -306,6 +309,7 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
+    <!-- Uncomment below to run FO as System user. Also uncomment the Principals node below. -->
     <!--<Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
     </Policies>-->
@@ -321,14 +325,15 @@
       </StatelessService>
     </Service>
   </DefaultServices>
+  <!-- Uncomment below to run FO as System user.Also uncomment the Policies node above. -->
   <!--<Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
   </Principals>-->
   <!-- This is important to set so that FO can run as NetworkUser if you want to upload AppObserver user service process dumps to your Azure Storage account via AzureStorageObserver. 
-       Just supply the same thumbprint you used to encrypt your ConnectionString. Of course, the certificate's private key will also need to be installed on all your VMs in the cluster.
-       You should already understand this. -->
+       Just supply the same thumbprint you used to encrypt your Storage Connection String or Storage Account Key.
+       If you need to run FabricObserver as System user (you will need to in order to monitor your services that run as System or Admin user), then you do not need to set this. -->
   <Certificates>
     <SecretsCertificate X509FindValue="" Name="" />
   </Certificates>
