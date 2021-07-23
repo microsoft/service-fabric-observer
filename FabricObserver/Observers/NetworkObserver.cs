@@ -344,11 +344,7 @@ namespace FabricObserver.Observers
 
                 if (!ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(Token)))
                 {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                                         FabricServiceContext.ServiceName.OriginalString,
-                                         ObserverName,
-                                         HealthState.Warning,
-                                         "Unable to create NetInfo.txt file.");
+                    ObserverLogger.LogWarning("Unable to create NetInfo.txt file.");
                 }
             }
 
@@ -494,11 +490,7 @@ namespace FabricObserver.Observers
                         }
                         catch (Exception e) when (!(e is OperationCanceledException))
                         {
-                            HealthReporter.ReportFabricObserverServiceHealth(
-                                            FabricServiceContext.ServiceName.OriginalString,
-                                            ObserverName,
-                                            HealthState.Warning,
-                                            e.ToString());
+                            ObserverLogger.LogWarning(e.ToString());
 
                             // Fix the bug..
                             throw;

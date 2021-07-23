@@ -64,6 +64,9 @@ namespace FabricObserver.Observers.Utilities
         // AzureStorageObserver
         public const string AzureStorageConnectionStringParameter = "AzureStorageConnectionString";
         public const string AzureBlobContainerNameParameter = "BlobContainerName";
+        public const string AzureStorageAccountNameParameter = "AzureStorageAccountName";
+        public const string AzureStorageAccountKeyParameter = "AzureStorageAccountKey";
+        public const string ZipFileCompressionLevelParameter = "ZipFileCompressionLevel";
 
         // Certificate Observer
         public const string CertificateObserverName = "CertificateObserver";

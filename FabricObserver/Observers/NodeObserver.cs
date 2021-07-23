@@ -373,11 +373,8 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             { 
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                    FabricServiceContext.ServiceName.OriginalString,
-                                    ObserverName,
-                                    HealthState.Warning,
-                                    $"Unhandled exception re-thrown:{Environment.NewLine}{e}"); 
+                ObserverLogger.LogWarning($"Unhandled exception re-thrown:{Environment.NewLine}{e}"); 
+                
                 // Fix the bug..
                 throw; 
             }
@@ -724,11 +721,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             { 
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                FabricServiceContext.ServiceName.OriginalString,
-                                ObserverName,
-                                HealthState.Warning,
-                                $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}"); 
+                ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}"); 
                 // Fix the bug..
                 throw; 
             }

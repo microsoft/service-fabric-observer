@@ -290,6 +290,43 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_IsHealthy()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            using var client = new FabricClient(FabricClientRole.User);
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricClientInstance = client;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(client, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle.json"),
+                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>()
+            };
+
+            await obs.ObserveAsync(token).ConfigureAwait(true);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
+        }
+
+        [TestMethod]
         public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
             var startDateTime = DateTime.Now;

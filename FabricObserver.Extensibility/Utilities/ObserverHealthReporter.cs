@@ -33,39 +33,6 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Report FabricObserver service health as log event (not to SF Health).
-        /// </summary>
-        /// <param name="serviceName">Name of the service.</param>
-        /// <param name="propertyName">Name of the health property.</param>
-        /// <param name="healthState">Health state (Ok, Error, etc).</param>
-        /// <param name="description">Description of the health condition.</param>
-        public void ReportFabricObserverServiceHealth(string serviceName, string propertyName, HealthState healthState, string description)
-        {
-            string msg = $"{propertyName} reporting {healthState}: {description}";
-
-            switch (healthState)
-            {
-                case HealthState.Error:
-                    logger.LogError(msg);
-                    break;
-
-                case HealthState.Warning:
-                    logger.LogWarning(msg);
-                    break;
-
-                default:
-                {
-                    if (logger.EnableVerboseLogging)
-                    {
-                        logger.LogInfo(msg);
-                    }
-
-                    break;
-                }
-            }
-        }
-
-        /// <summary>
         /// This function generates Service Fabric Health Reports that will show up in SFX.
         /// </summary>
         /// <param name="healthReport">Utilities.HealthReport instance.</param>

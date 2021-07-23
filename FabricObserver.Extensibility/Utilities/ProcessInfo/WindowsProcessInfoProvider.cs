@@ -123,9 +123,9 @@ namespace FabricObserver.Observers.Utilities
             }
 
             // Get child procs.
-            List<(string procName, int pid)> childProcesses = TupleGetChildProcessInfo(processId);
+            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessInfo(processId);
 
-            if (childProcesses == null)
+            if (childProcesses == null || childProcesses.Count == 0)
             {
                 return null;
             }
@@ -138,9 +138,9 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<(string procName, int pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].pid);
+                List<(string ProcName, int Pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].Pid);
 
-                if (c1?.Count > 0)
+                if (c1 != null && c1.Count > 0)
                 {
                     childProcesses.AddRange(c1);
 
@@ -151,9 +151,9 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int j = 0; j < c1.Count; ++j)  
                     {
-                        List<(string procName, int pid)> c2 = TupleGetChildProcessInfo(c1[j].pid);
+                        List<(string ProcName, int Pid)> c2 = TupleGetChildProcessInfo(c1[j].Pid);
 
-                        if (c2?.Count > 0)
+                        if (c2 != null && c2.Count > 0)
                         {
                             childProcesses.AddRange(c2);
 
@@ -164,9 +164,9 @@ namespace FabricObserver.Observers.Utilities
 
                             for (int k = 0; k < c2.Count; ++k)
                             {
-                                List<(string procName, int pid)> c3 = TupleGetChildProcessInfo(c2[k].pid);
+                                List<(string ProcName, int Pid)> c3 = TupleGetChildProcessInfo(c2[k].Pid);
 
-                                if (c3?.Count > 0)
+                                if (c3 != null && c3.Count > 0)
                                 {
                                     childProcesses.AddRange(c3);
 
@@ -177,9 +177,9 @@ namespace FabricObserver.Observers.Utilities
 
                                     for (int l = 0; l < c3.Count; ++l)
                                     {
-                                        List<(string procName, int pid)> c4 = TupleGetChildProcessInfo(c3[l].pid);
+                                        List<(string ProcName, int Pid)> c4 = TupleGetChildProcessInfo(c3[l].Pid);
 
-                                        if (c4?.Count > 0)
+                                        if (c4 != null && c4.Count > 0)
                                         {
                                             childProcesses.AddRange(c4);
 

@@ -28,8 +28,8 @@ namespace FabricObserver.Observers
     {
         private const int TtlAddMinutes = 5;
         private const string FabricSystemAppName = "fabric:/System";
-        private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> serviceDumpCountDictionary;
         private bool disposed;
+        private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
 
         public bool EnableProcessDumps
         {
@@ -384,35 +384,6 @@ namespace FabricObserver.Observers
         public abstract Task ReportAsync(CancellationToken token);
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="property"></param>
-        /// <param name="description"></param>
-        /// <param name="level"></param>
-        public void WriteToLogWithLevel(string property, string description, LogLevel level)
-        {
-            switch (level)
-            {
-                case LogLevel.Information:
-                    ObserverLogger.LogInfo("{0} logged at level {1}: {2}", property, level, description);
-                    break;
-
-                case LogLevel.Warning:
-                    ObserverLogger.LogWarning("{0} logged at level {1}: {2}", property, level, description);
-                    break;
-
-                case LogLevel.Error:
-                    ObserverLogger.LogError("{0} logged at level {1}: {2}", property, level, description);
-                    break;
-
-                default:
-                    return;
-            }
-
-            Logger.Flush();
-        }
-
-        /// <summary>
         /// Gets a parameter value from the specified section.
         /// </summary>
         /// <param name="sectionName">Name of the section.</param>
@@ -476,23 +447,75 @@ namespace FabricObserver.Observers
         /// This function runs if you set dumpProcessOnError to true in AppObserver.config.json AND enable process dumps in AppObserver configuration in ApplicationManifest.xml.
         /// </summary>
         /// <param name="processId">Process id of the target process to dump.</param>
-        /// <param name="folderPath">The full path to store dump folder.</param>
-        /// <param name="procName">Optional: process name.</param>
+        /// <param name="procName">Process name.</param>
+        /// <param name="metric">The name of the metric threshold that was breached, leading to dump.</param>
         /// <returns>true or false if the operation succeeded.</returns>
-        private bool DumpServiceProcess(int processId, string folderPath, string procName = null)
+        public bool DumpWindowsServiceProcess(int processId, string procName, string metric)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(DumpsPath) && string.IsNullOrWhiteSpace(folderPath))
+            if (string.IsNullOrWhiteSpace(DumpsPath))
             {
                 return false;
             }
 
-            string path = !string.IsNullOrWhiteSpace(folderPath) ? folderPath : DumpsPath;
-            string processName = !string.IsNullOrWhiteSpace(procName) ? procName : string.Empty;
+            if (!Directory.Exists(DumpsPath))
+            {
+                try
+                {
+                    Directory.CreateDirectory(DumpsPath);
+                }
+                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                {
+                    ObserverLogger.LogWarning($"Can't create dump directory for path {DumpsPath}. Will not generate dmp file for {procName}. " +
+                                              $"Error info:{Environment.NewLine}{e}");
+                    return false;
+                }
+            }
+
+            if (ServiceDumpCountDictionary == null)
+            {
+                ServiceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
+            }
+
+            StringBuilder sb = new StringBuilder(metric);
+            string metricName = sb.Replace(" ", string.Empty)
+                                    .Replace("Total", string.Empty)
+                                    .Replace("MB", string.Empty)
+                                    .Replace("%", string.Empty)
+                                    .Replace("Active", string.Empty)
+                                    .Replace("TCP", string.Empty).ToString();
+            sb.Clear();
+            string dumpKey = $"{procName}_{metricName}";
+            string processName = dumpKey;
+
+            if (Directory.Exists(DumpsPath) && Directory.GetFiles(DumpsPath, $"*{dumpKey}*.dmp", SearchOption.AllDirectories).Length >= MaxDumps)
+            {
+                ObserverLogger.LogWarning($"Reached maximum dumps({MaxDumps}) for {dumpKey} dmp files. Aborting.. " +
+                                          $"If enabled, make sure that AzureStorageObserver is configured correctly. Will attempt to delete old (>= 1 day) files now.");
+
+                // Clean out old dmp files, if any. Generally, there will only be some dmp files remaining on disk if customer has not configured
+                // AzureStorageObserver correctly or some error occurred during some stage of the upload process.
+                Logger.TryCleanFolder(DumpsPath, $"*{dumpKey}*.dmp", TimeSpan.FromDays(1));
+                return false;
+            }
+            
+            if (!ServiceDumpCountDictionary.ContainsKey(dumpKey))
+            {
+                ServiceDumpCountDictionary.Add(dumpKey, (0, DateTime.UtcNow));
+            }
+            else if (DateTime.UtcNow.Subtract(ServiceDumpCountDictionary[dumpKey].LastDumpDate) >= TimeSpan.FromHours(8))
+            {
+                ServiceDumpCountDictionary[dumpKey] = (0, DateTime.UtcNow);
+            }
+            else if (ServiceDumpCountDictionary[dumpKey].DumpCount >= MaxDumps)
+            {
+                return false;
+            }
+
             NativeMethods.MINIDUMP_TYPE miniDumpType;
 
             switch (DumpType)
@@ -536,33 +559,15 @@ namespace FabricObserver.Observers
                     processName += $"_{DateTime.Now:ddMMyyyyHHmmss}.dmp";
 
                     // Check disk space availability before writing dump file.
-                    string driveName = path.Substring(0, 2);
+                    string driveName = DumpsPath.Substring(0, 2);
 
                     if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
                     {
-                        HealthReporter.ReportFabricObserverServiceHealth(
-                                                FabricServiceContext.ServiceName.OriginalString,
-                                                ObserverName,
-                                                HealthState.Warning,
-                                                "Not enough disk space available for dump file creation.");
-
+                        ObserverLogger.LogWarning("Not enough disk space available for dump file creation.");
                         return false;
                     }
 
-                    if (!Directory.Exists(path))
-                    {
-                        try
-                        {
-                            Directory.CreateDirectory(path);
-                        }
-                        catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
-                        {
-                            // Can't create directory in SF dumps folder, so dump into top level directory..
-                            path = DumpsPath;
-                        }
-                    }
-
-                    using (FileStream file = File.Create(Path.Combine(path, processName)))
+                    using (FileStream file = File.Create(Path.Combine(DumpsPath, processName)))
                     {
                         if (!NativeMethods.MiniDumpWriteDump(
                                             processHandle,
@@ -574,6 +579,11 @@ namespace FabricObserver.Observers
                                             IntPtr.Zero))
                         {
                             throw new Win32Exception(Marshal.GetLastWin32Error());
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(metric))
+                        {
+                            ServiceDumpCountDictionary[dumpKey] = (ServiceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
                         }
                     }
                 }
@@ -696,7 +706,7 @@ namespace FabricObserver.Observers
                 // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
                 // be contained in the ChildProcessTelemetry data instances and AppObserver will have already emitted it.
                 // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
-                if (IsTelemetryEnabled && replicaOrInstance.ChildProcesses == null)
+                if (IsTelemetryEnabled && replicaOrInstance?.ChildProcesses == null)
                 {
                      _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(true);
                 }
@@ -705,7 +715,7 @@ namespace FabricObserver.Observers
                 // be contained in the ChildProcessTelemetry data instances and AppObserver will have already emitted it.
                 // Enable this for your observer if you want to log etw (which can then be read by some agent that will send it to some endpoint)
                 // for each resource usage observation it makes per specified metric.
-                if (IsEtwEnabled && replicaOrInstance.ChildProcesses == null)
+                if (IsEtwEnabled && replicaOrInstance?.ChildProcesses == null)
                 {
                     ObserverLogger.LogEtw(
                                     ObserverConstants.FabricObserverETWEventName,
@@ -718,7 +728,7 @@ namespace FabricObserver.Observers
                                         Value = Math.Round(data.AverageDataValue, 0),
                                         PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                         ProcessId = procId,
-                                        ReplicaId = replicaOrInstance?.ReplicaOrInstanceId,
+                                        ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
                                         SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty
@@ -786,9 +796,9 @@ namespace FabricObserver.Observers
                 {
                     if (!string.IsNullOrWhiteSpace(DumpsPath))
                     {
-                        if (serviceDumpCountDictionary == null)
+                        if (ServiceDumpCountDictionary == null)
                         {
-                            serviceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
+                            ServiceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
                         }
 
                         try
@@ -798,35 +808,7 @@ namespace FabricObserver.Observers
                             using (var proc = Process.GetProcessById(pid))
                             {
                                 string procName = proc?.ProcessName;
-                                StringBuilder sb = new StringBuilder(data.Property);
-                                string metricName = sb.Replace(" ", string.Empty)
-                                                      .Replace("Total", string.Empty)
-                                                      .Replace("MB", string.Empty)
-                                                      .Replace("%", string.Empty)
-                                                      .Replace("Active", string.Empty)
-                                                      .Replace("TCP", string.Empty).ToString();
-                                sb.Clear();
-                                string dumpKey = $"{procName}_{metricName}";
-
-                                if (!serviceDumpCountDictionary.ContainsKey(dumpKey))
-                                {
-                                    serviceDumpCountDictionary.Add(dumpKey, (0, DateTime.UtcNow));
-                                }
-                                else if (DateTime.UtcNow.Subtract(serviceDumpCountDictionary[dumpKey].LastDumpDate) >= TimeSpan.FromDays(1))
-                                {
-                                    serviceDumpCountDictionary[dumpKey] = (0, DateTime.UtcNow);
-                                }
-
-                                if (serviceDumpCountDictionary[dumpKey].DumpCount < MaxDumps)
-                                {
-                                    // DumpServiceProcess defaults to a MiniPlus dump with process memory, handles, threads.
-                                    bool success = DumpServiceProcess(pid, DumpsPath, dumpKey);
-
-                                    if (success)
-                                    {
-                                        serviceDumpCountDictionary[dumpKey] = (serviceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
-                                    }
-                                }
+                                _ = DumpWindowsServiceProcess(pid, procName, data.Property);
                             }
                         }
                         catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)

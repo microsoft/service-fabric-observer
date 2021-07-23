@@ -200,11 +200,7 @@ namespace FabricObserver.Observers
                     // This file is used by the web application (log reader.).
                     if (!ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow:M/d/yyyy HH:mm:ss} UTC<br/>{osReport}"))
                     {
-                        HealthReporter.ReportFabricObserverServiceHealth(
-                                            FabricServiceContext.ServiceName.OriginalString,
-                                            ObserverName,
-                                            HealthState.Warning,
-                                            "Unable to create SysInfo.txt file.");
+                        ObserverLogger.LogWarning("Unable to create SysInfo.txt file.");
                     }
                 }
 
@@ -281,11 +277,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException))
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                    FabricServiceContext.ServiceName.OriginalString,
-                                    ObserverName,
-                                    HealthState.Error,
-                                    $"Unhandled exception processing OS information:{Environment.NewLine}{e}");
+                ObserverLogger.LogError($"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
                 // Fix the bug..
                 throw;
@@ -663,11 +655,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                   FabricServiceContext.ServiceName.OriginalString,
-                                   ObserverName,
-                                   HealthState.Error,
-                                   $"Unhandled Exception processing OS information:{Environment.NewLine}{e}");
+                ObserverLogger.LogError($"Unhandled Exception processing OS information:{Environment.NewLine}{e}");
             }
         }
     }

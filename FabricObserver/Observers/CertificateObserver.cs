@@ -136,10 +136,7 @@ namespace FabricObserver.Observers
             }
             catch (SecurityException e)
             {
-                WriteToLogWithLevel(
-                    ObserverName,
-                    $"Can't access {store.Name} due to {e.Message} - {e.StackTrace}",
-                    LogLevel.Warning);
+                ObserverLogger.LogWarning($"Can't access {store.Name} due to {e.Message} - {e.StackTrace}");
             }
             finally
             {
@@ -412,10 +409,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException))
             {
-                WriteToLogWithLevel(
-                    ObserverName,
-                    $"There was an issue parsing the cluster manifest. Observer cannot run. Error Details:{Environment.NewLine}{e}",
-                    LogLevel.Error);
+                ObserverLogger.LogError($"There was an issue parsing the cluster manifest. Observer cannot run. Error Details:{Environment.NewLine}{e}");
 
                 throw;
             }

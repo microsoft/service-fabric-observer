@@ -9,7 +9,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
-using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
@@ -91,13 +90,8 @@ namespace FabricObserver.Observers
 
             if (!initialized)
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                FabricServiceContext.ServiceName.OriginalString,
-                                ObserverName,
-                                HealthState.Warning,
-                                "AppObserver was unable to initialize correctly due to misconfiguration. " +
-                                "Please check your AppObserver configuration settings.");
-
+                ObserverLogger.LogWarning("AppObserver was unable to initialize correctly due to misconfiguration. " +
+                                           "Please check your AppObserver configuration settings.");
                 stopwatch.Stop();
                 stopwatch.Reset();
                 return;
@@ -149,7 +143,8 @@ namespace FabricObserver.Observers
                 try
                 {
                     app = deployedTargetList.Find(
-                        a => a.TargetApp == repOrInst.ApplicationName.OriginalString || a.TargetAppType == repOrInst.ApplicationTypeName);
+                        a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) || 
+                             (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
                     
                     using Process p = Process.GetProcessById((int)repOrInst.HostProcessId);
 
@@ -204,7 +199,7 @@ namespace FabricObserver.Observers
 
                     if (hasChildProcs)
                     {
-                        ProcessChildProcs(ref AllAppCpuData, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                        ProcessChildProcs(ref AllAppCpuData, ref childProcessTelemetryDataList, repOrInst, ref app, ref parentFrud, token);
                     }
 
                     // Parent's and aggregated (summed) spawned process data (if any).
@@ -225,7 +220,7 @@ namespace FabricObserver.Observers
 
                     if (hasChildProcs)
                     {
-                        ProcessChildProcs(ref AllAppMemDataMb, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                        ProcessChildProcs(ref AllAppMemDataMb, ref childProcessTelemetryDataList, repOrInst, ref app, ref parentFrud, token);
                     }
 
                     // Parent's and aggregated (summed) spawned process data (if any).
@@ -246,7 +241,7 @@ namespace FabricObserver.Observers
 
                     if (hasChildProcs)
                     {
-                        ProcessChildProcs(ref AllAppMemDataPercent, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                        ProcessChildProcs(ref AllAppMemDataPercent, ref childProcessTelemetryDataList, repOrInst, ref app, ref parentFrud, token);
                     }
 
                     // Parent's and aggregated (summed) spawned process data (if any).
@@ -267,7 +262,7 @@ namespace FabricObserver.Observers
                     
                     if (hasChildProcs)
                     {
-                        ProcessChildProcs(ref AllAppTotalActivePortsData, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                        ProcessChildProcs(ref AllAppTotalActivePortsData, ref childProcessTelemetryDataList, repOrInst, ref app, ref parentFrud, token);
                     }
 
                     // Parent's and aggregated (summed) spawned process data (if any).
@@ -288,7 +283,7 @@ namespace FabricObserver.Observers
 
                     if (hasChildProcs)
                     {
-                        ProcessChildProcs(ref AllAppEphemeralPortsData, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                        ProcessChildProcs(ref AllAppEphemeralPortsData, ref childProcessTelemetryDataList, repOrInst, ref app, ref parentFrud, token);
                     }
 
                     // Parent's and aggregated (summed) spawned process data (if any).
@@ -309,7 +304,7 @@ namespace FabricObserver.Observers
 
                     if (hasChildProcs)
                     {
-                        ProcessChildProcs(ref AllAppHandlesData, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                        ProcessChildProcs(ref AllAppHandlesData, ref childProcessTelemetryDataList, repOrInst, ref app, ref parentFrud, token);
                     }
 
                     // Parent's and aggregated (summed) spawned process data (if any).
@@ -346,12 +341,12 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessChildProcs<T>(
-            ref List<FabricResourceUsageData<T>> fruds,
-            ref List<ChildProcessTelemetryData> childProcessTelemetryDataList, 
-            ReplicaOrInstanceMonitoringInfo repOrInst, 
-            ApplicationInfo app, 
-            ref FabricResourceUsageData<T> parentFrud, 
-            CancellationToken token) where T : struct
+                            ref List<FabricResourceUsageData<T>> fruds,
+                            ref List<ChildProcessTelemetryData> childProcessTelemetryDataList, 
+                            ReplicaOrInstanceMonitoringInfo repOrInst, 
+                            ref ApplicationInfo app, 
+                            ref FabricResourceUsageData<T> parentFrud, 
+                            CancellationToken token) where T : struct
         {
             token.ThrowIfCancellationRequested();
 
@@ -359,7 +354,7 @@ namespace FabricObserver.Observers
             {
                 string metric = parentFrud.Property;
                 var parentDataAvg = Math.Round(parentFrud.AverageDataValue, 0);
-                var (childProcInfo, Sum) = ProcessChildFrudsGetDataSum(ref fruds, repOrInst, app, token);
+                var (childProcInfo, Sum) = ProcessChildFrudsGetDataSum(ref fruds, repOrInst, ref app, token);
                 double sumAllValues = Sum + parentDataAvg;
                 childProcInfo.Metric = metric;
                 childProcInfo.Value = sumAllValues;
@@ -376,7 +371,7 @@ namespace FabricObserver.Observers
         private (ChildProcessTelemetryData childProcInfo, double Sum) ProcessChildFrudsGetDataSum<T>(
                                                                         ref List<FabricResourceUsageData<T>> fruds,
                                                                         ReplicaOrInstanceMonitoringInfo repOrInst,
-                                                                        ApplicationInfo app,
+                                                                        ref ApplicationInfo app,
                                                                         CancellationToken token) where T : struct
         {
             var childProcs = repOrInst.ChildProcesses;
@@ -426,6 +421,64 @@ namespace FabricObserver.Observers
                             {
                                 var childProcInfo = new ChildProcessInfo { ProcessName = childProcName, Value = value };
                                 childProcessInfoData.ChildProcessInfo.Add(childProcInfo); 
+                            }
+
+                            // Windows process dump support for descendant/child processes \\
+
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && app.DumpProcessOnError && EnableProcessDumps)
+                            {
+                                string prop = frud.Property;
+
+                                switch (prop)
+                                {
+                                    case ErrorWarningProperty.TotalCpuTime:
+                                        if (frud.IsUnhealthy(app.CpuErrorLimitPercent))
+                                        {
+                                            DumpWindowsServiceProcess(childPid, childProcName, ErrorWarningProperty.TotalCpuTime);
+                                            app.DumpProcessOnError = false;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.TotalMemoryConsumptionMb:
+                                        if (frud.IsUnhealthy(app.MemoryErrorLimitMb))
+                                        {
+                                            DumpWindowsServiceProcess(childPid, childProcName, ErrorWarningProperty.TotalMemoryConsumptionMb);
+                                            app.DumpProcessOnError = false;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.TotalMemoryConsumptionPct:
+                                        if (frud.IsUnhealthy(app.MemoryErrorLimitPercent))
+                                        {
+                                            DumpWindowsServiceProcess(childPid, childProcName, ErrorWarningProperty.TotalMemoryConsumptionPct);
+                                            app.DumpProcessOnError = false;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.TotalActivePorts:
+                                        if (frud.IsUnhealthy(app.NetworkErrorActivePorts))
+                                        {
+                                            DumpWindowsServiceProcess(childPid, childProcName, ErrorWarningProperty.TotalActivePorts);
+                                            app.DumpProcessOnError = false;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.TotalEphemeralPorts:
+                                        if (frud.IsUnhealthy(app.NetworkErrorEphemeralPorts))
+                                        {
+                                            DumpWindowsServiceProcess(childPid, childProcName, ErrorWarningProperty.TotalEphemeralPorts);
+                                            app.DumpProcessOnError = false;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.TotalFileHandles:
+                                        if (frud.IsUnhealthy(app.ErrorOpenFileHandles))
+                                        {
+                                            DumpWindowsServiceProcess(childPid, childProcName, ErrorWarningProperty.TotalFileHandles);
+                                            app.DumpProcessOnError = false;
+                                        }
+                                        break;
+                                }
                             }
 
                             // Remove child FRUD from ref FRUD.
@@ -675,16 +728,12 @@ namespace FabricObserver.Observers
             {
                 Token.ThrowIfCancellationRequested();
 
-                var application = userTargetList[i];
+                ApplicationInfo application = userTargetList[i];
                 Uri appUri = null;
 
                 if (string.IsNullOrWhiteSpace(application.TargetApp) && string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                                         FabricServiceContext.ServiceName.ToString(),
-                                         ObserverName,
-                                         HealthState.Warning,
-                                         $"InitializeAsync() | {application.TargetApp}: Required setting, target, is not set.");
+                    ObserverLogger.LogWarning($"InitializeAsync: Required setting, targetApp or targetAppType, is not set in AppObserver.config.json.");
 
                     settingsFail++;
                     continue;
@@ -708,12 +757,8 @@ namespace FabricObserver.Observers
                     }
                     catch (Exception e) when (e is ArgumentException || e is UriFormatException)
                     {
-                        HealthReporter.ReportFabricObserverServiceHealth(
-                                             FabricServiceContext.ServiceName.ToString(),
-                                             ObserverName,
-                                             HealthState.Warning,
-                                             $"InitializeAsync() | {application.TargetApp}: Invalid TargetApp value. " +
-                                             $"Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\"");
+                        ObserverLogger.LogWarning($"InitializeAsync: Unexpected TargetApp value {application.TargetApp}. " +
+                                                  $"Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\"");
 
                         settingsFail++;
                         continue;

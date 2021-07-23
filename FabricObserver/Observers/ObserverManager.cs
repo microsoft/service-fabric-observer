@@ -183,17 +183,24 @@ namespace FabricObserver.Observers
 
             // this logs error/warning/info messages for ObserverManager.
             Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays > 0 ? MaxArchivedLogFileLifetimeDays : 7);
-            HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-            SetPropertiesFromConfigurationParameters();
             serviceCollection = serviceProvider.GetServices<ObserverBase>();
 
             // Populate the Observer list for the sequential run loop.
             int capacity = serviceCollection.Count(o => o.IsEnabled);
+
             if (capacity > 0)
             {
                 observers = new List<ObserverBase>(capacity);
                 observers.AddRange(serviceCollection.Where(o => o.IsEnabled));
             }
+            else
+            {
+                Logger.LogWarning("There are no observers enabled. Aborting..");
+                return;
+            }
+
+            HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+            SetPropertiesFromConfigurationParameters();
 
             // FabricObserver Internal Diagnostic Telemetry (Non-PII).
             // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
@@ -237,7 +244,7 @@ namespace FabricObserver.Observers
             try
             {
                 // Nothing to do here.
-                if (observers?.Count == 0)
+                if (observers == null || observers.Count == 0)
                 {
                     return;
                 }
@@ -250,13 +257,16 @@ namespace FabricObserver.Observers
                 {
                     if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                     {
-                        await ShutDownAsync().ConfigureAwait(true);
+                        await ShutDownAsync().ConfigureAwait(false);
                         break;
                     }
 
-                    if (!await RunObserversAsync().ConfigureAwait(true))
+                    if (!await RunObserversAsync().ConfigureAwait(false))
                     {
-                        continue;
+                        if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
+                        {
+                            Logger.LogWarning("All enabled observers did not run successfully. See observer logs for details.");
+                        }
                     }
 
                  /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
@@ -269,12 +279,9 @@ namespace FabricObserver.Observers
                     Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
                     FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
                     
+                    // SOH, sweep-only collection (no compaction). This will clear the early generation objects (short-lived) from memory. This only impacts the FO process.
                     GC.Collect(0, GCCollectionMode.Forced, true, false);
                     GC.Collect(1, GCCollectionMode.Forced, true, false);
-
-                    // Compact LOH
-                    //GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    //GC.Collect(2, GCCollectionMode.Forced, true, true);
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
@@ -916,12 +923,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e)
                 {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                                         ObserverConstants.ObserverManagerName,
-                                         ApplicationName,
-                                         HealthState.Error,
-                                         $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
-
+                    Logger.LogWarning($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                     allExecuted = false;
                 }
 
@@ -934,12 +936,7 @@ namespace FabricObserver.Observers
             }
             else
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                     ObserverConstants.ObserverManagerName,
-                                     ApplicationName,
-                                     HealthState.Warning,
-                                     exceptionBuilder.ToString());
-                
+                Logger.LogWarning(exceptionBuilder.ToString());
                 _ = exceptionBuilder.Clear();
             }
 

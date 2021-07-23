@@ -14,7 +14,7 @@
          setting EnableVerboseLogging to true on AppObserver, for example, and it will log how long it takes to run each time it runs to completion. Any observer
          that monitors stuff supports run duration logging. Use this these values to determine what constitutes too long and that an observer needs to be fixed. 
          No Observer should ever take 2 hours to run, so the below setting is an extreme maximum. Vary the number to meet your actual needs. -->
-    <Parameter Name="ObserverExecutionTimeout" Value="7200" />
+    <Parameter Name="ObserverExecutionTimeout" Value="1800" />
     
     <!-- How long to wait, in seconds, after a shutdown is signaled. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
@@ -293,15 +293,25 @@
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Azure Blob store container name. -->
     <Parameter Name="BlobContainerName" Value="" MustOverride="true" />
+    <!-- For Authenticating to your Storage Account, you can either provide an encrypted ConnectionString OR an Account Name and encrypted shared access key. -->
     <!-- This must be an encrypted string. It is not a good idea to place an unencrypted ConnectionString here. 
          Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
          See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
     <Parameter Name="AzureStorageConnectionString" IsEncrypted="true" Value="" />
+    <!-- OR -->
+    <Parameter Name="AzureStorageAccountName" Value="" MustOverride="true" />
+    <!-- This must be an encrypted string. It is not a good idea to place an unencrypted key here. 
+         Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
+         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
+    <Parameter Name="AzureStorageAccountKey" IsEncrypted="true" Value="" MustOverride="true" />
+    <!-- Compression level for dmp file. Default is Optimal. If you have limited cores, than decrease the value. 
+         Supported values are: Fastest, Optimal. Optimal creates the smallest zip files. Fastest runs for less time with non-optimal compressed size. -->
+    <Parameter Name="ZipFileCompressionLevel" Value="" MustOverride="true" />
   </Section>
   <!-- Plugin model sample. Just add the configuration info here that your observer needs.
        **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
        Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
-       See the SampleObserverPlugin project for a complete example of implementing an observer plugin.
+       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
    <Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
@@ -309,5 +319,5 @@
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
-  </Section>-->
+  </Section>
 </Settings>

@@ -56,4 +56,9 @@
     <ProjectReference Include="..\ClusterObserver\ClusterObserver.csproj" />
     <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="PackageRoot\Config\AppObserver.config.oldstyle.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

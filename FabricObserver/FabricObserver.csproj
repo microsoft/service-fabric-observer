@@ -98,4 +98,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="PackageRoot\Data\Plugins\" />
+  </ItemGroup>
 </Project>
