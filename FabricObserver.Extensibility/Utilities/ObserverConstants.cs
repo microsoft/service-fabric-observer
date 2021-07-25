@@ -61,6 +61,7 @@ namespace FabricObserver.Observers.Utilities
         public const string EnableProcessDumpsParameter = "EnableProcessDumps";
         public const string DumpTypeParameter = "DumpType";
         public const string MaxDumpsParameter = "MaxDumps";
+        public const string MaxDumpsTimeWindowParameter = "MaxDumpsTimeWindow";
 
         // AzureStorageObserver
         public const string AzureStorageConnectionStringParameter = "AzureStorageConnectionString";

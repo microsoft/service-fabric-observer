@@ -159,7 +159,7 @@ Here are the current observers and what they monitor:
 | Resource | Observer |
 | --- | --- |
 | Application (services) resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | AppObserver |
-| Looks for dmp files in observer log directories to compress (optimal) and upload to your specified Azure storage account (blob only and still Windows only in this version of FO) | AzureStorageObserver |
+| Looks for dmp files in observer log directories to compress (optimal) and upload to your specified Azure storage account (blob only and still Windows only in this version of FO) | AzureStorageUploadObserver |
 | Application (user) and cluster certificate health monitoring | CertificateObserver |
 | Disk (local storage disk health/availability, space usage, IO) | DiskObserver |
 | SF System Services resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | FabricSystemObserver |

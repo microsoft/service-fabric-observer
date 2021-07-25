@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using Azure;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using FabricObserver.Observers.Utilities;
@@ -22,9 +23,13 @@ namespace FabricObserver.Observers
     // configured to do so - assuming correctly encrypted and specified ConnectionString for an Azure Storage Account, a container name, and other basic settings.
     // Since only Windows is supported for dumping service processes today by FO, this observer is not useful for Liunx in this version. 
     // So, if you are deploying FO to Linux servers, then don't enable this observer (it won't do anything if it is enabled, so no need have it resident in memory).
-    public class AzureStorageObserver : ObserverBase
+    public class AzureStorageUploadObserver : ObserverBase
     {
         private readonly Stopwatch stopwatch;
+
+        // Only AppObserver is supported today. No other observers generate dmp files.
+        private const string AppObserverDumpFolder = "MemoryDumps";
+        private string appObsDumpFolderPath;
 
         private SecureString StorageConnectionString
         {
@@ -56,7 +61,7 @@ namespace FabricObserver.Observers
             get; set;
         } = CompressionLevel.Optimal;
 
-        public AzureStorageObserver(FabricClient fabricClient, StatelessServiceContext context)
+        public AzureStorageUploadObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
             stopwatch = new Stopwatch();
@@ -95,7 +100,8 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            await ProcessFilesAsync(ObserverLogger.LogFolderBasePath, token);
+            // In case upload failed, also try and upload any zip files that remained in target local directory.
+            await ProcessFilesAsync(appObsDumpFolderPath, new[] { "*.zip", "*.dmp" }, token);
             await ReportAsync(token);
 
             CleanUp();
@@ -128,34 +134,47 @@ namespace FabricObserver.Observers
             }
         }
 
-        private async Task ProcessFilesAsync(string folderPath, CancellationToken token)
+        private async Task ProcessFilesAsync(string folderPath, string[] searchPatterns, CancellationToken token)
         {
-            string[] files = Directory.GetFiles(folderPath, "*.dmp", SearchOption.AllDirectories);
-
-            for (int i = 0; i < files.Length; ++i)
+            for (int i = 0; i < searchPatterns.Length; ++i)
             {
                 token.ThrowIfCancellationRequested();
 
-                if (!CompressFileForUpload(files[i]))
-                {
-                    continue;
-                }
+                string searchPattern = searchPatterns[i];
+                string[] files = Directory.GetFiles(folderPath, searchPattern, SearchOption.AllDirectories);
 
-                string file = files[i].Replace(".dmp", ".zip");
-                bool success = await UploadBlobAsync(file, token);
-                
-                await Task.Delay(1000, token);
+                for (int j = 0; j < files.Length; ++j)
+                {
+                    token.ThrowIfCancellationRequested();
+                    
+                    string file = files[j];
 
-                try
-                {
-                    File.Delete(file);
-                }
-                catch (Exception e) when (e is IOException || e is ArgumentException || e is UnauthorizedAccessException || e is PathTooLongException)
-                {
-                    if (success)
+                    if (searchPattern == "*.dmp")
                     {
-                        ObserverLogger.LogWarning($"Unable to delete file {Path.GetFileName(file)} after successful upload " +
-                                                  $"to blob container {BlobContainerName}:{Environment.NewLine}{e}");
+                        if (!CompressFileForUpload(file))
+                        {
+                            continue;
+                        }
+                    }
+
+                    string zipfile = file.Replace(".dmp", ".zip");
+                    bool success = await UploadBlobAsync(zipfile, token);
+
+                    await Task.Delay(1000, token);
+
+                    if (!success)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        Retry.Do(() => File.Delete(zipfile), TimeSpan.FromSeconds(1), token, 3);
+                    }
+                    catch (AggregateException ae)
+                    {
+                        ObserverLogger.LogWarning($"Unable to delete file {Path.GetFileName(zipfile)} after successful upload " +
+                                                  $"to blob container {BlobContainerName}:{Environment.NewLine}{ae}");
                     }
                 }
             }
@@ -168,14 +187,19 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            string zipPath;
+            if (file.EndsWith(".zip"))
+            {
+                return true;
+            }
+
+            string zipPath = null;
 
             try
             {
                 zipPath = file.Replace(".dmp", ".zip");
-                using var fs = new FileStream(zipPath, FileMode.Create);
-                using var arch = new ZipArchive(fs, ZipArchiveMode.Create);
-                arch.CreateEntryFromFile(file, Path.GetFileName(file), ZipCompressionLevel);
+                using FileStream fs = new FileStream(zipPath, FileMode.Create);
+                using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Create);
+                zip.CreateEntryFromFile(file, Path.GetFileName(file), ZipCompressionLevel);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
             {
@@ -188,11 +212,11 @@ namespace FabricObserver.Observers
             {
                 try
                 {
-                    File.Delete(file);
+                    Retry.Do(() => File.Delete(file), TimeSpan.FromSeconds(1), Token, 3);
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                catch (AggregateException ae)
                 {
-                    ObserverLogger.LogWarning($"Unable to delete original file after successful compression to zip file:{Environment.NewLine}{e}");
+                    ObserverLogger.LogWarning($"Unable to delete original file after successful compression to zip file:{Environment.NewLine}{ae}");
                 }
             }
 
@@ -207,19 +231,26 @@ namespace FabricObserver.Observers
 
         private bool Initialize()
         {
+            appObsDumpFolderPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverConstants.AppObserverName, AppObserverDumpFolder);
+
             // Nothing to do here.
-            if (!Directory.Exists(ObserverLogger.LogFolderBasePath))
+            if (!Directory.Exists(appObsDumpFolderPath))
             {
                 return false;
             }
 
             try
             {
-                var files = Directory.GetFiles(ObserverLogger.LogFolderBasePath, "*.dmp", SearchOption.AllDirectories);
+                var files = Directory.GetFiles(appObsDumpFolderPath, "*.dmp", SearchOption.AllDirectories);
 
                 if (files.Length == 0)
                 {
-                    return false;
+                    files = Directory.GetFiles(appObsDumpFolderPath, "*.zip", SearchOption.AllDirectories);
+
+                    if (files.Length == 0)
+                    {
+                        return false;
+                    }
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
@@ -247,8 +278,9 @@ namespace FabricObserver.Observers
             }
 
             // Clean out old dmp files, if any. Generally, there will only be some dmp files remaining on disk if customer has not configured
-            // uploads correctly or some error during some stage of the upload process.
-            Logger.TryCleanFolder(ObserverLogger.LogFolderBasePath, "*.dmp", TimeSpan.FromDays(1));
+            // uploads correctly or some error during some stage of the upload process. Under normal circumstances, there will be no dmp (or zip) files remaining on
+            // disk after successful uploads to configured blob storage container.
+            ObserverLogger.TryCleanFolder(appObsDumpFolderPath, "*.dmp", TimeSpan.FromDays(3));
 
             // Compression setting.
             string compressionLevel = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ZipFileCompressionLevelParameter);
@@ -391,13 +423,32 @@ namespace FabricObserver.Observers
             BlobClient blob = container.GetBlobClient(blobName);
 
             // Upload local zip file.
-            await blob.UploadAsync(filePath, token)
-                .ContinueWith((response) =>
+
+            await blob.UploadAsync(filePath, token).ContinueWith(
+                (response) =>
                 {
                     if (response.IsFaulted)
                     {
                         ObserverLogger.LogWarning($"Upload of blob {Path.GetFileName(filePath)} " +
-                                                  $"failed:{Environment.NewLine}{response.Exception ?? null}");
+                                                  $"failed:{Environment.NewLine}{response.Exception.Message}");
+
+                        // Try and delete local duplicate blob file (it already exists in the blob storage account).
+                        if (response.Exception.InnerException is RequestFailedException ex)
+                        {
+                            if (ex.ErrorCode == "BlobAlreadyExists" || ex.HResult == -2146233088)
+                            {
+                                ObserverLogger.LogWarning($"Deleting duplicate blob {blobName} from local disk..");
+                                try
+                                {
+                                    Retry.Do(() => File.Delete(filePath), TimeSpan.FromSeconds(1), token);
+                                    ObserverLogger.LogWarning($"Successfully deleted duplicate blob {blobName} from local disk..");
+                                }
+                                catch (AggregateException ae)
+                                {
+                                    ObserverLogger.LogWarning($"Can't delete local duplicate blob {blobName}:{Environment.NewLine}{ae}");
+                                }
+                            }
+                        }
                         success = false;
                     }
                     else if (response.IsCompletedSuccessfully)
@@ -406,6 +457,7 @@ namespace FabricObserver.Observers
                                                $"to blob container {BlobContainerName}.");
                         success = true;
                     }
+
                 }, token).ConfigureAwait(true);
 
             return success;

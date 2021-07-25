@@ -47,6 +47,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        public TimeSpan MaxDumpsTimeWindow
+        {
+            get; set;
+        } = TimeSpan.FromHours(4);
+
         public DumpType DumpType
         {
             get; set;
@@ -457,6 +462,12 @@ namespace FabricObserver.Observers
                 return false;
             }
 
+            // Must provide a process name.. & do not try and dump yourself..
+            if (string.IsNullOrEmpty(procName) || procName == ObserverConstants.FabricObserverName)
+            {
+                return false;
+            }
+
             if (string.IsNullOrWhiteSpace(DumpsPath))
             {
                 return false;
@@ -483,36 +494,50 @@ namespace FabricObserver.Observers
 
             StringBuilder sb = new StringBuilder(metric);
             string metricName = sb.Replace(" ", string.Empty)
-                                    .Replace("Total", string.Empty)
-                                    .Replace("MB", string.Empty)
-                                    .Replace("%", string.Empty)
-                                    .Replace("Active", string.Empty)
-                                    .Replace("TCP", string.Empty).ToString();
+                                  .Replace("Total", string.Empty)
+                                  .Replace("MB", string.Empty)
+                                  .Replace("%", string.Empty)
+                                  .Replace("Active", string.Empty)
+                                  .Replace("Allocated", string.Empty)
+                                  .Replace("Length", string.Empty)
+                                  .Replace("Consumption", string.Empty)
+                                  .Replace("Time", string.Empty)
+                                  .Replace("TCP", string.Empty).ToString();
             sb.Clear();
             string dumpKey = $"{procName}_{metricName}";
-            string processName = dumpKey;
+            string dumpFileName = $"{dumpKey}_{NodeName}";
 
-            if (Directory.Exists(DumpsPath) && Directory.GetFiles(DumpsPath, $"*{dumpKey}*.dmp", SearchOption.AllDirectories).Length >= MaxDumps)
+            try
             {
-                ObserverLogger.LogWarning($"Reached maximum dumps({MaxDumps}) for {dumpKey} dmp files. Aborting.. " +
-                                          $"If enabled, make sure that AzureStorageObserver is configured correctly. Will attempt to delete old (>= 1 day) files now.");
+                if (Directory.Exists(DumpsPath) && Directory.GetFiles(DumpsPath, $"{dumpKey}*.dmp", SearchOption.AllDirectories).Length >= MaxDumps)
+                {
+                    ObserverLogger.LogWarning($"Reached maximum number({MaxDumps}) of {dumpKey} dmp files stored on local disk. Will not create dmp file. " +
+                                              $"If enabled, please make sure that AzureStorageObserver is configured correctly. " +
+                                              $"Will attempt to delete old (>= 1 day) local files now.");
 
-                // Clean out old dmp files, if any. Generally, there will only be some dmp files remaining on disk if customer has not configured
-                // AzureStorageObserver correctly or some error occurred during some stage of the upload process.
-                Logger.TryCleanFolder(DumpsPath, $"*{dumpKey}*.dmp", TimeSpan.FromDays(1));
-                return false;
+                    // Clean out old dmp files, if any. Generally, there will only be some dmp files remaining on disk if customer has not configured
+                    // AzureStorageObserver correctly or some error occurred during some stage of the upload process.
+                    ObserverLogger.TryCleanFolder(DumpsPath, $"{dumpKey}*.dmp", TimeSpan.FromDays(1));
+                    return false;
+                }
             }
-            
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+            {
+
+            }
+
             if (!ServiceDumpCountDictionary.ContainsKey(dumpKey))
             {
                 ServiceDumpCountDictionary.Add(dumpKey, (0, DateTime.UtcNow));
             }
-            else if (DateTime.UtcNow.Subtract(ServiceDumpCountDictionary[dumpKey].LastDumpDate) >= TimeSpan.FromHours(8))
+            else if (DateTime.UtcNow.Subtract(ServiceDumpCountDictionary[dumpKey].LastDumpDate) >= MaxDumpsTimeWindow)
             {
                 ServiceDumpCountDictionary[dumpKey] = (0, DateTime.UtcNow);
             }
             else if (ServiceDumpCountDictionary[dumpKey].DumpCount >= MaxDumps)
             {
+                ObserverLogger.LogWarning($"Reached maximum number of process dumps({MaxDumps}) for key {dumpKey} " +
+                                          $"within {MaxDumpsTimeWindow.TotalHours} hour period. Will not create dmp file.");
                 return false;
             }
 
@@ -550,13 +575,13 @@ namespace FabricObserver.Observers
             {
                 using (Process process = Process.GetProcessById(processId))
                 {
-                    if (processName == string.Empty)
+                    if (dumpFileName == string.Empty)
                     {
-                        processName = process.ProcessName;
+                        dumpFileName = process.ProcessName;
                     }
 
                     IntPtr processHandle = process.Handle;
-                    processName += $"_{DateTime.Now:ddMMyyyyHHmmss}.dmp";
+                    dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
 
                     // Check disk space availability before writing dump file.
                     string driveName = DumpsPath.Substring(0, 2);
@@ -567,7 +592,7 @@ namespace FabricObserver.Observers
                         return false;
                     }
 
-                    using (FileStream file = File.Create(Path.Combine(DumpsPath, processName)))
+                    using (FileStream file = File.Create(Path.Combine(DumpsPath, dumpFileName)))
                     {
                         if (!NativeMethods.MiniDumpWriteDump(
                                             processHandle,
@@ -599,7 +624,7 @@ namespace FabricObserver.Observers
                     e is Win32Exception)
             {
                 ObserverLogger.LogWarning(
-                    $"Failure generating Windows process dump file {processName} with error:{Environment.NewLine}{e}");
+                    $"Failure generating Windows process dump file {dumpFileName} with error:{Environment.NewLine}{e}");
             }
            
             return false;

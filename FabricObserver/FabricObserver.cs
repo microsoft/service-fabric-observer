@@ -56,7 +56,7 @@ namespace FabricObserver
         private void ConfigureServices(IServiceCollection services)
         {
             _ = services.AddScoped(typeof(ObserverBase), s => new AppObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new AzureStorageObserver(fabricClient, Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new AzureStorageUploadObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new CertificateObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new DiskObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new FabricSystemObserver(fabricClient, Context));

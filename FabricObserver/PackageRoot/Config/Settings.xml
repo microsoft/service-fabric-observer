@@ -163,6 +163,7 @@
     <Parameter Name="DumpType" Value="" MustOverride="true" />
     <!-- The maximum number of dumps per day per service process per metric. Default is 3. -->
     <Parameter Name="MaxDumps" Value="" MustOverride="true" />
+    <Parameter Name="MaxDumpsTimeWindow" Value="" MustOverride="true" />
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
@@ -288,7 +289,7 @@
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
   </Section>
-  <Section Name="AzureStorageObserverConfiguration">
+  <Section Name="AzureStorageUploadObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />

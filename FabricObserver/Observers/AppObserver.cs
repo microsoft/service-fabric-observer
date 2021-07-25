@@ -519,7 +519,7 @@ namespace FabricObserver.Observers
             userTargetList = new List<ApplicationInfo>();
             deployedTargetList = new List<ApplicationInfo>();
 
-            /* For descendant proc monitoring */
+            /* Child/Descendant proc monitoring config */
             if (bool.TryParse(
                      GetSettingParameterValue(
                         ConfigurationSectionName,
@@ -535,12 +535,16 @@ namespace FabricObserver.Observers
             {
                 MaxChildProcTelemetryDataCount = maxChildProcs;
             }
-            /* End descendant proc monitoring */
 
-            /* Start dumpProcessOnError config */
+            /* dumpProcessOnError config */
             if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableProcessDumpsParameter), out bool enableDumps))
             {
                 EnableProcessDumps = enableDumps;
+            }
+
+            if (Enum.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DumpTypeParameter), out DumpType dumpType))
+            {
+                DumpType = dumpType;
             }
 
             if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxDumpsParameter), out int maxDumps))
@@ -548,11 +552,10 @@ namespace FabricObserver.Observers
                 MaxDumps = maxDumps;
             }
 
-            if (Enum.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DumpTypeParameter), out DumpType dumpType))
+            if (TimeSpan.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxDumpsTimeWindowParameter), out TimeSpan dumpTimeWindow))
             {
-                DumpType = dumpType;
+                MaxDumpsTimeWindow = dumpTimeWindow;
             }
-            /* End dumpProcessOnError config */
 
             configSettings.Initialize(
                             FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
@@ -640,12 +643,12 @@ namespace FabricObserver.Observers
                     }
 
                     // App filtering: AppExcludeList, AppIncludeList. This is only useful when you are observing All/* applications for a range of thresholds.
-                    if (!string.IsNullOrWhiteSpace(application.AppExcludeList) && application.AppExcludeList.Contains(app.ApplicationName.OriginalString))
+                    if (!string.IsNullOrWhiteSpace(application.AppExcludeList) && application.AppExcludeList.Contains(app.ApplicationName.OriginalString.Replace("fabric:/", string.Empty)))
                     {
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString))
+                    if (!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString.Replace("fabric:/", string.Empty)))
                     {
                         continue;
                     }
@@ -839,6 +842,12 @@ namespace FabricObserver.Observers
                     try
                     {
                         parentProc = Process.GetProcessById(parentPid);
+
+                        // This is strange and can happen during a redeployment.
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && parentProc?.ProcessName == "Idle")
+                        {
+                            continue;
+                        }
 
                         // This will throw Win32Exception if process is running at higher elevation than FO.
                         // If it is not, then this would mean the process has exited so move on to next process.

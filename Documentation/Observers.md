@@ -20,7 +20,7 @@ Service Fabric Error Health Events can block upgrades and other important Fabric
 | Observer | Description |
 | :--- | :--- |
 | [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes) and their spawn (child processes). Alerts when user-supplied thresholds are reached. |
-| [AzureStorageObserver](#azurestorageobserver) | Runs periodically (do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true. It will clean up files after successful upload. |
+| [AzureStorageUploadObserver](#azurestorageuploadobserver) | Runs periodically (do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true. It will clean up files after successful upload. |
 | [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
 | [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are reached. |
 | [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric System services (compare to AppObserver) |
@@ -110,6 +110,30 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 
 AppObserver also supports non-JSON parameters for configuration unrelated to thresholds. Like all observers these settings are located in ApplicationManifest.xml to support versionless configuration updates via application upgrade. 
 
+#### Non-json settings  
+
+```XML
+    <!-- AppObserver -->
+    <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
+    <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
+    <!-- Required-If UseCircularBuffer = true -->
+    <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
+    <!-- Configuration file name. -->
+    <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
+    <!-- Process family tree monitoring. -->
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
+    <!-- Service process dumps (dumpProcessOnError feature). -->
+    <!-- You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
+         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
+    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="true" />
+    <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
+    <!-- Max number of dumps to generate per service, per observed metric within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
+    <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
+    <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
+    <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
+```
+
 Example AppObserver Output (Warning - Ephemeral Ports Usage):  
 
 ![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning output example.")  
@@ -121,19 +145,31 @@ as explained above. Like FabricSystemObserver, all data is stored in in-memory d
   
 This observer also monitors the FabricObserver service itself across CPU/Mem/FileHandles/Ports.  
 
-## AzureStorageObserver 
-Runs periodically (please do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true to a specified Azure Storage Account (blob storage only) and blob container name. It will delete dmp files from local storage after each successful upload. 
-For authentication to AzStorage, only ConnectionString auth is supported today. Since there is currently only support for Windows process dumps (by AppObserver only), there is no need to run this Observer on Linux (today..).
+## AzureStorageUploadObserver 
+Runs periodically (you can set its RunInterval setting, just like any observer) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true and supply Error thresholds in AppObserver configuration. The files are compressed and uploaded to a specified Azure Storage Account (blob storage only) and blob container name (default is fodumps, but you can configure this). It will delete dmp files from local storage after each successful upload. 
+For authentication to Azure Storage, Storage Connection String and Account Name/Account Key pair are supported today. Since there is currently only support for Windows process dumps (by AppObserver only), there is no need to run this Observer on Linux (today..).
 The dumps created are *not* crash dumps, they are live dumps of a process's memory, handles, threads. The target process will not be killed or blow up in memory size. The offending service will keep on doing what it's doing wrong.
-By default, the dmp files are MiniPlus mini dumps, so they will roughly be as large as the target process's private working set and stack. You can set to Mini (similar size) or 
+By default, the dmp files are MiniPlus mini dumps, so they will be roughly as large as the target process's private working set and stack. You can set to Mini (similar size) or 
 Full, which is much larger. You probably do not need to create Full dumps in most cases. 
 
-It is very important that you generate an encrypted ConnectionString string in a supported way: Use Service Fabric's Invoke-ServiceFabricEncryptText PowerShell cmdlet with your Cluster thumbprint or cert name/location. 
+#### Compression  
+
+All dmp files are compressed to zip files before uploading to your storage account over the Internet. By default, the compression level is set to Optimal, which means the files will are compressed to the *smallest size possible*. You can change this in configuration to Fastest or NoCompression. It's up to you.
+
+Optimal: Best compression, uses more CPU for a short duration (this should not be an issue nor a deciding factor).  
+Fastest: Fastest compression, uses less CPU than Optimal, produces non-optimally compressed files.
+NoCompression: Don't compress. This is NOT recommended. You should reduce the size of these files before uploading them to your cloud storage (blob) container.
+
+#### Encrypting your secrets  
+
+It is very important that you generate an encrypted Connection String or Account Key string in a supported way: Use Service Fabric's Invoke-ServiceFabricEncryptText PowerShell cmdlet with your Cluster thumbprint or cert name/location. 
 Please see the [related documentation with samples](https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps). It is really easy to do! 
 
 Also, since FO runs as NetworkUser by default, you will need to supply a SecretsCertificate setting in ApplicationManifest.xml which will enable FO to run as unprivileged user and access your private key for the cert installed on the local machine.
 This section is already present in ApplicationManifest.xml. Just add the thumbprint you used to create your encrypted connection string and a friendly name for the cert.
 If you do not do this, then you will need to run FO as System in order for decryption of your connection string to work and for blob uploads to succeed. 
+
+As always, if you want to monitor services that are running as System user (or Admin user), you must run FabricObserver as System user. In this case, you do not need to set SecretsCertificate.  
 
 SecretsCertificate configuration in ApplicationManifest.xml:
 
@@ -148,17 +184,23 @@ SecretsCertificate configuration in ApplicationManifest.xml:
 </ApplicationManifest>
 ```
 
-Example AzureStorageObserver configuration in ApplicationManifest.xml:  
+Example AzureStorageUploadObserver configuration in ApplicationManifest.xml:  
 
 ```XML
-<!-- AzureStorageObserver -->
-    <Parameter Name="AzureStorageObserverBlobContainerName" DefaultValue="fodumps" />
-    <!-- This must be an encrypted string. It is not a good idea to place an unencrypted ConnectionString in an XML file.. FO will ignore unencrypted strings. 
+    <!-- AzureStorageUploadObserver -->
+    <Parameter Name="AzureStorageUploadObserverBlobContainerName" DefaultValue="fodumps" />
+    <!-- This should be an encrypted string. It is not a good idea to place an unencrypted ConnectionString in an XML file.. FO will ignore unencrypted strings. 
          Use Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here. 
-         The encrypted string must not contain any line breaks or spaces. This is very important. If you copy the the string incorrectly, then FO will not upload dumps.
+         The encrypted string must NOT contain any line breaks or spaces. This is very important. If you copy the the string incorrectly, then FO will not upload dumps.
          See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps  
          for details. Follow the directions in the sample for creating an encryted secret. Note the use of thumbprint in the cmd. -->
-    <Parameter Name="AzureStorageObserverAzureStorageConnectionString" DefaultValue="NNIDTgYJKoZIhvcNAFcDoIGDPzCCAzsCAQAxggGCMIIBfgIBADBmME8xCzAJBgNVBAYTAlVTMR4wHAYDVQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb84xIDAeBgNVBAMTF01pY3Jvc99mdCBSU0EgVExTIENBIDAxAhNrAABpknf9Fp92KoLyAAAAAGmSMA0GCSqGSIb3DQEBBzAABIIBAHLN+RthM0os/UHSSx6jBtyQIGSxZhG9rX49UQyETcS5FM0obkD7uvURvPpmebucL2GibdN2E/UxY/L35Ny9GLwnG1eoytwVZInHwc8ac3Q8UDC+L0LSL3+OEYcwxqOO5kRBmYAwP7C44S5q/KoHCTqgNRPIeB4CwahMIhhq5e0RpOoq5cQqm5a8CfOoWiY4muu7ep82dBP2SMkgGy9zU6L3lbekz7PD0OytvJs2OGj4wfzEy+ofbtml/ErAqbC7ZV7RwmfjiF2VLdxRbqhWya7H0nozlU2u4zohm91W6QZbvQxoWMovWHlLO8gzG4dJDoASg/fcryWZgXFX5azh/TAwggGuBgkqhkiG9w0BBwEwHQYJYIZIAWUDBAEqBBAsjDpiIewvf97MwI7RY8fdgIIBgBiwK5XBq/yLoP3Rs6h8jZKSsuriiPAB46L8FoFKxfk1t0voP6nJVIYf/meOToHFCvZxPvxIZ/WFJO/mRq32XWWO8YH1EW5RpfHUamKqQKjgXCWsyVOX1nLMjiON9Jm0Llq8Ws632QeOBW/E3e3MQQgZv9is5m2LBv5rMKBZq+QM6kFO45fTsaIcRFLnFi2py4EiZs7C5yHMqHWDbfCIFCJaWXSulWmLbJJc1wVyIv5KqfdDS55Q3dISshiLtcfiHjMW4a3bRE8Jfi2aBU/CQrBut6P3aRW1bOOGE4VA8znhQUpkAqlw6JoCDP/s7E5AA7vaA/9LPd63Yax3mfUBfmfszBYTcv3VV1r1HJV1ylOxshC6FD3I9BXbyRPj4PSAx3+jc0HQHy6iX3UfaRTYYf0fupc1Fl5e6RdMwk/+f1i4ET82psssOMaADbrV/jnPrWCwMGlWecg5mPOyMPBXN4szmxEmbYK5tiLT2l3XHXXszSyF+QrQ1WJgh+4m/IU81g==" />
+    <Parameter Name="AzureStorageUploadObserverStorageConnectionString" DefaultValue="" />
+    <!-- OR -->
+    <Parameter Name="AzureStorageUploadObserverStorageAccountName" DefaultValue="mystorageacctname" />
+    <!-- This should be an encrypted string. Make sure there are no line breaks and no blank spaces between any characters. This is very important. -->
+    <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="XIICjAYJKoZIhvcNAQcDoXXCfTCCAnkCAQAxggGCMIIBfgIRESBmME8xCzAJBgNVBAYTAlVTMR4wHAYDVQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb24xIDAeBgNVBAMTF01pY3Jvc29mdCBSU0EgVExTIENBIDAxAhNrAABpknf9Fp92KoLyCCCCGmSMA0GCSqGSIb3DQEBBzAABIIBAB5/q1AKccctjPq/dM/jTz1eZfAsyhkJFLfs12X2aNYHqJSVPm02A8XUjS0RjKQ5NKd40AEiEGjYHWWQCXy/qnTOF5ViwyxSZmizlpthhVzEU/rPtgfJy/KXCfFsOwjuIy2npnLpcVcjK2u010tcp+BWMBSC2M3adrgMNDzxINJZbmul/0oxC16O5O4grIbqhktq3FG/iCiBHOo3irkwZos4gPslcg7SFYXYpZjbTxbippzNRpPDXIqD2KspIfp7RGjtmJYU/d5mlB/ratW+NxVGXz8B9CQs7SaDyxwcSK/97gZAn9JsnOYr8pxrM2EA5dt3apT9oy779MImQ61PGPMwge0GCSqGSIb3DQEHATAdBglghkgBZQMEASoEEJSJgAwPRYXujvanWupBZpSAgcAwDfo7qv7n1cWvnq1EEZt5btgRr8QDm0bvrgg2gRxOnxwGAyPmYuLGDna4M0JAcdmQ3V1t7x0sd0AJRLDfYd8tH0uXVD7jdPFkAnN7EvdpVG/u/HEwEkyDAUWbC//mW+waCUpiHvOcIkxlV7mRAVNYowHeOVSKlQcnfjKaNorMMWS8AoCAhDsvBuUUgPlBcnR7zBXjPe7KblcS5l5xxSs4FKi8JkP1uQh18/9QQOn4Xy41TtNe5RP2ExUBiz7d5fg=" />
+    <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. -->
+    <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
 ```
   
 
