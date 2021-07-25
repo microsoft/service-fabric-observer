@@ -154,7 +154,7 @@ Full, which is much larger. You probably do not need to create Full dumps in mos
 
 #### Compression  
 
-All dmp files are compressed to zip files before uploading to your storage account over the Internet. By default, the compression level is set to Optimal, which means the files will are compressed to the *smallest size possible*. You can change this in configuration to Fastest or NoCompression. It's up to you.
+All dmp files are compressed to zip files before uploading to your storage account over the Internet. By default, the compression level is set to Optimal, which means the files will be compressed to the *smallest size possible*. You can change this in configuration to Fastest or NoCompression. We do not recommend NoCompression. The choice is yours to own.
 
 Optimal: Best compression, uses more CPU for a short duration (this should not be an issue nor a deciding factor).  
 Fastest: Fastest compression, uses less CPU than Optimal, produces non-optimally compressed files.
@@ -163,13 +163,13 @@ NoCompression: Don't compress. This is NOT recommended. You should reduce the si
 #### Encrypting your secrets  
 
 It is very important that you generate an encrypted Connection String or Account Key string in a supported way: Use Service Fabric's Invoke-ServiceFabricEncryptText PowerShell cmdlet with your Cluster thumbprint or cert name/location. 
-Please see the [related documentation with samples](https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps). It is really easy to do! 
+Please see the [related documentation with samples](https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps). It is really easy to do! Non-encrypted strings are supported, but we do not recommend using them. The decision is yours to own.
 
 Also, since FO runs as NetworkUser by default, you will need to supply a SecretsCertificate setting in ApplicationManifest.xml which will enable FO to run as unprivileged user and access your private key for the cert installed on the local machine.
-This section is already present in ApplicationManifest.xml. Just add the thumbprint you used to create your encrypted connection string and a friendly name for the cert.
+This section is already present in ApplicationManifest.xml. Just add the thumbprint you used to create your encrypted connection string or account key and a friendly name for the cert.
 If you do not do this, then you will need to run FO as System in order for decryption of your connection string to work and for blob uploads to succeed. 
 
-As always, if you want to monitor services that are running as System user (or Admin user), you must run FabricObserver as System user. In this case, you do not need to set SecretsCertificate.  
+***As always, if you want to monitor services that are running as System user (or Admin user), you must run FabricObserver as System user.*** In the FO-as-System-user case, you do not need to set SecretsCertificate.  
 
 SecretsCertificate configuration in ApplicationManifest.xml:
 
