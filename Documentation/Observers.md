@@ -152,7 +152,7 @@ The dumps created are *not* crash dumps, they are live dumps of a process's memo
 By default, the dmp files are MiniPlus mini dumps, so they will be roughly as large as the target process's private working set and stack. You can set to Mini (similar size) or 
 Full, which is much larger. You probably do not need to create Full dumps in most cases. 
 
-Note that this feature does not apply to the FabricObserver process, regardless of a supplying configuration setting to do so. FabricObserver will not dump itself.  
+Note that this feature does not apply to the FabricObserver process, even if specifying a configuration setting to do so. FabricObserver will not dump itself.  
 
 #### Compression  
 
