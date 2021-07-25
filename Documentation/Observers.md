@@ -146,11 +146,13 @@ as explained above. Like FabricSystemObserver, all data is stored in in-memory d
 This observer also monitors the FabricObserver service itself across CPU/Mem/FileHandles/Ports.  
 
 ## AzureStorageUploadObserver 
-Runs periodically (you can set its RunInterval setting, just like any observer) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true and supply Error thresholds in AppObserver configuration. The files are compressed and uploaded to a specified Azure Storage Account (blob storage only) and blob container name (default is fodumps, but you can configure this). It will delete dmp files from local storage after each successful upload. 
+Runs periodically (you can set its RunInterval setting, just like any observer) and will upload dmp files of user services that AppObserver creates when you set dumpProcessOnError to true and supply Error thresholds in AppObserver configuration. The files are compressed and uploaded to a specified Azure Storage Account (blob storage only) and blob container name (default is fodumps, but you can configure this). It will delete dmp files from local storage after each successful upload. 
 For authentication to Azure Storage, Storage Connection String and Account Name/Account Key pair are supported today. Since there is currently only support for Windows process dumps (by AppObserver only), there is no need to run this Observer on Linux (today..).
 The dumps created are *not* crash dumps, they are live dumps of a process's memory, handles, threads. The target process will not be killed or blow up in memory size. The offending service will keep on doing what it's doing wrong.
 By default, the dmp files are MiniPlus mini dumps, so they will be roughly as large as the target process's private working set and stack. You can set to Mini (similar size) or 
 Full, which is much larger. You probably do not need to create Full dumps in most cases. 
+
+Note that this feature does not apply to the FabricObserver process, regardless of a supplying configuration setting to do so. FabricObserver will not dump itself.  
 
 #### Compression  
 
