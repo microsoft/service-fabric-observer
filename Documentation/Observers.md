@@ -46,6 +46,38 @@ For every other observer, it's XML as per usual.
 Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application service processes and the child processes they spawn. If a service process creates child processes, then these processes will be monitored and their summed resource usage for some metric you are observing will be applied to the parent process (added) and a threshold breach will be determined based on the sum of children and parent resource usage.
 This observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring**. 
 
+***Important: By default, FabricObserver runs as an unprivileged user (NetworkUser on Windows and sfappsuser on Linux). If you want to monitor services that are running as System user (or Admin user) on Windows, you must run FabricObserver as System user.***  
+
+***For Linux, there is no need to run as root, so do not do that.***    
+
+You configure FO's user account type in ApplicationManifest.xml (only Windows would need this. FO's build script automatically inserts this setting for Linux target, and for running Setup scripts only (not Code package binaries), to support FO's Linux Capabilities implementation):  
+
+```XML
+    </ConfigOverrides>
+    <!-- Uncomment below to run FO as System user. Also uncomment the Principals node below. -->
+    <!--<Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
+    </Policies>-->
+  </ServiceManifestImport>
+  <DefaultServices>
+    <!-- The section below creates instances of service types, when an instance of this 
+         application type is created. You can also create one or more instances of service type using the 
+         ServiceFabric PowerShell module.
+         The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
+    <Service Name="FabricObserver" ServicePackageActivationMode="ExclusiveProcess">
+      <StatelessService ServiceTypeName="FabricObserverType" InstanceCount="[FabricObserver_InstanceCount]">
+        <SingletonPartition />
+      </StatelessService>
+    </Service>
+  </DefaultServices>
+  <!-- Uncomment below to run FO as System user. Also uncomment the Policies node above. -->
+  <!--<Principals>
+    <Users>
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
+  </Principals>-->
+```
+
 ### A note on child process monitoring
 
 AppObserver (FO version >= 3.1.15) will automatically monitor up to 50 process descendants of your primary service process (50 is extreme. You should not design services that own that many descendant processes..). If your services launch child processes, then AppObserver will automatically monitor them for the same metrics and thresholds you supply for the containing Application. 
@@ -158,9 +190,14 @@ Note that this feature does not apply to the FabricObserver process, even if spe
 
 All dmp files are compressed to zip files before uploading to your storage account over the Internet. By default, the compression level is set to Optimal, which means the files will be compressed to the *smallest size possible*. You can change this in configuration to Fastest or NoCompression. We do not recommend NoCompression. The choice is yours to own.
 
-Optimal: Best compression, uses more CPU for a short duration (this should not be an issue nor a deciding factor).  
-Fastest: Fastest compression, uses less CPU than Optimal, produces non-optimally compressed files.
-NoCompression: Don't compress. This is NOT recommended. You should reduce the size of these files before uploading them to your cloud storage (blob) container.
+**Optimal**: Best compression, uses more CPU for a short duration (this should not be an issue nor a deciding factor).  
+
+**Fastest**: Fastest compression, uses less CPU than Optimal, produces non-optimally compressed files.  
+
+**NoCompression**: Don't compress. This is NOT recommended. You should reduce the size of these files before uploading them to your cloud storage (blob) container.
+
+A note on resource usage: This feature is intended for the exceptional case - when your app service is truly doing something really wrong (like leaking memory, ports, handles). Make sure that you set your Error thresholds to meaningfully high values. Internally, FabricObserver will only dump a configured amount of times in a specified time window per service, per observed metric. The idea
+is to not eat your local disk space and use up too much CPU for too long. Please be mindful of how you utilize this **debugging** feature. It is best to enable it in Test and Staging clusters to find the egregious bugs in your service code *before* you ship your services to production clusters. 
 
 #### Encrypting your secrets  
 
