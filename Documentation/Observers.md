@@ -208,7 +208,7 @@ Also, since FO runs as NetworkUser by default, you will need to supply a Secrets
 This section is already present in ApplicationManifest.xml. Just add the thumbprint you used to create your encrypted connection string or account key and a friendly name for the cert.
 If you do not do this, then you will need to run FO as System in order for decryption of your connection string to work and for blob uploads to succeed. 
 
-***As always, if you want to monitor services that are running as System user (or Admin user), you must run FabricObserver as System user.*** In the FO-as-System-user case, you do not need to set SecretsCertificate.  
+***As always, if you want to monitor user services on Windows that are running as System user (or Admin user), you must run FabricObserver as System user on Windows.*** In the FO-as-System-user-on-Windows case, you do not need to set SecretsCertificate.  
 
 SecretsCertificate configuration in ApplicationManifest.xml:
 
