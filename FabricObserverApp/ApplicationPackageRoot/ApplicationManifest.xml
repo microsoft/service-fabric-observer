@@ -15,11 +15,8 @@
     <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
     <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
-    <Parameter Name="OSObserverEnabled" DefaultValue="true" />
+    <Parameter Name="OSObserverEnabled" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <!-- AzureStorageUploadObserver is only useful for Windows today. Disable it for Linux.
-         You only need to enable this observer if you have set AppObserver to generate dump files when an Error threshold is 
-         breached AND you supply Azure Storage account credentials in AzureStorageUploadObserver's settings in this file. -->
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="SampleNewObserverEnabled" DefaultValue="false" />
     <!-- Telemetry - AppInsights or LogAnalytics -->
@@ -34,7 +31,7 @@
     <Parameter Name="AzureStorageUploadObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" />
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />
@@ -62,7 +59,7 @@
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:02" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:03" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
@@ -84,9 +81,9 @@
     <!-- Process family tree monitoring. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError feature). -->
     <!-- You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
          if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
+    <!-- Service process dumps (dumpProcessOnError feature). -->
     <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
     <!-- Max number of dumps to generate per service, per observed metric within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
@@ -296,10 +293,10 @@
             <Parameter Name="EnableVerboseLogging" Value="[AzureStorageUploadObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[AzureStorageUploadObserverRunInterval]" />
             <Parameter Name="BlobContainerName" Value="[AzureStorageUploadObserverBlobContainerName]" />
-            <!-- Azure Storage Connection String -->
+            <!-- Azure Storage Auth: Either supply an encrypted Connection String or an account name and encrypted shared key. -->
             <!-- Note that you *can* use plain text values that are unencrypted strings. This is NOT recommended, but the decision is yours. If you choose to do this,
                  then you must set IsEncrypted to false both in the below settings and the corresponding settings in Settings.xml. -->
-            <!-- Azure Storage Auth: Either supply an encrypted Connection String or an account name and encrypted shared key. -->
+            <!-- Azure Storage Connection String -->
             <Parameter Name="AzureStorageConnectionString" Value="[AzureStorageUploadObserverStorageConnectionString]" IsEncrypted="true" />
             <!-- OR use Account Name/Account Key pair if NOT using Connection String.. -->
             <Parameter Name="AzureStorageAccountName" Value="[AzureStorageUploadObserverStorageAccountName]" />
@@ -341,7 +338,6 @@
   </Principals>-->
   <!-- This is important to set if you run FabricObserver as NetworkUser (Default) and you want to upload AppObserver's user service process dumps to your Azure Storage account 
        via AzureStorageUploadObserver using an encrypted storage account Connection String or Account Key. 
-       
        Just supply the same thumbprint you used to encrypt your Storage Connection String or Account Key using the Invoke-ServiceFabricEncryptSecret cmdlet.
        NOTE: If you need to run FabricObserver as System user - you will need to in order to monitor services that run as System or Admin user -, then you do not need to set this. -->
   <Certificates>

@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.ServiceModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -393,7 +392,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            throw new ActionNotSupportedException("if X509FindTime attribute, value should be FindBySubjectName");
+                            throw new Exception("if X509FindTime attribute, value should be FindBySubjectName");
                         }
                     }
 

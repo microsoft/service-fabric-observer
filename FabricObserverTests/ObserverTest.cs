@@ -349,6 +349,11 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task Successful_CertificateObserver_Run_Cancellation_Via_ObserverManager()
         {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
             using var client = new FabricClient(FabricClientRole.User);
 
             ObserverManager.FabricServiceContext = context;
@@ -445,6 +450,11 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task Successful_FabricSystemObserver_Run_Cancellation_Via_ObserverManager()
         {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
             using var client = new FabricClient();
 
             ObserverManager.FabricServiceContext = context;
@@ -476,7 +486,12 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task Successful_NetworkObserver_Run_Cancellation_Via_ObserverManager()
         {
-            using var client = new FabricClient(FabricClientRole.User);
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            using var client = new FabricClient();
 
             ObserverManager.FabricServiceContext = context;
             ObserverManager.FabricClientInstance = client;
@@ -503,6 +518,11 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task Successful_NodeObserver_Run_Cancellation_Via_ObserverManager()
         {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
             using var client = new FabricClient();
 
             ObserverManager.FabricServiceContext = context;
@@ -535,6 +555,11 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task Successful_OSObserver_Run_Cancellation_Via_ObserverManager()
         {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
             using var client = new FabricClient(FabricClientRole.User);
 
             ObserverManager.FabricServiceContext = context;
