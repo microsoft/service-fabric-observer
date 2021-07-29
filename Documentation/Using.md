@@ -333,7 +333,10 @@ The configuration below specifies that AppObserver is to monitor and report thre
   }
 ]
 ``` 
-***Problem:*** I want to dump any user Windows SF service process that is eating too much memory. This is not supported on Linux.
+
+**Advanced Debugging - Windows Process Dumps**  
+
+***Problem:*** I want to dump any of my SF service processes that are eating too much memory on Windows. (This is not supported on Linux yet).
 
 ***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All"(case doesn't matter). 
 In this case, AppObserver will initiate a mini dump (MiniPlus by default) of an offending process running on Windows. You can configure [AzureStorageUploadObserver](/Documentation/Observers.md#azurestorageuploadobserver) to ship the dmp (compressed to zip file) to a blob in your Azure storage account.
