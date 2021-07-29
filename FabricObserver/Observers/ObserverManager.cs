@@ -9,7 +9,6 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
-using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -96,6 +95,12 @@ namespace FabricObserver.Observers
             private set;
         }
 
+        public HealthState ObserverFailureHealthStateLevel
+        {
+            get;
+            set;
+        } = HealthState.Warning;
+
         private ObserverHealthReporter HealthReporter
         {
             get;
@@ -176,25 +181,31 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDays),
-                out int maxArchivedLogFileLifetimeDays))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDays), out int maxArchivedLogFileLifetimeDays))
             {
                 MaxArchivedLogFileLifetimeDays = maxArchivedLogFileLifetimeDays;
             }
 
             // this logs error/warning/info messages for ObserverManager.
             Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays > 0 ? MaxArchivedLogFileLifetimeDays : 7);
-            HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-            SetPropertiesFromConfigurationParameters();
             serviceCollection = serviceProvider.GetServices<ObserverBase>();
 
             // Populate the Observer list for the sequential run loop.
             int capacity = serviceCollection.Count(o => o.IsEnabled);
+
             if (capacity > 0)
             {
                 observers = new List<ObserverBase>(capacity);
                 observers.AddRange(serviceCollection.Where(o => o.IsEnabled));
             }
+            else
+            {
+                Logger.LogWarning("There are no observers enabled. Aborting..");
+                return;
+            }
+
+            HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+            SetPropertiesFromConfigurationParameters();
 
             // FabricObserver Internal Diagnostic Telemetry (Non-PII).
             // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
@@ -203,16 +214,11 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (FabricServiceContext == null)
-            {
-                return;
-            }
-
             string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
             string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
             string filepath = Path.Combine(Logger.LogFolderBasePath,
-                $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_" +
-                $"{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
+                                           $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_" +                                                   
+                                           $"{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
 
 #if !DEBUG
             // If this has already been sent for this activated version (code/config) of node type x
@@ -221,18 +227,20 @@ namespace FabricObserver.Observers
                 return;
             }
 #endif
-            var telemetryEvents = new TelemetryEvents(
-                                        FabricClientInstance,
-                                        FabricServiceContext,
-                                        ServiceEventSource.Current,
-                                        this.token);
-
-            if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion,
-                GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
+            try
             {
-                // Log a file to prevent re-sending this in case of process restart(s).
-                // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
-                _ = Logger.TryWriteLogFile(filepath, GetFabricObserverInternalConfiguration());
+                var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, ServiceEventSource.Current, this.token);
+
+                if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion, GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
+                {
+                    // Log a file to prevent re-sending this in case of process restart(s).
+                    // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
+                    _ = Logger.TryWriteLogFile(filepath, GetFabricObserverInternalConfiguration());
+                }
+            }
+            catch
+            {
+                
             }
         }
 
@@ -241,7 +249,7 @@ namespace FabricObserver.Observers
             try
             {
                 // Nothing to do here.
-                if (observers?.Count == 0)
+                if (observers == null || observers.Count == 0)
                 {
                     return;
                 }
@@ -254,14 +262,12 @@ namespace FabricObserver.Observers
                 {
                     if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                     {
-                        await ShutDownAsync().ConfigureAwait(true);
+                        await ShutDownAsync().ConfigureAwait(false);
                         break;
                     }
 
-                    if (!await RunObserversAsync().ConfigureAwait(true))
-                    {
-                        continue;
-                    }
+                    _ = await RunObserversAsync().ConfigureAwait(false);
+                    
 
                  /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
                     make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
@@ -273,12 +279,9 @@ namespace FabricObserver.Observers
                     Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
                     FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
                     
+                    // SOH, sweep-only collection (no compaction). This will clear the early generation objects (short-lived) from memory. This only impacts the FO process.
                     GC.Collect(0, GCCollectionMode.Forced, true, false);
                     GC.Collect(1, GCCollectionMode.Forced, true, false);
-
-                    // Compact LOH
-                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(2, GCCollectionMode.Forced, true, true);
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
@@ -676,6 +679,17 @@ namespace FabricObserver.Observers
             // ObserverWebApi.
             ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
 
+            // ObserverFailure HealthState Level
+            string state = GetConfigSettingValue(ObserverConstants.ObserverFailureHealthStateLevelParameter);
+            if (string.IsNullOrWhiteSpace(state) || state?.ToLower() == "none")
+            {
+                ObserverFailureHealthStateLevel = HealthState.Unknown;
+            }
+            else if (Enum.TryParse(state, out HealthState healthState))
+            {
+                ObserverFailureHealthStateLevel = healthState;
+            }
+
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
@@ -790,7 +804,7 @@ namespace FabricObserver.Observers
                 {
                     if (TaskCancelled || shutdownSignaled)
                     {
-                        return false;
+                        return true;
                     }
 
                     // Is it healthy?
@@ -804,14 +818,14 @@ namespace FabricObserver.Observers
                     IsObserverRunning = true;
 
                     // Synchronous call.
-                    var isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(observerExecTimeout);
+                    bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(observerExecTimeout);
 
                     // The observer is taking too long (hung?), move on to next observer.
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
                     if (!isCompleted && !(TaskCancelled || shutdownSignaled))
                     {
-                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. " +
-                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Look into it.";
+                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified Maximum run time of {observerExecTimeout.TotalSeconds} seconds. " +
+                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Please look into it.";
 
                         Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
@@ -823,7 +837,7 @@ namespace FabricObserver.Observers
                             {
                                 Description = observerHealthWarning,
                                 HealthState = "Error",
-                                Metric = $"{observer.ObserverName}_ServiceHealth",
+                                Metric = $"{observer.ObserverName}_HealthState",
                                 NodeName = nodeName,
                                 ObserverName = ObserverConstants.ObserverManagerName,
                                 Source = ObserverConstants.FabricObserverName
@@ -836,16 +850,36 @@ namespace FabricObserver.Observers
                         if (EtwEnabled)
                         {
                             Logger.LogEtw(
-                                ObserverConstants.FabricObserverETWEventName,
-                                new
-                                {
-                                    Description = observerHealthWarning,
-                                    HealthState = "Error",
-                                    Metric = $"{observer.ObserverName}_ServiceHealth",
-                                    NodeName = nodeName,
-                                    ObserverName = ObserverConstants.ObserverManagerName,
-                                    Source = ObserverConstants.FabricObserverName
-                                });
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Description = observerHealthWarning,
+                                        HealthState = "Error",
+                                        Metric = $"{observer.ObserverName}_HealthState",
+                                        NodeName = nodeName,
+                                        ObserverName = ObserverConstants.ObserverManagerName,
+                                        Source = ObserverConstants.FabricObserverName
+                                    });
+                        }
+
+                        // Put FO into Warning or Error (health state is configurable in Settings.xml)
+                        if (ObserverFailureHealthStateLevel != HealthState.Unknown)
+                        {
+                            var healthReport = new HealthReport
+                            {
+                                AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                                EmitLogEvent = false,
+                                HealthMessage = observerHealthWarning,
+                                HealthReportTimeToLive = TimeSpan.MaxValue,
+                                Property = $"{observer.ObserverName}_HealthState",
+                                ReportType = HealthReportType.Application,
+                                State = ObserverFailureHealthStateLevel,
+                                NodeName = this.nodeName,
+                                Observer = ObserverConstants.ObserverManagerName,
+                            };
+
+                            // Generate a Service Fabric Health Report.
+                            HealthReporter.ReportHealthToServiceFabric(healthReport);
                         }
 
                         continue;
@@ -920,12 +954,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e)
                 {
-                    HealthReporter.ReportFabricObserverServiceHealth(
-                                         ObserverConstants.ObserverManagerName,
-                                         ApplicationName,
-                                         HealthState.Error,
-                                         $"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
-
+                    Logger.LogWarning($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                     allExecuted = false;
                 }
 
@@ -938,12 +967,7 @@ namespace FabricObserver.Observers
             }
             else
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                     ObserverConstants.ObserverManagerName,
-                                     ApplicationName,
-                                     HealthState.Warning,
-                                     exceptionBuilder.ToString());
-                
+                Logger.LogWarning(exceptionBuilder.ToString());
                 _ = exceptionBuilder.Clear();
             }
 

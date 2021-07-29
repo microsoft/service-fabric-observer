@@ -28,11 +28,36 @@ namespace FabricObserver.Observers
     {
         private const int TtlAddMinutes = 5;
         private const string FabricSystemAppName = "fabric:/System";
-        private const int MaxDumps = 5;
-        private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> serviceDumpCountDictionary;
-        private string SFLogRoot;
-        private string SFDumpsPath;
         private bool disposed;
+        private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
+
+        public bool EnableProcessDumps
+        {
+            get;set;
+        }
+
+        /* Process dump settings. TODO: Only AppObserver and Windows is supported today. */
+        public string DumpsPath
+        {
+            get; set;
+        }
+
+        public int MaxDumps
+        {
+            get; set;
+        }
+
+        public TimeSpan MaxDumpsTimeWindow
+        {
+            get; set;
+        } = TimeSpan.FromHours(4);
+
+        public DumpType DumpType
+        {
+            get; set;
+        } = DumpType.MiniPlus;
+
+        /* End AO procsess dump settings. */
 
         public string ObserverName
         {
@@ -325,10 +350,9 @@ namespace FabricObserver.Observers
                 EnableETWLogging = IsEtwProviderEnabled
             };
 
-            // Only supported on Windows (dump on error).
-            if (string.IsNullOrWhiteSpace(SFDumpsPath) && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (string.IsNullOrWhiteSpace(DumpsPath))
             {
-                SetDefaultSFWindowsDumpPath();
+                SetDumpPath();
             }
 
             ConfigurationSettings = new ConfigSettings(
@@ -363,35 +387,6 @@ namespace FabricObserver.Observers
         /// <param name="token">Cancellation token.</param>
         /// <returns>A Task.</returns>
         public abstract Task ReportAsync(CancellationToken token);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="property"></param>
-        /// <param name="description"></param>
-        /// <param name="level"></param>
-        public void WriteToLogWithLevel(string property, string description, LogLevel level)
-        {
-            switch (level)
-            {
-                case LogLevel.Information:
-                    ObserverLogger.LogInfo("{0} logged at level {1}: {2}", property, level, description);
-                    break;
-
-                case LogLevel.Warning:
-                    ObserverLogger.LogWarning("{0} logged at level {1}: {2}", property, level, description);
-                    break;
-
-                case LogLevel.Error:
-                    ObserverLogger.LogError("{0} logged at level {1}: {2}", property, level, description);
-                    break;
-
-                default:
-                    return;
-            }
-
-            Logger.Flush();
-        }
 
         /// <summary>
         /// Gets a parameter value from the specified section.
@@ -448,32 +443,107 @@ namespace FabricObserver.Observers
             Dispose(true);
         }
 
-        // Windows process dmp creator.
+        // Windows process dmp creator.\\
+
         /// <summary>
         /// This function will create Windows process dumps in supplied location if there is enough disk space available.
-        /// This function runs if you set dumpProcessOnError to true in AppObserver.config.json, for example.
+        /// Only AppObserver is supported today since it will generate memory dumps for the service processes it monitors when an Error threshold has been breached.
+        /// In the future, this may be applied to FabricSystemObserver as well, thus this code is located in ObserverBase..
+        /// This function runs if you set dumpProcessOnError to true in AppObserver.config.json AND enable process dumps in AppObserver configuration in ApplicationManifest.xml.
         /// </summary>
         /// <param name="processId">Process id of the target process to dump.</param>
-        /// <param name="dumpType">Optional: The type of dump to generate. Default is DumpType.Full.</param>
-        /// <param name="folderPath">Optional: The full path to store dump file. Default is %SFLogRoot%\CrashDumps</param>
+        /// <param name="procName">Process name.</param>
+        /// <param name="metric">The name of the metric threshold that was breached, leading to dump.</param>
         /// <returns>true or false if the operation succeeded.</returns>
-        private bool DumpServiceProcessWindows(int processId, DumpType dumpType = DumpType.Full, string folderPath = null, string fileName = null)
+        public bool DumpWindowsServiceProcess(int processId, string procName, string metric)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(SFDumpsPath) && string.IsNullOrWhiteSpace(folderPath))
+            // Must provide a process name.. & do not try and dump yourself..
+            if (string.IsNullOrEmpty(procName) || procName == ObserverConstants.FabricObserverName)
             {
                 return false;
             }
 
-            string path = !string.IsNullOrWhiteSpace(folderPath) ? folderPath : SFDumpsPath;
-            string processName = !string.IsNullOrWhiteSpace(fileName) ? fileName : string.Empty;
+            if (string.IsNullOrWhiteSpace(DumpsPath))
+            {
+                return false;
+            }
+
+            if (!Directory.Exists(DumpsPath))
+            {
+                try
+                {
+                    Directory.CreateDirectory(DumpsPath);
+                }
+                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                {
+                    ObserverLogger.LogWarning($"Can't create dump directory for path {DumpsPath}. Will not generate dmp file for {procName}. " +
+                                              $"Error info:{Environment.NewLine}{e}");
+                    return false;
+                }
+            }
+
+            if (ServiceDumpCountDictionary == null)
+            {
+                ServiceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
+            }
+
+            StringBuilder sb = new StringBuilder(metric);
+            string metricName = sb.Replace(" ", string.Empty)
+                                  .Replace("Total", string.Empty)
+                                  .Replace("MB", string.Empty)
+                                  .Replace("%", string.Empty)
+                                  .Replace("Active", string.Empty)
+                                  .Replace("Allocated", string.Empty)
+                                  .Replace("Length", string.Empty)
+                                  .Replace("Consumption", string.Empty)
+                                  .Replace("Time", string.Empty)
+                                  .Replace("TCP", string.Empty).ToString();
+            sb.Clear();
+            string dumpKey = $"{procName}_{metricName}";
+            string dumpFileName = $"{dumpKey}_{NodeName}";
+
+            try
+            {
+                if (Directory.Exists(DumpsPath) && Directory.GetFiles(DumpsPath, $"{dumpKey}*.dmp", SearchOption.AllDirectories).Length >= MaxDumps)
+                {
+                    ObserverLogger.LogWarning($"Reached maximum number({MaxDumps}) of {dumpKey} dmp files stored on local disk. Will not create dmp file. " +
+                                              $"If enabled, please make sure that AzureStorageObserver is configured correctly. " +
+                                              $"Will attempt to delete old (>= 1 day) local files now.");
+
+                    // Clean out old dmp files, if any. Generally, there will only be some dmp files remaining on disk if customer has not configured
+                    // AzureStorageObserver correctly or some error occurred during some stage of the upload process.
+                    ObserverLogger.TryCleanFolder(DumpsPath, $"{dumpKey}*.dmp", TimeSpan.FromDays(1));
+                    return false;
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+            {
+
+            }
+
+            if (!ServiceDumpCountDictionary.ContainsKey(dumpKey))
+            {
+                ServiceDumpCountDictionary.Add(dumpKey, (0, DateTime.UtcNow));
+            }
+            else if (DateTime.UtcNow.Subtract(ServiceDumpCountDictionary[dumpKey].LastDumpDate) >= MaxDumpsTimeWindow)
+            {
+                ServiceDumpCountDictionary[dumpKey] = (0, DateTime.UtcNow);
+            }
+            else if (ServiceDumpCountDictionary[dumpKey].DumpCount >= MaxDumps)
+            {
+                ObserverLogger.LogWarning($"Reached maximum number of process dumps({MaxDumps}) for key {dumpKey} " +
+                                          $"within {MaxDumpsTimeWindow.TotalHours} hour period. Will not create dmp file.");
+                return false;
+            }
+
             NativeMethods.MINIDUMP_TYPE miniDumpType;
 
-            switch (dumpType)
+            switch (DumpType)
             {
                 case DumpType.Full:
                     miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory |
@@ -498,49 +568,35 @@ namespace FabricObserver.Observers
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(dumpType), dumpType, null);
+                    throw new ArgumentOutOfRangeException(nameof(DumpType), DumpType, null);
             }
+
+            string dumpFilePath = null;
 
             try
             {
                 using (Process process = Process.GetProcessById(processId))
                 {
-                    if (processName == string.Empty)
+                    if (dumpFileName == string.Empty)
                     {
-                        processName = process.ProcessName;
+                        dumpFileName = process.ProcessName;
                     }
 
                     IntPtr processHandle = process.Handle;
-                    processName += $"_{DateTime.Now:ddMMyyyyHHmmss}.dmp";
+                    dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
 
                     // Check disk space availability before writing dump file.
-                    string driveName = path.Substring(0, 2);
+                    string driveName = DumpsPath.Substring(0, 2);
 
                     if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
                     {
-                        HealthReporter.ReportFabricObserverServiceHealth(
-                                                FabricServiceContext.ServiceName.OriginalString,
-                                                ObserverName,
-                                                HealthState.Warning,
-                                                "Not enough disk space available for dump file creation.");
-
+                        ObserverLogger.LogWarning("Not enough disk space available for dump file creation.");
                         return false;
                     }
 
-                    if (!Directory.Exists(path))
-                    {
-                        try
-                        {
-                            Directory.CreateDirectory(path);
-                        }
-                        catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
-                        {
-                            // Can't create directory in SF dumps folder, so dump into top level directory..
-                            path = SFDumpsPath;
-                        }
-                    }
+                    dumpFilePath = Path.Combine(DumpsPath, dumpFileName);
 
-                    using (FileStream file = File.Create(Path.Combine(path, processName)))
+                    using (FileStream file = File.Create(dumpFilePath))
                     {
                         if (!NativeMethods.MiniDumpWriteDump(
                                             processHandle,
@@ -552,6 +608,11 @@ namespace FabricObserver.Observers
                                             IntPtr.Zero))
                         {
                             throw new Win32Exception(Marshal.GetLastWin32Error());
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(metric))
+                        {
+                            ServiceDumpCountDictionary[dumpKey] = (ServiceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
                         }
                     }
                 }
@@ -567,9 +628,23 @@ namespace FabricObserver.Observers
                     e is Win32Exception)
             {
                 ObserverLogger.LogWarning(
-                    $"Failure generating Windows process dump file {processName} with error:{Environment.NewLine}{e}");
-            }
+                    $"Failure generating Windows process dump file {dumpFileName} with error:{Environment.NewLine}{e}");
 
+                if (File.Exists(dumpFilePath))
+                {
+                    // This means a partial file may have been created (like the process went away during dump capture). Delete it.
+                    try
+                    {
+                        Retry.Do(() => File.Delete(Path.Combine(DumpsPath, dumpFileName)), TimeSpan.FromSeconds(1), Token);
+                    }
+                    catch(AggregateException)
+                    {
+                        // Couldn't delete file.
+                        // Retry.Do throws AggregateException containing list of exceptions caught. In this case, we don't really care..
+                    }
+                }
+            }
+           
             return false;
         }
 
@@ -674,7 +749,7 @@ namespace FabricObserver.Observers
                 // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
                 // be contained in the ChildProcessTelemetry data instances and AppObserver will have already emitted it.
                 // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
-                if (IsTelemetryEnabled && replicaOrInstance.ChildProcesses == null)
+                if (IsTelemetryEnabled && replicaOrInstance?.ChildProcesses == null)
                 {
                      _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(true);
                 }
@@ -683,7 +758,7 @@ namespace FabricObserver.Observers
                 // be contained in the ChildProcessTelemetry data instances and AppObserver will have already emitted it.
                 // Enable this for your observer if you want to log etw (which can then be read by some agent that will send it to some endpoint)
                 // for each resource usage observation it makes per specified metric.
-                if (IsEtwEnabled && replicaOrInstance.ChildProcesses == null)
+                if (IsEtwEnabled && replicaOrInstance?.ChildProcesses == null)
                 {
                     ObserverLogger.LogEtw(
                                     ObserverConstants.FabricObserverETWEventName,
@@ -696,7 +771,7 @@ namespace FabricObserver.Observers
                                         Value = Math.Round(data.AverageDataValue, 0),
                                         PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                         ProcessId = procId,
-                                        ReplicaId = replicaOrInstance?.ReplicaOrInstanceId,
+                                        ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
                                         SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty
@@ -762,52 +837,27 @@ namespace FabricObserver.Observers
                 // part of the base class for future use, like for plugins that manage service processes.
                 if (replicaOrInstance != null && dumpOnError && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    if (serviceDumpCountDictionary == null)
+                    if (!string.IsNullOrWhiteSpace(DumpsPath))
                     {
-                        serviceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
-                    }
-
-                    try
-                    {
-                        int pid = (int)replicaOrInstance.HostProcessId;
-
-                        using (var proc = Process.GetProcessById(pid))
+                        if (ServiceDumpCountDictionary == null)
                         {
-                            string procName = proc?.ProcessName;
-                            StringBuilder sb = new StringBuilder(data.Property);
-                            string metricName = sb.Replace(" ", string.Empty)
-                                                  .Replace("Total", string.Empty)
-                                                  .Replace("MB", string.Empty)
-                                                  .Replace("%", string.Empty)
-                                                  .Replace("Active", string.Empty)
-                                                  .Replace("TCP", string.Empty).ToString();
-                            sb.Clear();
-                            string dumpKey = $"{procName}_{metricName}";
+                            ServiceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
+                        }
 
-                            if (!serviceDumpCountDictionary.ContainsKey(dumpKey))
-                            {
-                                serviceDumpCountDictionary.Add(dumpKey, (0, DateTime.UtcNow));
-                            }
-                            else if (DateTime.UtcNow.Subtract(serviceDumpCountDictionary[dumpKey].LastDumpDate) >= TimeSpan.FromDays(1))
-                            {
-                                serviceDumpCountDictionary[dumpKey] = (0, DateTime.UtcNow);
-                            }
+                        try
+                        {
+                            int pid = (int)replicaOrInstance.HostProcessId;
 
-                            if (serviceDumpCountDictionary[dumpKey].DumpCount < MaxDumps)
+                            using (var proc = Process.GetProcessById(pid))
                             {
-                                // DumpServiceProcess defaults to a Full dump with process memory, handles and thread data.
-                                bool success = DumpServiceProcessWindows(pid, DumpType.Full, Path.Combine(SFDumpsPath, procName), dumpKey);
-
-                                if (success)
-                                {
-                                    serviceDumpCountDictionary[dumpKey] = (serviceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
-                                }
+                                string procName = proc?.ProcessName;
+                                _ = DumpWindowsServiceProcess(pid, procName, data.Property);
                             }
                         }
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-                    {
-                        ObserverLogger.LogInfo($"Unable to generate dmp file:{Environment.NewLine}{e}");
+                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                        {
+                            ObserverLogger.LogInfo($"Unable to generate dmp file:{Environment.NewLine}{e}");
+                        }
                     }
                 }
             }
@@ -1139,47 +1189,29 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void SetDefaultSFWindowsDumpPath()
+        private void SetDumpPath()
         {
+            if (ObserverName != ObserverConstants.AppObserverName)
+            {
+                return;
+            }
+
             // This only needs to be set once.
-            if (string.IsNullOrWhiteSpace(SFDumpsPath))
-            {
-                SFLogRoot = ServiceFabricConfiguration.Instance.FabricLogRoot;
-
-                if (string.IsNullOrWhiteSpace(SFLogRoot))
-                {
-                    SFDumpsPath = null;
-                    return;
-                }
-            }
-
-            SFDumpsPath = Path.Combine(SFLogRoot, "ApplicationCrashDumps");
-
-            if (Directory.Exists(SFDumpsPath))
+            if (!string.IsNullOrWhiteSpace(DumpsPath) && Directory.Exists(DumpsPath))
             {
                 return;
             }
 
-            HealthReporter.ReportFabricObserverServiceHealth(
-                                 FabricServiceContext.ServiceName.ToString(),
-                                 ObserverName,
-                                 HealthState.Warning,
-                                 $"Unable to locate dump directory {SFDumpsPath}. Trying another one...");
-
-            SFDumpsPath = Path.Combine(SFLogRoot, "CrashDumps");
-
-            if (Directory.Exists(SFDumpsPath))
+            try
             {
+                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, "MemoryDumps");
+                Directory.CreateDirectory(DumpsPath);
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
+            {
+                ObserverLogger.LogWarning($"Unable to create dump directory {DumpsPath}.");
                 return;
             }
-
-            SFDumpsPath = null;
-            HealthReporter.ReportFabricObserverServiceHealth(
-                                 FabricServiceContext.ServiceName.ToString(),
-                                 ObserverName,
-                                 HealthState.Warning,
-                                 $"Unable to locate dump directory {SFDumpsPath}. Aborting. Will not generate application service dumps.");
-            return; 
         }
 
         private void SetObserverConfiguration()
@@ -1250,7 +1282,6 @@ namespace FabricObserver.Observers
                         new CancellationToken());
 
                     break;
-                        
 
                 case TelemetryProviderType.AzureApplicationInsights:
                         
@@ -1264,7 +1295,6 @@ namespace FabricObserver.Observers
 
                     TelemetryClient = new AppInsightsTelemetry(aiKey);
                     break;
-                        
 
                 default:
 

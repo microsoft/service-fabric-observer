@@ -156,10 +156,8 @@ namespace ClusterObserver.Utilities.Telemetry
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);
 
-            using (var encryptor = new HMACSHA256(Convert.FromBase64String(Key)))
-            {
-                return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
-            }
+            using var encryptor = new HMACSHA256(Convert.FromBase64String(Key));
+            return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
         }
 
         // These two overloads of ReportHealthAsync are the only function impls that really makes sense for ClusterObserver 

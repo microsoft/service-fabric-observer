@@ -19,6 +19,7 @@ namespace FabricObserver.Observers.Utilities
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
         public const string FabricObserverName = "FabricObserver";
         public const string FabricObserverETWEventName = "FabricObserverDataEvent";
+        public const string ObserverFailureHealthStateLevelParameter = "ObserverFailureHealthStateLevel";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";
@@ -55,8 +56,19 @@ namespace FabricObserver.Observers.Utilities
         // AppObserver.
         public const string AppObserverName = "AppObserver";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
-        public const string EnableChildProcessMonitoring = "EnableChildProcessMonitoring";
+        public const string EnableChildProcessMonitoringParameter = "EnableChildProcessMonitoring";
         public const string MaxChildProcTelemetryDataCountParameter = "MaxChildProcTelemetryDataCount";
+        public const string EnableProcessDumpsParameter = "EnableProcessDumps";
+        public const string DumpTypeParameter = "DumpType";
+        public const string MaxDumpsParameter = "MaxDumps";
+        public const string MaxDumpsTimeWindowParameter = "MaxDumpsTimeWindow";
+
+        // AzureStorageObserver
+        public const string AzureStorageConnectionStringParameter = "AzureStorageConnectionString";
+        public const string AzureBlobContainerNameParameter = "BlobContainerName";
+        public const string AzureStorageAccountNameParameter = "AzureStorageAccountName";
+        public const string AzureStorageAccountKeyParameter = "AzureStorageAccountKey";
+        public const string ZipFileCompressionLevelParameter = "ZipFileCompressionLevel";
 
         // Certificate Observer
         public const string CertificateObserverName = "CertificateObserver";

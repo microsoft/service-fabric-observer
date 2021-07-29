@@ -33,39 +33,6 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Report FabricObserver service health as log event (not to SF Health).
-        /// </summary>
-        /// <param name="serviceName">Name of the service.</param>
-        /// <param name="propertyName">Name of the health property.</param>
-        /// <param name="healthState">Health state (Ok, Error, etc).</param>
-        /// <param name="description">Description of the health condition.</param>
-        public void ReportFabricObserverServiceHealth(string serviceName, string propertyName, HealthState healthState, string description)
-        {
-            string msg = $"{propertyName} reporting {healthState}: {description}";
-
-            switch (healthState)
-            {
-                case HealthState.Error:
-                    logger.LogError(msg);
-                    break;
-
-                case HealthState.Warning:
-                    logger.LogWarning(msg);
-                    break;
-
-                default:
-                {
-                    if (logger.EnableVerboseLogging)
-                    {
-                        logger.LogInfo(msg);
-                    }
-
-                    break;
-                }
-            }
-        }
-
-        /// <summary>
         /// This function generates Service Fabric Health Reports that will show up in SFX.
         /// </summary>
         /// <param name="healthReport">Utilities.HealthReport instance.</param>
@@ -99,10 +66,6 @@ namespace FabricObserver.Observers.Utilities
 
             if (healthReport.State == HealthState.Error || healthReport.State == HealthState.Warning)
             {
-                errWarnPreamble =
-                    $"{healthReport.Observer} detected " +
-                    $"{Enum.GetName(typeof(HealthState), healthReport.State)} threshold breach. ";
-
                 // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
                 if (healthReport.Observer == ObserverConstants.OSObserverName && healthReport.Property == "OSConfiguration")
                 {
@@ -149,7 +112,7 @@ namespace FabricObserver.Observers.Utilities
                         break;
 
                     default:
-                        healthReport.Property = $"{healthReport.Observer}_{(!string.IsNullOrWhiteSpace(healthReport.ResourceUsageDataProperty) ? healthReport.ResourceUsageDataProperty : "GenericHealthProperty")}";
+                        healthReport.Property = $"{healthReport.Observer}_{(!string.IsNullOrWhiteSpace(healthReport.ResourceUsageDataProperty) ? healthReport.ResourceUsageDataProperty : "GenericHealth")}";
                         break;
 
                 }

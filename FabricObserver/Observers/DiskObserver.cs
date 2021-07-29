@@ -186,10 +186,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException))
             {
-                WriteToLogWithLevel(
-                    ObserverName,
-                    $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}",
-                    LogLevel.Error); 
+                ObserverLogger.LogError($"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}"); 
                 
                 // Fix the bug..
                 throw;
@@ -291,11 +288,7 @@ namespace FabricObserver.Observers
                     throw;
                 }
 
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                FabricServiceContext.ServiceName.OriginalString,
-                                ObserverName,
-                                HealthState.Warning,
-                                $"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
                 // Fix the bug..
                 throw;
@@ -360,11 +353,7 @@ namespace FabricObserver.Observers
                     throw;
                 }
 
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                FabricServiceContext.ServiceName.OriginalString,
-                                ObserverName,
-                                HealthState.Warning,
-                                $"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
                 // Fix the bug...
                 throw;
             }

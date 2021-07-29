@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.15" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.16" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
              simple configuration updates for them. By design, any observer you make using our 
              extensibility model will employ the same basic config parameters as all observers do.
@@ -17,7 +17,8 @@
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnabled" DefaultValue="true" />-->
+    <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
+    <Parameter Name="SampleNewObserverEnabled" DefaultValue="false" />
     <!-- Telemetry - AppInsights or LogAnalytics -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
@@ -27,9 +28,10 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" />-->
+    <Parameter Name="AzureStorageUploadObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" />
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />
@@ -37,7 +39,8 @@
     <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableEtw" DefaultValue="true" />-->
+    <Parameter Name="AzureStorageUploadObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="SampleNewObserverEnableEtw" DefaultValue="false" />
     <!-- CSV Logging -->
     <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
@@ -51,11 +54,12 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!--Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="true" />-->
+    <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:02" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:02" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
@@ -65,7 +69,8 @@
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
-    <!--Parameter Name="SampleNewObserverRunInterval" DefaultValue="" />-->
+    <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="" />
+    <Parameter Name="SampleNewObserverRunInterval" DefaultValue="00:05:00" />
     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
@@ -76,6 +81,15 @@
     <!-- Process family tree monitoring. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
+    <!-- Service process dumps (dumpProcessOnError feature). -->
+    <!-- You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
+         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
+    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
+    <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
+    <!-- Max number of dumps to generate per service, per observed metric within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
+    <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
+    <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
+    <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -108,7 +122,6 @@
     <Parameter Name="NodeObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="NodeObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- NodeObserver Warning/Error Thresholds -->
     <Parameter Name="NodeObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="90" />
     <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
@@ -130,12 +143,26 @@
     <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
     <!-- NetworkObserver -->
     <Parameter Name="NetworkObserverConfigurationFile" DefaultValue="NetworkObserver.config.json" />
+    <!-- NEW: AzureStorageUploadObserver -->
+    <Parameter Name="AzureStorageUploadObserverBlobContainerName" DefaultValue="fodumps" />
+    <!-- This should be an encrypted string. It is not a good idea to place an unencrypted ConnectionString in an XML file.. FO will ignore unencrypted strings. 
+         Use Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here. 
+         The encrypted string must NOT contain any line breaks or spaces. This is very important. If you copy the the string incorrectly, then FO will not upload dumps.
+         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps  
+         for details. Follow the directions in the sample for creating an encryted secret. Note the use of thumbprint in the cmd. -->
+    <Parameter Name="AzureStorageUploadObserverStorageConnectionString" DefaultValue="" />
+    <!-- OR -->
+    <Parameter Name="AzureStorageUploadObserverStorageAccountName" DefaultValue="" />
+    <!-- This should be an encrypted string. Make sure there are no line breaks and no blank spaces between any characters. This is very important. -->
+    <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
+    <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. -->
+    <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.15" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.16" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -154,6 +181,10 @@
             <Parameter Name="ResourceUsageDataCapacity" Value="[AppObserverResourceUsageDataCapacity]" />
             <Parameter Name="EnableChildProcessMonitoring" Value="[AppObserverEnableChildProcessMonitoring]" />
             <Parameter Name="MaxChildProcTelemetryDataCount" Value="[AppObserverMaxChildProcTelemetryDataCount]" />
+            <Parameter Name="EnableProcessDumps" Value="[AppObserverEnableProcessDumps]" />
+            <Parameter Name="DumpType" Value="[AppObserverProcessDumpType]" />
+            <Parameter Name="MaxDumps" Value="[AppObserverMaxProcessDumps]" />
+            <Parameter Name="MaxDumpsTimeWindow" Value="[AppObserverMaxDumpsTimeWindow]" />
           </Section>
           <Section Name="CertificateObserverConfiguration">
             <Parameter Name="Enabled" Value="[CertificateObserverEnabled]" />
@@ -255,17 +286,36 @@
             <Parameter Name="EnableVerboseLogging" Value="[SFConfigurationObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[SFConfigurationObserverRunInterval]" />
           </Section>
-          <!--<Section Name="SampleNewObserverConfiguration">
+          <Section Name="AzureStorageUploadObserverConfiguration">
+            <Parameter Name="Enabled" Value="[AzureStorageUploadObserverEnabled]" />
+            <Parameter Name="EnableTelemetry" Value="[AzureStorageUploadObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[AzureStorageUploadObserverEnableEtw]" />
+            <Parameter Name="EnableVerboseLogging" Value="[AzureStorageUploadObserverEnableVerboseLogging]" />
+            <Parameter Name="RunInterval" Value="[AzureStorageUploadObserverRunInterval]" />
+            <Parameter Name="BlobContainerName" Value="[AzureStorageUploadObserverBlobContainerName]" />
+            <!-- Azure Storage Connection String -->
+            <!-- Note that you *can* use plain text values that are unencrypted strings. This is NOT recommended, but the decision is yours. If you choose to do this,
+                 then you must set IsEncrypted to false both in the below settings and the corresponding settings in Settings.xml. -->
+            <!-- Azure Storage Auth: Either supply an encrypted Connection String or an account name and encrypted shared key. -->
+            <Parameter Name="AzureStorageConnectionString" Value="[AzureStorageUploadObserverStorageConnectionString]" IsEncrypted="true" />
+            <!-- OR use Account Name/Account Key pair if NOT using Connection String.. -->
+            <Parameter Name="AzureStorageAccountName" Value="[AzureStorageUploadObserverStorageAccountName]" />
+            <Parameter Name="AzureStorageAccountKey" Value="[AzureStorageUploadObserverStorageAccountKey]" IsEncrypted="true" />
+            <!-- File compression level -->
+            <Parameter Name="ZipFileCompressionLevel" Value="[AzureStorageUploadObserverZipFileCompressionLevel]" />
+          </Section>
+          <Section Name="SampleNewObserverConfiguration">
             <Parameter Name="Enabled" Value="[SampleNewObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[SampleNewObserverEnableTelemetry]" />
             <Parameter Name="EnableEtw" Value="[SampleNewObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[SampleNewObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[SampleNewObserverRunInterval]" />
-          </Section>-->
+          </Section>
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!--<Policies>
+    <!-- Uncomment the to run FO as System user. Also uncomment the Principals node below.
+    <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
     </Policies>-->
   </ServiceManifestImport>
@@ -280,9 +330,17 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!--<Principals>
+  <!-- This is important to set if you run FabricObserver as NetworkUser (Default) and you want to upload AppObserver's user service process dumps to your Azure Storage account 
+       via AzureStorageUploadObserver using an encrypted storage account Connection String or Account Key. 
+       Just supply the same thumbprint you used to encrypt your Storage Connection String or Account Key using the Invoke-ServiceFabricEncryptSecret cmdlet.
+       NOTE: If you need to run FabricObserver as System user - you will need to in order to monitor services that run as System or Admin user -, then you do not need to set this. -->
+  <!-- Uncomment below to run FO as System user. Also uncomment the Policies node above.
+  <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals>-->
+  </Principals> -->
+  <Certificates>
+    <SecretsCertificate X509FindValue="" Name="" />
+  </Certificates>
 </ApplicationManifest>

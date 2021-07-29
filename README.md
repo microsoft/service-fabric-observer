@@ -1,4 +1,4 @@
-# FabricObserver 3.1.15
+# FabricObserver 3.1.16
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
@@ -159,6 +159,7 @@ Here are the current observers and what they monitor:
 | Resource | Observer |
 | --- | --- |
 | Application (services) resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | AppObserver |
+| Looks for dmp and zip files in AppObserver's MemoryDumps folder, compresses (if necessary) and uploads them to your specified Azure storage account (blob only, AppObserver only, and still Windows only in this version of FO) | AzureStorageUploadObserver |
 | Application (user) and cluster certificate health monitoring | CertificateObserver |
 | Disk (local storage disk health/availability, space usage, IO) | DiskObserver |
 | SF System Services resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | FabricSystemObserver |

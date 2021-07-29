@@ -67,7 +67,7 @@ namespace FabricObserver.Observers
 
         public override async Task ObserveAsync(CancellationToken token)
         {
-            if (!IsObserverWebApiAppDeployed || RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (!IsObserverWebApiAppDeployed || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
             }
@@ -76,6 +76,8 @@ namespace FabricObserver.Observers
             {
                 return;
             }
+
+            Token = token;
 
             try
             {
@@ -100,11 +102,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException))
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                FabricServiceContext.ServiceName.OriginalString,
-                                ObserverName,
-                                HealthState.Warning,
-                                $"Unhandled Exception in ObserveAsync:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"Unhandled Exception in ObserveAsync:{Environment.NewLine}{e}");
 
                 // Fix the bug..
                 throw;
@@ -175,11 +173,7 @@ namespace FabricObserver.Observers
             // This file is used by the web application (ObserverWebApi).
             if (!ObserverLogger.TryWriteLogFile(logPath, sb.ToString()))
             {
-                HealthReporter.ReportFabricObserverServiceHealth(
-                                     FabricServiceContext.ServiceName.OriginalString,
-                                     ObserverName,
-                                     HealthState.Warning,
-                                     "Unable to create SFInfraInfo.txt file.");
+                ObserverLogger.LogWarning("Unable to create SFInfraInfo.txt file.");
             }
 
             _ = sb.Clear();

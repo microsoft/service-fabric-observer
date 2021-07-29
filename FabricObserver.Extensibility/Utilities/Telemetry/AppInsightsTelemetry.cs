@@ -115,7 +115,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
-                        HealthScope scope,
                         string propertyName,
                         HealthState state,
                         string unhealthyEvaluations,
@@ -143,7 +142,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     healthInfo += $"{Environment.NewLine}{unhealthyEvaluations}";
                 }
 
-                var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
+                var tt = new TraceTelemetry(
+                    $"{Enum.GetName(typeof(HealthState), state)} from {source}:{Environment.NewLine}" +
+                    $"{propertyName}{Environment.NewLine}" +
+                    $"{healthInfo}", sev);
+
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
 

@@ -251,11 +251,12 @@ namespace ClusterObserver
                                 {
 
                                 }
-
                                 break;
+
                             case HealthEvaluationKind.Application:
                             case HealthEvaluationKind.Applications:
                             case HealthEvaluationKind.SystemApplication:
+
                                 try
                                 {
                                     await ProcessApplicationHealthAsync(clusterHealth.ApplicationHealthStates, token).ConfigureAwait(true);
@@ -264,9 +265,10 @@ namespace ClusterObserver
                                 {
 
                                 }
-
                                 break;
+
                             default:
+
                                 try
                                 {
                                     await ProcessGenericEntityHealthAsync(evaluation, token).ConfigureAwait(true);
@@ -275,7 +277,6 @@ namespace ClusterObserver
                                 {
 
                                 }
-
                                 break;
                         }
                     }
@@ -633,7 +634,8 @@ namespace ClusterObserver
                             Description = $"{nodeDictItem.Key} is now Up.",
                             Metric = "NodeStatus",
                             NodeName = nodeDictItem.Key,
-                            Source = ObserverName
+                            Source = ObserverName,
+                            Value = 0
                         };
 
                         await ObserverTelemetryClient.ReportHealthAsync(telemetry, token);
@@ -646,13 +648,12 @@ namespace ClusterObserver
                                             ObserverConstants.ClusterObserverETWEventName,
                                             new
                                             {
-                                                HealthScope = "Node",
                                                 HealthState = "Ok",
-                                                HealthEventDescription = $"{nodeDictItem.Key} is now Up.",
+                                                Description = $"{nodeDictItem.Key} is now Up.",
                                                 Metric = "NodeStatus",
                                                 NodeName = nodeDictItem.Key,
-                                                NodeStatus = "Up",
-                                                Source = ObserverName
+                                                Source = ObserverName,
+                                                Value = 0
                                             });
                     }
 
@@ -706,7 +707,8 @@ namespace ClusterObserver
                                 Description = message,
                                 Metric = "NodeStatus",
                                 NodeName = kvp.Key,
-                                Source = ObserverName
+                                Source = ObserverName,
+                                Value = 1,
                             };
 
                             await ObserverTelemetryClient.ReportHealthAsync(telemetry, token);
@@ -719,13 +721,12 @@ namespace ClusterObserver
                                                 ObserverConstants.ClusterObserverETWEventName,
                                                 new
                                                 {
-                                                    HealthScope = "Node",
                                                     HealthState = "Warning",
-                                                    HealthEventDescription = message,
+                                                    Description = message,
                                                     Metric = "NodeStatus",
                                                     NodeName = kvp.Key,
-                                                    NodeStatus = $"{kvp.Value.NodeStatus}",
-                                                    Source = ObserverName
+                                                    Source = ObserverName,
+                                                    Value = 1,
                                                 });
                         }
                     }

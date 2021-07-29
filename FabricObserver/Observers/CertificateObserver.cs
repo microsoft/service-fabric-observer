@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.ServiceModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -78,7 +77,6 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // Only run once per specified time in Settings.xml. (default is already set to 1 day for CertificateObserver)
-            // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter.
             if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
@@ -88,6 +86,8 @@ namespace FabricObserver.Observers
             {
                 return;
             }
+
+            Token = token;
 
             await Initialize(token).ConfigureAwait(true);
             
@@ -135,10 +135,7 @@ namespace FabricObserver.Observers
             }
             catch (SecurityException e)
             {
-                WriteToLogWithLevel(
-                    ObserverName,
-                    $"Can't access {store.Name} due to {e.Message} - {e.StackTrace}",
-                    LogLevel.Warning);
+                ObserverLogger.LogWarning($"Can't access {store.Name} due to {e.Message} - {e.StackTrace}");
             }
             finally
             {
@@ -395,7 +392,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            throw new ActionNotSupportedException("if X509FindTime attribute, value should be FindBySubjectName");
+                            throw new Exception("if X509FindTime attribute, value should be FindBySubjectName");
                         }
                     }
 
@@ -411,10 +408,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException))
             {
-                WriteToLogWithLevel(
-                    ObserverName,
-                    $"There was an issue parsing the cluster manifest. Observer cannot run. Error Details:{Environment.NewLine}{e}",
-                    LogLevel.Error);
+                ObserverLogger.LogError($"There was an issue parsing the cluster manifest. Observer cannot run. Error Details:{Environment.NewLine}{e}");
 
                 throw;
             }

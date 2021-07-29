@@ -810,13 +810,19 @@ namespace FabricObserver.Observers
 
                     // This is used for info report.
                     TotalAllocatedHandlesAllSystemServices += handles;
-
+                    
                     // No need to proceed further if there are no configuration settings for CPU, Memory, Handles thresholds.
                     // Returning here is correct as supplied thresholds apply to all system services.
                     if (CpuErrorUsageThresholdPct <= 0 && CpuWarnUsageThresholdPct <= 0 && MemErrorUsageThresholdMb <= 0 && MemWarnUsageThresholdMb <= 0
                         && AllocatedHandlesError <= 0 && AllocatedHandlesWarning <= 0)
                     {
                         return;
+                    }
+
+                    // Handles/FDs
+                    if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
+                    {
+                        allHandlesData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(handles);
                     }
 
                     CpuUsage cpuUsage = new CpuUsage();
@@ -829,13 +835,6 @@ namespace FabricObserver.Observers
                         {
                             _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
                         }
-                    }
-
-                    // Allocated Handles
-                    if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
-                    {
-                        float handleCount = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, FabricServiceContext);
-                        allHandlesData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(handleCount);
                     }
 
                     TimeSpan duration = TimeSpan.FromSeconds(1);
@@ -902,6 +901,8 @@ namespace FabricObserver.Observers
 
                 timer.Stop();
                 timer.Reset();
+
+                await Task.Delay(250, Token).ConfigureAwait(false);
             }
         }
 
@@ -1015,6 +1016,8 @@ namespace FabricObserver.Observers
                 allActiveTcpPortData?.Clear();
                 allActiveTcpPortData = null;
             }
+
+            ProcessInfoProvider.Instance?.Dispose();
         }
     }
 }

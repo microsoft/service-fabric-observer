@@ -206,21 +206,16 @@ namespace FabricObserver.Observers.Utilities
                 return false;
             }
 
-            for (var i = 0; i < Retries; i++)
+            try
             {
-                try
-                {
-                    File.Delete(FilePath);
-                    return true;
-                }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
-                {
-
-                }
-
-                Thread.Sleep(1000);
+                Retry.Do(() => File.Delete(FilePath), TimeSpan.FromSeconds(1), CancellationToken.None);
+                return true;
             }
+            catch (AggregateException)
+            {
 
+            }
+ 
             return false;
         }
 
@@ -276,13 +271,6 @@ namespace FabricObserver.Observers.Utilities
 
             FilePath = file;
 
-            // Clean out old log files. This is to ensure the supplied policy is enforced if FO is restarted before the MaxArchiveFileLifetimeDays has been reached.
-            // This is because Logger FileTarget settings are not preserved across FO deployments.
-            if (MaxArchiveFileLifetimeDays > 0)
-            {
-                TryCleanLogFolder(Path.Combine(logFolderBase, FolderName), TimeSpan.FromDays(MaxArchiveFileLifetimeDays));
-            }
-
             var targetName = loggerName + "LogFile";
 
             if (LogManager.Configuration == null)
@@ -308,25 +296,39 @@ namespace FabricObserver.Observers.Utilities
                 };
 
                 LogManager.Configuration.AddTarget(loggerName + "LogFile", target);
-
                 var ruleInfo = new LoggingRule(loggerName, NLog.LogLevel.Debug, target);
-
                 LogManager.Configuration.LoggingRules.Add(ruleInfo);
                 LogManager.ReconfigExistingLoggers();
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
             OLogger = LogManager.GetLogger(loggerName);
+
+            // Clean out old log files. This is to ensure the supplied policy is enforced if FO is restarted before the MaxArchiveFileLifetimeDays has been reached.
+            // This is because Logger FileTarget settings are not preserved across FO deployments.
+            if (MaxArchiveFileLifetimeDays > 0)
+            {
+                TryCleanFolder(Path.Combine(logFolderBase, FolderName), "*.log", TimeSpan.FromDays(MaxArchiveFileLifetimeDays));
+            }
         }
 
-        private static void TryCleanLogFolder(string folderPath, TimeSpan maxAge)
+        public void TryCleanFolder(string folderPath, string searchPattern, TimeSpan maxAge)
         {
             if (!Directory.Exists(folderPath))
             {
                 return;
             }
 
-            string[] files = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories);
+            string[] files = new string[] { };
+
+            try
+            {
+                files = Directory.GetFiles(folderPath, searchPattern, SearchOption.AllDirectories);
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+            {
+                return;
+            }
 
             foreach (string file in files)
             {
@@ -334,12 +336,12 @@ namespace FabricObserver.Observers.Utilities
                 {
                     if (DateTime.UtcNow.Subtract(File.GetCreationTime(file)) >= maxAge)
                     {
-                        File.Delete(file);
+                        Retry.Do(() => File.Delete(file), TimeSpan.FromSeconds(1), CancellationToken.None);
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                catch (Exception e) when (e is ArgumentException || e is AggregateException)
                 {
-
+                    LogWarning($"Unable to delete file {file}:{Environment.NewLine}{e}");
                 }
             }
         }
