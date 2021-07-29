@@ -266,13 +266,8 @@ namespace FabricObserver.Observers
                         break;
                     }
 
-                    if (!await RunObserversAsync().ConfigureAwait(false))
-                    {
-                        if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
-                        {
-                            Logger.LogWarning("All enabled observers did not run successfully. See observer logs for details.");
-                        }
-                    }
+                    _ = await RunObserversAsync().ConfigureAwait(false);
+                    
 
                  /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
                     make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
@@ -809,7 +804,7 @@ namespace FabricObserver.Observers
                 {
                     if (TaskCancelled || shutdownSignaled)
                     {
-                        return false;
+                        return true;
                     }
 
                     // Is it healthy?

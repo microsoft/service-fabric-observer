@@ -676,6 +676,19 @@ namespace FabricObserver.Observers
                     }
                 }
 
+                // Ports.
+                if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
+                {
+                    int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
+                    ActivePortsData.Data.Add(activePortCountTotal);
+                }
+
+                if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
+                {
+                    int ephemeralPortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
+                    EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
+                }
+
                 timer.Start();
                 
                 while (timer.Elapsed <= duration)
@@ -698,19 +711,6 @@ namespace FabricObserver.Observers
                     if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                     {
                         MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
-                    }
-
-                    // Ports.
-                    if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
-                    {
-                        int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
-                        ActivePortsData.Data.Add(activePortCountTotal);
-                    }
-
-                    if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
-                    {
-                        int ephemeralPortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
-                        EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
                     }
 
                     await Task.Delay(250, Token).ConfigureAwait(true);

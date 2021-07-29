@@ -260,7 +260,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;

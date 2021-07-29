@@ -92,7 +92,7 @@ namespace FabricObserver.Observers
             if (!initialized)
             {
                 ObserverLogger.LogWarning("AppObserver was unable to initialize correctly due to misconfiguration. " +
-                                           "Please check your AppObserver configuration settings.");
+                                          "Please check your AppObserver configuration settings.");
                 stopwatch.Stop();
                 stopwatch.Reset();
                 return;
@@ -572,17 +572,104 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            await using Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+            bool isJson = JsonHelper.IsJson<List<ApplicationInfo>>(await File.ReadAllTextAsync(appObserverConfigFileName));
 
-            if (stream.Length > 0 && JsonHelper.IsJson<List<ApplicationInfo>>(await File.ReadAllTextAsync(appObserverConfigFileName)))
+            if (!isJson)
             {
-                userTargetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
+                string message = "AppObserver's JSON configuration file is malformed. Please fix the JSON and redeploy FabricObserver if you want AppObserver to monitor service processes.";
+                var healthReport = new Utilities.HealthReport
+                {
+                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                    EmitLogEvent = EnableVerboseLogging,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = "JsonValidation",
+                    ReportType = HealthReportType.Application,
+                    State = HealthState.Warning,
+                    NodeName = NodeName,
+                    Observer = ObserverConstants.AppObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                                               "JsonValidation",
+                                               HealthState.Warning,
+                                               message,
+                                               ObserverName,
+                                               Token);
+                }
+
+                // ETW.
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Property = "JsonValidation",
+                                        Level = "Warning",
+                                        Message = message,
+                                        ObserverName
+                                    });
+                }
+
+                return false;
             }
 
-            // Are any of the config-supplied apps deployed?.
+            await using Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+            userTargetList.AddRange(JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream));
+            
+            // Does the configuration have any objects (targets) defined?
             if (userTargetList.Count == 0)
             {
-                ObserverLogger.LogWarning($"Will not observe service resource consumption on node {NodeName} as no configuration parameters have been supplied.");
+                string message = $"Please add targets to AppObserver's JSON configuration file and redeploy FabricObserver if you want AppObserver to monitor service processes.";
+           
+                var healthReport = new Utilities.HealthReport
+                {
+                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                    EmitLogEvent = EnableVerboseLogging,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = "Misconfiguration",
+                    ReportType = HealthReportType.Application,
+                    State = HealthState.Warning,
+                    NodeName = NodeName,
+                    Observer = ObserverConstants.AppObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                                               "Misconfiguration",
+                                               HealthState.Warning,
+                                               message,
+                                               ObserverName,
+                                               Token);
+                }
+
+                // ETW.
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Property = "Misconfiguration",
+                                        Level = "Warning",
+                                        Message = message,
+                                        ObserverName
+                                    });
+                }
+
                 return false;
             }
 
@@ -722,9 +809,8 @@ namespace FabricObserver.Observers
             for (int i = 0; i < userTargetList.Count; ++i) 
             {
                 Token.ThrowIfCancellationRequested();
-
-                ApplicationInfo application = userTargetList[i];
                 Uri appUri = null;
+                ApplicationInfo application = userTargetList[i];
 
                 if (string.IsNullOrWhiteSpace(application.TargetApp) && string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
@@ -733,7 +819,13 @@ namespace FabricObserver.Observers
                     settingsFail++;
                     continue;
                 }
-                
+
+                // No required settings supplied for deployed application(s).
+                if (settingsFail == userTargetList.Count)
+                {
+                    return false;
+                }
+
                 if (!string.IsNullOrWhiteSpace(application.TargetApp))
                 {
                     try
@@ -755,15 +847,8 @@ namespace FabricObserver.Observers
                         ObserverLogger.LogWarning($"InitializeAsync: Unexpected TargetApp value {application.TargetApp}. " +
                                                   $"Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\"");
 
-                        settingsFail++;
                         continue;
                     }
-                }
-
-                // No required settings supplied for deployed application(s).
-                if (settingsFail == userTargetList.Count)
-                {
-                    return false;
                 }
 
                 if (!string.IsNullOrWhiteSpace(application.TargetAppType))
@@ -776,7 +861,9 @@ namespace FabricObserver.Observers
                 }
             }
 
-            for (int i = 0; i < ReplicaOrInstanceList.Count; ++i)
+            int repCount = ReplicaOrInstanceList.Count;
+
+            for (int i = 0; i < repCount; ++i)
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -1050,6 +1137,64 @@ namespace FabricObserver.Observers
                                 _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(procId);
                             }
                         }
+                        
+                        // Handles/FDs
+                        if (checkHandles)
+                        {
+                            float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
+
+                            if (handles > -1)
+                            {
+                                if (procId == parentPid)
+                                {
+                                    AllAppHandlesData.FirstOrDefault(x => x.Id == id).Data.Add(handles);
+                                }
+                                else
+                                {
+                                    if (!AllAppHandlesData.Any(x => x.Id == $"{id}:{procName}"))
+                                    {
+                                        AllAppHandlesData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}", capacity, UseCircularBuffer));
+                                    }
+                                    AllAppHandlesData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(handles);
+                                }
+                            }
+                        }
+
+                        // Total TCP ports usage
+                        if (checkAllPorts)
+                        {
+                            // Parent process (the service process).
+                            if (procId == parentPid)
+                            {
+                                AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
+                            }
+                            else
+                            {
+                                // Child procs spawned by the parent service process.
+                                if (!AllAppTotalActivePortsData.Any(x => x.Id == $"{id}:{procName}"))
+                                {
+                                    AllAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, $"{id}:{procName}", capacity, UseCircularBuffer));
+                                }
+                                AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
+                            }
+                        }
+
+                        // Ephemeral TCP ports usage
+                        if (checkEphemeralPorts)
+                        {
+                            if (procId == parentPid)
+                            {
+                                AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
+                            }
+                            else
+                            {
+                                if (!AllAppEphemeralPortsData.Any(x => x.Id == $"{id}:{procName}"))
+                                {
+                                    AllAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, $"{id}:{procName}", capacity, UseCircularBuffer));
+                                }
+                                AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
+                            }
+                        }
 
                         // Monitor Duration applies to the code below.
                         timer.Start();
@@ -1135,68 +1280,13 @@ namespace FabricObserver.Observers
                                 }
                             }
 
-                            if (checkHandles)
-                            {
-                                float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
-
-                                if (handles > -1)
-                                {
-                                    if (procId == parentPid)
-                                    {
-                                        AllAppHandlesData.FirstOrDefault(x => x.Id == id).Data.Add(handles);
-                                    }
-                                    else
-                                    {
-                                        if (!AllAppHandlesData.Any(x => x.Id == $"{id}:{procName}"))
-                                        {
-                                            AllAppHandlesData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}", capacity, UseCircularBuffer));
-                                        }
-                                        AllAppHandlesData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(handles);
-                                    }
-                                }
-                            }
-
-                            // Total TCP ports usage
-                            if (checkAllPorts)
-                            {
-                                // Parent process (the service process).
-                                if (procId == parentPid)
-                                {
-                                    AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
-                                }
-                                else
-                                {
-                                    // Child procs spawned by the parent service process.
-                                    if (!AllAppTotalActivePortsData.Any(x => x.Id == $"{id}:{procName}"))
-                                    {
-                                        AllAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, $"{id}:{procName}", capacity, UseCircularBuffer));
-                                    }
-                                    AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
-                                }
-                            }
-
-                            // Ephemeral TCP ports usage
-                            if (checkEphemeralPorts)
-                            {
-                                if (procId == parentPid)
-                                {
-                                    AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
-                                }
-                                else
-                                {
-                                    if (!AllAppEphemeralPortsData.Any(x => x.Id == $"{id}:{procName}"))
-                                    {
-                                        AllAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, $"{id}:{procName}", capacity, UseCircularBuffer));
-                                    }
-                                    AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
-                                }
-                            }
-
-                            await Task.Delay(250, Token);
+                            await Task.Delay(250, Token).ConfigureAwait(false);
                         }
 
                         timer.Stop();
                         timer.Reset();
+
+                        await Task.Delay(250, Token).ConfigureAwait(false);
                     }
                 }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
@@ -1469,6 +1559,8 @@ namespace FabricObserver.Observers
                 AllAppTotalActivePortsData?.Clear();
                 AllAppTotalActivePortsData = null;
             }
+
+            ProcessInfoProvider.Instance?.Dispose();
         }
 
         private void LogAllAppResourceDataToCsv(string appName)

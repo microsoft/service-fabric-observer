@@ -20,8 +20,6 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
     <StartupObject>FabricObserver.Program</StartupObject>
-    <SignAssembly>false</SignAssembly>
-    <DelaySign>false</DelaySign>
     <NoWarn>CA1822;$(NoWarn)</NoWarn>
     <ResolveComReferenceSilent>true</ResolveComReferenceSilent>
     <Platforms>AnyCPU;x64</Platforms>
@@ -89,8 +87,5 @@
     <None Update="setcaps.sh">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="PackageRoot\Data\Plugins\" />
   </ItemGroup>
 </Project>

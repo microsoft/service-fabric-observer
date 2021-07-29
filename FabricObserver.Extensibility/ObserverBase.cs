@@ -571,6 +571,8 @@ namespace FabricObserver.Observers
                     throw new ArgumentOutOfRangeException(nameof(DumpType), DumpType, null);
             }
 
+            string dumpFilePath = null;
+
             try
             {
                 using (Process process = Process.GetProcessById(processId))
@@ -592,7 +594,9 @@ namespace FabricObserver.Observers
                         return false;
                     }
 
-                    using (FileStream file = File.Create(Path.Combine(DumpsPath, dumpFileName)))
+                    dumpFilePath = Path.Combine(DumpsPath, dumpFileName);
+
+                    using (FileStream file = File.Create(dumpFilePath))
                     {
                         if (!NativeMethods.MiniDumpWriteDump(
                                             processHandle,
@@ -625,6 +629,20 @@ namespace FabricObserver.Observers
             {
                 ObserverLogger.LogWarning(
                     $"Failure generating Windows process dump file {dumpFileName} with error:{Environment.NewLine}{e}");
+
+                if (File.Exists(dumpFilePath))
+                {
+                    // This means a partial file may have been created (like the process went away during dump capture). Delete it.
+                    try
+                    {
+                        Retry.Do(() => File.Delete(Path.Combine(DumpsPath, dumpFileName)), TimeSpan.FromSeconds(1), Token);
+                    }
+                    catch(AggregateException)
+                    {
+                        // Couldn't delete file.
+                        // Retry.Do throws AggregateException containing list of exceptions caught. In this case, we don't really care..
+                    }
+                }
             }
            
             return false;

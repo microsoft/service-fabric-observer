@@ -3,7 +3,7 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>3.1.16</version>
-    <releaseNotes>Added support for uploading dmp files created by AppObserver to your specified Azure Storage account (blob). This is a Windows-only feature today.</releaseNotes>
+    <releaseNotes>New observer: AzureStorageUploadObserver. This adds Windows-only (for now) support for uploading dmp files to your specified Azure Storage account (blob). This is a Windows-only feature today, so there is no need to enable the new observer for Linux deployments. Design fix: decreased CPU use by AppObserver and NodeObserver. Code enhancements and bug fixes. See release notes on repo for details.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
