@@ -725,7 +725,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     ObserverName = ObserverName,
                     Metric = data.Property,
-                    Value = Math.Round(data.AverageDataValue, 0),
+                    Value = Math.Round(data.AverageDataValue, 2),
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ProcessId = procId,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
@@ -768,7 +768,7 @@ namespace FabricObserver.Observers
                                         NodeName,
                                         ObserverName,
                                         Metric = data.Property,
-                                        Value = Math.Round(data.AverageDataValue, 0),
+                                        Value = Math.Round(data.AverageDataValue, 2),
                                         PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                         ProcessId = procId,
                                         ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
@@ -802,7 +802,7 @@ namespace FabricObserver.Observers
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
                     Source = ObserverConstants.FabricObserverName,
-                    Value = Math.Round(data.AverageDataValue, 0)
+                    Value = Math.Round(data.AverageDataValue, 2)
                 };
 
                 if (IsTelemetryEnabled)
@@ -820,7 +820,7 @@ namespace FabricObserver.Observers
                                         ObserverName,
                                         Metric = $"{drive}{data.Property}",
                                         Source = ObserverConstants.FabricObserverName,
-                                        Value = Math.Round(data.AverageDataValue, 0)
+                                        Value = Math.Round(data.AverageDataValue, 2)
                                     });
                 }
             }
@@ -971,7 +971,7 @@ namespace FabricObserver.Observers
                 }
 
                 _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 0)}{data.Units} ");
+                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 2)}{data.Units} ");
                 
                 if (childProcMsg != string.Empty)
                 {
@@ -1017,7 +1017,7 @@ namespace FabricObserver.Observers
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
                                         SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                                        Value = Math.Round(data.AverageDataValue, 0)
+                                        Value = Math.Round(data.AverageDataValue, 2)
                                     });
                 }
 
@@ -1076,7 +1076,7 @@ namespace FabricObserver.Observers
                     telemetryData.Description = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
                     telemetryData.Source = ObserverConstants.FabricObserverName;
-                    telemetryData.Value = Math.Round(data.AverageDataValue, 0);
+                    telemetryData.Value = Math.Round(data.AverageDataValue, 2);
 
                     // Telemetry
                     if (IsTelemetryEnabled)
@@ -1102,7 +1102,7 @@ namespace FabricObserver.Observers
                                             ServiceName = name ?? string.Empty,
                                             Source = ObserverConstants.FabricObserverName,
                                             SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                                            Value = Math.Round(data.AverageDataValue, 0)
+                                            Value = Math.Round(data.AverageDataValue, 2)
                                         });
                     }
 

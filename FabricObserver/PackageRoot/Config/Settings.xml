@@ -236,7 +236,6 @@
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
-    
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
          These values are held in a json file, NetworkObserver.config.json". -->
@@ -265,7 +264,6 @@
     <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
-    
     <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
     <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
     <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
@@ -298,19 +296,14 @@
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Azure Blob store container name. -->
     <Parameter Name="BlobContainerName" Value="" MustOverride="true" />
-    <!-- For Authenticating to your Storage Account, you can either provide an encrypted ConnectionString OR an Account Name and encrypted shared access key. -->
-    <!-- This must be an encrypted string. It is not a good idea to place an unencrypted ConnectionString here. 
-         Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
-         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
-    <Parameter Name="AzureStorageConnectionString" Value="" IsEncrypted="true" />
+    <!-- For Authenticating to your Storage Account, you can either provide a Connection String OR an Account Name and Account Key. 
+         NOTE: If you do not plan on encrypting your account secrets, then set IsEncrypted to false both here and in 
+         the AzureStorageUploadObserverConfiguration Section in ApplicationManifest.xml. -->
+    <Parameter Name="AzureStorageConnectionString" Value="" IsEncrypted="true" MustOverride="true" />
     <!-- OR -->
     <Parameter Name="AzureStorageAccountName" Value="" MustOverride="true" />
-    <!-- This must be an encrypted string. It is not a good idea to place an unencrypted key here. 
-         Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
-         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
     <Parameter Name="AzureStorageAccountKey" Value="" IsEncrypted="true" MustOverride="true" />
-    <!-- Compression level for dmp file. Default is Optimal. If you have limited cores, than decrease the value. 
-         Supported values are: Fastest, Optimal. Optimal creates the smallest zip files. Fastest runs for less time with non-optimal compressed size. -->
+    <!-- Compression level. dmp files will be compressed to limit network usage. -->
     <Parameter Name="ZipFileCompressionLevel" Value="" MustOverride="true" />
   </Section>
   <!-- Plugin model sample. Just add the configuration info here that your observer needs.

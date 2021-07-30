@@ -199,7 +199,7 @@ All dmp files are compressed to zip files before uploading to your storage accou
 A note on resource usage: This feature is intended for the exceptional case - when your app service is truly doing something really wrong (like leaking memory, ports, handles). Make sure that you set your Error thresholds to meaningfully high values. Internally, FabricObserver will only dump a configured amount of times in a specified time window per service, per observed metric. The idea
 is to not eat your local disk space and use up too much CPU for too long. Please be mindful of how you utilize this **debugging** feature. It is best to enable it in Test and Staging clusters to find the egregious bugs in your service code *before* you ship your services to production clusters. 
 
-#### Encrypting your secrets  
+#### Encrypting your secrets  (Optional, but recommended)
 
 It is very important that you generate an encrypted Connection String or Account Key string in a supported way: Use Service Fabric's Invoke-ServiceFabricEncryptText PowerShell cmdlet with your Cluster thumbprint or cert name/location. 
 Please see the [related documentation with samples](https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps). It is really easy to do! Non-encrypted strings are supported, but we do not recommend using them. The decision is yours to own.
@@ -242,6 +242,33 @@ Example AzureStorageUploadObserver configuration in ApplicationManifest.xml:
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
 ```
   
+You do not need to encrypt your keys, but that is up to you to decide. We recommend that you do. If you do not want to, then:
+
+In Settings.xml you must change IsEncryted to false:
+
+```Xml
+ <Section Name="AzureStorageUploadObserverConfiguration">
+    <!-- For Authenticating to your Storage Account, you can either provide a Connection String OR an Account Name and Account Key. 
+         NOTE: If you do not plan on encrypting your account secrets, then set IsEncrypted to false both here and in 
+         the AzureStorageUploadObserverConfiguration Section in ApplicationManifest.xml. -->
+    <Parameter Name="AzureStorageConnectionString" Value="" IsEncrypted="false" MustOverride="true" />
+    ... 
+    <Parameter Name="AzureStorageAccountKey" Value="" IsEncrypted="false" MustOverride="true" />
+ </Section>
+```
+
+In ApplicationManifest.xml you must change IsEncrypted to false:  
+
+```XML
+ <Section Name="AzureStorageUploadObserverConfiguration">
+    ...
+    <Parameter Name="AzureStorageConnectionString" Value="[AzureStorageUploadObserverStorageConnectionString]" IsEncrypted="false" />
+    <!-- OR use Account Name/Account Key pair if NOT using Connection String.. -->
+    <Parameter Name="AzureStorageAccountName" Value="[AzureStorageUploadObserverStorageAccountName]" />
+    <Parameter Name="AzureStorageAccountKey" Value="[AzureStorageUploadObserverStorageAccountKey]" IsEncrypted="false" />
+    ...
+ </Section>
+```
 
 ## CertificateObserver
 Monitors the expiration date of the cluster certificate and any other certificates provided by the user. 

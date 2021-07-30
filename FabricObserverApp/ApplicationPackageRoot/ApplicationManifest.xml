@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.16" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.17" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
              simple configuration updates for them. By design, any observer you make using our 
              extensibility model will employ the same basic config parameters as all observers do.
@@ -31,7 +31,7 @@
     <Parameter Name="AzureStorageUploadObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SampleNewObserverEnableTelemetry" DefaultValue="false" />
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />
@@ -80,13 +80,14 @@
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree monitoring. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
+    <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError feature). -->
-    <!-- You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
+    <!-- Service process dumps (dumpProcessOnError feature).
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
          if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
     <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
-    <!-- Max number of dumps to generate per service, per observed metric within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
+    <!-- Max number of dumps to generate per service, per observed metric, within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
     <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
@@ -145,24 +146,24 @@
     <Parameter Name="NetworkObserverConfigurationFile" DefaultValue="NetworkObserver.config.json" />
     <!-- NEW: AzureStorageUploadObserver -->
     <Parameter Name="AzureStorageUploadObserverBlobContainerName" DefaultValue="fodumps" />
-    <!-- This should be an encrypted string. It is not a good idea to place an unencrypted ConnectionString in an XML file.. FO will ignore unencrypted strings. 
-         Use Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here. 
-         The encrypted string must NOT contain any line breaks or spaces. This is very important. If you copy the the string incorrectly, then FO will not upload dumps.
+    <!-- This can be an encrypted string or not. The decision is yours.
+         For encrypting, please use the Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here. 
+         Any encrypted string must NOT contain line breaks or spaces. This is very important. If you copy/paste the encrypted string incorrectly, then FO will not upload dumps.
          See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps  
          for details. Follow the directions in the sample for creating an encryted secret. Note the use of thumbprint in the cmd. -->
     <Parameter Name="AzureStorageUploadObserverStorageConnectionString" DefaultValue="" />
     <!-- OR -->
     <Parameter Name="AzureStorageUploadObserverStorageAccountName" DefaultValue="" />
-    <!-- This should be an encrypted string. Make sure there are no line breaks and no blank spaces between any characters. This is very important. -->
+    <!-- This can be an encrypted string or not. If encrypted, then make sure there are no line breaks and no blank spaces between any characters. This is very important. -->
     <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
-    <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. -->
+    <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.16" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.17" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -293,10 +294,9 @@
             <Parameter Name="EnableVerboseLogging" Value="[AzureStorageUploadObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[AzureStorageUploadObserverRunInterval]" />
             <Parameter Name="BlobContainerName" Value="[AzureStorageUploadObserverBlobContainerName]" />
-            <!-- Azure Storage Connection String -->
-            <!-- Note that you *can* use plain text values that are unencrypted strings. This is NOT recommended, but the decision is yours. If you choose to do this,
+            <!-- Azure Storage Auth: Either supply an encrypted Connection String or an account name and encrypted Account Key.
+                 Note that you *can* use unencrypted strings. This is not recommended, but the decision is yours. If you choose to do this,
                  then you must set IsEncrypted to false both in the below settings and the corresponding settings in Settings.xml. -->
-            <!-- Azure Storage Auth: Either supply an encrypted Connection String or an account name and encrypted shared key. -->
             <Parameter Name="AzureStorageConnectionString" Value="[AzureStorageUploadObserverStorageConnectionString]" IsEncrypted="true" />
             <!-- OR use Account Name/Account Key pair if NOT using Connection String.. -->
             <Parameter Name="AzureStorageAccountName" Value="[AzureStorageUploadObserverStorageAccountName]" />
@@ -336,9 +336,8 @@
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
   </Principals> -->
-
   <!-- This is important to set if you run FabricObserver as NetworkUser (Default) and you want to upload AppObserver's user service process dumps to your Azure Storage account 
-       via AzureStorageUploadObserver using an encrypted storage account Connection String or Account Key. 
+       via AzureStorageUploadObserver using a cert-based *encrypted* storage account Connection String or Account Key. 
        Just supply the same thumbprint you used to encrypt your Storage Connection String or Account Key using the Invoke-ServiceFabricEncryptSecret cmdlet.
        NOTE: If you need to run FabricObserver as System user - you will need to in order to monitor services that run as System or Admin user -, then you do not need to set this. -->
   <Certificates>
