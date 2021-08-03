@@ -91,7 +91,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (ManagementException me)
             {
-                Logger.LogWarning($"[Containing try-catch] Handled Exception in GetProcessAllocatedHandles: {me}");
+                Logger.LogWarning($"[Outer try-catch] Handled Exception in GetProcessAllocatedHandles: {me}");
             }
 
             return 0F;
@@ -240,7 +240,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (ManagementException me)
             {
-                Logger.LogWarning($"[Containing try-catch] Handled Exception in GetChildProcesses: {me}");
+                Logger.LogWarning($"[Outer try-catch] Handled Exception in GetChildProcesses: {me}");
             }
 
             return childProcesses;
@@ -279,6 +279,7 @@ namespace FabricObserver.Observers.Utilities
                             }
                             catch (Exception e) when (e is ArgumentException || e is ManagementException)
                             {
+                                Logger.LogWarning($"[Inner try-catch (enumeration)] Handled Exception in GetProcessPrivateWorkingSet: {e}");
                                 continue;
                             }
                         }
@@ -287,7 +288,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (ManagementException me)
             {
-                Logger.LogWarning($"Handled Exception in GetProcessPrivateWorkingSet: {me}");
+                Logger.LogWarning($"[Outer try-catch] Handled Exception in GetProcessPrivateWorkingSet: {me}");
             }
 
             return 0F;
