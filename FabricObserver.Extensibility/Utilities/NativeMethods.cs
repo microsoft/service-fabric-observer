@@ -58,5 +58,67 @@ namespace FabricObserver.Observers.Utilities
             MiniDumpFilterTriage = 0x00100000,
             MiniDumpValidTypeFlags = 0x001fffff
         }
+
+        public struct PerfomanceInfoData
+        {
+            public long CommitTotalPages;
+            public long CommitLimitPages;
+            public long CommitPeakPages;
+            public long PhysicalTotalBytes;
+            public long PhysicalAvailableBytes;
+            public long InUse;
+            public long SystemCacheBytes;
+            public long KernelTotalBytes;
+            public long KernelPagedBytes;
+            public long KernelNonPagedBytes;
+            public long PageSizeBytes;
+            public int HandlesCount;
+            public int ProcessCount;
+            public int ThreadCount;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct PsApiPerformanceInformation
+        {
+            internal int Size;
+            internal IntPtr CommitTotal;
+            internal IntPtr CommitLimit;
+            internal IntPtr CommitPeak;
+            internal IntPtr PhysicalTotal;
+            internal IntPtr PhysicalAvailable;
+            internal IntPtr SystemCache;
+            internal IntPtr KernelTotal;
+            internal IntPtr KernelPaged;
+            internal IntPtr KernelNonPaged;
+            internal IntPtr PageSize;
+            internal int HandlesCount;
+            internal int ProcessCount;
+            internal int ThreadCount;
+        }
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GetPerformanceInfo([Out] out PsApiPerformanceInformation PerformanceInformation, [In] uint Size);
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct PROCESS_MEMORY_COUNTERS_EX
+        {
+            internal uint cb;
+            internal uint PageFaultCount;
+            internal IntPtr PeakWorkingSetSize;
+            internal IntPtr WorkingSetSize;
+            internal IntPtr QuotaPeakPagedPoolUsage;
+            internal IntPtr QuotaPagedPoolUsage;
+            internal IntPtr QuotaPeakNonPagedPoolUsage;
+            internal IntPtr QuotaNonPagedPoolUsage;
+            internal IntPtr PagefileUsage;
+            internal IntPtr PeakPagefileUsage;
+            internal IntPtr PrivateUsage;
+        }
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
     }
 }

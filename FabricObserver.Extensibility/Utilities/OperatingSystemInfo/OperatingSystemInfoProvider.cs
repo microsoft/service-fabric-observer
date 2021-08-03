@@ -10,12 +10,12 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    public abstract class OperatingSystemInfoProvider
+    public abstract class OSInfoProvider
     {
-        private static OperatingSystemInfoProvider instance;
+        private static OSInfoProvider instance;
         private static readonly object lockObj = new object();
 
-        public static OperatingSystemInfoProvider Instance
+        public static OSInfoProvider Instance
         {
             get
             {
@@ -47,7 +47,7 @@ namespace FabricObserver.Observers.Utilities
         } = new Logger("OSUtilities");
 
 
-        public abstract (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse();
+        public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo();
 
         public abstract int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null);
 

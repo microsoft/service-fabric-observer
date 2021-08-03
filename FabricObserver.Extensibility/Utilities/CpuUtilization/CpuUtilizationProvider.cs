@@ -11,7 +11,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public abstract class CpuUtilizationProvider : IDisposable
     {
-        public abstract Task<float> NextValueAsync();
+        public abstract float NextValue();
 
         public static CpuUtilizationProvider Create()
         {

@@ -18,7 +18,7 @@ namespace FabricObserver.Observers.Utilities
             perfCounter = new PerformanceCounter(categoryName: "Processor", counterName: "% Processor Time", instanceName: "_Total", readOnly: true);
         }
 
-        public override Task<float> NextValueAsync()
+        public override float NextValue()
         {
             if (perfCounter == null)
             {
@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             float result = perfCounter.NextValue();
-            return Task.FromResult(result);
+            return result;
         }
 
         protected override void Dispose(bool disposing)

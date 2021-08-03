@@ -945,10 +945,15 @@ namespace FabricObserver.Observers
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                        {
+                            continue;
+                        }
+
                         if (e is Win32Exception exception && exception.NativeErrorCode == 5 || e.Message.ToLower().Contains("access is denied"))
                         {
-                            string message = $"Host process {parentProc?.ProcessName} for service {repOrInst?.ServiceName?.OriginalString} is running at a higher user privilege than FabricObserver.{Environment.NewLine}" +
-                                             $"Note: you must run FabricObserver as System user if you want to monitor services that run as System or Admin user.";
+                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running as a more privileged Windows user than FabricObserver.{Environment.NewLine}" +
+                                             $"You must run FabricObserver as System user on Windows if you want to monitor services that run as System or Admin user.";
 
                             var healthReport = new Utilities.HealthReport
                             {
@@ -956,7 +961,7 @@ namespace FabricObserver.Observers
                                 EmitLogEvent = EnableVerboseLogging,
                                 HealthMessage = message,
                                 HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                                Property = $"PermissionViolation({parentProc?.ProcessName})",
+                                Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
                                 ReportType = HealthReportType.Application,
                                 State = HealthState.Warning,
                                 NodeName = NodeName,
@@ -970,7 +975,7 @@ namespace FabricObserver.Observers
                             if (IsTelemetryEnabled)
                             {
                                 _ = TelemetryClient?.ReportHealthAsync(
-                                                           $"PermissionViolation({parentProc?.ProcessName})",
+                                                           $"UserAccountPrivilege({parentProc?.ProcessName})",
                                                            HealthState.Warning,
                                                            message,
                                                            ObserverName,
@@ -985,7 +990,7 @@ namespace FabricObserver.Observers
                                                 ObserverConstants.FabricObserverETWEventName,
                                                 new
                                                 {
-                                                    Property = $"PermissionViolation({parentProc?.ProcessName})",
+                                                    Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
                                                     Level = "Warning",
                                                     Message = message,
                                                     ObserverName,
@@ -1129,14 +1134,6 @@ namespace FabricObserver.Observers
                                 _ = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
                             }
                         }
-
-                        if (checkMemMb || checkMemPct)
-                        {
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            {
-                                _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(procId);
-                            }
-                        }
                         
                         // Handles/FDs
                         if (checkHandles)
@@ -1166,7 +1163,7 @@ namespace FabricObserver.Observers
                             // Parent process (the service process).
                             if (procId == parentPid)
                             {
-                                AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
+                                AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == id).Data.Add(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
                             }
                             else
                             {
@@ -1175,7 +1172,7 @@ namespace FabricObserver.Observers
                                 {
                                     AllAppTotalActivePortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, $"{id}:{procName}", capacity, UseCircularBuffer));
                                 }
-                                AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
+                                AllAppTotalActivePortsData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
                             }
                         }
 
@@ -1184,7 +1181,7 @@ namespace FabricObserver.Observers
                         {
                             if (procId == parentPid)
                             {
-                                AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id).Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
+                                AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == id).Data.Add(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
                             }
                             else
                             {
@@ -1192,7 +1189,7 @@ namespace FabricObserver.Observers
                                 {
                                     AllAppEphemeralPortsData.Add(new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, $"{id}:{procName}", capacity, UseCircularBuffer));
                                 }
-                                AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
+                                AllAppEphemeralPortsData.FirstOrDefault(x => x.Id == $"{id}:{procName}").Data.Add(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
                             }
                         }
 
@@ -1203,11 +1200,10 @@ namespace FabricObserver.Observers
                         {
                             token.ThrowIfCancellationRequested();
 
-                            float processMem = 0;
+                            // CPU (all cores) \\
 
                             if (checkCpu)
                             {
-                                // CPU (all cores).
                                 double cpu = cpuUsage.GetCpuUsagePercentageProcess(procId);
 
                                 if (cpu >= 0)
@@ -1232,10 +1228,14 @@ namespace FabricObserver.Observers
                                 }
                             }
 
-                            // Memory (private working set (process)).
+                            // Memory \\
+
+                            float processMem = 0;
+
+                            // private working set.
                             if (checkMemMb)
                             {
-                                processMem = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(procId);
+                                processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, true);
 
                                 if (procId == parentPid)
                                 {
@@ -1251,19 +1251,19 @@ namespace FabricObserver.Observers
                                 }
                             }
 
-                            // Memory (percent in use (total)).
+                            // percent in use (of total).
                             if (checkMemPct)
                             {
                                 if (processMem == 0)
                                 {
-                                    processMem = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(procId);
+                                    processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, true);
                                 }
 
-                                var (TotalMemory, _) = OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse();
+                                var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetMemoryInfo();
 
-                                if (TotalMemory > 0)
+                                if (TotalMemoryGb > 0)
                                 {
-                                    double usedPct = Math.Round((double)(processMem * 100) / (TotalMemory * 1024), 2);
+                                    double usedPct = Math.Round((double)(processMem * 100) / (TotalMemoryGb * 1024), 2);
 
                                     if (procId == parentPid)
                                     {
@@ -1559,8 +1559,6 @@ namespace FabricObserver.Observers
                 AllAppTotalActivePortsData?.Clear();
                 AllAppTotalActivePortsData = null;
             }
-
-            ProcessInfoProvider.Instance?.Dispose();
         }
 
         private void LogAllAppResourceDataToCsv(string appName)

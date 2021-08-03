@@ -11,69 +11,34 @@ using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    public class WindowsInfoProvider : OperatingSystemInfoProvider
+    public class WindowsInfoProvider : OSInfoProvider
     {
         private const string TcpProtocol = "tcp";
 
-        public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo()
         {
-            ManagementObjectSearcher win32OsInfo = null;
-            ManagementObjectCollection results = null;
-            long visibleTotal = -1;
-            long freePhysical = -1;
+            NativeMethods.PerfomanceInfoData perfData;
 
             try
             {
-                win32OsInfo = new ManagementObjectSearcher("SELECT FreePhysicalMemory, TotalVisibleMemorySize FROM Win32_OperatingSystem");
-                results = win32OsInfo.Get();
-
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
-                {
-                    while (enumerator.MoveNext())
-                    {
-                        using (ManagementObject mObj = (ManagementObject)enumerator.Current)
-                        {
-                            object visibleTotalObj = mObj.Properties["TotalVisibleMemorySize"].Value;
-                            object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
-
-                            if (visibleTotalObj == null || freePhysicalObj == null)
-                            {
-                                continue;
-                            }
-
-                            visibleTotal = Convert.ToInt64(visibleTotalObj);
-                            freePhysical = Convert.ToInt64(freePhysicalObj);
-                        }
-                    }
-                }
-
-                if (visibleTotal < 1)
-                {
-                    return (-1L, -1);
-                }
-
-                double used = ((double)(visibleTotal - freePhysical)) / visibleTotal;
+                perfData = GetWindowsPerformanceInfo();
+                double used = ((double)(perfData.PhysicalTotalBytes - perfData.PhysicalAvailableBytes)) / perfData.PhysicalTotalBytes;
                 double usedPct = used * 100;
 
-                return (visibleTotal / 1024 / 1024, Math.Round(usedPct, 2));
+                return (perfData.PhysicalTotalBytes / 1024 / 1024 / 1024, perfData.InUse / 1024 / 1024, Math.Round(usedPct, 2));
             }
-            catch (Exception e) when (e is FormatException || e is InvalidCastException || e is ManagementException)
+            catch (Win32Exception e)
             {
-                Logger.LogWarning($"Handled failure in TupleGetTotalPhysicalMemorySizeAndPercentInUse:{Environment.NewLine}{e}");
+                Logger.LogWarning($"Error getting performance information:{Environment.NewLine}{e}");
+                return (-1, -1, -1);
             }
-            finally
-            {
-                win32OsInfo?.Dispose();
-                results?.Dispose();
-            }
-
-            return (-1L, -1);
         }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
@@ -266,6 +231,47 @@ namespace FabricObserver.Observers.Utilities
         public override int GetTotalAllocatedFileHandlesCount()
         {
             return -1;
+        }
+
+        /// <summary>
+        /// Windows performance information.
+        /// </summary>
+        /// <returns>PerformanceInfoData structure.</returns>
+        public static NativeMethods.PerfomanceInfoData GetWindowsPerformanceInfo()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new PlatformNotSupportedException("This only works on Windows.");
+            }
+
+            NativeMethods.PerfomanceInfoData perfData = new NativeMethods.PerfomanceInfoData();
+
+            if (!NativeMethods.GetPerformanceInfo(
+                out NativeMethods.PsApiPerformanceInformation perfInfo,
+                (uint)Marshal.SizeOf(typeof(NativeMethods.PsApiPerformanceInformation))))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+
+            perfData.CommitTotalPages = perfInfo.CommitTotal.ToInt64();
+            perfData.CommitLimitPages = perfInfo.CommitLimit.ToInt64();
+            perfData.CommitPeakPages = perfInfo.CommitPeak.ToInt64();
+
+            long pageSize = perfInfo.PageSize.ToInt64();
+            perfData.PhysicalTotalBytes = perfInfo.PhysicalTotal.ToInt64() * pageSize;
+            perfData.PhysicalAvailableBytes = perfInfo.PhysicalAvailable.ToInt64() * pageSize;
+            perfData.InUse = perfData.PhysicalTotalBytes - perfData.PhysicalAvailableBytes;
+            perfData.SystemCacheBytes = perfInfo.SystemCache.ToInt64() * pageSize;
+            perfData.KernelTotalBytes = perfInfo.KernelTotal.ToInt64() * pageSize;
+            perfData.KernelPagedBytes = perfInfo.KernelPaged.ToInt64() * pageSize;
+            perfData.KernelNonPagedBytes = perfInfo.KernelNonPaged.ToInt64() * pageSize;
+            perfData.PageSizeBytes = pageSize;
+
+            perfData.HandlesCount = perfInfo.HandlesCount;
+            perfData.ProcessCount = perfInfo.ProcessCount;
+            perfData.ThreadCount = perfInfo.ThreadCount;
+
+            return perfData;
         }
 
         private int GetTcpPortCount(int processId = -1, bool ephemeral = false)

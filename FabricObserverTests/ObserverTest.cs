@@ -354,7 +354,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
 
             ObserverManager.FabricServiceContext = context;
             ObserverManager.FabricClientInstance = client;
@@ -370,11 +370,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(true);
-            }).ConfigureAwait(true);
+                await obsMgr.StartObserversAsync().ConfigureAwait(false);
+            });
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -419,11 +419,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync().ConfigureAwait(false);
             });
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -439,11 +439,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartAsync().ConfigureAwait(true);
+                await obsMgr.StartAsync().ConfigureAwait(false);
             });
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopAsync().ConfigureAwait(true);
+            await obsMgr.StopAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -475,11 +475,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(true);
-            }).ConfigureAwait(true);
+                await obsMgr.StartObserversAsync().ConfigureAwait(false);
+            });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(true));
-            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(false));
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -544,11 +544,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(true);
-            }).ConfigureAwait(true);
+                await obsMgr.StartObserversAsync().ConfigureAwait(false);
+            });
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -560,7 +560,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
 
             ObserverManager.FabricServiceContext = context;
             ObserverManager.FabricClientInstance = client;
@@ -580,11 +580,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync().ConfigureAwait(true);
-            }).ConfigureAwait(true);
+                await obsMgr.StartObserversAsync().ConfigureAwait(false);
+            });
 
             Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -833,8 +833,8 @@ namespace FabricObserverTests
 
             // Data containers are null.
             Assert.IsTrue(obs.CpuTimeData == null);
-            Assert.IsTrue(obs.MemDataCommittedBytes == null);
-            Assert.IsTrue(obs.MemDataPercentUsed == null);
+            Assert.IsTrue(obs.MemDataInUse == null);
+            Assert.IsTrue(obs.MemDataPercent == null);
             Assert.IsTrue(obs.ActivePortsData == null);
             Assert.IsTrue(obs.EphemeralPortsData == null);
 

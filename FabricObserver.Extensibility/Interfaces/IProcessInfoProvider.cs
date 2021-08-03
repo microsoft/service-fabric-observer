@@ -11,7 +11,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public interface IProcessInfoProvider
     {
-        float GetProcessPrivateWorkingSetInMB(int processId);
+        float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false);
 
         /// <summary>
         /// Returns the number of allocated (in use) file handles for a specified process.
@@ -27,7 +27,5 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="process"></param>
         /// <returns></returns>
         List<(string ProcName, int Pid)> GetChildProcessInfo(int processId);
-
-        void Dispose();
     }
 }

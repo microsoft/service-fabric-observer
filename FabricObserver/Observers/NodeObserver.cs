@@ -6,7 +6,6 @@
 using System;
 using System.Diagnostics;
 using System.Fabric;
-using System.Fabric.Health;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +21,7 @@ namespace FabricObserver.Observers
         private readonly Stopwatch stopwatch;
 
         // These are public properties because they are used in unit tests.
-        public FabricResourceUsageData<float> MemDataCommittedBytes;
+        public FabricResourceUsageData<float> MemDataInUse;
 
         public FabricResourceUsageData<int> FirewallData;
 
@@ -30,7 +29,7 @@ namespace FabricObserver.Observers
 
         public FabricResourceUsageData<int> EphemeralPortsData;
 
-        public FabricResourceUsageData<double> MemDataPercentUsed;
+        public FabricResourceUsageData<double> MemDataPercent;
 
         public FabricResourceUsageData<float> CpuTimeData;
 
@@ -190,39 +189,39 @@ namespace FabricObserver.Observers
                     }
 
                     // Memory - Committed (MB)
-                    if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                    if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                     {
                         CsvFileLogger.LogData(
                                         fileName,
                                         NodeName,
                                         "Committed Memory (MB)",
                                         "Average",
-                                        Math.Round(MemDataCommittedBytes.AverageDataValue, 1));
+                                        Math.Round(MemDataInUse.AverageDataValue, 1));
 
                             CsvFileLogger.LogData(
                                             fileName,
                                             NodeName,
                                             "Committed Memory (MB)",
                                             "Peak",
-                                            Math.Round(MemDataCommittedBytes.MaxDataValue));
+                                            Math.Round(MemDataInUse.MaxDataValue));
                     }
 
                     // % of Total
-                    if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                    if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                     {
                         CsvFileLogger.LogData(
                                         fileName,
                                         NodeName,
                                         "Memory in Use (%)",
                                         "Average",
-                                        Math.Round(MemDataPercentUsed.AverageDataValue, 1));
+                                        Math.Round(MemDataPercent.AverageDataValue, 1));
 
                         CsvFileLogger.LogData(
                                         fileName,
                                         NodeName,
                                         "Memory in Use (%)",
                                         "Peak",
-                                        Math.Round(MemDataPercentUsed.MaxDataValue, 1));
+                                        Math.Round(MemDataPercent.MaxDataValue, 1));
                     }
 
                     if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
@@ -298,20 +297,20 @@ namespace FabricObserver.Observers
                 }
 
                 // Memory - MB
-                if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            MemDataCommittedBytes,
+                            MemDataInUse,
                             MemErrorUsageThresholdMb,
                             MemWarningUsageThresholdMb,
                             timeToLiveWarning);
                 }
 
                 // Memory - Percent
-                if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            MemDataPercentUsed,
+                            MemDataPercent,
                             MemoryErrorLimitPercent,
                             MemoryWarningLimitPercent,
                             timeToLiveWarning);
@@ -404,14 +403,14 @@ namespace FabricObserver.Observers
                 CpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", frudCapacity, UseCircularBuffer);
             }
 
-            if (MemDataCommittedBytes == null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+            if (MemDataInUse == null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
             {
-                MemDataCommittedBytes = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", frudCapacity, UseCircularBuffer);
+                MemDataInUse = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", frudCapacity, UseCircularBuffer);
             }
 
-            if (MemDataPercentUsed == null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+            if (MemDataPercent == null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
             {
-                MemDataPercentUsed = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", frudCapacity, UseCircularBuffer);
+                MemDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", frudCapacity, UseCircularBuffer);
             }
 
             if (FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
@@ -641,7 +640,7 @@ namespace FabricObserver.Observers
                     cpuUtilizationProvider = CpuUtilizationProvider.Create();
 
                     // Warm up counter.
-                    _ = await cpuUtilizationProvider.NextValueAsync();
+                    _ = cpuUtilizationProvider.NextValue();
                 }
 
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
@@ -651,11 +650,11 @@ namespace FabricObserver.Observers
                 {
                     if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
-                        float totalOpenFileHandles = OperatingSystemInfoProvider.Instance.GetTotalAllocatedFileHandlesCount();
+                        float totalOpenFileHandles = OSInfoProvider.Instance.GetTotalAllocatedFileHandlesCount();
 
                         if (totalOpenFileHandles > 0)
                         {
-                            int maximumConfiguredFDCount = OperatingSystemInfoProvider.Instance.GetMaximumConfiguredFileHandlesCount();
+                            int maximumConfiguredFDCount = OSInfoProvider.Instance.GetMaximumConfiguredFileHandlesCount();
 
                             if (maximumConfiguredFDCount > 0)
                             {
@@ -667,7 +666,7 @@ namespace FabricObserver.Observers
 
                     if (LinuxFileHandlesDataTotalAllocated != null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
                     {
-                        int totalOpenFileHandles = OperatingSystemInfoProvider.Instance.GetTotalAllocatedFileHandlesCount();
+                        int totalOpenFileHandles = OSInfoProvider.Instance.GetTotalAllocatedFileHandlesCount();
 
                         if (totalOpenFileHandles > 0)
                         {
@@ -679,14 +678,31 @@ namespace FabricObserver.Observers
                 // Ports.
                 if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                 {
-                    int activePortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
+                    int activePortCountTotal = OSInfoProvider.Instance.GetActiveTcpPortCount();
                     ActivePortsData.Data.Add(activePortCountTotal);
                 }
 
                 if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
                 {
-                    int ephemeralPortCountTotal = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
+                    int ephemeralPortCountTotal = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
                     EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
+                }
+
+                // Memory \\
+
+                if (MemDataInUse != null || MemDataPercent != null)
+                {
+                    var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+
+                    if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                    {
+                        MemDataInUse.Data.Add(MemoryInUseMb);
+                    }
+
+                    if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                    {
+                        MemDataPercent.Data.Add(PercentInUse);
+                    }
                 }
 
                 timer.Start();
@@ -698,22 +714,10 @@ namespace FabricObserver.Observers
                     // CPU
                     if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
-                        CpuTimeData.Data.Add(await cpuUtilizationProvider.NextValueAsync());
+                        CpuTimeData.Data.Add(cpuUtilizationProvider.NextValue());
                     }
 
-                    // Memory
-                    if (MemDataCommittedBytes != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
-                    {
-                        float committedMegaBytes = MemoryUsageProvider.Instance.GetCommittedBytes() / 1048576.0f;
-                        MemDataCommittedBytes.Data.Add(committedMegaBytes);
-                    }
-
-                    if (MemDataPercentUsed != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
-                    {
-                        MemDataPercentUsed.Data.Add(OperatingSystemInfoProvider.Instance.TupleGetTotalPhysicalMemorySizeAndPercentInUse().PercentInUse);
-                    }
-
-                    await Task.Delay(250, Token).ConfigureAwait(true);
+                    await Task.Delay(150, Token).ConfigureAwait(true);
                 }
 
                 timer.Stop();
@@ -749,14 +753,14 @@ namespace FabricObserver.Observers
                 EphemeralPortsData = null;
             }
 
-            if (MemDataCommittedBytes != null && !MemDataCommittedBytes.ActiveErrorOrWarning)
+            if (MemDataInUse != null && !MemDataInUse.ActiveErrorOrWarning)
             {
-                MemDataCommittedBytes = null;
+                MemDataInUse = null;
             }
 
-            if (MemDataPercentUsed != null && !MemDataPercentUsed.ActiveErrorOrWarning)
+            if (MemDataPercent != null && !MemDataPercent.ActiveErrorOrWarning)
             {
-                MemDataPercentUsed = null;
+                MemDataPercent = null;
             }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && FirewallData != null && !FirewallData.ActiveErrorOrWarning)

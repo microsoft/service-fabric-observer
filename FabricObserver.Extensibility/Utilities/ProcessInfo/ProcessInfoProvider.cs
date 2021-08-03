@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
 {
-    public abstract class ProcessInfoProvider : IProcessInfoProvider, IDisposable
+    public abstract class ProcessInfoProvider : IProcessInfoProvider
     {
         private static IProcessInfoProvider instance;
         private static readonly object lockObj = new object();
@@ -41,23 +41,15 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-            instance = null;
-        }
-
         protected Logger Logger 
         { 
             get; 
         } = new Logger("Utilities");
 
-        public abstract float GetProcessPrivateWorkingSetInMB(int processId);
+        public abstract float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false);
 
         public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
 
         public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int processId);
-
-        protected abstract void Dispose(bool disposing);
     }
 }

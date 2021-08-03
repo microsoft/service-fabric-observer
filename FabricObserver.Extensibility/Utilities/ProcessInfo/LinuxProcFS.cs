@@ -64,7 +64,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <returns>An Uptime/IdleTime tuple. The first value represents the total number of seconds the system has been up.
         /// The second value is the sum of how much time each core has spent idle, in seconds.</returns>
-        public static Task<(float Uptime, float IdleTime)> ReadUptimeAsync()
+        public static (float Uptime, float IdleTime) ReadUptime()
         {
             // Doc: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/deployment_guide/s2-proc-uptime
             // Source code: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/fs/proc/uptime.c
@@ -73,7 +73,7 @@ namespace FabricObserver.Observers.Utilities
             float uptime = float.Parse(text.Substring(0, spaceIndex));
             float idleTime = float.Parse(text.Substring(spaceIndex + 1));
 
-            return Task.FromResult((uptime, idleTime));
+            return (uptime, idleTime);
         }
 
         /// <summary>

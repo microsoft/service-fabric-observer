@@ -57,9 +57,9 @@
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SampleNewObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:02" />
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:02" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:01" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
@@ -339,7 +339,7 @@
   <!-- This is important to set if you run FabricObserver as NetworkUser (Default) and you want to upload AppObserver's user service process dumps to your Azure Storage account 
        via AzureStorageUploadObserver using a cert-based *encrypted* storage account Connection String or Account Key. 
        Just supply the same thumbprint you used to encrypt your Storage Connection String or Account Key using the Invoke-ServiceFabricEncryptSecret cmdlet.
-       NOTE: If you need to run FabricObserver as System user - you will need to in order to monitor services that run as System or Admin user -, then you do not need to set this. -->
+       NOTE: If you need to run FabricObserver as System user - you will need to in order to monitor services that run as System or Admin user - or you don't encrypt your secrets, then you do not need to set this. -->
   <Certificates>
     <SecretsCertificate X509FindValue="" Name="" />
   </Certificates>

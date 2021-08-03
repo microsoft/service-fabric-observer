@@ -784,7 +784,7 @@ namespace FabricObserver.Observers
                 try
                 { 
                     // Ports - Active TCP All
-                    int activePortCount = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(process.Id, FabricServiceContext);
+                    int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(process.Id, FabricServiceContext);
                     
                     // This is used for info report.
                     TotalActivePortCountAllSystemServices += activePortCount;
@@ -795,7 +795,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Ports - Active TCP Ephemeral
-                    int activeEphemeralPortCount = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id, FabricServiceContext);
+                    int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id, FabricServiceContext);
 
                     // This is used for info report.
                     TotalActiveEphemeralPortCountAllSystemServices += activeEphemeralPortCount;
@@ -830,11 +830,8 @@ namespace FabricObserver.Observers
                     // Mem
                     if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                     {
-                        // Warm up the perf counters.
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        {
-                            _ = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
-                        }
+                        float mem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, true);
+                        allMemData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(mem);
                     }
 
                     TimeSpan duration = TimeSpan.FromSeconds(1);
@@ -859,13 +856,6 @@ namespace FabricObserver.Observers
                                 allCpuData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(cpu);
                             }
 
-                            // Mem
-                            if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
-                            {
-                                float mem = ProcessInfoProvider.Instance.GetProcessPrivateWorkingSetInMB(process.Id);
-                                allMemData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(mem);
-                            }
-
                             await Task.Delay(250, Token).ConfigureAwait(true);
                         }
                         catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
@@ -883,7 +873,8 @@ namespace FabricObserver.Observers
                     // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
                     // It is generally *not* worth running FO process as a Windows elevated user just for this scenario. On Linux, FO always should be run as normal user, not root.
 #if DEBUG
-                    ObserverLogger.LogWarning($"Can't observe {procName} due to it's privilege level. FabricObserver must be running as System or Admin on Windows for this specific task.");
+                    ObserverLogger.LogWarning($"Can't observe {procName} due to it's privilege level. " +
+                                              $"FabricObserver must be running as System or Admin on Windows for this specific task.");
 #endif       
                     continue;
                 }
@@ -1016,8 +1007,6 @@ namespace FabricObserver.Observers
                 allActiveTcpPortData?.Clear();
                 allActiveTcpPortData = null;
             }
-
-            ProcessInfoProvider.Instance?.Dispose();
         }
     }
 }
