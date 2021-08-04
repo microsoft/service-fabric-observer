@@ -230,6 +230,26 @@ namespace FabricObserver.Observers
             get; set;
         } = new List<string>();
 
+        public int ServiceCount
+        {
+            get; set;
+        }
+
+        public int AppCount
+        {
+            get; set;
+        }
+
+        public int CurrentErrorCount
+        {
+            get; set;
+        }
+
+        public int CurrentWarningCount
+        {
+            get; set;
+        }
+
         public TimeSpan RunInterval
         {
             get => ConfigurationSettings?.RunInterval ?? TimeSpan.MinValue;
@@ -832,6 +852,7 @@ namespace FabricObserver.Observers
                 threshold = thresholdError;
                 warningOrError = true;
                 healthState = HealthState.Error;
+                CurrentErrorCount++;
 
                 // **Windows-only**. This is used by AppObserver, but makes sense to be
                 // part of the base class for future use, like for plugins that manage service processes.
@@ -867,6 +888,7 @@ namespace FabricObserver.Observers
             {
                 warningOrError = true;
                 healthState = HealthState.Warning;
+                CurrentWarningCount++;
             }
 
             if (warningOrError)

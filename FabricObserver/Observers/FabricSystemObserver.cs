@@ -517,6 +517,9 @@ namespace FabricObserver.Observers
                 };
             }
 
+            // fabric:/System
+            AppCount = 1;
+            ServiceCount = processWatchList.Length;
             int listcapacity = processWatchList.Length;
             int frudCapacity = 4;
 

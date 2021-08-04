@@ -3,11 +3,11 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.TelemetryLib
+namespace FabricObserver.TelemetryLib
 {
-    internal static class TelemetryConstants
+    public static class TelemetryConstants
     {
-        internal const string AppInsightsInstrumentationKey = "$Token$";
+        public const string AppInsightsInstrumentationKey = "$Token$";
         internal const string TelemetryEndpoint = "https://vortex.data.microsoft.com/collect/v1";
         internal const string Undefined = "undefined";
         internal const string ClusterTypeStandalone = "standalone";

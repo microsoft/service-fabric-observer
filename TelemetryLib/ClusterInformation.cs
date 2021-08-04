@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.Win32;
 
-namespace Microsoft.ServiceFabric.TelemetryLib
+namespace FabricObserver.TelemetryLib
 {
     /// <summary>
     /// Helper class to facilitate non-PII identification of cluster.
@@ -30,7 +30,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
         /// Gets ClusterID, tenantID and ClusterType for current ServiceFabric cluster
         /// The logic to compute these values closely resembles the logic used in SF runtime's telemetry client.
         /// </summary>
-        public static async Task<Tuple<string, string, string>> TupleGetClusterIdAndTypeAsync(FabricClient fabricClient, CancellationToken token)
+        public static async Task<(string ClusterId, string TenantId, string ClusterType)> TupleGetClusterIdAndTypeAsync(FabricClient fabricClient, CancellationToken token)
         {
             string clusterManifest = await fabricClient.ClusterManager.GetClusterManifestAsync(
                                         TimeSpan.FromSeconds(TelemetryConstants.AsyncOperationTimeoutSeconds),
@@ -74,7 +74,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
                 }
             }
 
-            return Tuple.Create(clusterId, tenantId, clusterType);
+            return (clusterId, tenantId, clusterType);
         }
 
         /// <summary>
@@ -128,7 +128,6 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             }
 
             string tenantId;
-
             var xmlDoc = new XmlDocument { XmlResolver = null };
 
             using (var xmlReader = XmlReader.Create(TenantIdFile, new XmlReaderSettings { XmlResolver = null }))
@@ -137,7 +136,6 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             }
 
             tenantId = xmlDoc.GetElementsByTagName("Deployment").Item(0).Attributes.GetNamedItem("name").Value;
-
             return tenantId;
         }
 
@@ -145,7 +143,6 @@ namespace Microsoft.ServiceFabric.TelemetryLib
         private static string GetTenantIdWindows()
         {
             const string TenantIdValueName = "WATenantID";
-
             string tenantIdKeyName = string.Format(CultureInfo.InvariantCulture, "{0}\\{1}", Registry.LocalMachine.Name, FabricRegistryKeyPath);
 
             return (string)Registry.GetValue(tenantIdKeyName, TenantIdValueName, null);

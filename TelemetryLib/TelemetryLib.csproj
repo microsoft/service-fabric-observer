@@ -3,12 +3,12 @@
     <ProjectGuid>{7BC6991F-C840-413E-B1CD-4025947CF5FA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Microsoft.ServiceFabric.TelemetryLib</RootNamespace>
+    <RootNamespace>FabricObserver.TelemetryLib</RootNamespace>
     <AssemblyName>TelemetryLib</AssemblyName>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <AssemblyVersion>1.0.0.5</AssemblyVersion>
-    <FileVersion>1.0.0.5</FileVersion>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>TelemetryLib</Product>
     <Platforms>AnyCPU;x64</Platforms>
@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="5.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
   <UsingTask TaskName="TokenReplace" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">

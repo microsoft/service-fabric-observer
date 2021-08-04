@@ -17,7 +17,8 @@ using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ServiceFabric.TelemetryLib;
+using FabricObserver.TelemetryLib;
+using Newtonsoft.Json;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -38,6 +39,10 @@ namespace FabricObserver.Observers
         private bool disposed;
         private readonly IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgress;
+        private DateTime StartDateTime;
+
+        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
+        private const string InternalVersionNumber = "3.1.17";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -121,6 +126,16 @@ namespace FabricObserver.Observers
             get;
         }
 
+        public DateTime LastTelemetrySendDate 
+        { 
+            get; private set; 
+        }
+
+        public TimeSpan FOTelemetryTimeWindow
+        {
+            get; private set;
+        } = TimeSpan.FromHours(4);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// This is only used by unit tests.
@@ -158,14 +173,7 @@ namespace FabricObserver.Observers
             FabricClientInstance = fabricClient;
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
             nodeName = FabricServiceContext?.NodeContext.NodeName;
-
-            if (FabricServiceContext == null)
-            {
-                return;
-            }
-
-            FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent +=
-                CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -206,42 +214,6 @@ namespace FabricObserver.Observers
 
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
             SetPropertiesFromConfigurationParameters();
-
-            // FabricObserver Internal Diagnostic Telemetry (Non-PII).
-            // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
-            if (!FabricObserverInternalTelemetryEnabled)
-            {
-                return;
-            }
-
-            string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
-            string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
-            string filepath = Path.Combine(Logger.LogFolderBasePath,
-                                           $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_" +                                                   
-                                           $"{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
-
-#if !DEBUG
-            // If this has already been sent for this activated version (code/config) of node type x
-            if (File.Exists(filepath))
-            {
-                return;
-            }
-#endif
-            try
-            {
-                var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, ServiceEventSource.Current, this.token);
-
-                if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion, GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
-                {
-                    // Log a file to prevent re-sending this in case of process restart(s).
-                    // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
-                    _ = Logger.TryWriteLogFile(filepath, GetFabricObserverInternalConfiguration());
-                }
-            }
-            catch
-            {
-                
-            }
         }
 
         public async Task StartObserversAsync()
@@ -256,6 +228,7 @@ namespace FabricObserver.Observers
 
                 // Continue running until a shutdown signal is sent
                 Logger.LogInfo("Starting Observers loop.");
+                StartDateTime = DateTime.UtcNow;
 
                 // Observers run sequentially. See RunObservers impl.
                 while (true)
@@ -267,18 +240,41 @@ namespace FabricObserver.Observers
                     }
 
                     _ = await RunObserversAsync().ConfigureAwait(false);
-                    
 
-                 /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
-                    make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
-                    As always, measure and understand what impact your code has on memory before employing the GC API in your own projects.
-                    This is only used here to ensure gen0 and gen1 do not hold unecessary objects for any amount of time before FO goes to sleep and to compact the LOH. 
-                    
-                    All observers clear and null their internal lists, objects that maintain internal lists. They also dispose/null disposable objects, etc before this code runs.
-                    This is a micro "optimization" and not really necessary. However, it does modestly decrease the already reasonable memory footprint of FO. 
-                    Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
-                    FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
-                    
+                    // Send internal FO telemetry - no PII information.
+                    if (FabricObserverInternalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= FOTelemetryTimeWindow)
+                    {
+                        try
+                        {
+                            var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, ServiceEventSource.Current, this.token);
+                            var foData = GetFabricObserverInternalTelemetryData();
+                            string foDataString = JsonConvert.SerializeObject(foData);
+                            string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_telemetry_sent_{foData.Version}_{FabricServiceContext.NodeContext.NodeType}.log");
+
+                            if (telemetryEvents.FabricObserverRuntimeNodeEvent(foData))
+                            {
+                                // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
+                                _ = Logger.TryWriteLogFile(filepath, foDataString);
+                                LastTelemetrySendDate = DateTime.UtcNow;
+                                ResetInternalDataCounters();
+                            }
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                    /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
+                       make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
+                       As always, measure and understand what impact your code has on memory before employing the GC API in your own projects.
+                       This is only used here to ensure gen0 and gen1 do not hold unecessary objects for any amount of time before FO goes to sleep and to compact the LOH. 
+
+                       All observers clear and null their internal lists, objects that maintain internal lists. They also dispose/null disposable objects, etc before this code runs.
+                       This is a micro "optimization" and not really necessary. However, it does modestly decrease the already reasonable memory footprint of FO. 
+                       Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
+                       FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
+
                     // SOH, sweep-only collection (no compaction). This will clear the early generation objects (short-lived) from memory. This only impacts the FO process.
                     GC.Collect(0, GCCollectionMode.Forced, true, false);
                     GC.Collect(1, GCCollectionMode.Forced, true, false);
@@ -344,6 +340,15 @@ namespace FabricObserver.Observers
                 // Don't swallow the exception.
                 // Take down FO process. Fix the bug(s).
                 throw;
+            }
+        }
+
+        private void ResetInternalDataCounters()
+        {
+            foreach(var obs in observers)
+            {
+                obs.CurrentErrorCount = 0;
+                obs.CurrentWarningCount = 0;
             }
         }
 
@@ -539,15 +544,56 @@ namespace FabricObserver.Observers
         /// This function gets FabricObserver's internal configuration for telemetry for Charles and company.
         /// No PII. As you can see, this is generic information - number of enabled observer, observer names.
         /// </summary>
-        private string GetFabricObserverInternalConfiguration()
+        private FabricObserverInternalTelemetryData GetFabricObserverInternalTelemetryData()
         {
-            int enabledObserverCount = observers.Count(obs => obs.IsEnabled);
-            string observerList = observers.Aggregate("{ ", (current, obs) => current + $"{obs.ObserverName} ");
+            FabricObserverInternalTelemetryData telemetryData = new FabricObserverInternalTelemetryData
+            {
+                UpTime = DateTime.UtcNow.Subtract(StartDateTime),
+                Version = InternalVersionNumber,
+                EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
+                EnabledObservers = observers.Aggregate("[ ", (current, obs) => current + $"{obs.ObserverName} ") + "]",
+                ObserverData = GetObserverData(),
+            };
 
-            observerList += "}";
-            string ret = $"EnabledObserverCount: {enabledObserverCount}, EnabledObservers: {observerList}";
+            return telemetryData;
+        }
 
-            return ret;
+        private List<ObserverData> GetObserverData()
+        {
+            var observerData = new List<ObserverData>();
+
+            foreach (var obs in observers.Where(o => o.IsEnabled))
+            {
+                // These observers monitor apps and/or services.
+                if (obs.ObserverName == ObserverConstants.AppObserverName ||
+                    obs.ObserverName == ObserverConstants.NetworkObserverName ||
+                    obs.ObserverName == ObserverConstants.FabricSystemObserverName)
+                {
+                    observerData.Add(
+                        new AppServiceObserverData
+                        {
+                            ObserverName = obs.ObserverName,
+                            HealthState = obs.IsUnhealthy ? HealthState.Warning.ToString() : HealthState.Ok.ToString(),
+                            MonitoredAppCount = obs.AppCount,
+                            MonitoredServiceCount = obs.ServiceCount,
+                            ErrorCount = obs.CurrentErrorCount,
+                            WarningCount = obs.CurrentWarningCount
+                        });
+                }
+                else
+                {
+                    observerData.Add(
+                        new ObserverData
+                        {
+                            ObserverName = obs.ObserverName,
+                            HealthState = obs.IsUnhealthy ? HealthState.Warning.ToString() : HealthState.Ok.ToString(),
+                            ErrorCount = obs.CurrentErrorCount,
+                            WarningCount = obs.CurrentWarningCount
+                        });
+                }
+            }
+
+            return observerData;
         }
 
         /// <summary>
@@ -670,10 +716,10 @@ namespace FabricObserver.Observers
                 Fqdn = fqdn;
             }
 
-            // FabricObserver runtime telemetry (Non-PII)
+            // FabricObserver runtime telemetry (No PII)
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
             {
-                FabricObserverInternalTelemetryEnabled = foTelemEnabled;
+                FabricObserverInternalTelemetryEnabled = foTelemEnabled && TelemetryConstants.AppInsightsInstrumentationKey != "$Token$";
             }
 
             // ObserverWebApi.

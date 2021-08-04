@@ -7,7 +7,8 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
-using Microsoft.ServiceFabric.TelemetryLib;
+using FabricObserver.TelemetryLib;
+using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -214,28 +215,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             VerboseMessage(finalMessage);
         }
 
-        private const int FabricObserverTelemetryEventId = 8;
+        private const int FabricObserverInternalTelemetryEventId = 8;
 
-        [Event(FabricObserverTelemetryEventId, Level = EventLevel.Verbose,
-            Message = "FabricObserver Internal Diagnostic Event, " +
-            "eventSourceId = {0}, applicationVersion = {1}, " +
-            "fabricObserverConfiguration = {2}, " +
-            "fabricObserverHealthState = {3}")]
-        public void FabricObserverRuntimeNodeEvent(
-                            string clusterId,
-                            string applicationVersion,
-                            string foConfigInfo,
-                            string foHealthInfo)
+        [Event(FabricObserverInternalTelemetryEventId, Level = EventLevel.Verbose, Message = "{0}")]
+        public void FabricObserverRuntimeNodeEvent(FabricObserverInternalTelemetryData foData)
         {
-            if (IsEnabled())
-            {
-                WriteEvent(
-                     FabricObserverTelemetryEventId,
-                     clusterId,
-                     applicationVersion,
-                     foConfigInfo,
-                     foHealthInfo);
-            }
+            VerboseMessage(JsonConvert.SerializeObject(foData));
         }
 
 #if UNSAFE

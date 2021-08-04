@@ -9,8 +9,9 @@ using System.Fabric;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
+using Newtonsoft.Json;
 
-namespace Microsoft.ServiceFabric.TelemetryLib
+namespace FabricObserver.TelemetryLib
 {
     /// <summary>
     /// Contains common telemetry events
@@ -35,13 +36,13 @@ namespace Microsoft.ServiceFabric.TelemetryLib
                 InstrumentationKey = TelemetryConstants.AppInsightsInstrumentationKey
             };
 
-            var (item1, item2, item3) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
-            clusterId = item1;
-            tenantId = item2;
-            clusterType = item3;
+            var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
+            clusterId = ClusterId;
+            tenantId = TenantId;
+            clusterType = ClusterType;
         }
 
-        public bool FabricObserverRuntimeNodeEvent(string applicationVersion, string foConfigInfo, string foHealthInfo)
+        public bool FabricObserverRuntimeNodeEvent(FabricObserverInternalTelemetryData foData)
         {
             // This means that the token replacement did not take place and this is not an 
             // SFPKG/NUPKG signed Release build of FO. So, don't do anything.
@@ -50,7 +51,7 @@ namespace Microsoft.ServiceFabric.TelemetryLib
                 return false;
             }
 
-            eventSource.FabricObserverRuntimeNodeEvent(clusterId, applicationVersion, foConfigInfo, foHealthInfo);
+            eventSource.FabricObserverRuntimeNodeEvent(foData);
 
             string nodeHashString = string.Empty;
             int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
@@ -67,10 +68,8 @@ namespace Microsoft.ServiceFabric.TelemetryLib
                 { "ClusterId", clusterId },
                 { "ClusterType", clusterType },
                 { "TenantId", tenantId },
-                { "FabricObserverVersion", applicationVersion },
                 { "NodeNameHash",  nodeHashString },
-                { "FabricObserverHealthInfo", foHealthInfo },
-                { "FabricObserverConfigInfo", foConfigInfo },
+                { "ObserverData", JsonConvert.SerializeObject(foData)},
                 { "Timestamp", DateTime.UtcNow.ToString("o") }
             };
 
@@ -79,7 +78,6 @@ namespace Microsoft.ServiceFabric.TelemetryLib
             
             // allow time for flushing
             Thread.Sleep(1000);
-
             return true;
         }
     }

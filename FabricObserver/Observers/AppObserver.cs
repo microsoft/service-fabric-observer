@@ -862,6 +862,8 @@ namespace FabricObserver.Observers
             }
 
             int repCount = ReplicaOrInstanceList.Count;
+            ServiceCount = repCount;
+            AppCount = deployedTargetList.Count;
 
             for (int i = 0; i < repCount; ++i)
             {
@@ -1127,14 +1129,6 @@ namespace FabricObserver.Observers
                             }
                         }
 
-                        if (checkHandles)
-                        {
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            {
-                                _ = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
-                            }
-                        }
-                        
                         // Handles/FDs
                         if (checkHandles)
                         {
