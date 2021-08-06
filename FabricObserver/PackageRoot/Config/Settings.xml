@@ -80,10 +80,8 @@
          FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
     <Parameter Name="EnableETWProvider" Value="true" />
     
-    <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII.  
-         We just want to know if FO is running somewhere and that it is healthy. We collect no personal identifiable information, 
-         as you can see in the source code. See ObserverManager.cs for examples of collected data for FO.
-         See TelemetryLib project for SF info that is collected. -->
+    <!-- Optional: FabricObserver operational telemetry. No PII.  
+         See ObserverManager.cs and TelemetryLib project for FO data that is collected. -->
     <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="true" />
     
     <!-- Optional: If you deploy the FabricObserverWebApi app, set this to true.-->
