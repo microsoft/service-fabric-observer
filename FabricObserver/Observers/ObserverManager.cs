@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
+using Microsoft.Win32;
 
 namespace FabricObserver.Observers
 {
@@ -40,6 +41,8 @@ namespace FabricObserver.Observers
         private readonly IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgress;
         private DateTime StartDateTime;
+        private bool IsInternalCluster;
+        private TelemetryEvents telemetryEvents;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.1.17";
@@ -131,7 +134,7 @@ namespace FabricObserver.Observers
             get; private set; 
         }
 
-        public TimeSpan FOTelemetryTimeWindow
+        public TimeSpan FOInternalTelemetryRunInterval
         {
             get; private set;
         } = TimeSpan.FromHours(4);
@@ -241,27 +244,37 @@ namespace FabricObserver.Observers
 
                     _ = await RunObserversAsync().ConfigureAwait(false);
 
-                    // Send internal FO telemetry - no PII information.
-                    if (FabricObserverInternalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= FOTelemetryTimeWindow)
+                    // Send internal FO telemetry - no PII.
+                    if (FabricObserverInternalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= FOInternalTelemetryRunInterval)
                     {
                         try
                         {
-                            var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, ServiceEventSource.Current, this.token);
-                            var foData = GetFabricObserverInternalTelemetryData();
-                            string foDataString = JsonConvert.SerializeObject(foData);
-                            string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_telemetry_sent_{foData.Version}_{FabricServiceContext.NodeContext.NodeType}.log");
+                            telemetryEvents ??= new TelemetryEvents(
+                                                        FabricClientInstance,
+                                                        FabricServiceContext,
+                                                        ServiceEventSource.Current,
+                                                        FOInternalTelemetryRunInterval,
+                                                        this.token);
 
-                            if (telemetryEvents.FabricObserverRuntimeNodeEvent(foData))
+                            var foData = GetFabricObserverInternalTelemetryData();
+                            
+                            if (foData != null)
                             {
-                                // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
-                                _ = Logger.TryWriteLogFile(filepath, foDataString);
-                                LastTelemetrySendDate = DateTime.UtcNow;
-                                ResetInternalDataCounters();
+                                string foDataString = JsonConvert.SerializeObject(foData);
+                                string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_telemetry_sent_{InternalVersionNumber}_{FabricServiceContext.NodeContext.NodeType}.log");
+
+                                if (telemetryEvents.EmitFabricObserverTelemetryEvent(foData))
+                                {
+                                    // Log to local file for customer audit/review (you can see what was sent).
+                                    _ = Logger.TryWriteLogFile(filepath, foDataString);
+                                    LastTelemetrySendDate = DateTime.UtcNow;
+                                    ResetInternalDataCounters();
+                                }
                             }
                         }
                         catch
                         {
-
+                            // Telemetry is non-critical and should not take down FO.
                         }
                     }
 
@@ -475,13 +488,10 @@ namespace FabricObserver.Observers
             }
 
             if (disposing)
-            {
-                if (FabricClientInstance != null)
-                {
-                    FabricClientInstance.Dispose();
-                    FabricClientInstance = null;
-                }
-
+            { 
+                FabricClientInstance?.Dispose();
+                FabricClientInstance = null;
+                telemetryEvents?.Dispose();
                 linkedSFRuntimeObserverTokenSource?.Dispose();
                 cts?.Dispose();
                 FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
@@ -541,19 +551,32 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// This function gets FabricObserver's internal configuration for telemetry for Charles and company.
-        /// No PII. As you can see, this is generic information - number of enabled observer, observer names.
+        /// This function gets FabricObserver's internal observer operational data for telemetry sent to Microsoft (no PII).
+        /// Any data sent to Microsoft is also stored in a file in the observer_logs directory so you can see exactly what gets transmitted.
+        /// You can enable/disable this at any time by setting EnableFabricObserverDiagnosticTelemetry to true/false in Settings.xml, ObserverManagerConfiguration section.
         /// </summary>
         private FabricObserverInternalTelemetryData GetFabricObserverInternalTelemetryData()
         {
-            FabricObserverInternalTelemetryData telemetryData = new FabricObserverInternalTelemetryData
+            FabricObserverInternalTelemetryData telemetryData = null;
+            try
             {
-                UpTime = DateTime.UtcNow.Subtract(StartDateTime),
-                Version = InternalVersionNumber,
-                EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
-                EnabledObservers = observers.Aggregate("[ ", (current, obs) => current + $"{obs.ObserverName} ") + "]",
-                ObserverData = GetObserverData(),
-            };
+                string enabledObservers = observers.Aggregate("[ ", (current, obs) => current + $"{obs.ObserverName}, ") + "]";
+                enabledObservers = enabledObservers.Remove(enabledObservers.LastIndexOf(","), 1);
+
+                telemetryData = new FabricObserverInternalTelemetryData
+                {
+                    IsInternalCluster = IsInternalCluster,
+                    UpTime = DateTime.UtcNow.Subtract(StartDateTime),
+                    Version = InternalVersionNumber,
+                    EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
+                    EnabledObservers = enabledObservers,
+                    ObserverData = GetObserverData(),
+                };
+            }
+            catch (Exception e) when (e is ArgumentException)
+            {
+                
+            }
 
             return telemetryData;
         }
@@ -719,7 +742,9 @@ namespace FabricObserver.Observers
             // FabricObserver runtime telemetry (No PII)
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
             {
-                FabricObserverInternalTelemetryEnabled = foTelemEnabled && TelemetryConstants.AppInsightsInstrumentationKey != "$Token$";
+                // Internal Microsoft team owns the cluster (First Party).
+                IsInternalCluster = IsInternalSFCluster();
+                FabricObserverInternalTelemetryEnabled = foTelemEnabled;
             }
 
             // ObserverWebApi.
@@ -805,6 +830,42 @@ namespace FabricObserver.Observers
                     TelemetryEnabled = false;
                     break;
             }
+        }
+
+        private bool IsInternalSFCluster()
+        {
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    using RegistryKey azSecMonitorKey = Registry.LocalMachine.OpenSubKey("SOFTWARE")?
+                                                                             .OpenSubKey("Microsoft")?
+                                                                             .OpenSubKey("Windows Azure")?
+                                                                             .OpenSubKey("CurrentVersion")?
+                                                                             .OpenSubKey("SecurityMonitoring");
+                    
+                    // We don't know what the latest version is (which is itself a reg key), so just get the first subkey name of SecurityMonitoring key to get it.
+                    string verName = azSecMonitorKey?.GetSubKeyNames()[0];
+                    using RegistryKey featuresKey = azSecMonitorKey?.OpenSubKey(verName)?.OpenSubKey("Features");
+                    bool isInternal = featuresKey != null && featuresKey.SubKeyCount > 1 && !featuresKey.GetSubKeyNames().Contains("asc");
+
+                    azSecMonitorKey?.Close();
+                    featuresKey?.Close();
+
+                    return isInternal;
+                }
+                else // TODO - Linux.
+                {
+                    // Linux 1P: to_geneva value should be true in /etc/azsec/azsec.xml
+                }
+            }
+            catch (Exception e)
+            {
+                // Telemetry (and therefore telemetry data) is non-critical and should not take down FO.
+                Logger.LogWarning($"Can't determine if Windows cluster is internal:{Environment.NewLine}{e}");
+            }
+
+            return false;
         }
 
         /// <summary>

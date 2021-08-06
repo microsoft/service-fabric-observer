@@ -343,6 +343,11 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
         }
 
+
+        /* NOTE: The below tests are *flaky* (not the feature they test, though... :-). 
+         * Run them one by one or, even better, make them better.. */
+
+
         // Stop observer tests. Ensure calling ObserverManager's StopObservers() works as expected.
         // NOTE: It is best to run these together as part of a single test run (so, not part of a Run All Tests run), otherwise, the results are flaky (false negatives).
         // In general, regardless, these tests are flaky (VS Test issue?). So re-run failed runs to ensure they pass (they will).
@@ -373,13 +378,10 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync().ConfigureAwait(false);
             });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 250).ConfigureAwait(false));
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
-
-        /* NOTE: The below tests are *flaky* (not the feature they test, though... :-). 
-         * Run them one by one or, even better, make them better.. */
 
         [TestMethod]
         public async Task Successful_AppObserver_Run_Cancellation_Via_ObserverManager()
@@ -422,7 +424,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync().ConfigureAwait(false);
             });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 250).ConfigureAwait(false));
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
@@ -442,7 +444,7 @@ namespace FabricObserverTests
                 await obsMgr.StartAsync().ConfigureAwait(false);
             });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 250).ConfigureAwait(false));
             await obsMgr.StopAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
@@ -478,7 +480,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync().ConfigureAwait(false);
             });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(false));
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 250).ConfigureAwait(false));
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
@@ -507,11 +509,11 @@ namespace FabricObserverTests
 
             _ = Task.Run(async () =>
             {
-                await obsMgr.StartObserversAsync();
+                await obsMgr.StartObserversAsync().ConfigureAwait(false);
             });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
-            await obsMgr.StopObserversAsync();
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 25).ConfigureAwait(false));
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
 
@@ -547,7 +549,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync().ConfigureAwait(false);
             });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 25).ConfigureAwait(false));
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
@@ -583,7 +585,7 @@ namespace FabricObserverTests
                 await obsMgr.StartObserversAsync().ConfigureAwait(false);
             });
 
-            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1));
+            Assert.IsTrue(await WaitAsync(() => obsMgr.IsObserverRunning, 1).ConfigureAwait(false));
             await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obsMgr.IsObserverRunning);
         }
@@ -889,7 +891,7 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
         }
 
         /// <summary>
@@ -939,7 +941,7 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
         }
 
         /// <summary>
@@ -996,9 +998,9 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
 
-            await obsMgr.StopObserversAsync();
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1084,7 +1086,7 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
         }
 
         /// <summary>
@@ -1130,7 +1132,7 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            await obsMgr.StopObserversAsync();
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1182,7 +1184,7 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
         }
 
         /// <summary>
@@ -1572,13 +1574,13 @@ namespace FabricObserverTests
             }
         }
 
-        private static async Task<bool> WaitAsync(Func<bool> predicate, int timeoutInSeconds)
+        private static async Task<bool> WaitAsync(Func<bool> predicate, int timeoutInMilliseconds)
         {
             var stopwatch = Stopwatch.StartNew();
 
-            while (stopwatch.Elapsed < TimeSpan.FromSeconds(timeoutInSeconds) && !predicate())
+            while (stopwatch.Elapsed < TimeSpan.FromMilliseconds(timeoutInMilliseconds) && !predicate())
             {
-                await Task.Delay(1).ConfigureAwait(true);
+                await Task.Delay(1).ConfigureAwait(false);
             }
 
             return predicate();
@@ -1611,7 +1613,7 @@ namespace FabricObserverTests
                             try
                             {
                                 var appName = new Uri(app);
-                                var appHealth = await client.HealthManager.GetApplicationHealthAsync(appName);
+                                var appHealth = await client.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
                                 var unhealthyEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
                                                             && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning));
 
@@ -1640,7 +1642,7 @@ namespace FabricObserverTests
                 }
 
                 // System reports
-                var sysAppHealth = await client.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System"));
+                var sysAppHealth = await client.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System")).ConfigureAwait(false);
 
                 if (sysAppHealth != null)
                 {
@@ -1663,7 +1665,7 @@ namespace FabricObserverTests
                 }
 
                 // Node reports
-                var nodeHealth = await client.HealthManager.GetNodeHealthAsync(context.NodeContext.NodeName);
+                var nodeHealth = await client.HealthManager.GetNodeHealthAsync(context.NodeContext.NodeName).ConfigureAwait(false);
 
                 var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains("NodeObserver")
                                                                                 || s.HealthInformation.SourceId.Contains("DiskObserver")

@@ -252,6 +252,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 return 0F;
             }
+
             string query = $"select WorkingSetPrivate from Win32_PerfRawData_PerfProc_Process where IDProcess = {processId}";
 
             try

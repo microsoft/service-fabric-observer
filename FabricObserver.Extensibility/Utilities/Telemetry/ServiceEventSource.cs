@@ -8,7 +8,6 @@ using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
 using FabricObserver.TelemetryLib;
-using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -23,7 +22,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             _ = Task.Run(() => { });
         }
 
-        // Instance constructor is private to enforce singleton semantics
+        // Instance constructor is private to enforce singleton semantics.
+        // FabricObserver ETW provider name is passed to base.ctor here instead of decorating this class.
         private ServiceEventSource() : base(ObserverConstants.EventSourceProviderName)
         {
             
@@ -121,6 +121,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 finalMessage);
         }
 
+        [NonEvent]
+        public void VerboseMessage(string message, params object[] args)
+        {
+            string finalMessage = string.Format(message, args);
+            VerboseMessage(finalMessage);
+        }
+
         // For very high-frequency events it might be advantageous to raise events using WriteEventCore API.
         // This results in more efficient parameter handling, but requires explicit allocation of EventData structure and unsafe code.
         // To enable this code path, define UNSAFE conditional compilation symbol and turn on unsafe code support in project properties.
@@ -208,19 +215,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
         }
 
-        [NonEvent]
-        public void VerboseMessage(string message, params object[] args)
+        [Event(42, Level = EventLevel.Verbose, Message = "{0}")]
+        public void InternalFODataEvent(string data)
         {
-            string finalMessage = string.Format(message, args);
-            VerboseMessage(finalMessage);
-        }
-
-        private const int FabricObserverInternalTelemetryEventId = 8;
-
-        [Event(FabricObserverInternalTelemetryEventId, Level = EventLevel.Verbose, Message = "{0}")]
-        public void FabricObserverRuntimeNodeEvent(FabricObserverInternalTelemetryData foData)
-        {
-            VerboseMessage(JsonConvert.SerializeObject(foData));
+            WriteEvent(42, data);
         }
 
 #if UNSAFE
@@ -246,6 +244,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             public const EventKeywords ServiceInitialization = (EventKeywords)0x2L;
             public const EventKeywords ResourceUsage = (EventKeywords)0x4L;
             public const EventKeywords ErrorOrWarning = (EventKeywords)0x8L;
+            public const EventKeywords InternalData = (EventKeywords)0x10L;
         }
     }
 }

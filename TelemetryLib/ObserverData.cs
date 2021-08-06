@@ -30,12 +30,6 @@ namespace FabricObserver.TelemetryLib
 
     public class AppServiceObserverData : ObserverData
     {
-        // This is done for list data ordering purposes.
-        public new string ObserverName
-        {
-            get; set;
-        }
-
         public int MonitoredAppCount
         {
             get; set;

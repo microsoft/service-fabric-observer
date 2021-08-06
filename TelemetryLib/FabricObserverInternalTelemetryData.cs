@@ -10,10 +10,34 @@ namespace FabricObserver.TelemetryLib
 {
     public class FabricObserverInternalTelemetryData
     {
-        public TimeSpan UpTime;
-        public string Version;
-        public int EnabledObserverCount;
-        public string EnabledObservers;
-        public List<ObserverData> ObserverData;
+        public TimeSpan UpTime 
+        { 
+            get; set; 
+        }
+
+        public string Version 
+        { 
+            get; set; 
+        }
+
+        public int EnabledObserverCount 
+        { 
+            get; set; 
+        }
+
+        public string EnabledObservers 
+        { 
+            get; set; 
+        }
+
+        public List<ObserverData> ObserverData 
+        { 
+            get; set; 
+        }
+
+        public bool IsInternalCluster 
+        { 
+            get; set; 
+        }
     }
 }
