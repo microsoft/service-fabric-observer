@@ -58,6 +58,7 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="PackageRoot\Config\AppObserver.config.json" />
+    <None Include="PackageRoot\Config\ContainerObserver.config.json" />
     <None Include="PackageRoot\Config\NetworkObserver.config.json" />
     <None Include="PackageRoot\ServiceManifest.xml" />
   </ItemGroup>

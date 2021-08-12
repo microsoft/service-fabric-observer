@@ -22,22 +22,16 @@ namespace FabricObserver.Observers
 
         // These are public properties because they are used in unit tests.
         public FabricResourceUsageData<float> MemDataInUse;
-
         public FabricResourceUsageData<int> FirewallData;
-
         public FabricResourceUsageData<int> ActivePortsData;
-
         public FabricResourceUsageData<int> EphemeralPortsData;
-
         public FabricResourceUsageData<double> MemDataPercent;
-
         public FabricResourceUsageData<float> CpuTimeData;
 
         // These are only useful for Linux.\\
 
         // Holds data for percentage of total configured file descriptors that are in use.
         public FabricResourceUsageData<double> LinuxFileHandlesDataPercentAllocated;
-
         public FabricResourceUsageData<int> LinuxFileHandlesDataTotalAllocated;
 
         public float CpuErrorUsageThresholdPct
@@ -607,7 +601,6 @@ namespace FabricObserver.Observers
         {
             token.ThrowIfCancellationRequested();
 
-            CpuUtilizationProvider cpuUtilizationProvider = null;
             var timer = new Stopwatch();
 
             try
@@ -637,10 +630,8 @@ namespace FabricObserver.Observers
 
                 if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                 {
-                    cpuUtilizationProvider = CpuUtilizationProvider.Create();
-
                     // Warm up counter.
-                    _ = cpuUtilizationProvider.NextValue();
+                    _ = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
                 }
 
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
@@ -688,23 +679,6 @@ namespace FabricObserver.Observers
                     EphemeralPortsData.Data.Add(ephemeralPortCountTotal);
                 }
 
-                // Memory \\
-
-                if (MemDataInUse != null || MemDataPercent != null)
-                {
-                    var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
-
-                    if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
-                    {
-                        MemDataInUse.Data.Add(MemoryInUseMb);
-                    }
-
-                    if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
-                    {
-                        MemDataPercent.Data.Add(PercentInUse);
-                    }
-                }
-
                 timer.Start();
                 
                 while (timer.Elapsed <= duration)
@@ -714,7 +688,23 @@ namespace FabricObserver.Observers
                     // CPU
                     if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
-                        CpuTimeData.Data.Add(cpuUtilizationProvider.NextValue());
+                        CpuTimeData.Data.Add(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
+                    }
+
+                    // Memory
+                    if (MemDataInUse != null || MemDataPercent != null)
+                    {
+                        var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+
+                        if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                        {
+                            MemDataInUse.Data.Add(MemoryInUseMb);
+                        }
+
+                        if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                        {
+                            MemDataPercent.Data.Add(PercentInUse);
+                        }
                     }
 
                     await Task.Delay(150, Token).ConfigureAwait(true);
@@ -726,13 +716,16 @@ namespace FabricObserver.Observers
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             { 
                 ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}"); 
+                
                 // Fix the bug..
                 throw; 
             }
             finally
             {
-                cpuUtilizationProvider?.Dispose();
-                cpuUtilizationProvider = null;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    CpuUtilizationProvider.Instance?.Dispose();
+                }
             }
         }
 

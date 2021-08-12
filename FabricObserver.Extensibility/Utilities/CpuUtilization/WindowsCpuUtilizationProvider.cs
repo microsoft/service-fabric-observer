@@ -5,34 +5,41 @@
 
 using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
     public class WindowsCpuUtilizationProvider : CpuUtilizationProvider
     {
-        private PerformanceCounter perfCounter = null;
-        
+        private PerformanceCounter performanceCounter = null;
+
         public WindowsCpuUtilizationProvider()
         {
-            perfCounter = new PerformanceCounter(categoryName: "Processor", counterName: "% Processor Time", instanceName: "_Total", readOnly: true);
+            performanceCounter = new PerformanceCounter(
+                                        categoryName: "Processor",
+                                        counterName: "% Processor Time",
+                                        instanceName: "_Total",
+                                        readOnly: true);
         }
 
-        public override float NextValue()
+        public override float GetProcessorTimePercentage()
         {
-            if (perfCounter == null)
+            if (performanceCounter == null)
             {
-                throw new ObjectDisposedException(nameof(WindowsCpuUtilizationProvider));
+                performanceCounter = new PerformanceCounter(
+                                            categoryName: "Processor",
+                                            counterName: "% Processor Time",
+                                            instanceName: "_Total",
+                                            readOnly: true);
             }
 
-            float result = perfCounter.NextValue();
+            float result = performanceCounter.NextValue();
             return result;
         }
 
-        protected override void Dispose(bool disposing)
+        public override void Dispose()
         {
-            this.perfCounter?.Dispose();
-            this.perfCounter = null;
+            performanceCounter?.Dispose();
+            performanceCounter = null;
         }
     }
 }

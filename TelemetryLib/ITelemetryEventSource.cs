@@ -7,6 +7,8 @@ namespace FabricObserver.TelemetryLib
 {
     public interface ITelemetryEventSource
     {
-        void InternalFODataEvent(string data);
+        void InternalFODataEvent<T>(T data);
+
+        void InternalFOCriticalErrorDataEvent<T>(T data);
     }
 }

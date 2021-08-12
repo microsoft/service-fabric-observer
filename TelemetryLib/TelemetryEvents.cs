@@ -17,32 +17,29 @@ using Newtonsoft.Json;
 namespace FabricObserver.TelemetryLib
 {
     /// <summary>
-    /// Contains common telemetry events
+    /// Contains common FabricObserver telemetry events
     /// </summary>
     public class TelemetryEvents : IDisposable
     {
-        private const string EventName = "InternalObserverData";
+        private const string OperationalEventName = "OperationalEvent";
+        private const string CriticalErrorEventName = "CriticalErrorEvent";
         private const string TaskName = "FabricObserver";
         private readonly TelemetryClient telemetryClient;
         private readonly ServiceContext serviceContext;
         private readonly ITelemetryEventSource serviceEventSource;
         private readonly string clusterId, tenantId, clusterType;
-        private readonly TimeSpan observerDataEventRunInterval;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
 
         public TelemetryEvents(
-            FabricClient fabricClient,
-            ServiceContext context,
-            ITelemetryEventSource eventSource,
-            TimeSpan runInterval,
-            CancellationToken token)
+                    FabricClient fabricClient,
+                    ServiceContext context,
+                    ITelemetryEventSource eventSource,
+                    CancellationToken token)
         {
             serviceEventSource = eventSource;
             serviceContext = context;
-            observerDataEventRunInterval = runInterval;
-            string config = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "InternalApplicationInsights.config"));
+            string config = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FOAppInsightsOperational.config"));
             appInsightsTelemetryConf = TelemetryConfiguration.CreateFromConfiguration(config);
-            appInsightsTelemetryConf.TelemetryChannel.EndpointAddress = TelemetryConstants.TelemetryEndpoint;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
             clusterId = ClusterId;
@@ -50,23 +47,17 @@ namespace FabricObserver.TelemetryLib
             clusterType = ClusterType;
         }
 
-        public bool EmitFabricObserverTelemetryEvent(FabricObserverInternalTelemetryData foData)
+        public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
         {
             if (!telemetryClient.IsEnabled())
             {
                 return false;
             }
 
-            // This means that the token replacement did not take place and this is not an 
-            // SFPKG/NUPKG signed Release build of FO. So, don't do anything.
-            if (TelemetryConstants.AppInsightsInstrumentationKey.Contains("Token"))
-            {
-                return false;
-            }
-
             try
             {
-                serviceEventSource.InternalFODataEvent(JsonConvert.SerializeObject(foData));
+                // ETW
+                serviceEventSource.InternalFODataEvent(new { FOInternalTelemtryData = JsonConvert.SerializeObject(foData) });
 
                 string nodeHashString = string.Empty;
                 int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
@@ -78,51 +69,149 @@ namespace FabricObserver.TelemetryLib
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
-                    { "EventName", EventName},
+                    { "EventName", OperationalEventName},
                     { "TaskName", TaskName},
-                    { "EventRunInterval", observerDataEventRunInterval.ToString() },
+                    { "EventRunInterval", runInterval.ToString() },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
-                    { "NodeNameHash",  nodeHashString },
+                    { "NodeNameHash", nodeHashString },
                     { "FOVersion", foData.Version },
-                    { "UpTime", foData.UpTime.ToString() },
-                    { "EnabledObserverCount", foData.EnabledObserverCount.ToString() },
-                    { "Timestamp", DateTime.UtcNow.ToString("o") }
+                    { "UpTime", foData.UpTime },
+                    { "Timestamp", DateTime.UtcNow.ToString("o") },
+                    { "OS", foData.OS }
                 };
 
                 IDictionary<string, double> metrics = new Dictionary<string, double>
                 {
-                    // Target app/service counts for enabled observers that monitor service processes.
-                    { "AppObserverTotalApps", foData.ObserverData.Any(o => o.ObserverName == "AppObserver") ? ((AppServiceObserverData)foData.ObserverData.Find(o => o.ObserverName == "AppObserver")).MonitoredAppCount : 0 },
-                    { "AppObserverTotalServices", foData.ObserverData.Any(o => o.ObserverName == "AppObserver") ? ((AppServiceObserverData)foData.ObserverData.Find(o => o.ObserverName == "AppObserver")).MonitoredServiceCount : 0 },
-                    { "FabricSystemObserverTotalServices", foData.ObserverData.Any(o => o.ObserverName == "FabricSystemObserver") ? ((AppServiceObserverData)foData.ObserverData.Find(o => o.ObserverName == "FabricSystemObserver")).MonitoredServiceCount : 0 },
-                    { "NetworkObserverTotalApps", foData.ObserverData.Any(o => o.ObserverName == "NetworkObserver") ? ((AppServiceObserverData)foData.ObserverData.Find(o => o.ObserverName == "NetworkObserver")).MonitoredAppCount : 0 },
-                
-                    // Error level health event counts generated by enabled observers.
-                    { "AppObserverErrorDetections", foData.ObserverData.Any(o => o.ObserverName == "AppObserver") ? foData.ObserverData.Find(o => o.ObserverName == "AppObserver").ErrorCount : 0  },
-                    { "CertificateObserverErrorDetections", foData.ObserverData.Any(o => o.ObserverName == "CertificateObserver") ? foData.ObserverData.Find(o => o.ObserverName == "CertificateObserver").ErrorCount : 0  },
-                    { "DiskObserverErrorDetections", foData.ObserverData.Any(o => o.ObserverName == "DiskObserver") ?  foData.ObserverData.Find(o => o.ObserverName == "DiskObserver").ErrorCount : 0  },
-                    { "FabricSystemObserverErrorDetections", foData.ObserverData.Any(o => o.ObserverName == "FabricSystemObserver") ? foData.ObserverData.Find(o => o.ObserverName == "FabricSystemObserver").ErrorCount : 0  },
-                    { "NetworkObserverErrorDetections", foData.ObserverData.Any(o => o.ObserverName == "NetworkObserver") ? foData.ObserverData.Find(o => o.ObserverName == "NetworkObserver").ErrorCount : 0  },
-                    { "NodeObserverErrorDetections", foData.ObserverData.Any(o => o.ObserverName == "NodeObserver") ? foData.ObserverData.Find(o => o.ObserverName == "NodeObserver").ErrorCount : 0  },
-                    { "OSObserverErrorDetections", foData.ObserverData.Any(o => o.ObserverName == "OSObserver") ? foData.ObserverData.Find(o => o.ObserverName == "OSObserver").ErrorCount : 0  },
-                
-                    // Warning level health event counts generated by enabled observers.
-                    { "AppObserverWarningDetections", foData.ObserverData.Any(o => o.ObserverName == "AppObserver") ? foData.ObserverData.Find(o => o.ObserverName == "AppObserver").WarningCount : 0  },
-                    { "CertificateObserverWarningDetections", foData.ObserverData.Any(o => o.ObserverName == "CertificateObserver") ? foData.ObserverData.Find(o => o.ObserverName == "CertificateObserver").WarningCount : 0  },
-                    { "DiskObserverWarningDetections", foData.ObserverData.Any(o => o.ObserverName == "DiskObserver") ? foData.ObserverData.Find(o => o.ObserverName == "DiskObserver").WarningCount : 0  },
-                    { "FabricSystemObserverWarningDetections", foData.ObserverData.Any(o => o.ObserverName == "FabricSystemObserver") ? foData.ObserverData.Find(o => o.ObserverName == "FabricSystemObserver").WarningCount : 0  },
-                    { "NetworkObserverWarningDetections", foData.ObserverData.Any(o => o.ObserverName == "NetworkObserver") ? foData.ObserverData.Find(o => o.ObserverName == "NetworkObserver").WarningCount : 0  },
-                    { "NodeObserverWarningDetections", foData.ObserverData.Any(o => o.ObserverName == "NodeObserver") ? foData.ObserverData.Find(o => o.ObserverName == "NodeObserver").WarningCount : 0  },
-                    { "OSObserverWarningDetections", foData.ObserverData.Any(o => o.ObserverName == "OSObserver") ? foData.ObserverData.Find(o => o.ObserverName == "OSObserver").WarningCount : 0  }
+                    { "EnabledObserversCount", foData.EnabledObserverCount }
                 };
 
-                telemetryClient?.TrackEvent($"{TaskName}.{EventName}", eventProperties, metrics);
+                const string err = "ErrorDetections";
+                const string warn = "WarningDetections";
+                const string apps = "TotalMonitoredApps";
+                const string procs = "TotalMonitoredServiceProcesses";
+                const string conts = "TotalMonitoredContainers";
+
+                foreach (var obData in foData.ObserverData)
+                {
+                    double data = 0;
+                    string key;
+
+                    // These observers monitor app services/containers.
+                    if (obData.ObserverName.Contains("AppObserver") || obData.ObserverName.Contains("FabricSystemObserver")
+                            || obData.ObserverName.Contains("NetworkObserver") || obData.ObserverName.Contains("ContainerObserver"))
+                    {
+                        // App count.
+                        data = ((AppServiceObserverData)obData).MonitoredAppCount;
+                        key = $"{obData.ObserverName}{apps}";
+                        metrics.Add(key, data);
+
+                        // Process (service instance/primary replica/container) count.
+                        data = ((AppServiceObserverData)obData).MonitoredServiceProcessCount;
+                        key = $"{obData.ObserverName}{procs}";
+
+                        if (obData.ObserverName.Contains("ContainerObserver"))
+                        {
+                            key = $"{obData.ObserverName}{conts}";
+                        }
+
+                        metrics.Add(key, data);
+                    }
+
+                    // AzureStorage and SFConfig observers do not generate health events.
+                    if (obData.ObserverName.Contains("AzureStorageUploadObserver") || obData.ObserverName.Contains("SFConfigurationObserver"))
+                    {
+                        key = $"{obData.ObserverName}Enabled";
+                        data = 1; // Enabled.
+                        metrics.Add(key, data);
+                    }
+                    else
+                    {
+                        // Observer-created Error count
+                        key = $"{obData.ObserverName}{err}";
+                        data = obData.ErrorCount;
+                        metrics.Add(key, data);
+
+                        // Observer-created Warning count
+                        key = $"{obData.ObserverName}{warn}";
+                        data = obData.WarningCount;
+                        metrics.Add(key, data);
+                    }
+                }
+
+                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties, metrics);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
                 Thread.Sleep(1000);
+
+                // write a local log file containing the exact information sent to MS \\
+                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray());
+                telemetryData += "," + string.Join(",", metrics.Select(kv => $"\"{kv.Key}\":" + kv.Value).ToArray()) + "}";
+                TryWriteLogFile(logFilePath, telemetryData);
+
+                eventProperties.Clear();
+                eventProperties = null;
+                metrics.Clear();
+                metrics = null;
+
+                return true;
+            }
+            catch
+            {
+                // Telemetry is non-critical and should not take down FO.
+            }
+
+            return false;
+        }
+
+        public bool EmitFabricObserverCriticalErrorEvent(FabricObserverCriticalErrorEventData foErrorData, string logFilePath)
+        {
+            if (!telemetryClient.IsEnabled())
+            {
+                return false;
+            }
+
+            try
+            {
+                // ETW
+                serviceEventSource.InternalFOCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(foErrorData) });
+
+                string nodeHashString = string.Empty;
+                int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
+
+                if (nodeNameHash != -1)
+                {
+                    nodeHashString = ((uint)nodeNameHash).ToString();
+                }
+
+                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                {
+                    { "EventName", CriticalErrorEventName},
+                    { "TaskName", TaskName},
+                    { "ClusterId", clusterId },
+                    { "ClusterType", clusterType },
+                    { "TenantId", tenantId },
+                    { "NodeNameHash",  nodeHashString },
+                    { "FOVersion", foErrorData.Version },
+                    { "CrashTime", foErrorData.CrashTime },
+                    { "ErrorMessage", foErrorData.ErrorMessage },
+                    { "CrashData", foErrorData.ErrorStack },
+                    { "Timestamp", DateTime.UtcNow.ToString("o") },
+                    { "OS", foErrorData.OS }
+                };
+
+                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties);
+                telemetryClient?.Flush();
+
+                // allow time for flushing
+                Thread.Sleep(1000);
+
+                // write a local log file containing the exact information sent to MS \\
+                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
+                TryWriteLogFile(logFilePath, telemetryData);
+
                 return true;
             }
             catch
@@ -140,6 +229,43 @@ namespace FabricObserver.TelemetryLib
             // allow time for flushing.
             Thread.Sleep(1000);
             appInsightsTelemetryConf?.Dispose();
+        }
+
+        const int Retries = 4;
+
+        private bool TryWriteLogFile(string path, string content)
+        {
+            if (string.IsNullOrEmpty(content))
+            {
+                return false;
+            }
+
+            for (var i = 0; i < Retries; i++)
+            {
+                try
+                {
+                    string directory = Path.GetDirectoryName(path);
+
+                    if (!Directory.Exists(directory))
+                    {
+                        if (directory != null)
+                        {
+                            _ = Directory.CreateDirectory(directory);
+                        }
+                    }
+
+                    File.WriteAllText(path, content);
+                    return true;
+                }
+                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                {
+
+                }
+
+                Thread.Sleep(1000);
+            }
+
+            return false;
         }
     }
 }

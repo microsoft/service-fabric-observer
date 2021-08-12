@@ -862,8 +862,10 @@ namespace FabricObserver.Observers
             }
 
             int repCount = ReplicaOrInstanceList.Count;
-            ServiceCount = repCount;
-            AppCount = deployedTargetList.Count;
+            
+            // For use in internal telemetry.
+            MonitoredServiceProcessCount = repCount;
+            MonitoredAppCount = deployedTargetList.Count;
 
             for (int i = 0; i < repCount; ++i)
             {
@@ -879,14 +881,23 @@ namespace FabricObserver.Observers
 
                     if (p.ProcessName == "Fabric")
                     {
+                        MonitoredServiceProcessCount--;
+                        continue;
+                    }
+
+                    // This will throw Win32Exception if process is running at higher elevation than FO.
+                    // If it is not, then this would mean the process has exited so move on to next process.
+                    if (p.HasExited)
+                    {
+                        MonitoredServiceProcessCount--;
                         continue;
                     }
 
                     ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName?.OriginalString}({rep.HostProcessId}) (and child procs, if any) on Node {NodeName}.");
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
                 {
-
+                    MonitoredServiceProcessCount--;
                 }
             }
 
@@ -947,7 +958,7 @@ namespace FabricObserver.Observers
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
                         {
                             continue;
                         }
@@ -965,7 +976,7 @@ namespace FabricObserver.Observers
                                 HealthReportTimeToLive = GetHealthReportTimeToLive(),
                                 Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
                                 ReportType = HealthReportType.Application,
-                                State = HealthState.Warning,
+                                State = ObserverManager.ObserverFailureHealthStateLevel,
                                 NodeName = NodeName,
                                 Observer = ObserverConstants.AppObserverName,
                             };

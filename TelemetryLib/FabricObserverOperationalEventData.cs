@@ -5,12 +5,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace FabricObserver.TelemetryLib
 {
-    public class FabricObserverInternalTelemetryData
+    public class FabricObserverOperationalEventData
     {
-        public TimeSpan UpTime 
+        public string UpTime 
         { 
             get; set; 
         }
@@ -25,19 +26,11 @@ namespace FabricObserver.TelemetryLib
             get; set; 
         }
 
-        public string EnabledObservers 
-        { 
-            get; set; 
-        }
-
         public List<ObserverData> ObserverData 
         { 
             get; set; 
         }
 
-        public bool IsInternalCluster 
-        { 
-            get; set; 
-        }
+        public string OS => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
     }
 }

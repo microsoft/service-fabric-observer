@@ -230,12 +230,12 @@ namespace FabricObserver.Observers
             get; set;
         } = new List<string>();
 
-        public int ServiceCount
+        public int MonitoredServiceProcessCount
         {
             get; set;
         }
 
-        public int AppCount
+        public int MonitoredAppCount
         {
             get; set;
         }

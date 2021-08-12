@@ -207,7 +207,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private const int VerboseMessageEventId = 7;
 
         [Event(VerboseMessageEventId, Level = EventLevel.Verbose, Message = "{0}")]
-        public void VerboseMessage(string message)
+        public void VerboseMessage<T>(T message)
         {
             if (IsEnabled())
             {
@@ -215,10 +215,16 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
         }
 
-        [Event(42, Level = EventLevel.Verbose, Message = "{0}")]
-        public void InternalFODataEvent(string data)
+        [Event(42, Level = EventLevel.Verbose)]
+        public void InternalFODataEvent<T>(T data)
         {
-            WriteEvent(42, data);
+            Write("FabricObserverOperationalEvent", data);
+        }
+
+        [Event(43, Level = EventLevel.Error)]
+        public void InternalFOCriticalErrorDataEvent<T>(T data)
+        {
+            Write("FabricObserverCriticalErrorEvent", data);
         }
 
 #if UNSAFE

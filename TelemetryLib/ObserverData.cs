@@ -21,11 +21,6 @@ namespace FabricObserver.TelemetryLib
         {
             get; set;
         }
-
-        public string HealthState
-        {
-            get; set;
-        }
     }
 
     public class AppServiceObserverData : ObserverData
@@ -35,7 +30,7 @@ namespace FabricObserver.TelemetryLib
             get; set;
         }
 
-        public int MonitoredServiceCount
+        public int MonitoredServiceProcessCount
         {
             get; set;
         }
