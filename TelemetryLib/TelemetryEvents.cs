@@ -40,6 +40,7 @@ namespace FabricObserver.TelemetryLib
             serviceContext = context;
             string config = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FOAppInsightsOperational.config"));
             appInsightsTelemetryConf = TelemetryConfiguration.CreateFromConfiguration(config);
+            appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
             clusterId = ClusterId;
@@ -49,7 +50,7 @@ namespace FabricObserver.TelemetryLib
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
         {
-            if (!telemetryClient.IsEnabled())
+            if (!telemetryClient.IsEnabled() || telemetryClient.InstrumentationKey == "$Token$")
             {
                 return false;
             }
