@@ -253,7 +253,8 @@ namespace FabricObserver.Observers
                                                                 FabricClientInstance,
                                                                 FabricServiceContext,
                                                                 ServiceEventSource.Current,
-                                                                this.token);
+                                                                token,
+                                                                EtwEnabled);
 
                             var foData = GetFabricObserverInternalTelemetryData();
                             
@@ -355,7 +356,8 @@ namespace FabricObserver.Observers
                                                             FabricClientInstance,
                                                             FabricServiceContext,
                                                             ServiceEventSource.Current,
-                                                            token);
+                                                            token,
+                                                            EtwEnabled);
 
                         var foData = new FabricObserverCriticalErrorEventData
                         {

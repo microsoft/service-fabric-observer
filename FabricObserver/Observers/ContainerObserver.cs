@@ -377,17 +377,9 @@ namespace FabricObserver.Observers
              */
 
             int listcapacity = ReplicaOrInstanceList.Count;
-
-            if (allCpuDataPercentage == null)
-            {
-                allCpuDataPercentage = new List<FabricResourceUsageData<double>>(listcapacity);
-            }
-
-            if (allMemDataMB == null)
-            {
-                allMemDataMB = new List<FabricResourceUsageData<double>>(listcapacity);
-            }
-
+            allCpuDataPercentage ??= new List<FabricResourceUsageData<double>>(listcapacity);
+            allMemDataMB ??= new List<FabricResourceUsageData<double>>(listcapacity);
+            
             try
             {
                 foreach (ReplicaOrInstanceMonitoringInfo repOrInst in ReplicaOrInstanceList)

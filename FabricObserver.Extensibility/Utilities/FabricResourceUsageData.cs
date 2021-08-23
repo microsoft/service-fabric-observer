@@ -178,7 +178,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Returns true or false depending upon computed health state based on supplied threshold value.</returns>
         public bool IsUnhealthy<TU>(TU threshold)
         {
-            if (Data.Count < 1 || Convert.ToDouble(threshold) < 1)
+            if (Data.Count < 1 || Convert.ToDouble(threshold) <= 0)
             {
                 return false;
             }

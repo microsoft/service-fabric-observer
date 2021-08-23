@@ -29,12 +29,14 @@ namespace FabricObserver.TelemetryLib
         private readonly ITelemetryEventSource serviceEventSource;
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
+        private readonly bool isEtwEnabled;
 
         public TelemetryEvents(
                     FabricClient fabricClient,
                     ServiceContext context,
                     ITelemetryEventSource eventSource,
-                    CancellationToken token)
+                    CancellationToken token,
+                    bool etwEnabled)
         {
             serviceEventSource = eventSource;
             serviceContext = context;
@@ -46,6 +48,7 @@ namespace FabricObserver.TelemetryLib
             clusterId = ClusterId;
             tenantId = TenantId;
             clusterType = ClusterType;
+            isEtwEnabled = etwEnabled;
         }
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
@@ -58,7 +61,10 @@ namespace FabricObserver.TelemetryLib
             try
             {
                 // ETW
-                serviceEventSource.InternalFODataEvent(new { FOInternalTelemtryData = JsonConvert.SerializeObject(foData) });
+                if (isEtwEnabled)
+                {
+                    serviceEventSource.InternalFODataEvent(new { FOInternalTelemtryData = JsonConvert.SerializeObject(foData) });
+                }
 
                 string nodeHashString = string.Empty;
                 int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
@@ -177,7 +183,10 @@ namespace FabricObserver.TelemetryLib
             try
             {
                 // ETW
-                serviceEventSource.InternalFOCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(foErrorData) });
+                if (isEtwEnabled)
+                {
+                    serviceEventSource.InternalFOCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(foErrorData) });
+                }
 
                 string nodeHashString = string.Empty;
                 int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
