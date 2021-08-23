@@ -25,6 +25,7 @@ namespace FabricObserver.TelemetryLib
         private static string paasClusterId;
         private static string diagnosticsClusterId;
         private static XmlDocument clusterManifestXdoc;
+        private static readonly object lockObj = new object();
   
         /// <summary>
         /// Gets ClusterID, tenantID and ClusterType for current ServiceFabric cluster
@@ -50,10 +51,13 @@ namespace FabricObserver.TelemetryLib
                 {
                     using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
                     {
-                        clusterManifestXdoc?.Load(xreader);
+                        lock (lockObj)
+                        {
+                            clusterManifestXdoc?.Load(xreader);
 
-                        // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
-                        GetValuesFromClusterManifest();
+                            // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
+                            GetValuesFromClusterManifest();
+                        }
 
                         if (paasClusterId != null)
                         {

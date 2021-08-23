@@ -16,21 +16,23 @@ using System.Runtime.InteropServices;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.MachineInfoModel;
 using System.Fabric.Description;
+using System.Collections.Concurrent;
 
 namespace FabricObserver.Observers
 {
     public class ContainerObserver : ObserverBase
     {
-        private List<FabricResourceUsageData<double>> allCpuDataPercentage;
-        private List<FabricResourceUsageData<double>> allMemDataMB;
+        private ConcurrentQueue<FabricResourceUsageData<double>> allCpuDataPercentage;
+        private ConcurrentQueue<FabricResourceUsageData<double>> allMemDataMB;
 
         // userTargetList is the list of ApplicationInfo objects representing apps supplied in configuration.
         private List<ApplicationInfo> userTargetList;
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
-        private List<ApplicationInfo> deployedTargetList;
+        private ConcurrentQueue<ApplicationInfo> deployedTargetList;
         private List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
         private readonly string ConfigPackagePath;
+        private readonly object lockObj = new object();
         private string ConfigurationFilePath = string.Empty;
 
         public ContainerObserver(FabricClient fabricClient, StatelessServiceContext context)
@@ -38,7 +40,6 @@ namespace FabricObserver.Observers
         {
             var configSettings = new MachineInfoModel.ConfigSettings(context);
             ConfigPackagePath = configSettings.ConfigPackagePath;
-
         }
 
         // OsbserverManager passes in a special token to ObserveAsync and ReportAsync that enables it to stop this observer outside of
@@ -58,8 +59,8 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            await MonitorContainersAsync().ConfigureAwait(true);
-            await ReportAsync(token).ConfigureAwait(true);
+            MonitorContainers();
+            await ReportAsync(token);
             CleanUp();
             runDurationTimer.Stop();
             RunDuration = runDurationTimer.Elapsed;
@@ -68,88 +69,86 @@ namespace FabricObserver.Observers
 
         public override Task ReportAsync(CancellationToken token)
         {
+            if (deployedTargetList.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+
             TimeSpan timeToLive = GetHealthReportTimeToLive();
 
-            foreach (var app in deployedTargetList)
+            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
             {
-                if (!ReplicaOrInstanceList.Any(rep => rep.ApplicationName.OriginalString == app.TargetApp))
-                {
-                    continue;
-                }
+                var repOrInst = ReplicaOrInstanceList[i];
+                ApplicationInfo app = deployedTargetList.First(
+                                            a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
+                                                    (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
 
-                foreach (var repOrInst in ReplicaOrInstanceList.Where(rep => rep.ApplicationName.OriginalString == app.TargetApp))
-                {
-                    string serviceName = repOrInst.ServiceName.OriginalString.Replace(app.TargetApp, "").Replace("/", "");
-                    string cpuId = $"{serviceName}_cpu";
-                    string memId = $"{serviceName}_mem";
-                    var cpuFrudInst = allCpuDataPercentage.Find(cpu => cpu.Id == cpuId);
-                    var memFrudInst = allMemDataMB.Find(mem => mem.Id == memId);
+                string serviceName = repOrInst.ServiceName.OriginalString.Replace(app.TargetApp, "").Replace("/", "");
+                string cpuId = $"{serviceName}_cpu";
+                string memId = $"{serviceName}_mem";
+                var cpuFrudInst = allCpuDataPercentage.FirstOrDefault(cpu => cpu.Id == cpuId);
+                var memFrudInst = allMemDataMB.FirstOrDefault(mem => mem.Id == memId);
 
-                    if (EnableCsvLogging)
+                if (EnableCsvLogging)
+                {
+                    var csvFileName = $"{serviceName}Data{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
+                    string appName = repOrInst.ApplicationName.OriginalString.Replace("fabric:/", "");
+                    string id = $"{appName}:{serviceName}";
+
+                    // BaseLogDataLogFolderPath is set in ObserverBase or a default one is created by CsvFileLogger.
+                    // This means a new folder will be added to the base path.
+                    if (CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives)
                     {
-                        var csvFileName = $"{serviceName}Data{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
-                        string appName = repOrInst.ApplicationName.OriginalString.Replace("fabric:/", "");
-                        string id = $"{appName}:{serviceName}";
-
-                        // BaseLogDataLogFolderPath is set in ObserverBase or a default one is created by CsvFileLogger.
-                        // This means a new folder will be added to the base path.
-                        if (CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives)
-                        {
-                            CsvFileLogger.DataLogFolder = serviceName;
-                        }
-
-                        // Log resource usage data to local CSV file(s).
-                        // CPU Time
-                        CsvFileLogger.LogData(
-                                        csvFileName,
-                                        id,
-                                        ErrorWarningProperty.TotalCpuTime,
-                                        "Average",
-                                        Math.Round(cpuFrudInst.AverageDataValue));
-
-                        CsvFileLogger.LogData(
-                                        csvFileName,
-                                        id,
-                                        ErrorWarningProperty.TotalCpuTime,
-                                        "Peak",
-                                        Math.Round(cpuFrudInst.MaxDataValue));
-
-
-                        // Memory - MB
-                        CsvFileLogger.LogData(
-                                        csvFileName,
-                                        id,
-                                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                                        "Average",
-                                        Math.Round(memFrudInst.AverageDataValue));
-
-                        CsvFileLogger.LogData(
-                                        csvFileName,
-                                        id,
-                                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                                        "Peak",
-                                        Math.Round(memFrudInst.MaxDataValue));
-
+                        CsvFileLogger.DataLogFolder = serviceName;
                     }
 
-                    // Report -> Send Telemetry/Write ETW/Create SF Health Warnings (if threshold breach)
-                    ProcessResourceDataReportHealth(
-                        cpuFrudInst,
-                        app.CpuErrorLimitPercent,
-                        app.CpuWarningLimitPercent,
-                        timeToLive,
-                        HealthReportType.Application,
-                        repOrInst);
+                    // Log resource usage data to local CSV file(s).
+                    // CPU Time
+                    lock (lockObj)
+                    {
+                        CsvFileLogger.LogData(
+                                        csvFileName,
+                                        id,
+                                        ErrorWarningProperty.TotalCpuTime,
+                                        "Total",
+                                        Math.Round(cpuFrudInst.AverageDataValue));
+                    }
 
-                    ProcessResourceDataReportHealth(
-                        memFrudInst,
-                        app.MemoryErrorLimitMb,
-                        app.MemoryWarningLimitMb,
-                        timeToLive,
-                        HealthReportType.Application,
-                        repOrInst);
+                    // Memory - MB
+                    lock (lockObj)
+                    {
+                        CsvFileLogger.LogData(
+                                        csvFileName,
+                                        id,
+                                        ErrorWarningProperty.TotalMemoryConsumptionMb,
+                                        "Total",
+                                        Math.Round(memFrudInst.AverageDataValue));
+                    }
                 }
-            }
+
+                // Report -> Send Telemetry/Write ETW/Create SF Health Warnings (if threshold breach)
+                lock (lockObj)
+                {
+                    ProcessResourceDataReportHealth(
+                                        cpuFrudInst,
+                                        app.CpuErrorLimitPercent,
+                                        app.CpuWarningLimitPercent,
+                                        timeToLive,
+                                        HealthReportType.Application,
+                                        repOrInst);
+                }
+
+                lock (lockObj)
+                {
+                    ProcessResourceDataReportHealth(
+                                        memFrudInst,
+                                        app.MemoryErrorLimitMb,
+                                        app.MemoryWarningLimitMb,
+                                        timeToLive,
+                                        HealthReportType.Application,
+                                        repOrInst);
+                }
+            });
 
             return Task.CompletedTask;
         }
@@ -167,7 +166,7 @@ namespace FabricObserver.Observers
             }
 
             userTargetList = new List<ApplicationInfo>();
-            deployedTargetList = new List<ApplicationInfo>();
+            deployedTargetList = new ConcurrentQueue<ApplicationInfo>();
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
 
             using (Stream stream = new FileStream(ConfigurationFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -227,7 +226,7 @@ namespace FabricObserver.Observers
 
                 foreach (var app in apps)
                 {
-                    Token.ThrowIfCancellationRequested();
+                    token.ThrowIfCancellationRequested();
 
                     if (app.ApplicationName.OriginalString == "fabric:/System")
                     {
@@ -247,7 +246,7 @@ namespace FabricObserver.Observers
 
                     if (userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString))
                     {
-                        var existingAppConfig = userTargetList.Find(a => a.TargetApp == app.ApplicationName.OriginalString);
+                        var existingAppConfig = userTargetList.FirstOrDefault(a => a.TargetApp == app.ApplicationName.OriginalString);
 
                         if (existingAppConfig == null)
                         {
@@ -272,7 +271,7 @@ namespace FabricObserver.Observers
                             CpuWarningLimitPercent = application.CpuWarningLimitPercent,
                         };
 
-                        userTargetList.Add(appConfig);
+                        userTargetList.Add(appConfig);  
                     }
                 }
 
@@ -283,7 +282,6 @@ namespace FabricObserver.Observers
             }
 
             int settingsFail = 0;
-            MonitoredAppCount = userTargetList.Count;
 
             foreach (var application in userTargetList)
             {
@@ -326,7 +324,7 @@ namespace FabricObserver.Observers
                                                                                           null,
                                                                                           ConfigurationSettings.AsyncTimeout,
                                                                                           token),
-                                               Token);
+                                               token);
 
                     if (codepackages.Count == 0)
                     {
@@ -340,7 +338,7 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    deployedTargetList.Add(application);
+                    deployedTargetList.Enqueue(application);
                     await SetInstanceOrReplicaMonitoringList(new Uri(application.TargetApp), filteredServiceList, filterType, null).ConfigureAwait(false);
                 }
                 catch (Exception e) when (e is FabricException || e is TimeoutException)
@@ -349,7 +347,13 @@ namespace FabricObserver.Observers
                 }
             }
 
+            MonitoredAppCount = deployedTargetList.Count;
             MonitoredServiceProcessCount = ReplicaOrInstanceList.Count;
+
+            if (!EnableVerboseLogging)
+            {
+                return true;
+            }
 
             foreach (var rep in ReplicaOrInstanceList)
             {
@@ -361,7 +365,7 @@ namespace FabricObserver.Observers
             return true;
         }
 
-        private async Task MonitorContainersAsync()
+        private void MonitorContainers()
         {
             /* docker stats --no-stream --format "table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
 
@@ -376,56 +380,29 @@ namespace FabricObserver.Observers
                 fed0da6f7bad   sf-243-723d5795-01c7-477f-950e-45a400000000_2cc293c0-929c-5c40-bc96-cd4e596b6b6a   0.05%     27.19MiB / 15.45GiB
              */
 
-            int listcapacity = ReplicaOrInstanceList.Count;
-
-            if (allCpuDataPercentage == null)
-            {
-                allCpuDataPercentage = new List<FabricResourceUsageData<double>>(listcapacity);
-            }
-
-            if (allMemDataMB == null)
-            {
-                allMemDataMB = new List<FabricResourceUsageData<double>>(listcapacity);
-            }
+            allCpuDataPercentage ??= new ConcurrentQueue<FabricResourceUsageData<double>>();
+            allMemDataMB ??= new ConcurrentQueue<FabricResourceUsageData<double>>();
 
             try
             {
-                foreach (ReplicaOrInstanceMonitoringInfo repOrInst in ReplicaOrInstanceList)
+                _ = Parallel.For (0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
                 {
-                    // This is how long each measurement sequence for each container can last.
-                    // You can set this timespan value in ApplicationManifest_Modified.xml, see ContainerObserverMonitorDuration Parameter.
-                    TimeSpan duration = TimeSpan.FromSeconds(3);
-                    int frudCapacity;
-
                     Token.ThrowIfCancellationRequested();
 
-                    if (MonitorDuration > TimeSpan.MinValue)
-                    {
-                        duration = MonitorDuration;
-                    }
-
+                    var repOrInst = ReplicaOrInstanceList[i];
                     string serviceName = repOrInst.ServiceName.OriginalString.Replace(repOrInst.ApplicationName.OriginalString, "").Replace("/", "");
                     string cpuId = $"{serviceName}_cpu";
                     string memId = $"{serviceName}_mem";
                     string containerId = string.Empty;
 
-                    if (UseCircularBuffer)
-                    {
-                        frudCapacity = DataCapacity > 0 ? DataCapacity : 5;
-                    }
-                    else
-                    {
-                        frudCapacity = (int)duration.TotalSeconds * 4;
-                    }
-
                     if (!allCpuDataPercentage.Any(frud => frud.Id == cpuId))
                     {
-                        allCpuDataPercentage.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, frudCapacity, UseCircularBuffer));
+                        allCpuDataPercentage.Enqueue(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, 1, false));
                     }
 
                     if (!allMemDataMB.Any(frud => frud.Id == memId))
                     {
-                        allMemDataMB.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, frudCapacity, UseCircularBuffer));
+                        allMemDataMB.Enqueue(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1, false));
                     }
 
                     var monitorTimer = Stopwatch.StartNew();
@@ -454,19 +431,22 @@ namespace FabricObserver.Observers
                     };
 
                     using Process p = Process.Start(ps);
-                    List<string> output = new List<string>(frudCapacity);
+                    List<string> output = new List<string>(2);
                     string l;
 
-                    while ((l = await p.StandardOutput.ReadLineAsync()) != null)
+                    while ((l = p.StandardOutput.ReadLine()) != null)
                     {
-                        output.Add(l);
+                        lock (lockObj)
+                        {
+                            output.Add(l);
+                        }
                     }
 
                     foreach (string line in output)
                     {
                         Token.ThrowIfCancellationRequested();
 
-                        if (line.Contains("CPU"))
+                        if (string.IsNullOrWhiteSpace(line) || line.Contains("CPU"))
                         {
                             continue;
                         }
@@ -478,7 +458,7 @@ namespace FabricObserver.Observers
                         if (stats.Length < 4)
                         {
                             ObserverLogger.LogWarning($"docker stats not returning expected information: stats.Count = {stats.Length}. Expected 4.");
-                            return;
+                            state.Stop();
                         }
 
                         if (!stats[1].Contains(repOrInst.ServicePackageActivationId))
@@ -500,14 +480,17 @@ namespace FabricObserver.Observers
                         double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
                         allMemDataMB?.FirstOrDefault(f => f.Id == memId)?.Data.Add(mem_working_set_mb);
 
-                        await Task.Delay(150, Token);
+                        Thread.Sleep(150);
                     }
 
-                    output.Clear();
-                    output = null;
-                }
+                    lock (lockObj)
+                    {
+                        output.Clear();
+                        output = null;
+                    }
+                });
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (AggregateException e) when (!(e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"Failure in ObserveAsync:{Environment.NewLine}{e}");
 

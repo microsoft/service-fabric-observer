@@ -89,6 +89,9 @@
 
     <!-- Optional: If you deploy the FabricObserverWebApi app, set this to true.-->
     <Parameter Name="ObserverWebApiEnabled" Value="false" />
+    
+    <!-- Optional: Whether or not to turn on parallelized observer monitoring when running on capable hardware (>= 4 processors only). -->
+    <Parameter Name="EnableConcurrentExecution" Value="" MustOverride="true" />
   </Section>
   
   <!-- Observer Configuration Settings - *NOTE*: These are overridable settings, see ApplicationManifest.xml. 

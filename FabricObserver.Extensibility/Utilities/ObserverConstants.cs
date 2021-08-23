@@ -20,6 +20,7 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricObserverName = "FabricObserver";
         public const string FabricObserverETWEventName = "FabricObserverDataEvent";
         public const string ObserverFailureHealthStateLevelParameter = "ObserverFailureHealthStateLevel";
+        public const string EnableConcurrentExecution = "EnableConcurrentExecution";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";

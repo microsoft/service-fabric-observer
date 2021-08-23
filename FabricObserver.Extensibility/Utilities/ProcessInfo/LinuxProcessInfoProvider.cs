@@ -170,6 +170,11 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int i = 0; i < sPids.Length; ++i)
                     {
+                        if (sProcNames[i] == "ps" || sProcNames[i] == "bash")
+                        {
+                            continue;
+                        }
+
                         if (int.TryParse(sPids[i], out int childProcId))
                         {
                             childProcesses.Add((sProcNames[i], childProcId));

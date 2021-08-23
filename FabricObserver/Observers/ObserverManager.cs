@@ -18,9 +18,9 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using FabricObserver.TelemetryLib;
-using Newtonsoft.Json;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
+using System.Runtime;
 
 namespace FabricObserver.Observers
 {
@@ -139,6 +139,20 @@ namespace FabricObserver.Observers
         } = TimeSpan.FromHours(4);
 
         /// <summary>
+        /// This is for observers that support parallelized monitor loops. 
+        /// AppObserver, ContainerObserver, FabricSystemObserver.
+        /// </summary>
+        public static ParallelOptions ParallelOptions
+        {
+            get; set;
+        }
+
+        public static bool EnableConcurrentExecution 
+        {
+            get; set; 
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// This is only used by unit tests.
         /// </summary>
@@ -216,6 +230,13 @@ namespace FabricObserver.Observers
 
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
             SetPropertiesFromConfigurationParameters();
+
+            ParallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = EnableConcurrentExecution && Environment.ProcessorCount >= 4 ? -1 : 1,
+                CancellationToken = linkedSFRuntimeObserverTokenSource?.Token ?? token,
+                TaskScheduler = TaskScheduler.Default
+            };
         }
 
         public async Task StartObserversAsync()
@@ -287,6 +308,13 @@ namespace FabricObserver.Observers
                     // SOH, sweep-only collection (no compaction). This will clear the early generation objects (short-lived) from memory. This only impacts the FO process.
                     GC.Collect(0, GCCollectionMode.Forced, true, false);
                     GC.Collect(1, GCCollectionMode.Forced, true, false);
+
+                    // LOH
+                    if (EnableConcurrentExecution)
+                    {
+                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                        GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    }
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
@@ -741,6 +769,21 @@ namespace FabricObserver.Observers
         private void SetPropertiesFromConfigurationParameters(ConfigurationSettings settings = null)
         {
             ApplicationName = FabricServiceContext.CodePackageActivationContext.ApplicationName;
+
+            // Parallelization settings for capable hardware. \\
+
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableConcurrentExecution, settings), out bool enableConcurrency))
+            {
+                EnableConcurrentExecution = enableConcurrency;
+            }
+
+            ParallelOptions = new ParallelOptions
+            {
+                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
+                MaxDegreeOfParallelism = EnableConcurrentExecution && Environment.ProcessorCount >= 4 ? -1 : 1,
+                CancellationToken = linkedSFRuntimeObserverTokenSource?.Token ?? token,
+                TaskScheduler = TaskScheduler.Default
+            };
 
             // ETW - Overridable
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool etwEnabled))

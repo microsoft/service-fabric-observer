@@ -12,6 +12,6 @@ namespace FabricObserver.TelemetryLib
         internal const string ClusterTypeSfrp = "SFRP";
         internal const string ClusterTypePaasV1 = "PaasV1";
         internal const int AsyncOperationTimeoutSeconds = 120;
-        internal const string AIKey = "$Token$";
+        public const string AIKey = "$Token$";
     }
 }

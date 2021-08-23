@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -33,15 +34,16 @@ namespace FabricObserver.Observers
         private Stopwatch stopwatch;
 
         // Health Report data container - For use in analysis to determine health state.
-        private List<FabricResourceUsageData<int>> allCpuData;
-        private List<FabricResourceUsageData<float>> allMemData;
-        private List<FabricResourceUsageData<int>> allActiveTcpPortData;
-        private List<FabricResourceUsageData<int>> allEphemeralTcpPortData;
-        private List<FabricResourceUsageData<float>> allHandlesData;
+        private ConcurrentQueue<FabricResourceUsageData<int>> allCpuData;
+        private ConcurrentQueue<FabricResourceUsageData<float>> allMemData;
+        private ConcurrentQueue<FabricResourceUsageData<int>> allActiveTcpPortData;
+        private ConcurrentQueue<FabricResourceUsageData<int>> allEphemeralTcpPortData;
+        private ConcurrentQueue<FabricResourceUsageData<float>> allHandlesData;
 
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList = null;
         private bool monitorWinEventLog;
+        private readonly object lockObj = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
@@ -136,7 +138,7 @@ namespace FabricObserver.Observers
             {
                 Initialize();
 
-                for (int i = 0; i < processWatchList.Length; ++i)
+                _ = Parallel.For (0, processWatchList.Length, ObserverManager.ParallelOptions, async (i, state) =>
                 {
                     Token.ThrowIfCancellationRequested();
 
@@ -151,15 +153,15 @@ namespace FabricObserver.Observers
                             dotnet = "dotnet ";
                         }
 
-                        await GetProcessInfoAsync($"{dotnet}{procName}").ConfigureAwait(true);
+                        await GetProcessInfoAsync($"{dotnet}{procName}");
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
-
+                        return;
                     }
-                }
+                });
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (AggregateException e) when (!(e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException))
             {
                 ObserverLogger.LogError( $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}");
 
@@ -520,7 +522,6 @@ namespace FabricObserver.Observers
             // fabric:/System
             MonitoredAppCount = 1;
             MonitoredServiceProcessCount = processWatchList.Length;
-            int listcapacity = processWatchList.Length;
             int frudCapacity = 4;
 
             if (UseCircularBuffer)
@@ -539,11 +540,11 @@ namespace FabricObserver.Observers
             // CPU data
             if (allCpuData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0))
             {
-                allCpuData = new List<FabricResourceUsageData<int>>(listcapacity);
+                allCpuData = new ConcurrentQueue<FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allCpuData.Add(
+                    allCpuData.Enqueue(
                         new FabricResourceUsageData<int>(
                                 ErrorWarningProperty.TotalCpuTime,
                                 proc,
@@ -555,11 +556,11 @@ namespace FabricObserver.Observers
             // Memory data
             if (allMemData == null && (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0))
             {
-                allMemData = new List<FabricResourceUsageData<float>>(listcapacity);
+                allMemData = new ConcurrentQueue<FabricResourceUsageData<float>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allMemData.Add(
+                    allMemData.Enqueue(
                         new FabricResourceUsageData<float>(
                                 ErrorWarningProperty.TotalMemoryConsumptionMb,
                                 proc,
@@ -571,11 +572,11 @@ namespace FabricObserver.Observers
             // Ports
             if (allActiveTcpPortData == null && (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0))
             {
-                allActiveTcpPortData = new List<FabricResourceUsageData<int>>(listcapacity);
+                allActiveTcpPortData = new ConcurrentQueue<FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allActiveTcpPortData.Add(
+                    allActiveTcpPortData.Enqueue(
                         new FabricResourceUsageData<int>(
                                 ErrorWarningProperty.TotalActivePorts,
                                 proc,
@@ -586,11 +587,11 @@ namespace FabricObserver.Observers
 
             if (allEphemeralTcpPortData == null && (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0))
             {
-                allEphemeralTcpPortData = new List<FabricResourceUsageData<int>>(listcapacity);
+                allEphemeralTcpPortData = new ConcurrentQueue<FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allEphemeralTcpPortData.Add(
+                    allEphemeralTcpPortData.Enqueue(
                         new FabricResourceUsageData<int>(
                                 ErrorWarningProperty.TotalEphemeralPorts,
                                 proc,
@@ -602,11 +603,11 @@ namespace FabricObserver.Observers
             // Handles
             if (allHandlesData == null && (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0))
             {
-                allHandlesData = new List<FabricResourceUsageData<float>>(listcapacity);
+                allHandlesData = new ConcurrentQueue<FabricResourceUsageData<float>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allHandlesData.Add(
+                    allHandlesData.Enqueue(
                         new FabricResourceUsageData<float>(
                                 ErrorWarningProperty.TotalFileHandles,
                                 proc,
@@ -901,7 +902,7 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessResourceDataList<T>(
-                            List<FabricResourceUsageData<T>> data,
+                            ConcurrentQueue<FabricResourceUsageData<T>> data,
                             T thresholdError,
                             T thresholdWarning)
                                 where T : struct
@@ -913,15 +914,15 @@ namespace FabricObserver.Observers
                 fileName = $"FabricSystemServices{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
             }
 
-            for (int i = 0; i < data.Count; ++i)
+            _ = Parallel.For (0, data.Count, ObserverManager.ParallelOptions, (i, state) =>
             {
                 Token.ThrowIfCancellationRequested();
 
-                var dataItem = data[i];
+                var dataItem = data.ElementAt(i);
 
                 if (dataItem.Data.Count == 0 || dataItem.AverageDataValue <= 0)
                 {
-                    continue;
+                    return;
                 }
 
                 if (EnableCsvLogging)
@@ -955,7 +956,10 @@ namespace FabricObserver.Observers
 
                         if (procId > 0)
                         {
-                            CsvFileLogger.LogData(fileName, dataItem.Id, "ProcessId", "", procId);
+                            lock (lockObj)
+                            {
+                                CsvFileLogger.LogData(fileName, dataItem.Id, "ProcessId", "", procId);
+                            }
                         }
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
@@ -963,49 +967,52 @@ namespace FabricObserver.Observers
 
                     }
 
-                    CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
-                    CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
+                    lock (lockObj)
+                    {
+                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
+                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
+                    }
                 }
 
                 // This function will clear Data items in list (will call Clear() on the supplied FabricResourceUsageData instance's Data field..)
                 ProcessResourceDataReportHealth(
-                       dataItem,
-                       thresholdError,
-                       thresholdWarning,
-                       GetHealthReportTimeToLive(),
-                       HealthReportType.Application);
-            }
+                        dataItem,
+                        thresholdError,
+                        thresholdWarning,
+                        GetHealthReportTimeToLive(),
+                        HealthReportType.Application); 
+            });
         }
 
         private void CleanUp()
         {
             processWatchList = null;
 
-            if (allCpuData != null && !allCpuData.Any(frud => frud.ActiveErrorOrWarning))
+            if (allCpuData != null && !allCpuData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
             {
                 allCpuData?.Clear();
                 allCpuData = null;
             }
 
-            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.ActiveErrorOrWarning))
+            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
             {
                 allEphemeralTcpPortData?.Clear();
                 allEphemeralTcpPortData = null;
             }
 
-            if (allHandlesData != null && !allHandlesData.Any(frud => frud.ActiveErrorOrWarning))
+            if (allHandlesData != null && !allHandlesData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
             {
                 allHandlesData?.Clear();
                 allHandlesData = null;
             }
 
-            if (allMemData != null && !allMemData.Any(frud => frud.ActiveErrorOrWarning))
+            if (allMemData != null && !allMemData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
             {
                 allMemData?.Clear();
                 allMemData = null;
             }
 
-            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.ActiveErrorOrWarning))
+            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
             {
                 allActiveTcpPortData?.Clear();
                 allActiveTcpPortData = null;

@@ -41,7 +41,10 @@ namespace FabricObserver.TelemetryLib
             string config = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FOAppInsightsOperational.config"));
             appInsightsTelemetryConf = TelemetryConfiguration.CreateFromConfiguration(config);
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
-            telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
+            telemetryClient = new TelemetryClient(appInsightsTelemetryConf)
+            {
+                InstrumentationKey = TelemetryConstants.AIKey
+            };
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
             clusterId = ClusterId;
             tenantId = TenantId;

@@ -12,16 +12,17 @@
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
-    <Parameter Name="ObserverManagerEnableOperationalTelemetry" DefaultValue="true" />
+    <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
+    <Parameter Name="ObserverManagerEnableConcurrentExecution" DefaultValue="true" />
     <!-- Observers Configuration -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
-    <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
+    <Parameter Name="ContainerObserverEnabled" DefaultValue="true" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
@@ -48,9 +49,9 @@
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
     <!-- CSV Logging -->
-    <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
-    <Parameter Name="ContainerObserverEnableCSVDataLogging" DefaultValue="false" />
-    <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="true" />
+    <Parameter Name="ContainerObserverEnableCSVDataLogging" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="true" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
@@ -328,8 +329,9 @@
             <Parameter Name="EnableVerboseLogging" Value="[ObserverManagerEnableVerboseLogging]" />
             <Parameter Name="EnableETWProvider" Value="[ObserverManagerEnableETWProvider]" />
             <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
-            <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalTelemetry]" />
+            <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
             <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
+            <Parameter Name="EnableConcurrentExecution" Value="[ObserverManagerEnableConcurrentExecution]" />
           </Section>
         </Settings>
       </ConfigOverride>

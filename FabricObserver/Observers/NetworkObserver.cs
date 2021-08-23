@@ -635,7 +635,7 @@ namespace FabricObserver.Observers
 
                 if (!AppNames.Contains(targetApp))
                 {
-                    AppNames.Add(targetApp);
+                    AppNames.Enqueue(targetApp);
                 }
             }
         }
