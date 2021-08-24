@@ -1074,17 +1074,16 @@ namespace FabricObserver.Observers
                 {
                     IsObserverRunning = false;
 
-                    if (ex.InnerException is FabricException ||
-                        ex.InnerException is OperationCanceledException ||
-                        ex.InnerException is TaskCanceledException)
+                    if (ex.InnerExceptions != null && 
+                           (ex.InnerExceptions.Any(e => e is FabricException) ||
+                            ex.InnerExceptions.Any(e => e is OperationCanceledException) ||
+                            ex.InnerExceptions.Any(e => e is TaskCanceledException)))
                     {
                         if (isConfigurationUpdateInProgress)
                         {
                             IsObserverRunning = false;
-
                             return true;
                         }
-
                         continue;
                     }
 

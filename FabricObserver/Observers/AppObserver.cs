@@ -40,7 +40,7 @@ namespace FabricObserver.Observers
         private ConcurrentQueue<FabricResourceUsageData<float>> AllAppHandlesData;
 
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration.
-        private ConcurrentQueue<ApplicationInfo> userTargetList;
+        private List<ApplicationInfo> userTargetList;
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
         private ConcurrentQueue<ApplicationInfo> deployedTargetList;
@@ -110,11 +110,11 @@ namespace FabricObserver.Observers
             stopwatch.Stop();
             CleanUp();
             RunDuration = stopwatch.Elapsed;
-            ObserverLogger.LogWarning($"Run Duration {(ObserverManager.ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} Parallel (Processors: {Environment.ProcessorCount}):{RunDuration}");
-
+           
             if (EnableVerboseLogging)
             {
-                ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
+                ObserverLogger.LogInfo($"Run Duration {(ObserverManager.ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
+                                       $"Parallel (Processors: {Environment.ProcessorCount}):{RunDuration}");
             }
 
             stopwatch.Reset();
@@ -129,7 +129,7 @@ namespace FabricObserver.Observers
             }
 
             // For use in process family tree monitoring.
-            List<ChildProcessTelemetryData> childProcessTelemetryDataList = null;
+            ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList = null;
             TimeSpan healthReportTimeToLive = GetHealthReportTimeToLive();
 
             _ = Parallel.For (0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
@@ -144,7 +144,7 @@ namespace FabricObserver.Observers
 
                 if (hasChildProcs)
                 {
-                    childProcessTelemetryDataList = new List<ChildProcessTelemetryData>();
+                    childProcessTelemetryDataList = new ConcurrentQueue<ChildProcessTelemetryData>();
                 }
 
                 app = deployedTargetList.First(
@@ -323,7 +323,7 @@ namespace FabricObserver.Observers
                     {
                         var data = new
                         {
-                            ChildProcessTelemetryData = JsonConvert.SerializeObject(childProcessTelemetryDataList)
+                            ChildProcessTelemetryData = JsonConvert.SerializeObject(childProcessTelemetryDataList.ToList())
                         };
 
                         ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, data);
@@ -332,7 +332,10 @@ namespace FabricObserver.Observers
 
                 if (IsTelemetryEnabled && hasChildProcs && MaxChildProcTelemetryDataCount > 0)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList, token);
+                    lock (lockObj)
+                    {
+                        _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList.ToList(), token);
+                    }
                 } 
            });
 
@@ -341,7 +344,7 @@ namespace FabricObserver.Observers
 
         private void ProcessChildProcs<T>(
                             ConcurrentQueue<FabricResourceUsageData<T>> fruds,
-                            List<ChildProcessTelemetryData> childProcessTelemetryDataList, 
+                            ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList, 
                             ReplicaOrInstanceMonitoringInfo repOrInst, 
                             ApplicationInfo app, 
                             FabricResourceUsageData<T> parentFrud, 
@@ -362,7 +365,7 @@ namespace FabricObserver.Observers
                 double sumAllValues = Sum + parentDataAvg;
                 childProcInfo.Metric = metric;
                 childProcInfo.Value = sumAllValues;
-                childProcessTelemetryDataList.Add(childProcInfo);
+                childProcessTelemetryDataList.Enqueue(childProcInfo);
                 parentFrud.Data.Clear();
                 parentFrud.Data.Add((T)Convert.ChangeType(sumAllValues, typeof(T)));
             }
@@ -541,7 +544,7 @@ namespace FabricObserver.Observers
         private async Task<bool> InitializeAsync()
         {
             ReplicaOrInstanceList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
-            userTargetList = new ConcurrentQueue<ApplicationInfo>();
+            userTargetList = new List<ApplicationInfo>();
             deployedTargetList = new ConcurrentQueue<ApplicationInfo>();
 
             /* Child/Descendant proc monitoring config */
@@ -653,11 +656,7 @@ namespace FabricObserver.Observers
 
             await using Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read);
             var appInfo = JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream);
-
-            foreach (var app in appInfo)
-            {
-                userTargetList.Enqueue(app);
-            }
+            userTargetList.AddRange(appInfo);
             
             // Does the configuration have any objects (targets) defined?
             if (userTargetList.Count == 0)
@@ -829,19 +828,12 @@ namespace FabricObserver.Observers
                             WarningOpenFileHandles = application.WarningOpenFileHandles
                         };
 
-                        userTargetList.Enqueue(appConfig);
+                        userTargetList.Add(appConfig);
                     }
                 }
 
                 // Remove the All or * config item.
-                var tempQueue = new ConcurrentQueue<ApplicationInfo>();
-
-                foreach (var a in userTargetList.Where(a => !a.Equals(application)))
-                {
-                    tempQueue.Enqueue(a);
-                }
-
-                userTargetList = tempQueue;
+                _ = userTargetList.Remove(application);
                 apps.Clear();
                 apps = null;
             }
@@ -1427,7 +1419,7 @@ namespace FabricObserver.Observers
                 appList = null;
             }
 
-            _ = Parallel.For (0, deployedApps.Count, ObserverManager.ParallelOptions, (i, state) =>
+            for (int i = 0; i < deployedApps.Count; ++i)
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -1435,9 +1427,10 @@ namespace FabricObserver.Observers
                 string[] filteredServiceList = null;
 
                 // Filter service list if ServiceExcludeList/ServiceIncludeList config setting is non-empty.
-                var serviceFilter = userTargetList.FirstOrDefault(x => (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                                    || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
-                                                                    && (!string.IsNullOrWhiteSpace(x.ServiceExcludeList) || !string.IsNullOrWhiteSpace(x.ServiceIncludeList)));
+                var serviceFilter = 
+                    userTargetList.FirstOrDefault(x => (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
+                                                        || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
+                                                        && (!string.IsNullOrWhiteSpace(x.ServiceExcludeList) || !string.IsNullOrWhiteSpace(x.ServiceIncludeList)));
 
                 ServiceFilterType filterType = ServiceFilterType.None;
 
@@ -1457,25 +1450,20 @@ namespace FabricObserver.Observers
 
                 var replicasOrInstances = GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType).GetAwaiter().GetResult();
 
-                lock (lockObj)
+                foreach (var rep in replicasOrInstances)
                 {
-                    foreach (var rep in replicasOrInstances)
-                    {
-                        ReplicaOrInstanceList.Enqueue(rep);
-                    }
+                    ReplicaOrInstanceList.Enqueue(rep);
                 }
+               
 
-                lock (lockObj)
-                {
-                    var targets = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
+                var targets = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
                                                             && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
                                                                 || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower()));
-                    foreach (var target in targets)
-                    {
-                        deployedTargetList.Enqueue(target);
-                    }
+                foreach (var target in targets)
+                {
+                    deployedTargetList.Enqueue(target);
                 }
-            });
+            }
 
             deployedApps.Clear();
             deployedApps = null;
@@ -1521,8 +1509,7 @@ namespace FabricObserver.Observers
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary ||
-                                                                             statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary:
                     {
                         if (filterList != null && filterType != ServiceFilterType.None)
                         {
