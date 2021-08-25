@@ -1,7 +1,7 @@
 [
   {
     "targetApp": "*",
-    "cpuWarningLimitPercent": 70,
-    "memoryWarningLimitMB": 1024
+    "cpuWarningLimitPercent": 30,
+    "memoryWarningLimitMB": 500
   }
 ]

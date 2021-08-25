@@ -965,8 +965,8 @@ namespace FabricObserver.Observers
 
                         if (e is Win32Exception exception && exception.NativeErrorCode == 5 || e.Message.ToLower().Contains("access is denied"))
                         {
-                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running as a more privileged Windows user than FabricObserver.{Environment.NewLine}" +
-                                             $"You must run FabricObserver as System user on Windows if you want to monitor services that run as System or Admin user.";
+                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running at a higher account privilege than FabricObserver.{Environment.NewLine}" +
+                                             $"You must run FabricObserver as System user or Admin user on Windows if you want to monitor services that run as System or Admin user on Windows.";
 
                             var healthReport = new Utilities.HealthReport
                             {
@@ -978,7 +978,7 @@ namespace FabricObserver.Observers
                                 ReportType = HealthReportType.Application,
                                 State = ObserverManager.ObserverFailureHealthStateLevel,
                                 NodeName = NodeName,
-                                Observer = ObserverConstants.AppObserverName,
+                                Observer = ObserverName,
                             };
 
                             // Generate a Service Fabric Health Report.

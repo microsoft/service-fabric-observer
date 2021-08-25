@@ -16,6 +16,7 @@ using System.Runtime.InteropServices;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.MachineInfoModel;
 using System.Fabric.Description;
+using System.Fabric.Health;
 
 namespace FabricObserver.Observers
 {
@@ -38,7 +39,6 @@ namespace FabricObserver.Observers
         {
             var configSettings = new MachineInfoModel.ConfigSettings(context);
             ConfigPackagePath = configSettings.ConfigPackagePath;
-
         }
 
         // OsbserverManager passes in a special token to ObserveAsync and ReportAsync that enables it to stop this observer outside of
@@ -134,20 +134,20 @@ namespace FabricObserver.Observers
 
                     // Report -> Send Telemetry/Write ETW/Create SF Health Warnings (if threshold breach)
                     ProcessResourceDataReportHealth(
-                        cpuFrudInst,
-                        app.CpuErrorLimitPercent,
-                        app.CpuWarningLimitPercent,
-                        timeToLive,
-                        HealthReportType.Application,
-                        repOrInst);
+                                    cpuFrudInst,
+                                    app.CpuErrorLimitPercent,
+                                    app.CpuWarningLimitPercent,
+                                    timeToLive,
+                                    HealthReportType.Application,
+                                    repOrInst);
 
                     ProcessResourceDataReportHealth(
-                        memFrudInst,
-                        app.MemoryErrorLimitMb,
-                        app.MemoryWarningLimitMb,
-                        timeToLive,
-                        HealthReportType.Application,
-                        repOrInst);
+                                    memFrudInst,
+                                    app.MemoryErrorLimitMb,
+                                    app.MemoryWarningLimitMb,
+                                    timeToLive,
+                                    HealthReportType.Application,
+                                    repOrInst);
                 }
             }
 
@@ -384,40 +384,21 @@ namespace FabricObserver.Observers
             {
                 foreach (ReplicaOrInstanceMonitoringInfo repOrInst in ReplicaOrInstanceList)
                 {
-                    // This is how long each measurement sequence for each container can last.
-                    // You can set this timespan value in ApplicationManifest_Modified.xml, see ContainerObserverMonitorDuration Parameter.
-                    TimeSpan duration = TimeSpan.FromSeconds(3);
-                    int frudCapacity;
-
                     Token.ThrowIfCancellationRequested();
-
-                    if (MonitorDuration > TimeSpan.MinValue)
-                    {
-                        duration = MonitorDuration;
-                    }
-
+                    string error = string.Empty;
                     string serviceName = repOrInst.ServiceName.OriginalString.Replace(repOrInst.ApplicationName.OriginalString, "").Replace("/", "");
                     string cpuId = $"{serviceName}_cpu";
                     string memId = $"{serviceName}_mem";
                     string containerId = string.Empty;
 
-                    if (UseCircularBuffer)
-                    {
-                        frudCapacity = DataCapacity > 0 ? DataCapacity : 5;
-                    }
-                    else
-                    {
-                        frudCapacity = (int)duration.TotalSeconds * 4;
-                    }
-
                     if (!allCpuDataPercentage.Any(frud => frud.Id == cpuId))
                     {
-                        allCpuDataPercentage.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, frudCapacity, UseCircularBuffer));
+                        allCpuDataPercentage.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, 1));
                     }
 
                     if (!allMemDataMB.Any(frud => frud.Id == memId))
                     {
-                        allMemDataMB.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, frudCapacity, UseCircularBuffer));
+                        allMemDataMB.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1));
                     }
 
                     var monitorTimer = Stopwatch.StartNew();
@@ -442,16 +423,81 @@ namespace FabricObserver.Observers
                         WindowStyle = ProcessWindowStyle.Hidden,
                         RedirectStandardInput = false,
                         RedirectStandardOutput = true,
-                        RedirectStandardError = false,
+                        RedirectStandardError = true
                     };
 
-                    using Process p = Process.Start(ps);
-                    List<string> output = new List<string>(frudCapacity);
+                    using Process p = new Process();
+
+                    // Capture any error information from docker.
+                    p.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                    p.StartInfo = ps;
+                    _ = p.Start();
+                    var stdOutput = p.StandardOutput;
+
+                    // Start asynchronous read operation on error stream.  
+                    p.BeginErrorReadLine();
+                  
+                    List<string> output = new List<string>();
                     string l;
 
                     while ((l = await p.StandardOutput.ReadLineAsync()) != null)
                     {
                         output.Add(l);
+                    }
+
+                    p.WaitForExit();
+
+                    int exitStatus = p.ExitCode;
+                    stdOutput.Close();
+
+                    if (exitStatus != 0)
+                    {
+                        // there was an error associated with the non-zero exit code. Log it and throw.
+                        string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
+                        ObserverLogger.LogWarning(msg);
+                        
+                        var healthReport = new Utilities.HealthReport
+                        {
+                            AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                            EmitLogEvent = EnableVerboseLogging,
+                            HealthMessage = msg + " " + "NOTE: You must run FabricObserver as System user or Admin user in order for ContainerObserver to function correctly.",
+                            HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                            Property = "docker_stats_failure",
+                            ReportType = HealthReportType.Application,
+                            State = HealthState.Warning,
+                            NodeName = NodeName,
+                            Observer = ObserverName,
+                        };
+
+                        // Generate a Service Fabric Health Report.
+                        HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                        // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                        if (IsTelemetryEnabled)
+                        {
+                            _ = TelemetryClient?.ReportHealthAsync(
+                                                       "docker_stats_failure",
+                                                       HealthState.Warning,
+                                                       msg,
+                                                       ObserverName,
+                                                       Token);
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(
+                                            ObserverConstants.FabricObserverETWEventName,
+                                            new
+                                            {
+                                                Property = "docker_stats_failure",
+                                                Level = "Warning",
+                                                Message = msg,
+                                                ObserverName
+                                            });
+                        }
+
+                        return;
                     }
 
                     foreach (string line in output)
@@ -534,7 +580,7 @@ namespace FabricObserver.Observers
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary:
 
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                         {

@@ -303,10 +303,7 @@
     <!-- Compression level. dmp files will be compressed to limit network usage. -->
     <Parameter Name="ZipFileCompressionLevel" Value="" MustOverride="true" />
   </Section>
-  <!-- Plugin model sample. Just add the configuration info here that your observer needs.
-       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
-       Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
-       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
+  <!-- NOTE: FabricObserver must run as System or Admin on *Windows* in order to run ContainerObserver successfully. This is not the case for Linux. -->
    <Section Name="ContainerObserverConfiguration">
      <Parameter Name="Enabled" Value="" MustOverride="true" />
      <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
