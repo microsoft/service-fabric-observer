@@ -157,17 +157,18 @@ namespace FabricObserver.Observers
                         {
                             // Warm up counter.
                             _ = DiskUsage.GetAverageDiskQueueLength(d.Name[..2]);
-                            DiskAverageQueueLengthData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
+                            await Task.Delay(250);
+                            DiskAverageQueueLengthData.Find(x => x.Id == id)?.Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
                         }
                     }
 
                     if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
                     {
-                        DiskSpaceUsagePercentageData.Single(x => x.Id == id).Data.Add(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
+                        DiskSpaceUsagePercentageData.Find(x => x.Id == id)?.Data.Add(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
                     }
 
-                    DiskSpaceAvailableMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
-                    DiskSpaceTotalMbData.Single(x => x.Id == id).Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
+                    DiskSpaceAvailableMbData.Find(x => x.Id == id)?.Data.Add(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
+                    DiskSpaceTotalMbData.Find(x => x.Id == id)?.Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
 
                     // This section only needs to run if you have the FabricObserverWebApi app installed.
                     if (!IsObserverWebApiAppDeployed || !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -221,10 +222,10 @@ namespace FabricObserver.Observers
                     var data = DiskSpaceUsagePercentageData[i];
 
                     ProcessResourceDataReportHealth(
-                        data,
-                        DiskSpacePercentErrorThreshold,
-                        DiskSpacePercentWarningThreshold,
-                        timeToLiveWarning);
+                                        data,
+                                        DiskSpacePercentErrorThreshold,
+                                        DiskSpacePercentWarningThreshold,
+                                        timeToLiveWarning);
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
@@ -236,10 +237,10 @@ namespace FabricObserver.Observers
                         var data = DiskAverageQueueLengthData[i];
 
                         ProcessResourceDataReportHealth(
-                            data,
-                            AverageQueueLengthErrorThreshold,
-                            AverageQueueLengthWarningThreshold,
-                            timeToLiveWarning);
+                                            data,
+                                            AverageQueueLengthErrorThreshold,
+                                            AverageQueueLengthWarningThreshold,
+                                            timeToLiveWarning);
                     }
                 }
 
@@ -252,7 +253,6 @@ namespace FabricObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
                         var data = DiskSpaceAvailableMbData[i];
-
                         ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning);
                     }
 
@@ -261,7 +261,6 @@ namespace FabricObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
                         var data = DiskSpaceTotalMbData[i];
-
                         ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning);
                     }
                 }
@@ -275,20 +274,18 @@ namespace FabricObserver.Observers
                 }
 
                 var diskInfoPath = Path.Combine(ObserverLogger.LogFolderBasePath, "disks.txt");
-
                 _ = ObserverLogger.TryWriteLogFile(diskInfoPath, diskInfo.ToString());
-
                 _ = diskInfo.Clear();
             }
             catch (Exception e)
             {
                 // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException)
+                if (e is OperationCanceledException || e is TaskCanceledException || e is FabricException)
                 {
                     throw;
                 }
 
-                ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"Unhandled exception in ReportAsync:{Environment.NewLine}{e}");
 
                 // Fix the bug..
                 throw;
@@ -335,8 +332,8 @@ namespace FabricObserver.Observers
 
                 if (int.TryParse(
                             GetSettingParameterValue(
-                            ConfigurationSectionName,
-                            ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
+                                ConfigurationSectionName,
+                                ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
                     AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
                 }
@@ -348,7 +345,7 @@ namespace FabricObserver.Observers
             catch (Exception e)
             {
                 // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException)
+                if (e is OperationCanceledException || e is TaskCanceledException || e is FabricException)
                 {
                     throw;
                 }

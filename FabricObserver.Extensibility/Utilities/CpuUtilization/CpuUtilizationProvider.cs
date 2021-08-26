@@ -39,6 +39,10 @@ namespace FabricObserver.Observers.Utilities
 
                 return instance;
             }
+            set
+            {
+                instance = value;
+            }
         }
 
         public abstract void Dispose();

@@ -18,7 +18,6 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using FabricObserver.TelemetryLib;
-using Newtonsoft.Json;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
 
@@ -136,7 +135,7 @@ namespace FabricObserver.Observers
         public TimeSpan OperationalTelemetryRunInterval
         {
             get; private set;
-        } = TimeSpan.FromHours(4);
+        } = TimeSpan.FromHours(8);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.

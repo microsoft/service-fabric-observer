@@ -707,7 +707,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    await Task.Delay(150, Token).ConfigureAwait(true);
+                    await Task.Delay(250, Token).ConfigureAwait(true);
                 }
 
                 timer.Stop();
@@ -725,6 +725,7 @@ namespace FabricObserver.Observers
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     CpuUtilizationProvider.Instance?.Dispose();
+                    CpuUtilizationProvider.Instance = null;
                 }
             }
         }

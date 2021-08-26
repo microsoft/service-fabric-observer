@@ -11,7 +11,6 @@ using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Management;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,21 +23,7 @@ namespace FabricObserver.Observers.Utilities
 
         public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo()
         {
-            NativeMethods.PerfomanceInfoData perfData;
-
-            try
-            {
-                perfData = GetWindowsPerformanceInfo();
-                double used = ((double)(perfData.PhysicalTotalBytes - perfData.PhysicalAvailableBytes)) / perfData.PhysicalTotalBytes;
-                double usedPct = used * 100;
-
-                return (perfData.PhysicalTotalBytes / 1024 / 1024 / 1024, perfData.InUse / 1024 / 1024, Math.Round(usedPct, 2));
-            }
-            catch (Win32Exception e)
-            {
-                Logger.LogWarning($"Error getting performance information:{Environment.NewLine}{e}");
-                return (-1, -1, -1);
-            }
+            return TupleGetNodeMemoryInfo();
         }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
@@ -163,6 +148,8 @@ namespace FabricObserver.Observers.Utilities
                 {
                     while (enumerator.MoveNext())
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         try
                         {
                             using (ManagementObject mObj = (ManagementObject)enumerator.Current)
@@ -215,7 +202,9 @@ namespace FabricObserver.Observers.Utilities
             finally
             {
                 results?.Dispose();
+                results = null;
                 win32OsInfo?.Dispose();
+                win32OsInfo = null;
             }
 
             return Task.FromResult(osInfo);
@@ -231,47 +220,6 @@ namespace FabricObserver.Observers.Utilities
         public override int GetTotalAllocatedFileHandlesCount()
         {
             return -1;
-        }
-
-        /// <summary>
-        /// Windows performance information.
-        /// </summary>
-        /// <returns>PerformanceInfoData structure.</returns>
-        public static NativeMethods.PerfomanceInfoData GetWindowsPerformanceInfo()
-        {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new PlatformNotSupportedException("This only works on Windows.");
-            }
-
-            NativeMethods.PerfomanceInfoData perfData = new NativeMethods.PerfomanceInfoData();
-
-            if (!NativeMethods.GetPerformanceInfo(
-                out NativeMethods.PsApiPerformanceInformation perfInfo,
-                (uint)Marshal.SizeOf(typeof(NativeMethods.PsApiPerformanceInformation))))
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-
-            perfData.CommitTotalPages = perfInfo.CommitTotal.ToInt64();
-            perfData.CommitLimitPages = perfInfo.CommitLimit.ToInt64();
-            perfData.CommitPeakPages = perfInfo.CommitPeak.ToInt64();
-
-            long pageSize = perfInfo.PageSize.ToInt64();
-            perfData.PhysicalTotalBytes = perfInfo.PhysicalTotal.ToInt64() * pageSize;
-            perfData.PhysicalAvailableBytes = perfInfo.PhysicalAvailable.ToInt64() * pageSize;
-            perfData.InUse = perfData.PhysicalTotalBytes - perfData.PhysicalAvailableBytes;
-            perfData.SystemCacheBytes = perfInfo.SystemCache.ToInt64() * pageSize;
-            perfData.KernelTotalBytes = perfInfo.KernelTotal.ToInt64() * pageSize;
-            perfData.KernelPagedBytes = perfInfo.KernelPaged.ToInt64() * pageSize;
-            perfData.KernelNonPagedBytes = perfInfo.KernelNonPaged.ToInt64() * pageSize;
-            perfData.PageSizeBytes = pageSize;
-
-            perfData.HandlesCount = perfInfo.HandlesCount;
-            perfData.ProcessCount = perfInfo.ProcessCount;
-            perfData.ThreadCount = perfInfo.ThreadCount;
-
-            return perfData;
         }
 
         private int GetTcpPortCount(int processId = -1, bool ephemeral = false)
@@ -428,6 +376,65 @@ namespace FabricObserver.Observers.Utilities
             {
                 return (-1, -1);
             }
+        }
+
+        private (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetNodeMemoryInfo()
+        {
+            ManagementObjectSearcher win32OsInfo = null;
+            ManagementObjectCollection results = null;
+            OSInfo osInfo = default;
+
+            try
+            {
+                win32OsInfo = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize, FreePhysicalMemory FROM Win32_OperatingSystem");
+
+                results = win32OsInfo.Get();
+
+                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
+                {
+                    while (enumerator.MoveNext())
+                    {
+                        try
+                        {
+                            using (ManagementObject mObj = (ManagementObject)enumerator.Current)
+                            {
+                                object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
+                                object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
+                                osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
+                                osInfo.TotalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
+
+                                if (osInfo.TotalVisibleMemorySizeKB == 0)
+                                {
+                                    return (0, 0, 0);
+                                }
+
+                                ulong inUse = osInfo.TotalVisibleMemorySizeKB - osInfo.FreePhysicalMemoryKB;
+                                double used = ((double)(osInfo.TotalVisibleMemorySizeKB - osInfo.FreePhysicalMemoryKB)) / osInfo.TotalVisibleMemorySizeKB;
+                                double usedPct = used * 100;
+
+                                return ((long)osInfo.TotalVisibleMemorySizeKB / 1024 / 1024, (long)inUse / 1024, usedPct);
+                            }
+                        }
+                        catch (ManagementException me)
+                        {
+                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me}");
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogInfo($"Bug? => Exception in GetOSInfoAsync:{Environment.NewLine}{e}");
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                results?.Dispose();
+                results = null;
+                win32OsInfo?.Dispose();
+                win32OsInfo = null;
+            }
+
+            return (0, 0, 0);
         }
     }
 }
