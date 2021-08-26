@@ -175,6 +175,9 @@ To learn more about the current Observers and their configuration, please see th
 Just observe it.
 ```
 
+# Operational Telemetry 
+Please see [FabricObserver Operational Telemetry](/Documentation/OperationalTelemetry.md) for detailed information on the user agnostic (Non-PII) data FabricObserver sends to Microsoft (opt out with a simple configuration parameter change).
+
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit https://cla.microsoft.com.
