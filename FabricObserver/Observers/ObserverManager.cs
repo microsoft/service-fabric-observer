@@ -597,11 +597,33 @@ namespace FabricObserver.Observers
 
             try
             {
+                // plugins
+                bool hasPlugins = false;
+                string pluginsDir = Path.Combine(FabricServiceContext.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
+
+                if (!Directory.Exists(pluginsDir))
+                {
+                    hasPlugins = false;
+                }
+                else
+                {
+                    try
+                    {
+                        string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
+                        hasPlugins = pluginDlls.Length > 0;
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException || e is PathTooLongException)
+                    {
+
+                    }
+                }
+
                 telemetryData = new FabricObserverOperationalEventData
                 {
                     UpTime = DateTime.UtcNow.Subtract(StartDateTime).ToString(),
                     Version = InternalVersionNumber,
                     EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
+                    HasPlugins = hasPlugins,
                     ObserverData = GetObserverData(),
                 };
             }
@@ -617,9 +639,28 @@ namespace FabricObserver.Observers
         {
             var observerData = new List<ObserverData>();
             var enabledObs = observers.Where(o => o.IsEnabled);
+            string[] builtInObservers = new string[]
+            {
+                ObserverConstants.AppObserverName,
+                ObserverConstants.AzureStorageUploadObserverName,
+                ObserverConstants.CertificateObserverName,
+                ObserverConstants.ContainerObserverName,
+                ObserverConstants.DiskObserverName,
+                ObserverConstants.FabricSystemObserverName,
+                ObserverConstants.NetworkObserverName,
+                ObserverConstants.NodeObserverName,
+                ObserverConstants.OSObserverName,
+                ObserverConstants.SFConfigurationObserverName
+            };
 
             foreach (var obs in enabledObs)
             {
+                // We don't need to have any information about plugins besides whether or not there are any.
+                if (!builtInObservers.Any(o => o == obs.ObserverName))
+                {
+                    continue;
+                }
+
                 // These built-in (non-plugin) observers monitor apps and/or services.
                 if (obs.ObserverName == ObserverConstants.AppObserverName ||
                     obs.ObserverName == ObserverConstants.ContainerObserverName ||

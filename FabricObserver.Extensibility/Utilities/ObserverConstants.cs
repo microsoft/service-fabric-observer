@@ -63,7 +63,8 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxDumpsParameter = "MaxDumps";
         public const string MaxDumpsTimeWindowParameter = "MaxDumpsTimeWindow";
 
-        // AzureStorageObserver
+        // AzureStorageUploadObserver
+        public const string AzureStorageUploadObserverName = "AzureStorageUploadObserver";
         public const string AzureStorageConnectionStringParameter = "AzureStorageConnectionString";
         public const string AzureBlobContainerNameParameter = "BlobContainerName";
         public const string AzureStorageAccountNameParameter = "AzureStorageAccountName";

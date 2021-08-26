@@ -81,17 +81,25 @@ namespace FabricObserver.TelemetryLib
                     { "EventRunInterval", runInterval.ToString() },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
-                    { "TenantId", tenantId },
                     { "NodeNameHash", nodeHashString },
                     { "FOVersion", foData.Version },
+                    { "HasPlugins", foData.HasPlugins.ToString() },
                     { "UpTime", foData.UpTime },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", foData.OS }
                 };
 
+                if (eventProperties.TryGetValue("ClusterType", out string clustType))
+                {
+                    if (clustType != TelemetryConstants.ClusterTypeSfrp)
+                    {
+                        eventProperties.Add("TenantId", tenantId);
+                    }
+                }
+
                 IDictionary<string, double> metrics = new Dictionary<string, double>
                 {
-                    { "EnabledObserversCount", foData.EnabledObserverCount }
+                    { "EnabledObserverCount", foData.EnabledObserverCount }
                 };
 
                 const string err = "ErrorDetections";
@@ -107,7 +115,7 @@ namespace FabricObserver.TelemetryLib
 
                     // These observers monitor app services/containers.
                     if (obData.ObserverName.Contains("AppObserver") || obData.ObserverName.Contains("FabricSystemObserver")
-                            || obData.ObserverName.Contains("NetworkObserver") || obData.ObserverName.Contains("ContainerObserver"))
+                        || obData.ObserverName.Contains("NetworkObserver") || obData.ObserverName.Contains("ContainerObserver"))
                     {
                         // App count.
                         data = ((AppServiceObserverData)obData).MonitoredAppCount;

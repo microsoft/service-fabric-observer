@@ -26,6 +26,11 @@ namespace FabricObserver.TelemetryLib
             get; set; 
         }
 
+        public bool HasPlugins
+        {
+            get; set;
+        }
+
         public List<ObserverData> ObserverData 
         { 
             get; set; 
