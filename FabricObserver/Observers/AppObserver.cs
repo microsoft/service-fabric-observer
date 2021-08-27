@@ -965,8 +965,8 @@ namespace FabricObserver.Observers
 
                         if (e is Win32Exception exception && exception.NativeErrorCode == 5 || e.Message.ToLower().Contains("access is denied"))
                         {
-                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows.{Environment.NewLine}" +
-                                             $"You must also run FabricObserver as Admin user or System user on Windows if you want to monitor services that run as Admin or System user on Windows.";
+                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored.{Environment.NewLine}" +
+                                             $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem.";
 
                             var healthReport = new Utilities.HealthReport
                             {

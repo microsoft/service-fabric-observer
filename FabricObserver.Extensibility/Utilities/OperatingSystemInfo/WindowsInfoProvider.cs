@@ -21,11 +21,6 @@ namespace FabricObserver.Observers.Utilities
     {
         private const string TcpProtocol = "tcp";
 
-        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo()
-        {
-            return TupleGetNodeMemoryInfo();
-        }
-
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
             using (var p = new Process())
@@ -378,16 +373,14 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        private (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetNodeMemoryInfo()
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo()
         {
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
-            OSInfo osInfo = default;
 
             try
             {
                 win32OsInfo = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize, FreePhysicalMemory FROM Win32_OperatingSystem");
-
                 results = win32OsInfo.Get();
 
                 using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
@@ -400,19 +393,19 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
                                 object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
-                                osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
-                                osInfo.TotalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
+                                ulong freePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
+                                ulong totalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
 
-                                if (osInfo.TotalVisibleMemorySizeKB == 0)
+                                if (totalVisibleMemorySizeKB == 0)
                                 {
                                     return (0, 0, 0);
                                 }
 
-                                ulong inUse = osInfo.TotalVisibleMemorySizeKB - osInfo.FreePhysicalMemoryKB;
-                                double used = ((double)(osInfo.TotalVisibleMemorySizeKB - osInfo.FreePhysicalMemoryKB)) / osInfo.TotalVisibleMemorySizeKB;
+                                ulong inUse = totalVisibleMemorySizeKB - freePhysicalMemoryKB;
+                                double used = ((double)(totalVisibleMemorySizeKB - freePhysicalMemoryKB)) / totalVisibleMemorySizeKB;
                                 double usedPct = used * 100;
 
-                                return ((long)osInfo.TotalVisibleMemorySizeKB / 1024 / 1024, (long)inUse / 1024, usedPct);
+                                return ((long)totalVisibleMemorySizeKB / 1024 / 1024, (long)inUse / 1024, usedPct);
                             }
                         }
                         catch (ManagementException me)
