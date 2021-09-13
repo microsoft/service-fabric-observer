@@ -2,8 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.16</version>
-    <releaseNotes>New observer: AzureStorageUploadObserver. This adds Windows-only (for now) support for uploading dmp files to your specified Azure Storage account (blob). This is a Windows-only feature today, so there is no need to enable the new observer for Linux deployments. Design fix: decreased CPU use by AppObserver and NodeObserver. Code enhancements and bug fixes. See release notes on repo for details.</releaseNotes>
+    <version>3.1.17</version>
+    <releaseNotes>This version brings ContainerObserver into the mix, promoted to a built-in observer. Many ObserverManager settings are now overridable. 3.1.17 also includes monitoring and performance improvements for AppObserver, FabricSystemObserver and NodeObserver. Finally, this version ships with an updated operational telemetry impl for Non-PII data sharing with Microsoft (opt out). The only stuff we care about is if FO is working/healthy, it's finding issues (generating health events) and the total number of issues it finds, transmitted every 8 hours. Please see the release notes on the FO repo for more information.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>

@@ -19,13 +19,14 @@ Service Fabric Error Health Events can block upgrades and other important Fabric
 
 | Observer | Description |
 | :--- | :--- |
-| [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes) and their spawn (child processes). Alerts when user-supplied thresholds are reached. |
+| [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes) and their spawn (child processes). Alerts when user-supplied thresholds are breached. |
 | [AzureStorageUploadObserver](#azurestorageuploadobserver) | Runs periodically (do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true. It will clean up files after successful upload. |
 | [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
-| [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are reached. |
+| [ContainerObserver](#containerobserver) | Monitors container CPU and Memory use. Alerts when user-supplied thresholds are breached. |
+| [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are breached. |
 | [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric System services (compare to AppObserver) |
 | [NetworkObserver](#networkobserver) | Monitors outbound connection state for user-supplied endpoints (hostname/port pairs), i.e. it checks that the node can reach specific endpoints. |
-| [NodeObserver](#nodeobserver) | This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports). |
+| [NodeObserver](#nodeobserver) | This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports), File Handles (Linux). |
 | [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. |
 | [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. |
 
@@ -93,9 +94,9 @@ Finally, if you do not launch child processes from your services please disable 
 
 
 ### Input
-JSON config file supplied by user, stored in PackageRoot/Observers.Data folder. This data contains JSON arrays
+JSON config file supplied by user, stored in PackageRoot\Config folder. This configuration is composed of JSON array
 objects which constitute Service Fabric Apps (identified by service URI's). Users supply Error/Warning thresholds for CPU use, Memory use and Disk
-IO, ports. Memory values are supplied as number of megabytes... CPU and Disk Space values are provided as percentages (integers: so, 80 = 80%...)... 
+IO, ports. Memory values are supplied as number of megabytes or percentage use. CPU and Disk Space values are provided as percentages (integers: so, 80 = 80%) 
 **Please note that you can omit any of these properties. You can also supply 0 as the value, which means that threshold
 will be ignored (they are not omitted below so you can see what a fully specified object looks like). 
 We recommend you omit all Error thresholds until you become more comfortable with the behavior of your services and the side effects they have on machine resources**.
@@ -199,7 +200,7 @@ All dmp files are compressed to zip files before uploading to your storage accou
 A note on resource usage: This feature is intended for the exceptional case - when your app service is truly doing something really wrong (like leaking memory, ports, handles). Make sure that you set your Error thresholds to meaningfully high values. Internally, FabricObserver will only dump a configured amount of times in a specified time window per service, per observed metric. The idea
 is to not eat your local disk space and use up too much CPU for too long. Please be mindful of how you utilize this **debugging** feature. It is best to enable it in Test and Staging clusters to find the egregious bugs in your service code *before* you ship your services to production clusters. 
 
-#### Encrypting your secrets  
+#### Encrypting your secrets  (Optional, but recommended)
 
 It is very important that you generate an encrypted Connection String or Account Key string in a supported way: Use Service Fabric's Invoke-ServiceFabricEncryptText PowerShell cmdlet with your Cluster thumbprint or cert name/location. 
 Please see the [related documentation with samples](https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps). It is really easy to do! Non-encrypted strings are supported, but we do not recommend using them. The decision is yours to own.
@@ -242,6 +243,33 @@ Example AzureStorageUploadObserver configuration in ApplicationManifest.xml:
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
 ```
   
+You do not need to encrypt your keys, but that is up to you to decide. We recommend that you do. If you do not want to, then:
+
+In Settings.xml you must change IsEncryted to false:
+
+```Xml
+ <Section Name="AzureStorageUploadObserverConfiguration">
+    <!-- For Authenticating to your Storage Account, you can either provide a Connection String OR an Account Name and Account Key. 
+         NOTE: If you do not plan on encrypting your account secrets, then set IsEncrypted to false both here and in 
+         the AzureStorageUploadObserverConfiguration Section in ApplicationManifest.xml. -->
+    <Parameter Name="AzureStorageConnectionString" Value="" IsEncrypted="false" MustOverride="true" />
+    ... 
+    <Parameter Name="AzureStorageAccountKey" Value="" IsEncrypted="false" MustOverride="true" />
+ </Section>
+```
+
+In ApplicationManifest.xml you must change IsEncrypted to false:  
+
+```XML
+ <Section Name="AzureStorageUploadObserverConfiguration">
+    ...
+    <Parameter Name="AzureStorageConnectionString" Value="[AzureStorageUploadObserverStorageConnectionString]" IsEncrypted="false" />
+    <!-- OR use Account Name/Account Key pair if NOT using Connection String.. -->
+    <Parameter Name="AzureStorageAccountName" Value="[AzureStorageUploadObserverStorageAccountName]" />
+    <Parameter Name="AzureStorageAccountKey" Value="[AzureStorageUploadObserverStorageAccountKey]" IsEncrypted="false" />
+    ...
+ </Section>
+```
 
 ## CertificateObserver
 Monitors the expiration date of the cluster certificate and any other certificates provided by the user. 
@@ -270,6 +298,64 @@ Monitors the expiration date of the cluster certificate and any other certificat
     <Parameter Name="AppCertThumbprintsToObserve" Value="" MustOverride="true" />
     <Parameter
 ```
+
+## ContainerObserver 
+Monitors CPU and Memory use of Service Fabric containerized (docker) services.  
+
+**In order for ContainerObserver to function properly on Windows, FabricObserver must be configured to run as Admin or System user.** This is not the case for Linux deployments.
+
+
+### Configuration 
+
+XML:  
+
+Settings.xml  
+
+```XML
+  <!-- NOTE: FabricObserver must run as System or Admin on *Windows* in order to run ContainerObserver successfully. This is not the case for Linux. -->
+   <Section Name="ContainerObserverConfiguration">
+     <Parameter Name="Enabled" Value="" MustOverride="true" />
+     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
+     <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
+     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+     <Parameter Name="ConfigFileName" Value="" MustOverride="true" />
+  </Section>
+```
+Overridable XML settings are locatated in ApplicationManifest.xml, as always.
+
+JSON: 
+
+Configuration file supplied by user, stored in PackageRoot\\Config folder. 
+
+Example JSON config file located in **PackageRoot\\Config** folder (ContainerObserver.config.json). This is an example of a configuration that applies
+to all Service Fabric containerized services running on the virtual machine.
+```JSON
+[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 60,
+    "memoryWarningLimitMb": 1048
+  }
+]
+```
+Settings descriptions: 
+
+All settings are optional, ***except targetApp***, and can be omitted if you don't want to track. For memory use thresholds, you must supply MB values (a la 1024 for 1GB).
+
+| Setting | Description |
+| :--- | :--- |
+| **targetApp** | App URI string to observe. Required. | 
+| **memoryErrorLimitMb** | Maximum container memory use set in Megabytes that should generate a Fabric Error. |  
+| **memoryWarningLimitMb**| Minimum container memory set in Megabytes that should generate a Fabric Warning. |  
+| **cpuErrorLimitPercent** | Maximum CPU percentage that should generate a Fabric Error. |
+| **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Fabric Warning. |
+
+### Notes
+
+**In order for ContainerObserver to function properly on Windows, FabricObserver must be configured to run as Admin or System user.** This is not the case for Linux deployments.
 
 ## DiskObserver
 This observer monitors, records and analyzes storage disk information.

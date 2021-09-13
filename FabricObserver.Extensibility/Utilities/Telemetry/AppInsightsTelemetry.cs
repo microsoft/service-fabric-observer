@@ -15,7 +15,7 @@ using FabricObserver.Observers.Interfaces;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ServiceFabric.TelemetryLib;
+using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry

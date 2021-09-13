@@ -3,16 +3,15 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.TelemetryLib
+namespace FabricObserver.TelemetryLib
 {
-    internal static class TelemetryConstants
+    public static class TelemetryConstants
     {
-        internal const string AppInsightsInstrumentationKey = "$Token$";
-        internal const string TelemetryEndpoint = "https://vortex.data.microsoft.com/collect/v1";
         internal const string Undefined = "undefined";
         internal const string ClusterTypeStandalone = "standalone";
         internal const string ClusterTypeSfrp = "SFRP";
         internal const string ClusterTypePaasV1 = "PaasV1";
         internal const int AsyncOperationTimeoutSeconds = 120;
+        internal const string AIKey = "c065641b-ec84-43fe-a8e7-c2bcbb697995";
     }
 }

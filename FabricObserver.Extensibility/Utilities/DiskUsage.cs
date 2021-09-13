@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -115,19 +116,15 @@ namespace FabricObserver.Observers.Utilities
                     ReadOnly = true
                 };
 
-                // Warm up counter
-                _ = diskAverageQueueLengthCounter.NextValue();
-
                 return diskAverageQueueLengthCounter.NextValue();
             }
             catch (Exception e)
             {
                 Logger logger = new Logger("Utilities");
 
-                if (e is ArgumentNullException || e is PlatformNotSupportedException
-                    || e is Win32Exception || e is UnauthorizedAccessException)
+                if (e is ArgumentNullException || e is PlatformNotSupportedException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    logger.LogError($"{diskAverageQueueLengthCounter.CategoryName} {diskAverageQueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
+                    logger.LogWarning($"{diskAverageQueueLengthCounter.CategoryName} {diskAverageQueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
 
                     // Don't throw.
                     return 0F;
@@ -139,6 +136,7 @@ namespace FabricObserver.Observers.Utilities
             finally
             {
                 diskAverageQueueLengthCounter?.Dispose();
+                diskAverageQueueLengthCounter = null;
             }
         }
 

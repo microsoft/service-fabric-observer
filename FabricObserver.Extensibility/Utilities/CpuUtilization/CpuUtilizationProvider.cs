@@ -9,25 +9,42 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    public abstract class CpuUtilizationProvider : IDisposable
+    public abstract class CpuUtilizationProvider
     {
-        public abstract Task<float> NextValueAsync();
+        public abstract float GetProcessorTimePercentage();
+        private static CpuUtilizationProvider instance;
+        private static readonly object lockObj = new object();
 
-        public static CpuUtilizationProvider Create()
+        public static CpuUtilizationProvider Instance
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            get
             {
-                return new WindowsCpuUtilizationProvider();
+                if (instance == null)
+                {
+                    lock (lockObj)
+                    {
+                        if (instance == null)
+                        {
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                instance = new WindowsCpuUtilizationProvider();
+                            }
+                            else
+                            {
+                                instance = new LinuxCpuUtilizationProvider();
+                            }
+                        }
+                    }
+                }
+
+                return instance;
             }
-
-            return new LinuxCpuUtilizationProvider();
+            set
+            {
+                instance = value;
+            }
         }
 
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-        }
-
-        protected abstract void Dispose(bool disposing);
+        public abstract void Dispose();
     }
 }

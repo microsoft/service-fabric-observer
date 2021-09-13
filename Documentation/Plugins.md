@@ -3,7 +3,7 @@
 
 **FabricObserver version 3.1.0 introduces a refactored plugin implementation that will break existing plugins. The changes required by plugin authors are trivial, however. Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme with examples of the new format.**
 
-This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver).
+This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver) reference project (ContainerObserver is a part of FO as of 3.1.17).
 
 Note: The plugin model depends on the following packages, which **must have the same versions in both your plugin project and FabricObserver**:
 

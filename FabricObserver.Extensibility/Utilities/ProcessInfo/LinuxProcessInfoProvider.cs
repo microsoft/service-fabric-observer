@@ -14,7 +14,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private const int MaxDescendants = 50;
 
-        public override float GetProcessPrivateWorkingSetInMB(int processId)
+        public override float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false)
         {
             if (LinuxProcFS.TryParseStatusFile(processId, out ParsedStatus status))
             {
@@ -153,11 +153,6 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            // nothing to do here.
-        }
-
         private List<(string ProcName, int Pid)> TupleGetChildProcessInfo(int processId)
         {
             string pidCmdResult = $"ps -o pid= --ppid {processId}".Bash();
@@ -175,6 +170,11 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int i = 0; i < sPids.Length; ++i)
                     {
+                        if (sProcNames[i] == "ps" || sProcNames[i] == "bash")
+                        {
+                            continue;
+                        }
+
                         if (int.TryParse(sPids[i], out int childProcId))
                         {
                             childProcesses.Add((sProcNames[i], childProcId));

@@ -234,6 +234,7 @@ namespace FabricObserver.Observers
                 };
 
                 HasActiveFabricErrorOrWarning = true;
+                CurrentWarningCount++;
 
                 if (IsTelemetryEnabled)
                 {

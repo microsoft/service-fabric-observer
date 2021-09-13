@@ -15,7 +15,7 @@ namespace FabricObserver.Observers.Utilities
         public const string Fqdn = "FQDN";
         public const string EnableETWProvider = "EnableETWProvider";
         public const string EventSourceProviderName = "FabricObserverETWProvider";
-        public const string FabricObserverTelemetryEnabled = "EnableFabricObserverDiagnosticTelemetry";
+        public const string EnableFabricObserverOperationalTelemetry = "EnableFabricObserverOperationalTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
         public const string FabricObserverName = "FabricObserver";
         public const string FabricObserverETWEventName = "FabricObserverDataEvent";
@@ -63,7 +63,8 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxDumpsParameter = "MaxDumps";
         public const string MaxDumpsTimeWindowParameter = "MaxDumpsTimeWindow";
 
-        // AzureStorageObserver
+        // AzureStorageUploadObserver
+        public const string AzureStorageUploadObserverName = "AzureStorageUploadObserver";
         public const string AzureStorageConnectionStringParameter = "AzureStorageConnectionString";
         public const string AzureBlobContainerNameParameter = "BlobContainerName";
         public const string AzureStorageAccountNameParameter = "AzureStorageAccountName";
@@ -72,15 +73,16 @@ namespace FabricObserver.Observers.Utilities
 
         // Certificate Observer
         public const string CertificateObserverName = "CertificateObserver";
-        public const string CertificateObserverConfigurationSectionName = "CertificateObserverConfiguration";
         public const string CertificateObserverDaysUntilClusterExpiryWarningThreshold = "DaysUntilClusterExpiryWarningThreshold";
         public const string CertificateObserverDaysUntilAppExpiryWarningThreshold = "DaysUntilAppExpiryWarningThreshold";
         public const string CertificateObserverAppCertificateThumbprints = "AppCertThumbprintsToObserve";
         public const string CertificateObserverAppCertificateCommonNames = "AppCertCommonNamesToObserve";
 
+        // ContainerObserver
+        public const string ContainerObserverName = "ContainerObserver";
+
         // DiskObserver.
         public const string DiskObserverName = "DiskObserver";
-        public const string DiskObserverConfigurationSectionName = "DiskObserverConfiguration";
         public const string DiskObserverIntervalParameterName = "RunInterval";
         public const string DiskObserverDiskSpacePercentError = "DiskSpacePercentUsageErrorThreshold";
         public const string DiskObserverDiskSpacePercentWarning = "DiskSpacePercentUsageWarningThreshold";
@@ -89,7 +91,6 @@ namespace FabricObserver.Observers.Utilities
 
         // FabricSystemObserver.
         public const string FabricSystemObserverName = "FabricSystemObserver";
-        public const string FabricSystemObserverConfigurationSectionName = "FabricSystemObserverConfiguration";
         public const string FabricSystemObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
         public const string FabricSystemObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
         public const string FabricSystemObserverMemoryErrorLimitMb = "MemoryErrorLimitMb";
@@ -110,7 +111,6 @@ namespace FabricObserver.Observers.Utilities
 
         // NodeObserver.
         public const string NodeObserverName = "NodeObserver";
-        public const string NodeObserverConfigurationSectionName = "NodeObserverConfiguration";
         public const string NodeObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
         public const string NodeObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
         public const string NodeObserverMemoryErrorLimitMb = "MemoryErrorLimitMb";
@@ -132,7 +132,6 @@ namespace FabricObserver.Observers.Utilities
 
         // OSObserver.
         public const string OSObserverName = "OSObserver";
-        public const string OSObserverConfigurationSectionName = "OSObserverConfiguration";
         public const string EnableWindowsAutoUpdateCheck = "EnableWindowsAutoUpdateCheck";
 
         // SFConfigurationObserver.

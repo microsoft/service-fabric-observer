@@ -1,15 +1,8 @@
 ﻿[
   {
     "targetApp": "*",
-    "appExcludeList": "fabric:/MyApp42, fabric:/AnotherApp",
     "cpuWarningLimitPercent": 85,
     "memoryWarningLimitMb": 1048,
-    "networkWarningActivePorts": 8000,
     "networkWarningEphemeralPorts": 7500
-  },
-  {
-    "targetAppType": "SomeAppType",
-    "memoryWarningLimitPercent": 20,
-    "networkWarningEphemeralPorts": 5000
   }
 ]

@@ -15,7 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
-using Microsoft.ServiceFabric.TelemetryLib;
+using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry

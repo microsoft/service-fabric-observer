@@ -322,8 +322,6 @@ namespace FabricObserver.Observers
 
         private static string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
-            ManagementObjectSearcher searcher = null;
-            ManagementObjectCollection results = null;
             ManagementObject[] resultsOrdered;
             string ret = string.Empty;
 
@@ -331,17 +329,17 @@ namespace FabricObserver.Observers
 
             try
             {
-                searcher = new ManagementObjectSearcher("SELECT * FROM Win32_QuickFixEngineering");
-                results = searcher.Get();
-
+                using var searcher = new ManagementObjectSearcher("SELECT HotFixID,InstalledOn FROM Win32_QuickFixEngineering");
+                var results = searcher.Get();
+                
                 if (results.Count < 1)
                 {
                     return string.Empty;
                 }
 
                 resultsOrdered = results.Cast<ManagementObject>()
-                                        .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
-                                        .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
+                                            .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
+                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";
@@ -358,6 +356,10 @@ namespace FabricObserver.Observers
                             $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower().Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   " +
                             $"{obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
                     }
+                    catch (ArgumentException)
+                    {
+
+                    }
                     finally
                     {
                         obj?.Dispose();
@@ -369,6 +371,7 @@ namespace FabricObserver.Observers
                 ret = sb.ToString().Trim();
                 _ = sb.Clear();
                 sb = null;
+                
             }
             catch (Exception e) when (
                     e is ArgumentException ||
@@ -378,13 +381,6 @@ namespace FabricObserver.Observers
                     e is NullReferenceException)
             {
 
-            }
-            finally
-            {
-                results?.Dispose();
-                results = null;
-                searcher?.Dispose();
-                searcher = null;
             }
 
             return ret;
@@ -425,15 +421,15 @@ namespace FabricObserver.Observers
 
             try
             {
-                OSInfo osInfo = await OperatingSystemInfoProvider.Instance.GetOSInfoAsync(token);
+                OSInfo osInfo = await OSInfoProvider.Instance.GetOSInfoAsync(token);
                 osStatus = osInfo.Status;
 
                 // Active, bound ports.
-                int activePorts = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount();
+                int activePorts = OSInfoProvider.Instance.GetActiveTcpPortCount();
 
                 // Active, ephemeral ports.
-                int activeEphemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount();
-                (int lowPortOS, int highPortOS) = OperatingSystemInfoProvider.Instance.TupleGetDynamicPortRange();
+                int activeEphemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+                (int lowPortOS, int highPortOS) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
                 string osEphemeralPortRange = string.Empty;
                 string fabricAppPortRange = string.Empty;
                 string clusterManifestXml = !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(

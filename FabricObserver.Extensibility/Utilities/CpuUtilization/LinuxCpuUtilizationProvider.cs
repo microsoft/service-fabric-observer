@@ -14,14 +14,9 @@ namespace FabricObserver.Observers.Utilities
         private float idleTimeInSeconds;
         private float cpuUtilization;
 
-        public override async Task<float> NextValueAsync()
+        public override float GetProcessorTimePercentage()
         {
-            if (uptimeInSeconds == -1)
-            {
-                throw new ObjectDisposedException(nameof(LinuxCpuUtilizationProvider));
-            }
-
-            (float ut, float it) = await LinuxProcFS.ReadUptimeAsync();
+            (float ut, float it) = LinuxProcFS.ReadUptime();
 
             if (ut == uptimeInSeconds)
             {
@@ -41,10 +36,9 @@ namespace FabricObserver.Observers.Utilities
             return cpuUtilization;
         }
 
-        protected override void Dispose(bool disposing)
+        public override void Dispose()
         {
             // Nothing to do.
-            uptimeInSeconds = -1;
         }
     }
 }

@@ -313,8 +313,8 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    ObserverLogger.LogWarning("You have not encrypted your Azure Storage ConnectionString. This is not safe. " +
-                                              "Please encrypt it using the Invoke-ServiceFabricEncryptText PowerShell cmdlet.");
+                    ObserverLogger.LogInfo("You have not encrypted your Azure Storage ConnectionString. This is not safe. " +
+                                           "Please encrypt it using the Invoke-ServiceFabricEncryptText PowerShell cmdlet.");
 
                     // TOTHINK: Don't enable non-encrypted connection string support. Just return false here? 
                     char[] cArr = connString.ToCharArray();
@@ -353,8 +353,8 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    ObserverLogger.LogWarning("You have not encrypted your Azure Storage Account Key. This is not safe. " +
-                                              "Please encrypt it using the Invoke-ServiceFabricEncryptText PowerShell cmdlet.");
+                    ObserverLogger.LogInfo("You have not encrypted your Azure Storage Account Key. This is not safe. " +
+                                           "Please encrypt it using the Invoke-ServiceFabricEncryptText PowerShell cmdlet.");
 
                     // TOTHINK: Don't enable non-encrypted connection string support. Just return false here? 
                     char[] cArr = accountKey.ToCharArray();

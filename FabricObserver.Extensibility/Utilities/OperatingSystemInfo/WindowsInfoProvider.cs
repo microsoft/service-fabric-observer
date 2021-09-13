@@ -17,64 +17,9 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    public class WindowsInfoProvider : OperatingSystemInfoProvider
+    public class WindowsInfoProvider : OSInfoProvider
     {
         private const string TcpProtocol = "tcp";
-
-        public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
-        {
-            ManagementObjectSearcher win32OsInfo = null;
-            ManagementObjectCollection results = null;
-            long visibleTotal = -1;
-            long freePhysical = -1;
-
-            try
-            {
-                win32OsInfo = new ManagementObjectSearcher("SELECT FreePhysicalMemory, TotalVisibleMemorySize FROM Win32_OperatingSystem");
-                results = win32OsInfo.Get();
-
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
-                {
-                    while (enumerator.MoveNext())
-                    {
-                        using (ManagementObject mObj = (ManagementObject)enumerator.Current)
-                        {
-                            object visibleTotalObj = mObj.Properties["TotalVisibleMemorySize"].Value;
-                            object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
-
-                            if (visibleTotalObj == null || freePhysicalObj == null)
-                            {
-                                continue;
-                            }
-
-                            visibleTotal = Convert.ToInt64(visibleTotalObj);
-                            freePhysical = Convert.ToInt64(freePhysicalObj);
-                        }
-                    }
-                }
-
-                if (visibleTotal < 1)
-                {
-                    return (-1L, -1);
-                }
-
-                double used = ((double)(visibleTotal - freePhysical)) / visibleTotal;
-                double usedPct = used * 100;
-
-                return (visibleTotal / 1024 / 1024, Math.Round(usedPct, 2));
-            }
-            catch (Exception e) when (e is FormatException || e is InvalidCastException || e is ManagementException)
-            {
-                Logger.LogWarning($"Handled failure in TupleGetTotalPhysicalMemorySizeAndPercentInUse:{Environment.NewLine}{e}");
-            }
-            finally
-            {
-                win32OsInfo?.Dispose();
-                results?.Dispose();
-            }
-
-            return (-1L, -1);
-        }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
@@ -198,6 +143,8 @@ namespace FabricObserver.Observers.Utilities
                 {
                     while (enumerator.MoveNext())
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         try
                         {
                             using (ManagementObject mObj = (ManagementObject)enumerator.Current)
@@ -250,7 +197,9 @@ namespace FabricObserver.Observers.Utilities
             finally
             {
                 results?.Dispose();
+                results = null;
                 win32OsInfo?.Dispose();
+                win32OsInfo = null;
             }
 
             return Task.FromResult(osInfo);
@@ -422,6 +371,63 @@ namespace FabricObserver.Observers.Utilities
             {
                 return (-1, -1);
             }
+        }
+
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo()
+        {
+            ManagementObjectSearcher win32OsInfo = null;
+            ManagementObjectCollection results = null;
+
+            try
+            {
+                win32OsInfo = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize, FreePhysicalMemory FROM Win32_OperatingSystem");
+                results = win32OsInfo.Get();
+
+                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
+                {
+                    while (enumerator.MoveNext())
+                    {
+                        try
+                        {
+                            using (ManagementObject mObj = (ManagementObject)enumerator.Current)
+                            {
+                                object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
+                                object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
+                                ulong freePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
+                                ulong totalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
+
+                                if (totalVisibleMemorySizeKB == 0)
+                                {
+                                    return (0, 0, 0);
+                                }
+
+                                ulong inUse = totalVisibleMemorySizeKB - freePhysicalMemoryKB;
+                                double used = ((double)(totalVisibleMemorySizeKB - freePhysicalMemoryKB)) / totalVisibleMemorySizeKB;
+                                double usedPct = used * 100;
+
+                                return ((long)totalVisibleMemorySizeKB / 1024 / 1024, (long)inUse / 1024, usedPct);
+                            }
+                        }
+                        catch (ManagementException me)
+                        {
+                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me}");
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogInfo($"Bug? => Exception in GetOSInfoAsync:{Environment.NewLine}{e}");
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                results?.Dispose();
+                results = null;
+                win32OsInfo?.Dispose();
+                win32OsInfo = null;
+            }
+
+            return (0, 0, 0);
         }
     }
 }

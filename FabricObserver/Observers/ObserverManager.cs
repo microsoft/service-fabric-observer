@@ -17,8 +17,9 @@ using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ServiceFabric.TelemetryLib;
+using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
+using System.Fabric.Description;
 
 namespace FabricObserver.Observers
 {
@@ -27,17 +28,19 @@ namespace FabricObserver.Observers
     // with optional sleeps, and reliable shutdown event handling.
     public class ObserverManager : IDisposable
     {
-        private static bool etwEnabled;
         private readonly string nodeName;
         private readonly List<ObserverBase> observers;
         private volatile bool shutdownSignaled;
-        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(30);
         private readonly CancellationToken token;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
         private bool disposed;
         private readonly IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgress;
+        private DateTime StartDateTime;
+
+        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
+        private const string InternalVersionNumber = "3.1.17";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -67,7 +70,12 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        private static bool FabricObserverInternalTelemetryEnabled
+        private TimeSpan ObserverExecutionTimeout
+        {
+            get; set;
+        } = TimeSpan.FromMinutes(30);
+
+        private static bool FabricObserverOperationalTelemetryEnabled
         {
             get; set;
         }
@@ -79,9 +87,7 @@ namespace FabricObserver.Observers
 
         public static bool EtwEnabled
         {
-            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider), out etwEnabled) && etwEnabled;
-
-            set => etwEnabled = value;
+            get; set;
         }
 
         public string ApplicationName
@@ -95,11 +101,11 @@ namespace FabricObserver.Observers
             private set;
         }
 
-        public HealthState ObserverFailureHealthStateLevel
+        public static HealthState ObserverFailureHealthStateLevel
         {
             get;
             set;
-        } = HealthState.Warning;
+        } = HealthState.Unknown;
 
         private ObserverHealthReporter HealthReporter
         {
@@ -120,6 +126,16 @@ namespace FabricObserver.Observers
         {
             get;
         }
+
+        public DateTime LastTelemetrySendDate 
+        { 
+            get; private set; 
+        }
+
+        public TimeSpan OperationalTelemetryRunInterval
+        {
+            get; private set;
+        } = TimeSpan.FromHours(8);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
@@ -157,19 +173,12 @@ namespace FabricObserver.Observers
             linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
             FabricClientInstance = fabricClient;
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
-            nodeName = FabricServiceContext?.NodeContext.NodeName;
-
-            if (FabricServiceContext == null)
-            {
-                return;
-            }
-
-            FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent +=
-                CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            nodeName = FabricServiceContext.NodeContext.NodeName;
+            FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
 
             // Observer Logger setup.
             string logFolderBasePath;
-            string observerLogPath = GetConfigSettingValue(ObserverConstants.ObserverLogPathParameter);
+            string observerLogPath = GetConfigSettingValue(ObserverConstants.ObserverLogPathParameter, null);
 
             if (!string.IsNullOrEmpty(observerLogPath))
             {
@@ -181,7 +190,7 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDays), out int maxArchivedLogFileLifetimeDays))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDays, null), out int maxArchivedLogFileLifetimeDays))
             {
                 MaxArchivedLogFileLifetimeDays = maxArchivedLogFileLifetimeDays;
             }
@@ -206,48 +215,14 @@ namespace FabricObserver.Observers
 
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
             SetPropertiesFromConfigurationParameters();
-
-            // FabricObserver Internal Diagnostic Telemetry (Non-PII).
-            // Internally, TelemetryEvents determines current Cluster Id as a unique identifier for transmitted events.
-            if (!FabricObserverInternalTelemetryEnabled)
-            {
-                return;
-            }
-
-            string codePkgVersion = FabricServiceContext.CodePackageActivationContext.CodePackageVersion;
-            string serviceManifestVersion = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Description.ServiceManifestVersion;
-            string filepath = Path.Combine(Logger.LogFolderBasePath,
-                                           $"fo_telemetry_sent_{codePkgVersion.Replace(".", string.Empty)}_" +                                                   
-                                           $"{serviceManifestVersion.Replace(".", string.Empty)}_{FabricServiceContext.NodeContext.NodeType}.log");
-
-#if !DEBUG
-            // If this has already been sent for this activated version (code/config) of node type x
-            if (File.Exists(filepath))
-            {
-                return;
-            }
-#endif
-            try
-            {
-                var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, ServiceEventSource.Current, this.token);
-
-                if (telemetryEvents.FabricObserverRuntimeNodeEvent(codePkgVersion, GetFabricObserverInternalConfiguration(), "HealthState.Initialized"))
-                {
-                    // Log a file to prevent re-sending this in case of process restart(s).
-                    // This non-PII FO/Cluster info is versioned and should only be sent once per deployment (config or code updates).
-                    _ = Logger.TryWriteLogFile(filepath, GetFabricObserverInternalConfiguration());
-                }
-            }
-            catch
-            {
-                
-            }
         }
 
         public async Task StartObserversAsync()
         {
             try
             {
+                StartDateTime = DateTime.UtcNow;
+
                 // Nothing to do here.
                 if (observers == null || observers.Count == 0)
                 {
@@ -267,18 +242,48 @@ namespace FabricObserver.Observers
                     }
 
                     _ = await RunObserversAsync().ConfigureAwait(false);
-                    
 
-                 /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
-                    make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
-                    As always, measure and understand what impact your code has on memory before employing the GC API in your own projects.
-                    This is only used here to ensure gen0 and gen1 do not hold unecessary objects for any amount of time before FO goes to sleep and to compact the LOH. 
-                    
-                    All observers clear and null their internal lists, objects that maintain internal lists. They also dispose/null disposable objects, etc before this code runs.
-                    This is a micro "optimization" and not really necessary. However, it does modestly decrease the already reasonable memory footprint of FO. 
-                    Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
-                    FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
-                    
+                    // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
+                    if (FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    {
+                        try
+                        {
+                            using var telemetryEvents = new TelemetryEvents(
+                                                                FabricClientInstance,
+                                                                FabricServiceContext,
+                                                                ServiceEventSource.Current,
+                                                                token,
+                                                                EtwEnabled);
+
+                            var foData = GetFabricObserverInternalTelemetryData();
+                            
+                            if (foData != null)
+                            {
+                                string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_operational_telemetry.log");
+
+                                if (telemetryEvents.EmitFabricObserverOperationalEvent(foData, OperationalTelemetryRunInterval, filepath))
+                                {
+                                    LastTelemetrySendDate = DateTime.UtcNow;
+                                    ResetInternalDataCounters();
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // Telemetry is non-critical and should not take down FO.
+                        }
+                    }
+
+                    /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
+                       make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
+                       As always, measure and understand what impact your code has on memory before employing the GC API in your own projects.
+                       This is only used here to ensure gen0 and gen1 do not hold unecessary objects for any amount of time before FO goes to sleep and to compact the LOH. 
+
+                       All observers clear and null their internal lists, objects that maintain internal lists. They also dispose/null disposable objects, etc before this code runs.
+                       This is a micro "optimization" and not really necessary. However, it does modestly decrease the already reasonable memory footprint of FO. 
+                       Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
+                       FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
+
                     // SOH, sweep-only collection (no compaction). This will clear the early generation objects (short-lived) from memory. This only impacts the FO process.
                     GC.Collect(0, GCCollectionMode.Forced, true, false);
                     GC.Collect(1, GCCollectionMode.Forced, true, false);
@@ -341,9 +346,49 @@ namespace FabricObserver.Observers
                             });
                 }
 
+                // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
+                if (FabricObserverOperationalTelemetryEnabled)
+                {
+                    try
+                    {
+                        using var telemetryEvents = new TelemetryEvents(
+                                                            FabricClientInstance,
+                                                            FabricServiceContext,
+                                                            ServiceEventSource.Current,
+                                                            token,
+                                                            EtwEnabled);
+
+                        var foData = new FabricObserverCriticalErrorEventData
+                        {
+                            Source = ObserverConstants.ObserverManagerName,
+                            ErrorMessage = e.Message,
+                            ErrorStack = e.StackTrace,
+                            CrashTime = DateTime.UtcNow.ToString("o"),
+                            Version = InternalVersionNumber
+                        };
+
+                        string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_critical_error_telemetry.log");
+                        _ = telemetryEvents.EmitFabricObserverCriticalErrorEvent(foData, filepath);
+                    }
+                    catch
+                    {
+                        // Telemetry is non-critical and should not take down FO.
+                    }
+                }
+
                 // Don't swallow the exception.
                 // Take down FO process. Fix the bug(s).
                 throw;
+            }
+        }
+
+        private void ResetInternalDataCounters()
+        {
+            // These props are only set for telemetry purposes. This does not remove err/warn state on an observer.
+            foreach (var obs in observers)
+            {
+                obs.CurrentErrorCount = 0;
+                obs.CurrentWarningCount = 0;
             }
         }
 
@@ -470,13 +515,9 @@ namespace FabricObserver.Observers
             }
 
             if (disposing)
-            {
-                if (FabricClientInstance != null)
-                {
-                    FabricClientInstance.Dispose();
-                    FabricClientInstance = null;
-                }
-
+            { 
+                FabricClientInstance?.Dispose();
+                FabricClientInstance = null;
                 linkedSFRuntimeObserverTokenSource?.Dispose();
                 cts?.Dispose();
                 FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
@@ -500,11 +541,21 @@ namespace FabricObserver.Observers
             return false;
         }
 
-        private static string GetConfigSettingValue(string parameterName)
+        private static string GetConfigSettingValue(string parameterName, ConfigurationSettings settings)
         {
             try
             {
-                var configSettings = FabricServiceContext.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
+                ConfigurationSettings configSettings = null;
+
+                if (settings != null)
+                {
+                    configSettings = settings;
+                }
+                else
+                {
+                    configSettings = FabricServiceContext.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
+                }
+
                 var section = configSettings?.Sections[ObserverConstants.ObserverManagerConfigurationSectionName];
                 var parameter = section?.Parameters[parameterName];
 
@@ -536,18 +587,109 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// This function gets FabricObserver's internal configuration for telemetry for Charles and company.
-        /// No PII. As you can see, this is generic information - number of enabled observer, observer names.
+        /// This function gets FabricObserver's internal observer operational data for telemetry sent to Microsoft (no PII).
+        /// Any data sent to Microsoft is also stored in a file in the observer_logs directory so you can see exactly what gets transmitted.
+        /// You can enable/disable this at any time by setting EnableFabricObserverDiagnosticTelemetry to true/false in Settings.xml, ObserverManagerConfiguration section.
         /// </summary>
-        private string GetFabricObserverInternalConfiguration()
+        private FabricObserverOperationalEventData GetFabricObserverInternalTelemetryData()
         {
-            int enabledObserverCount = observers.Count(obs => obs.IsEnabled);
-            string observerList = observers.Aggregate("{ ", (current, obs) => current + $"{obs.ObserverName} ");
+            FabricObserverOperationalEventData telemetryData = null;
 
-            observerList += "}";
-            string ret = $"EnabledObserverCount: {enabledObserverCount}, EnabledObservers: {observerList}";
+            try
+            {
+                // plugins
+                bool hasPlugins = false;
+                string pluginsDir = Path.Combine(FabricServiceContext.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
-            return ret;
+                if (!Directory.Exists(pluginsDir))
+                {
+                    hasPlugins = false;
+                }
+                else
+                {
+                    try
+                    {
+                        string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
+                        hasPlugins = pluginDlls.Length > 0;
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException || e is PathTooLongException)
+                    {
+
+                    }
+                }
+
+                telemetryData = new FabricObserverOperationalEventData
+                {
+                    UpTime = DateTime.UtcNow.Subtract(StartDateTime).ToString(),
+                    Version = InternalVersionNumber,
+                    EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
+                    HasPlugins = hasPlugins,
+                    ObserverData = GetObserverData(),
+                };
+            }
+            catch (Exception e) when (e is ArgumentException)
+            {
+                
+            }
+
+            return telemetryData;
+        }
+
+        private List<ObserverData> GetObserverData()
+        {
+            var observerData = new List<ObserverData>();
+            var enabledObs = observers.Where(o => o.IsEnabled);
+            string[] builtInObservers = new string[]
+            {
+                ObserverConstants.AppObserverName,
+                ObserverConstants.AzureStorageUploadObserverName,
+                ObserverConstants.CertificateObserverName,
+                ObserverConstants.ContainerObserverName,
+                ObserverConstants.DiskObserverName,
+                ObserverConstants.FabricSystemObserverName,
+                ObserverConstants.NetworkObserverName,
+                ObserverConstants.NodeObserverName,
+                ObserverConstants.OSObserverName,
+                ObserverConstants.SFConfigurationObserverName
+            };
+
+            foreach (var obs in enabledObs)
+            {
+                // We don't need to have any information about plugins besides whether or not there are any.
+                if (!builtInObservers.Any(o => o == obs.ObserverName))
+                {
+                    continue;
+                }
+
+                // These built-in (non-plugin) observers monitor apps and/or services.
+                if (obs.ObserverName == ObserverConstants.AppObserverName ||
+                    obs.ObserverName == ObserverConstants.ContainerObserverName ||
+                    obs.ObserverName == ObserverConstants.NetworkObserverName ||
+                    obs.ObserverName == ObserverConstants.FabricSystemObserverName)
+                {
+                    observerData.Add(
+                        new AppServiceObserverData
+                        {
+                            ObserverName = obs.ObserverName,
+                            MonitoredAppCount = obs.MonitoredAppCount,
+                            MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount,
+                            ErrorCount = obs.CurrentErrorCount,
+                            WarningCount = obs.CurrentWarningCount
+                        });
+                }
+                else
+                {
+                    observerData.Add(
+                        new ObserverData
+                        {
+                            ObserverName = obs.ObserverName,
+                            ErrorCount = obs.CurrentErrorCount,
+                            WarningCount = obs.CurrentWarningCount
+                        });
+                }
+            }
+
+            return observerData;
         }
 
         /// <summary>
@@ -562,10 +704,7 @@ namespace FabricObserver.Observers
             try
             {
                 // For Linux, we need to restart the FO process due to the Linux Capabilities impl that enables us to run docker and netstat commands as elevated user (FO Linux should always be run as standard user on Linux).
-                // So, the netstats.sh FO setup script needs to run again so that the privileged operations can succeed when you enable/disable observers that need them, which is most observers (not all). These files are used by a shared utility.
-                // Exiting here ensures that both the new config settings you provided will be applied when a new FO process is running after the FO setup script runs that puts
-                // the Linux capabilities set in place for the elevated_netstat and elevated_docker_stats binaries. The reason this must happen is that SF touches the files during this upgrade (this may be an SF bug, but it is not preventing
-                // the shipping of FO 3.1.1.) and this unsets the Capabilities on the binaries. It looks like SF changes attributes on the files (permissions).
+                // During an upgrade event, SF touches the cap binaries which removes the cap settings so we need to run the FO app setup script again to reset them.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     // Graceful stop.
@@ -578,6 +717,9 @@ namespace FabricObserver.Observers
                 isConfigurationUpdateInProgress = true;
                 await StopObserversAsync(false).ConfigureAwait(true);
                 observers.Clear();
+
+                // ObserverManager settings?
+                this.SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
 
                 foreach (var observer in serviceCollection)
                 {
@@ -635,52 +777,58 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Sets ObserverManager's related properties/fields to their corresponding Settings.xml 
+        /// Sets ObserverManager's related properties/fields to their corresponding Settings.xml or ApplicationManifest.xml (Overrides)
         /// configuration settings (parameter values).
         /// </summary>
-        private void SetPropertiesFromConfigurationParameters()
+        private void SetPropertiesFromConfigurationParameters(ConfigurationSettings settings = null)
         {
-            ApplicationName = FabricRuntime.GetActivationContext().ApplicationName;
+            ApplicationName = FabricServiceContext.CodePackageActivationContext.ApplicationName;
 
-            // Observers
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout), out int result))
+            // ETW - Overridable
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool etwEnabled))
             {
-                observerExecTimeout = TimeSpan.FromSeconds(result);
+                EtwEnabled = etwEnabled;
             }
 
-            // Logger
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter), out bool enableVerboseLogging))
+            // Maximum time, in seconds, that an observer can run - Override.
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout, settings), out int timeoutSeconds))
+            {
+                ObserverExecutionTimeout = TimeSpan.FromSeconds(timeoutSeconds);
+            }
+
+            // ObserverManager verbose logging - Override.
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out bool enableVerboseLogging))
             {
                 Logger.EnableVerboseLogging = enableVerboseLogging;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds), out int execFrequency))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds, settings), out int execFrequency))
             {
                 ObserverExecutionLoopSleepSeconds = execFrequency;
-
-                Logger.LogInfo($"ExecutionFrequency is {ObserverExecutionLoopSleepSeconds} Seconds");
             }
 
             // FQDN for use in warning or error hyperlinks in HTML output
             // This only makes sense when you have the FabricObserverWebApi app installed.
-            string fqdn = GetConfigSettingValue(ObserverConstants.Fqdn);
+            string fqdn = GetConfigSettingValue(ObserverConstants.Fqdn, settings);
 
             if (!string.IsNullOrEmpty(fqdn))
             {
                 Fqdn = fqdn;
             }
 
-            // FabricObserver runtime telemetry (Non-PII)
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.FabricObserverTelemetryEnabled), out bool foTelemEnabled))
+            // FabricObserver runtime telemetry (No PII) - Override
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableFabricObserverOperationalTelemetry, settings), out bool foTelemEnabled))
             {
-                FabricObserverInternalTelemetryEnabled = foTelemEnabled;
+                FabricObserverOperationalTelemetryEnabled = foTelemEnabled;
             }
 
             // ObserverWebApi.
-            ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
+            ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiEnabled, settings), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
 
-            // ObserverFailure HealthState Level
-            string state = GetConfigSettingValue(ObserverConstants.ObserverFailureHealthStateLevelParameter);
+            // ObserverFailure HealthState Level - Override \\
+
+            string state = GetConfigSettingValue(ObserverConstants.ObserverFailureHealthStateLevelParameter, settings);
+            
             if (string.IsNullOrWhiteSpace(state) || state?.ToLower() == "none")
             {
                 ObserverFailureHealthStateLevel = HealthState.Unknown;
@@ -690,8 +838,8 @@ namespace FabricObserver.Observers
                 ObserverFailureHealthStateLevel = healthState;
             }
 
-            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled), out bool telemEnabled))
+            // Telemetry (AppInsights, LogAnalytics, etc) - Override
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled, settings), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
             }
@@ -701,7 +849,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderType);
+            string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderType, settings);
 
             if (string.IsNullOrEmpty(telemetryProviderType))
             {
@@ -721,9 +869,9 @@ namespace FabricObserver.Observers
             {
                 case TelemetryProviderType.AzureLogAnalytics:
                 {
-                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter);
-                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter);
-                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings);
+                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
+                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
 
                     if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                     {
@@ -743,7 +891,7 @@ namespace FabricObserver.Observers
 
                 case TelemetryProviderType.AzureApplicationInsights:
                 {
-                    string aiKey = GetConfigSettingValue(ObserverConstants.AiKey);
+                    string aiKey = GetConfigSettingValue(ObserverConstants.AiKey, settings);
 
                     if (string.IsNullOrEmpty(aiKey))
                     {
@@ -760,6 +908,7 @@ namespace FabricObserver.Observers
                     break;
             }
         }
+
 
         /// <summary>
         /// This function will signal cancellation on the token passed to an observer's ObserveAsync. 
@@ -791,7 +940,7 @@ namespace FabricObserver.Observers
             var exceptionBuilder = new StringBuilder();
             bool allExecuted = true;
 
-            for (int i = 0; i < observers.Count(); ++i)
+            for (int i = 0; i < observers.Count; ++i)
             {
                 var observer = observers[i];
 
@@ -814,17 +963,16 @@ namespace FabricObserver.Observers
                     }
 
                     Logger.LogInfo($"Starting {observer.ObserverName}");
-
                     IsObserverRunning = true;
 
                     // Synchronous call.
-                    bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(observerExecTimeout);
+                    bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(ObserverExecutionTimeout);
 
                     // The observer is taking too long (hung?), move on to next observer.
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
                     if (!isCompleted && !(TaskCancelled || shutdownSignaled))
                     {
-                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified Maximum run time of {observerExecTimeout.TotalSeconds} seconds. " +
+                        string observerHealthWarning = $"{observer.ObserverName} on node {nodeName} has exceeded its specified Maximum run time of {ObserverExecutionTimeout.TotalSeconds} seconds. " +
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Please look into it.";
 
                         Logger.LogError(observerHealthWarning);

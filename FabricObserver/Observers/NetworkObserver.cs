@@ -366,6 +366,7 @@ namespace FabricObserver.Observers
 
             if (userConfig.Count != 0)
             {
+                MonitoredAppCount = userConfig.Count;
                 return true;
             }
 
@@ -385,6 +386,7 @@ namespace FabricObserver.Observers
                 userConfig.Add(netConfig);
             }
 
+            MonitoredAppCount = userConfig.Count;
             return userConfig.Count != 0;
         }
 

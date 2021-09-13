@@ -3,20 +3,12 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.ServiceFabric.TelemetryLib
+namespace FabricObserver.TelemetryLib
 {
-    /// <summary>
-    /// Telemetry doesn't have an eventsource of its own. This interface declares the bare minimum events,
-    /// which should be implemented by eventsource of components which want to use Telemtry
-    /// </summary>
     public interface ITelemetryEventSource
     {
-        void VerboseMessage(string message, params object[] args);
+        void InternalFODataEvent<T>(T data);
 
-        void FabricObserverRuntimeNodeEvent(
-                           string clusterId,
-                           string applicationVersion,
-                           string foConfigInfo,
-                           string foHealthInfo);
+        void InternalFOCriticalErrorDataEvent<T>(T data);
     }
 }

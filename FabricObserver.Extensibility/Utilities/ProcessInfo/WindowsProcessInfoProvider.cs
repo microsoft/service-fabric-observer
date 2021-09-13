@@ -10,65 +10,40 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
 {
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
-        const string ProcessCategoryName = "Process";
-        const string WorkingSetCounterName = "Working Set - Private";
-        const string FileHandlesCounterName = "Handle Count";
-        private readonly object memPerfCounterLock = new object();
-        private readonly object fileHandlesPerfCounterLock = new object();
         private const int MaxDescendants = 50;
-        private PerformanceCounter memProcessPrivateWorkingSetCounter = new PerformanceCounter
-        {
-            CategoryName = ProcessCategoryName,
-            CounterName = WorkingSetCounterName,
-            ReadOnly = true
-        };
 
-        private PerformanceCounter processFileHandleCounter = new PerformanceCounter
+        public override float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false)
         {
-            CategoryName = ProcessCategoryName,
-            CounterName = FileHandlesCounterName,
-            ReadOnly = true
-        };
-
-        public override float GetProcessPrivateWorkingSetInMB(int processId)
-        {
-            string processName;
-
             try
             {
-                using (Process process = Process.GetProcessById(processId))
+                if (getPrivateWorkingSet)
                 {
-                    processName = process.ProcessName;
+                    return GetProcessPrivateWorkingSetMb(processId);
                 }
-            }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
-            {
-                // "Process with an Id of 12314 is not running."
-                return 0F;
-            }
 
-            lock (memPerfCounterLock)
+                NativeMethods.PROCESS_MEMORY_COUNTERS_EX memoryCounters;
+                memoryCounters.cb = (uint)Marshal.SizeOf(typeof(NativeMethods.PROCESS_MEMORY_COUNTERS_EX));
+
+                using (Process p = Process.GetProcessById(processId))
+                {
+                    if (!NativeMethods.GetProcessMemoryInfo(p.Handle, out memoryCounters, memoryCounters.cb))
+                    {
+                        throw new Win32Exception($"GetProcessMemoryInfo returned false. Error Code is {Marshal.GetLastWin32Error()}");
+                    }
+
+                    return memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
+                }
+            }
+            catch(Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
-                try
-                {
-                    memProcessPrivateWorkingSetCounter.InstanceName = processName;
-                    return memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
-                }
-                catch (Exception e) when (e is ArgumentNullException || e is Win32Exception || e is UnauthorizedAccessException)
-                {
-                    // Don't throw.
-                    return 0F;
-                }
-                catch (Exception e)
-                { 
-                    Logger.LogError($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
-                    throw;
-                }
+                Logger.LogWarning($"Exception getting working set for process {processId}:{Environment.NewLine}{e}");
+                return 0F;
             }
         }
 
@@ -77,42 +52,49 @@ namespace FabricObserver.Observers.Utilities
         {
             if (processId < 0)
             {
-                return -1F;
+                return 0F;
             }
 
-            string processName;
+            string query = $"select handlecount from win32_process where processid = {processId}";
 
             try
             {
-                using (Process process = Process.GetProcessById(processId))
+                using (var searcher = new ManagementObjectSearcher(query))
                 {
-                    processName = process.ProcessName;
+                    var results = searcher.Get();
+                    
+                    if (results.Count == 0)
+                    {
+                        return 0F;
+                    }
+
+                    using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
+                    {
+                        while (enumerator.MoveNext())
+                        {
+                            try
+                            {
+                                using (ManagementObject mObj = (ManagementObject)enumerator.Current)
+                                {
+                                    uint procHandles = (uint)mObj.Properties["handlecount"].Value;
+                                    return procHandles;
+                                }
+                            }
+                            catch (Exception e) when (e is ArgumentException || e is ManagementException)
+                            {
+                                Logger.LogWarning($"[Inner try-catch] Handled Exception in GetProcessAllocatedHandles: {e}");
+                                continue;
+                            }
+                        }
+                    }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
+            catch (ManagementException me)
             {
-                // "Process with an Id of 12314 is not running."
-                return -1F;
+                Logger.LogWarning($"[Outer try-catch] Handled Exception in GetProcessAllocatedHandles: {me}");
             }
 
-            lock (fileHandlesPerfCounterLock)
-            {
-                try
-                {
-                    processFileHandleCounter.InstanceName = processName;
-                    return processFileHandleCounter.NextValue();
-                }
-                catch (Exception e) when (e is InvalidOperationException || e is Win32Exception || e is UnauthorizedAccessException)
-                {
-                    // Don't throw.
-                    return -1F;
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError($"{ProcessCategoryName} {FileHandlesCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
-                    throw;
-                }
-            }
+            return 0F;
         }
 
         public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
@@ -199,35 +181,13 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        public float GetProcessPrivateWorkingSetInMB(string processName)
-        {
-            if (string.IsNullOrWhiteSpace(processName))
-            {
-                return 0F;
-            }
-
-            lock (memPerfCounterLock)
-            {
-                try
-                {
-                    memProcessPrivateWorkingSetCounter.InstanceName = processName;
-                    return memProcessPrivateWorkingSetCounter.NextValue() / (1024 * 1024);
-                }
-                catch (Exception e) when (e is ArgumentNullException || e is Win32Exception || e is UnauthorizedAccessException)
-                {
-                    // Don't throw.
-                    return 0F;
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError($"{ProcessCategoryName} {WorkingSetCounterName} PerfCounter unhandled error:{Environment.NewLine}{e}");
-                    throw;
-                }
-            }
-        }
-
         private List<(string procName, int pid)> TupleGetChildProcessInfo(int processId)
         {
+            if (processId < 0)
+            {
+                return null;
+            }
+
             List<(string procName, int pid)> childProcesses = null;
             string query = $"select caption,processid from win32_process where parentprocessid = {processId}";
 
@@ -280,19 +240,59 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (ManagementException me)
             {
-                Logger.LogWarning($"[Containing try-catch] Handled Exception in GetChildProcesses: {me}");
+                Logger.LogWarning($"[Outer try-catch] Handled Exception in GetChildProcesses: {me}");
             }
 
             return childProcesses;
         }
 
-        protected override void Dispose(bool disposing)
+        private float GetProcessPrivateWorkingSetMb(int processId)
         {
-            this.memProcessPrivateWorkingSetCounter?.Dispose();
-            this.memProcessPrivateWorkingSetCounter = null;
+            if (processId < 0)
+            {
+                return 0F;
+            }
 
-            this.processFileHandleCounter?.Dispose();
-            this.processFileHandleCounter = null;
+            string query = $"select WorkingSetPrivate from Win32_PerfRawData_PerfProc_Process where IDProcess = {processId}";
+
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher(query))
+                {
+                    var results = searcher.Get();
+
+                    if (results.Count == 0)
+                    {
+                        return 0F;
+                    }
+
+                    using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
+                    {
+                        while (enumerator.MoveNext())
+                        {
+                            try
+                            {
+                                using (ManagementObject mObj = (ManagementObject)enumerator.Current)
+                                {
+                                    ulong workingSet = (ulong)mObj.Properties["WorkingSetPrivate"].Value / 1024 / 1024;
+                                    return workingSet;
+                                }
+                            }
+                            catch (Exception e) when (e is ArgumentException || e is ManagementException)
+                            {
+                                Logger.LogWarning($"[Inner try-catch (enumeration)] Handled Exception in GetProcessPrivateWorkingSet: {e}");
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (ManagementException me)
+            {
+                Logger.LogWarning($"[Outer try-catch] Handled Exception in GetProcessPrivateWorkingSet: {me}");
+            }
+
+            return 0F;
         }
     }
 }

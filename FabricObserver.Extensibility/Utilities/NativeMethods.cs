@@ -58,5 +58,25 @@ namespace FabricObserver.Observers.Utilities
             MiniDumpFilterTriage = 0x00100000,
             MiniDumpValidTypeFlags = 0x001fffff
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct PROCESS_MEMORY_COUNTERS_EX
+        {
+            internal uint cb;
+            internal uint PageFaultCount;
+            internal IntPtr PeakWorkingSetSize;
+            internal IntPtr WorkingSetSize;
+            internal IntPtr QuotaPeakPagedPoolUsage;
+            internal IntPtr QuotaPagedPoolUsage;
+            internal IntPtr QuotaPeakNonPagedPoolUsage;
+            internal IntPtr QuotaNonPagedPoolUsage;
+            internal IntPtr PagefileUsage;
+            internal IntPtr PeakPagefileUsage;
+            internal IntPtr PrivateUsage;
+        }
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
     }
 }

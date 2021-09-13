@@ -22,22 +22,17 @@ namespace FabricObserver.Observers
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
     public class SFConfigurationObserver : ObserverBase
     {
-        // Values.
         private string SFVersion;
-
-        // Values.
         private string SFBinRoot;
-
-        // Values.
         private string SFCodePath;
-
-        // Values.
         private string SFDataRoot;
-
-        // Values.
         private string SFLogRoot;
+        private string SFNodeLastBootTime;
+        private string SFCompatibilityJsonPath;
+        private bool? SFVolumeDiskServiceEnabled;
+        private bool? unsupportedPreviewFeaturesEnabled;
+        private bool? SFEnableCircularTraceSession;
 
-        // Values.
         public string SFRootDir
         {
             get; private set;
@@ -47,15 +42,6 @@ namespace FabricObserver.Observers
         {
             get; set;
         }
-
-        // Values.
-        private string SFNodeLastBootTime;
-
-        // Values.
-        private string SFCompatibilityJsonPath;
-        private bool? SFVolumeDiskServiceEnabled;
-        private bool? unsupportedPreviewFeaturesEnabled;
-        private bool? SFEnableCircularTraceSession;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SFConfigurationObserver"/> class.
@@ -321,8 +307,8 @@ namespace FabricObserver.Observers
 
                                 if (procId > -1)
                                 {
-                                    ports = OperatingSystemInfoProvider.Instance.GetActiveTcpPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
-                                    ephemeralPorts = OperatingSystemInfoProvider.Instance.GetActiveEphemeralPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
+                                    ports = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
+                                    ephemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
                                 }
 
                                 _ = sb.AppendLine("\tService Name: " + serviceName.OriginalString);

@@ -336,6 +336,3 @@ ASALocalRun/
 /FabricObserver/observer_logs
 /FabricObserver/PackageRoot/Data/Plugins/SampleNewObserver.dll
 /nuget.exe
-/FabricObserver/PackageRoot/Data/Plugins/ContainerObserver
-/FabricObserver/PackageRoot/Data/Plugins/FabricObserverMdm
-/FabricObserver/PackageRoot/Config/containerobserver.config.json

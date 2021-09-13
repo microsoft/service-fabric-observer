@@ -1,26 +1,11 @@
 [
   {
-    "targetApp": "fabric:/TestApp",
+    "targetApp": "fabric:/TestApp0",
     "endpoints": [
       {
-        "hostname": "https://myazuresrvice42.westus2.cloudapp.azure.com",
+        "hostname": "bing.com",
         "port": 443,
         "protocol": "http"
-      },
-      {
-        "hostname": "somesqlservername.database.windows.net",
-        "port": 1433,
-        "protocol": "tcp"
-      }
-    ]
-  },
-  {
-    "targetApp": "fabric:/TestApp1",
-    "endpoints": [
-      {
-        "hostname": "somesqlservername.database.windows.net",
-        "port": 1433,
-        "protocol": "tcp"
       }
     ]
   }

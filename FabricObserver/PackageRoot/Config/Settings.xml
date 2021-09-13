@@ -1,11 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
+    <!-- *** Application Parameters - Must Override (set) in ApplicationManifest.xml, not here. *** -->
+    
     <!-- Required: Amount of time, in seconds, for FO to sleep before the next iteration of the sequential observers run loop. 
          0 means run continuously with no pausing - not recommended. If you only enable one observer, FO will sleep for 10 seconds between runs, regardless
          of this setting. SF Error/Warning Reports have TTLs that are computed in part with this value. -->
-    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
-    
+    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="" MustOverride="true"/>
     <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 120 minutes. If you are not monitoring hundreds of services, then you should decrease this if necessary.
@@ -13,8 +14,26 @@
          your deployment and configuration - like if you watch all services of a all applications and there are hundreds of them. You can do this easily by
          setting EnableVerboseLogging to true on AppObserver, for example, and it will log how long it takes to run each time it runs to completion. Any observer
          that monitors stuff supports run duration logging. Use this these values to determine what constitutes too long and that an observer needs to be fixed. 
-         No Observer should ever take 2 hours to run, so the below setting is an extreme maximum. Vary the number to meet your actual needs. -->
-    <Parameter Name="ObserverExecutionTimeout" Value="7200" />
+         No Observer should ever take 1 hour to run, for example, so the default setting of 3600 seconds is an extreme maximum. Vary the number to meet your actual needs. -->
+    <Parameter Name="ObserverExecutionTimeout" Value="" MustOverride="true" />
+    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. -->
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object in Logger instances that will emit 
+         FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
+    <Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
+    <!-- Optional: FabricObserver operational telemetry. No PII.  
+         See ObserverManager.cs and TelemetryLib project for FO data that is collected. -->
+    <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="" MustOverride="true" />
+    <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded), then put FO into Warning or Error state.
+         Supported values are Error, Warning or None (which means don't put FO into Warning or Error state..).-->
+    <Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
+    <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
+         but you can implement whatever provider you want. See IObserverTelemetry interface. -->
+    <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
+    
+    
+    <!-- *** Non-Overridable Parameters - Set these in this file. *** -->
     
     <!-- How long to wait, in seconds, after a shutdown is signaled. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
@@ -27,10 +46,6 @@
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data.
          **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you do for Windows).** -->
     <Parameter Name="DataLogPath" Value="fabric_observer_csvdata" />
-    
-    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. -->
-    <Parameter Name="EnableVerboseLogging" Value="false" />
     
     <!-- Optional: This is for use by the text logger to build node warning/error hyperlinks 
          that FabricObserverWebApi uses in html output. The API does not communicate directly with FabricObserver.
@@ -56,10 +71,6 @@
          RunInterval setting for supported observer. Note that in either case, files will remain on disk for the number of days specified in MaxArchivedCsvFileLifetimeDays. -->
     <Parameter Name="CsvFileWriteFormat" Value="SingleFileWithArchives" />
     
-    <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
-         but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="true" />
-    
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     
@@ -75,23 +86,9 @@
     
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
-    
-    <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object in Logger instances that will emit 
-         FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
-    <Parameter Name="EnableETWProvider" Value="true" />
-    
-    <!-- Optional: FabricObserver internal telemetry/diagnostic tracing. Non-PII.  
-         We just want to know if FO is running somewhere and that it is healthy. We collect no personal identifiable information, 
-         as you can see in the source code. See ObserverManager.cs for examples of collected data for FO.
-         See TelemetryLib project for SF info that is collected. -->
-    <Parameter Name="EnableFabricObserverDiagnosticTelemetry" Value="false" />
-    
+
     <!-- Optional: If you deploy the FabricObserverWebApi app, set this to true.-->
     <Parameter Name="ObserverWebApiEnabled" Value="false" />
-
-    <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded), then put FO into Warning or Error state.
-         Supported values are Error, Warning or None (which means don't put FO into Warning or Error state..).-->
-    <Parameter Name="ObserverFailureHealthStateLevel" Value="Warning" />
   </Section>
   
   <!-- Observer Configuration Settings - *NOTE*: These are overridable settings, see ApplicationManifest.xml. 
@@ -236,7 +233,6 @@
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
-    
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
          These values are held in a json file, NetworkObserver.config.json". -->
@@ -265,7 +261,6 @@
     <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
-    
     <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
     <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
     <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
@@ -298,31 +293,25 @@
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Azure Blob store container name. -->
     <Parameter Name="BlobContainerName" Value="" MustOverride="true" />
-    <!-- For Authenticating to your Storage Account, you can either provide an encrypted ConnectionString OR an Account Name and encrypted shared access key. -->
-    <!-- This must be an encrypted string. It is not a good idea to place an unencrypted ConnectionString here. 
-         Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
-         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
-    <Parameter Name="AzureStorageConnectionString" Value="" IsEncrypted="true" />
+    <!-- For Authenticating to your Storage Account, you can either provide a Connection String OR an Account Name and Account Key. 
+         NOTE: If you do not plan on encrypting your account secrets, then set IsEncrypted to false both here and in 
+         the AzureStorageUploadObserverConfiguration Section in ApplicationManifest.xml. -->
+    <Parameter Name="AzureStorageConnectionString" Value="" IsEncrypted="true" MustOverride="true" />
     <!-- OR -->
     <Parameter Name="AzureStorageAccountName" Value="" MustOverride="true" />
-    <!-- This must be an encrypted string. It is not a good idea to place an unencrypted key here. 
-         Use Invoke-ServiceFabricEncryptText PowerShell API to generate this string. 
-         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps -->
     <Parameter Name="AzureStorageAccountKey" Value="" IsEncrypted="true" MustOverride="true" />
-    <!-- Compression level for dmp file. Default is Optimal. If you have limited cores, than decrease the value. 
-         Supported values are: Fastest, Optimal. Optimal creates the smallest zip files. Fastest runs for less time with non-optimal compressed size. -->
+    <!-- Compression level. dmp files will be compressed to limit network usage. -->
     <Parameter Name="ZipFileCompressionLevel" Value="" MustOverride="true" />
   </Section>
-  <!-- Plugin model sample. Just add the configuration info here that your observer needs.
-       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
-       Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
-       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. -->
-   <Section Name="SampleNewObserverConfiguration">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
-    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+  <!-- NOTE: FabricObserver must run as System or Admin on *Windows* in order to run ContainerObserver successfully. This is not the case for Linux. -->
+   <Section Name="ContainerObserverConfiguration">
+     <Parameter Name="Enabled" Value="" MustOverride="true" />
+     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
+     <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
+     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+     <Parameter Name="ConfigFileName" Value="" MustOverride="true" />
   </Section>
 </Settings>

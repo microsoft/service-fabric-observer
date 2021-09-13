@@ -13,9 +13,9 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
-    public class LinuxInfoProvider : OperatingSystemInfoProvider
+    public class LinuxInfoProvider : OSInfoProvider
     {
-        public override (long TotalMemory, double PercentInUse) TupleGetTotalPhysicalMemorySizeAndPercentInUse()
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
 
@@ -26,8 +26,9 @@ namespace FabricObserver.Observers.Utilities
             // Divide by 1048576 to convert total memory from KB to GB.
             long totalMem = totalMemory / 1048576;
             double pctUsed = ((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100;
+            long memUsed = (totalMemory - availableMem - freeMem) / 1024;
 
-            return (totalMem, Math.Round(pctUsed, 2));
+            return (totalMem, memUsed, Math.Round(pctUsed, 2));
         }
 
         public override int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null)
@@ -90,7 +91,7 @@ namespace FabricObserver.Observers.Utilities
 
             osInfo.FreeVirtualMemoryKB = osInfo.FreePhysicalMemoryKB + memInfo[MemInfoConstants.SwapFree];
 
-            (float uptime, _) = await LinuxProcFS.ReadUptimeAsync();
+            (float uptime, _) = LinuxProcFS.ReadUptime();
 
             osInfo.LastBootUpTime = DateTime.UtcNow.AddSeconds(-uptime).ToString("o");
 
