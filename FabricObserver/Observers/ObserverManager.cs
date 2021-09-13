@@ -173,7 +173,7 @@ namespace FabricObserver.Observers
             linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
             FabricClientInstance = fabricClient;
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
-            nodeName = FabricServiceContext?.NodeContext.NodeName;
+            nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
 
             // Observer Logger setup.
@@ -940,7 +940,7 @@ namespace FabricObserver.Observers
             var exceptionBuilder = new StringBuilder();
             bool allExecuted = true;
 
-            for (int i = 0; i < observers.Count(); ++i)
+            for (int i = 0; i < observers.Count; ++i)
             {
                 var observer = observers[i];
 
@@ -963,7 +963,6 @@ namespace FabricObserver.Observers
                     }
 
                     Logger.LogInfo($"Starting {observer.ObserverName}");
-
                     IsObserverRunning = true;
 
                     // Synchronous call.
@@ -973,7 +972,7 @@ namespace FabricObserver.Observers
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
                     if (!isCompleted && !(TaskCancelled || shutdownSignaled))
                     {
-                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified Maximum run time of {ObserverExecutionTimeout.TotalSeconds} seconds. " +
+                        string observerHealthWarning = $"{observer.ObserverName} on node {nodeName} has exceeded its specified Maximum run time of {ObserverExecutionTimeout.TotalSeconds} seconds. " +
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Please look into it.";
 
                         Logger.LogError(observerHealthWarning);

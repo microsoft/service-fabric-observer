@@ -14,8 +14,8 @@
          your deployment and configuration - like if you watch all services of a all applications and there are hundreds of them. You can do this easily by
          setting EnableVerboseLogging to true on AppObserver, for example, and it will log how long it takes to run each time it runs to completion. Any observer
          that monitors stuff supports run duration logging. Use this these values to determine what constitutes too long and that an observer needs to be fixed. 
-         No Observer should ever take 2 hours to run, so the below setting is an extreme maximum. Vary the number to meet your actual needs. -->
-    <Parameter Name="ObserverExecutionTimeout" Value="7200" MustOverride="true" />
+         No Observer should ever take 1 hour to run, for example, so the default setting of 3600 seconds is an extreme maximum. Vary the number to meet your actual needs. -->
+    <Parameter Name="ObserverExecutionTimeout" Value="" MustOverride="true" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />

@@ -17,11 +17,13 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.MachineInfoModel;
 using System.Fabric.Description;
 using System.Fabric.Health;
+using System.ComponentModel;
 
 namespace FabricObserver.Observers
 {
     public class ContainerObserver : ObserverBase
     {
+        private const int MaxProcessExitWaitTimeMS = 60000;
         private List<FabricResourceUsageData<double>> allCpuDataPercentage;
         private List<FabricResourceUsageData<double>> allMemDataMB;
 
@@ -445,22 +447,41 @@ namespace FabricObserver.Observers
                         output.Add(l);
                     }
 
-                    p.WaitForExit();
+                    if (!p.WaitForExit(MaxProcessExitWaitTimeMS))
+                    {
+                        try
+                        {
+                            p?.Kill();
+                        }
+                        catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                        {
+
+                        }
+
+                        return;
+                    }
 
                     int exitStatus = p.ExitCode;
                     stdOutput.Close();
 
+                    // Was there an error running docker stats?
                     if (exitStatus != 0)
                     {
-                        // there was an error associated with the non-zero exit code. Log it and throw.
                         string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
+
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            msg += " NOTE: You must run FabricObserver as System user or Admin user on Windows " +
+                                   "in order for ContainerObserver to function correctly on Windows.";
+                        }
+
                         ObserverLogger.LogWarning(msg);
                         
                         var healthReport = new Utilities.HealthReport
                         {
                             AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
                             EmitLogEvent = EnableVerboseLogging,
-                            HealthMessage = msg + " " + "NOTE: You must run FabricObserver as System user or Admin user in order for ContainerObserver to function correctly.",
+                            HealthMessage = $"{msg}",
                             HealthReportTimeToLive = GetHealthReportTimeToLive(),
                             Property = "docker_stats_failure",
                             ReportType = HealthReportType.Application,
