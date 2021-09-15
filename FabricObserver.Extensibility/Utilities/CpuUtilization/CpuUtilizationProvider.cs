@@ -5,7 +5,6 @@
 
 using System;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -38,6 +37,10 @@ namespace FabricObserver.Observers.Utilities
                 }
 
                 return instance;
+            }
+            set
+            {
+                instance = value;
             }
         }
 

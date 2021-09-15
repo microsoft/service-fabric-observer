@@ -42,10 +42,10 @@ namespace FabricObserver.Observers.Utilities
             (int lowPort, int highPort) = TupleGetDynamicPortRange();
 
             int count = GetPortCount(processId, line =>
-                        {
-                            int port = GetPortFromNetstatOutput(line);
-                            return port >= lowPort && port <= highPort;
-                        }, context);
+            {
+                int port = GetPortFromNetstatOutput(line);
+                return port >= lowPort && port <= highPort;
+            }, context);
 
             return count;
         }

@@ -1448,14 +1448,13 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                var replicasOrInstances = GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType).GetAwaiter().GetResult();
+                var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType);
 
                 foreach (var rep in replicasOrInstances)
                 {
                     ReplicaOrInstanceList.Enqueue(rep);
                 }
                
-
                 var targets = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
                                                             && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
                                                                 || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower()));

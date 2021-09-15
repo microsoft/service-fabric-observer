@@ -19,8 +19,8 @@ namespace FabricObserver.Observers.Utilities
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
         public const string FabricObserverName = "FabricObserver";
         public const string FabricObserverETWEventName = "FabricObserverDataEvent";
-        public const string ObserverFailureHealthStateLevelParameter = "ObserverFailureHealthStateLevel";
         public const string EnableConcurrentExecution = "EnableConcurrentExecution";
+        public const string ObserverFailureHealthStateLevelParameter = "ObserverFailureHealthStateLevel";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";
@@ -64,7 +64,8 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxDumpsParameter = "MaxDumps";
         public const string MaxDumpsTimeWindowParameter = "MaxDumpsTimeWindow";
 
-        // AzureStorageObserver
+        // AzureStorageUploadObserver
+        public const string AzureStorageUploadObserverName = "AzureStorageUploadObserver";
         public const string AzureStorageConnectionStringParameter = "AzureStorageConnectionString";
         public const string AzureBlobContainerNameParameter = "BlobContainerName";
         public const string AzureStorageAccountNameParameter = "AzureStorageAccountName";
@@ -123,7 +124,7 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
-        
+
         // For use by Linux File Descriptors monitor.
         public const string NodeObserverLinuxFileHandlesErrorLimitPct = "LinuxFileHandlesErrorLimitPercent";
         public const string NodeObserverLinuxFileHandlesWarningLimitPct = "LinuxFileHandlesWarningLimitPercent";

@@ -40,7 +40,8 @@
     
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          Each observer will write to their own directory on this path.
-        **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you do for Windows).** -->
+        **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you would do for Windows).
+        The below (default) works on both platforms: on Windows it will be C:\observer_logs. On Linux the folder will live in the deployed code package directory.** -->
     <Parameter Name="ObserverLogPath" Value="observer_logs" />
     
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data.

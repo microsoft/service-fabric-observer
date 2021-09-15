@@ -362,6 +362,11 @@ namespace FabricObserver.Observers
         /// </summary>
         private void ReadServiceFabricWindowsEventLog()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return;
+            }
+
             string sfOperationalLogSource = "Microsoft-ServiceFabric/Operational";
             string sfAdminLogSource = "Microsoft-ServiceFabric/Admin";
             string systemLogSource = "System";

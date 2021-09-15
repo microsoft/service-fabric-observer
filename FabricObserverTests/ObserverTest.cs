@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
@@ -282,8 +283,7 @@ namespace FabricObserverTests
             using var obs = new AppObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
-                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>()
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json")
             };
 
             await obs.ObserveAsync(token);
@@ -326,8 +326,7 @@ namespace FabricObserverTests
             using var obs = new AppObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle.json"),
-                ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>()
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle.json")
             };
 
             await obs.ObserveAsync(token);

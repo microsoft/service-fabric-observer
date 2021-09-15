@@ -40,7 +40,7 @@ namespace FabricObserver.Observers.Utilities
                     return memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
                 }
             }
-            catch(Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
                 Logger.LogWarning($"Exception getting working set for process {processId}:{Environment.NewLine}{e}");
                 return 0F;
@@ -62,7 +62,7 @@ namespace FabricObserver.Observers.Utilities
                 using (var searcher = new ManagementObjectSearcher(query))
                 {
                     var results = searcher.Get();
-                    
+
                     if (results.Count == 0)
                     {
                         return 0F;
@@ -131,7 +131,7 @@ namespace FabricObserver.Observers.Utilities
                         return childProcesses.Take(MaxDescendants).ToList();
                     }
 
-                    for (int j = 0; j < c1.Count; ++j)  
+                    for (int j = 0; j < c1.Count; ++j)
                     {
                         List<(string ProcName, int Pid)> c2 = TupleGetChildProcessInfo(c1[j].Pid);
 

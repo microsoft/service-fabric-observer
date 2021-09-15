@@ -17,11 +17,14 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.MachineInfoModel;
 using System.Fabric.Description;
 using System.Collections.Concurrent;
+using System.ComponentModel;
+using System.Fabric.Health;
 
 namespace FabricObserver.Observers
 {
     public class ContainerObserver : ObserverBase
     {
+        private const int MaxProcessExitWaitTimeMS = 60000;
         private ConcurrentQueue<FabricResourceUsageData<double>> allCpuDataPercentage;
         private ConcurrentQueue<FabricResourceUsageData<double>> allMemDataMB;
 
@@ -30,7 +33,7 @@ namespace FabricObserver.Observers
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
         private ConcurrentQueue<ApplicationInfo> deployedTargetList;
-        private List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
+        private ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
         private readonly string ConfigPackagePath;
         private readonly object lockObj = new object();
         private string ConfigurationFilePath = string.Empty;
@@ -78,7 +81,7 @@ namespace FabricObserver.Observers
 
             _ = Parallel.For (0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
             {
-                var repOrInst = ReplicaOrInstanceList[i];
+                var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 ApplicationInfo app = deployedTargetList.First(
                                             a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
                                                     (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
@@ -155,6 +158,8 @@ namespace FabricObserver.Observers
 
         // Runs each time ObserveAsync is run to ensure that any new app targets and config changes will
         // be up to date across observer loop iterations.
+        // Runs each time ObserveAsync is run to ensure that any new app targets and config changes will
+        // be up to date across observer loop iterations.
         private async Task<bool> InitializeAsync(CancellationToken token)
         {
             SetConfigurationFilePath();
@@ -167,7 +172,7 @@ namespace FabricObserver.Observers
 
             userTargetList = new List<ApplicationInfo>();
             deployedTargetList = new ConcurrentQueue<ApplicationInfo>();
-            ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
+            ReplicaOrInstanceList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
 
             using (Stream stream = new FileStream(ConfigurationFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
@@ -226,7 +231,7 @@ namespace FabricObserver.Observers
 
                 foreach (var app in apps)
                 {
-                    token.ThrowIfCancellationRequested();
+                    Token.ThrowIfCancellationRequested();
 
                     if (app.ApplicationName.OriginalString == "fabric:/System")
                     {
@@ -246,7 +251,7 @@ namespace FabricObserver.Observers
 
                     if (userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString))
                     {
-                        var existingAppConfig = userTargetList.FirstOrDefault(a => a.TargetApp == app.ApplicationName.OriginalString);
+                        var existingAppConfig = userTargetList.Find(a => a.TargetApp == app.ApplicationName.OriginalString);
 
                         if (existingAppConfig == null)
                         {
@@ -271,7 +276,7 @@ namespace FabricObserver.Observers
                             CpuWarningLimitPercent = application.CpuWarningLimitPercent,
                         };
 
-                        userTargetList.Add(appConfig);  
+                        userTargetList.Add(appConfig);
                     }
                 }
 
@@ -282,6 +287,7 @@ namespace FabricObserver.Observers
             }
 
             int settingsFail = 0;
+            MonitoredAppCount = userTargetList.Count;
 
             foreach (var application in userTargetList)
             {
@@ -324,7 +330,7 @@ namespace FabricObserver.Observers
                                                                                           null,
                                                                                           ConfigurationSettings.AsyncTimeout,
                                                                                           token),
-                                               token);
+                                               Token);
 
                     if (codepackages.Count == 0)
                     {
@@ -347,13 +353,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            MonitoredAppCount = deployedTargetList.Count;
             MonitoredServiceProcessCount = ReplicaOrInstanceList.Count;
-
-            if (!EnableVerboseLogging)
-            {
-                return true;
-            }
 
             foreach (var rep in ReplicaOrInstanceList)
             {
@@ -389,11 +389,12 @@ namespace FabricObserver.Observers
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    var repOrInst = ReplicaOrInstanceList[i];
+                    var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                     string serviceName = repOrInst.ServiceName.OriginalString.Replace(repOrInst.ApplicationName.OriginalString, "").Replace("/", "");
                     string cpuId = $"{serviceName}_cpu";
                     string memId = $"{serviceName}_mem";
                     string containerId = string.Empty;
+                    string error = string.Empty;
 
                     if (!allCpuDataPercentage.Any(frud => frud.Id == cpuId))
                     {
@@ -405,7 +406,6 @@ namespace FabricObserver.Observers
                         allMemDataMB.Enqueue(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1, false));
                     }
 
-                    var monitorTimer = Stopwatch.StartNew();
                     string args = "/c docker stats --no-stream --format \"table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\"";
                     string filename = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe";
 
@@ -427,19 +427,101 @@ namespace FabricObserver.Observers
                         WindowStyle = ProcessWindowStyle.Hidden,
                         RedirectStandardInput = false,
                         RedirectStandardOutput = true,
-                        RedirectStandardError = false,
+                        RedirectStandardError = true
                     };
 
-                    using Process p = Process.Start(ps);
-                    List<string> output = new List<string>(2);
+                    using Process p = new Process();
+
+                    // Capture any error information from docker.
+                    p.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                    p.StartInfo = ps;
+                    _ = p.Start();
+                    var stdOutput = p.StandardOutput;
+
+                    // Start asynchronous read operation on error stream.  
+                    p.BeginErrorReadLine();
+
+                    List<string> output = new List<string>();
                     string l;
 
                     while ((l = p.StandardOutput.ReadLine()) != null)
                     {
-                        lock (lockObj)
+                        output.Add(l);
+                    }
+
+                    if (!p.WaitForExit(MaxProcessExitWaitTimeMS))
+                    {
+                        try
                         {
-                            output.Add(l);
+                            p?.Kill();
                         }
+                        catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                        {
+
+                        }
+
+                        ObserverLogger.LogWarning($"docker process has run too long ({MaxProcessExitWaitTimeMS} ms). Aborting.");
+                        state.Stop();
+                    }
+
+                    int exitStatus = p.ExitCode;
+                    stdOutput.Close();
+
+                    // Was there an error running docker stats?
+                    if (exitStatus != 0)
+                    {
+                        string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
+
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            msg += " NOTE: You must run FabricObserver as System user or Admin user on Windows " +
+                                   "in order for ContainerObserver to function correctly on Windows.";
+                        }
+
+                        ObserverLogger.LogWarning(msg);
+
+                        var healthReport = new Utilities.HealthReport
+                        {
+                            AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                            EmitLogEvent = EnableVerboseLogging,
+                            HealthMessage = $"{msg}",
+                            HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                            Property = "docker_stats_failure",
+                            ReportType = HealthReportType.Application,
+                            State = HealthState.Warning,
+                            NodeName = NodeName,
+                            Observer = ObserverName,
+                        };
+
+                        // Generate a Service Fabric Health Report.
+                        HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                        // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                        if (IsTelemetryEnabled)
+                        {
+                            _ = TelemetryClient?.ReportHealthAsync(
+                                                       "docker_stats_failure",
+                                                       HealthState.Warning,
+                                                       msg,
+                                                       ObserverName,
+                                                       Token);
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(
+                                            ObserverConstants.FabricObserverETWEventName,
+                                            new
+                                            {
+                                                Property = "docker_stats_failure",
+                                                Level = "Warning",
+                                                Message = msg,
+                                                ObserverName
+                                            });
+                        }
+
+                        state.Stop();
                     }
 
                     foreach (string line in output)
@@ -525,7 +607,7 @@ namespace FabricObserver.Observers
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary:
 
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                         {
@@ -583,7 +665,7 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                ReplicaOrInstanceList.Add(replicaInfo);
+                ReplicaOrInstanceList.Enqueue(replicaInfo);
             }
         }
 

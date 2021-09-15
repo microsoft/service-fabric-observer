@@ -29,26 +29,26 @@ namespace FabricObserver.TelemetryLib
         private readonly ITelemetryEventSource serviceEventSource;
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
+        private readonly bool isEtwEnabled;
 
         public TelemetryEvents(
                     FabricClient fabricClient,
                     ServiceContext context,
                     ITelemetryEventSource eventSource,
-                    CancellationToken token)
+                    CancellationToken token,
+                    bool etwEnabled)
         {
             serviceEventSource = eventSource;
             serviceContext = context;
             string config = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FOAppInsightsOperational.config"));
             appInsightsTelemetryConf = TelemetryConfiguration.CreateFromConfiguration(config);
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
-            telemetryClient = new TelemetryClient(appInsightsTelemetryConf)
-            {
-                InstrumentationKey = TelemetryConstants.AIKey
-            };
+            telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
             clusterId = ClusterId;
             tenantId = TenantId;
             clusterType = ClusterType;
+            isEtwEnabled = etwEnabled;
         }
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
@@ -61,7 +61,10 @@ namespace FabricObserver.TelemetryLib
             try
             {
                 // ETW
-                serviceEventSource.InternalFODataEvent(new { FOInternalTelemtryData = JsonConvert.SerializeObject(foData) });
+                if (isEtwEnabled)
+                {
+                    serviceEventSource.InternalFODataEvent(new { FOInternalTelemtryData = JsonConvert.SerializeObject(foData) });
+                }
 
                 string nodeHashString = string.Empty;
                 int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
@@ -78,17 +81,26 @@ namespace FabricObserver.TelemetryLib
                     { "EventRunInterval", runInterval.ToString() },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
-                    { "TenantId", tenantId },
                     { "NodeNameHash", nodeHashString },
                     { "FOVersion", foData.Version },
+                    { "HasPlugins", foData.HasPlugins.ToString() },
+                    { "ParallelExecution", foData.ParallelExecutionEnabled.ToString() },
                     { "UpTime", foData.UpTime },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", foData.OS }
                 };
 
+                if (eventProperties.TryGetValue("ClusterType", out string clustType))
+                {
+                    if (clustType != TelemetryConstants.ClusterTypeSfrp)
+                    {
+                        eventProperties.Add("TenantId", tenantId);
+                    }
+                }
+
                 IDictionary<string, double> metrics = new Dictionary<string, double>
                 {
-                    { "EnabledObserversCount", foData.EnabledObserverCount }
+                    { "EnabledObserverCount", foData.EnabledObserverCount }
                 };
 
                 const string err = "ErrorDetections";
@@ -104,7 +116,7 @@ namespace FabricObserver.TelemetryLib
 
                     // These observers monitor app services/containers.
                     if (obData.ObserverName.Contains("AppObserver") || obData.ObserverName.Contains("FabricSystemObserver")
-                            || obData.ObserverName.Contains("NetworkObserver") || obData.ObserverName.Contains("ContainerObserver"))
+                        || obData.ObserverName.Contains("NetworkObserver") || obData.ObserverName.Contains("ContainerObserver"))
                     {
                         // App count.
                         data = ((AppServiceObserverData)obData).MonitoredAppCount;
@@ -180,7 +192,10 @@ namespace FabricObserver.TelemetryLib
             try
             {
                 // ETW
-                serviceEventSource.InternalFOCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(foErrorData) });
+                if (isEtwEnabled)
+                {
+                    serviceEventSource.InternalFOCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(foErrorData) });
+                }
 
                 string nodeHashString = string.Empty;
                 int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;

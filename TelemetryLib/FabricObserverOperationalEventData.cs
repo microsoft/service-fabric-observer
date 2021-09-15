@@ -11,24 +11,34 @@ namespace FabricObserver.TelemetryLib
 {
     public class FabricObserverOperationalEventData
     {
-        public string UpTime 
-        { 
-            get; set; 
+        public string UpTime
+        {
+            get; set;
         }
 
-        public string Version 
-        { 
-            get; set; 
+        public string Version
+        {
+            get; set;
         }
 
-        public int EnabledObserverCount 
-        { 
-            get; set; 
+        public int EnabledObserverCount
+        {
+            get; set;
         }
 
-        public List<ObserverData> ObserverData 
-        { 
-            get; set; 
+        public bool HasPlugins
+        {
+            get; set;
+        }
+
+        public bool ParallelExecutionEnabled
+        {
+            get; set;
+        }
+
+        public List<ObserverData> ObserverData
+        {
+            get; set;
         }
 
         public string OS => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";

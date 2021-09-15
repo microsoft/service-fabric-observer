@@ -23,7 +23,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     // LogAnalyticsTelemetry class is partially (SendTelemetryAsync/GetSignature) based on public sample: https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
-        private const int MaxRetries = 5;
         private readonly FabricClient fabricClient;
         private readonly CancellationToken token;
         private readonly Logger logger;

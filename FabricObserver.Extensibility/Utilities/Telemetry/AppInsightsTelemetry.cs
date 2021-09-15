@@ -508,7 +508,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             // Track the telemetry.
             telemetryClient.TrackMetric(mt);
-
             return Task.CompletedTask;
         }
     }
