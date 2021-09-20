@@ -23,10 +23,6 @@ namespace FabricObserver.Observers.Utilities
     public sealed class Logger : IObserverLogger<ILogger>
     {
         private const int Retries = 5;
-
-        // This needs to be static to prevent internal EventSource instantiation errors.
-        //private static EventSource etwLogger;
-
         private readonly string loggerName;
 
         // Text file logger for observers - info/warn/error.
@@ -284,7 +280,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     Name = targetName,
                     OptimizeBufferReuse = true,
-                    ConcurrentWrites = false,
+                    ConcurrentWrites = true,
                     EnableFileDelete = true,
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",

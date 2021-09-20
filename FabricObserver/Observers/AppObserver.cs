@@ -123,7 +123,7 @@ namespace FabricObserver.Observers
 
         public override Task ReportAsync(CancellationToken token)
         {
-            if (deployedTargetList.Count == 0)
+            if (deployedTargetList.IsEmpty)
             {
                 return Task.CompletedTask;
             }
@@ -223,7 +223,6 @@ namespace FabricObserver.Observers
                     if (hasChildProcs)
                     {
                         ProcessChildProcs(AllAppMemDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                        
                     }
 
                     ProcessResourceDataReportHealth(
@@ -984,6 +983,7 @@ namespace FabricObserver.Observers
 
                 if (application?.TargetApp == null && application?.TargetAppType == null)
                 {
+                    // return in a parallel loop is equivalent to a standard loop's continue.
                     return;
                 }
 
@@ -1173,11 +1173,11 @@ namespace FabricObserver.Observers
                     {
                         int procId = procList.ElementAt(j).Pid;
                         string procName = procList.ElementAt(j).procName;
-                        TimeSpan duration = TimeSpan.FromSeconds(1);
+                        TimeSpan maxDuration = TimeSpan.FromSeconds(1);
 
                         if (MonitorDuration > TimeSpan.MinValue)
                         {
-                            duration = MonitorDuration;
+                            maxDuration = MonitorDuration;
                         }
 
                         // No need to proceed further if no cpu/mem/file handles thresholds are specified in configuration.
@@ -1209,7 +1209,6 @@ namespace FabricObserver.Observers
                                 }
                                 else
                                 {
-                                    // Do NOT do this...
                                     if (!AllAppHandlesData.Any(x => x?.Id == $"{id}:{procName}"))
                                     {
                                         AllAppHandlesData.Enqueue(new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}", capacity, UseCircularBuffer));
@@ -1258,7 +1257,7 @@ namespace FabricObserver.Observers
                         // Monitor Duration applies to the code below.
                         timer.Start();
 
-                        while (timer.Elapsed.Seconds <= duration.Seconds)
+                        while (timer.Elapsed <= maxDuration)
                         {
                             token.ThrowIfCancellationRequested();
 
@@ -1359,13 +1358,15 @@ namespace FabricObserver.Observers
                 }
            });
             
-            if (exceptions.Count > 0)
+            if (!exceptions.IsEmpty)
             {
                 var aggEx = new AggregateException(exceptions);
                 ObserverLogger.LogError($"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{aggEx}");
                 throw new AggregateException(aggEx);
             }
-
+#if DEBUG
+            ObserverLogger.LogInfo($"MonitorDeployedAppsAsync execution time: {stopwatch?.Elapsed}");
+#endif
             return Task.CompletedTask;
         }
 

@@ -36,7 +36,8 @@ namespace FabricObserver.Observers
         private ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
         private readonly string ConfigPackagePath;
         private readonly object lockObj = new object();
-        private string ConfigurationFilePath = string.Empty;
+        private Stopwatch runDurationTimer;
+        public string ConfigurationFilePath = string.Empty;
 
         public ContainerObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
@@ -55,24 +56,30 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            var runDurationTimer = Stopwatch.StartNew();
+            runDurationTimer = Stopwatch.StartNew();
 
             if (!await InitializeAsync(token).ConfigureAwait(false))
             {
                 return;
             }
 
+            Token = token;
             MonitorContainers();
             await ReportAsync(token);
             CleanUp();
             runDurationTimer.Stop();
             RunDuration = runDurationTimer.Elapsed;
+            if (EnableVerboseLogging)
+            {
+                ObserverLogger.LogInfo($"Run Duration {(ObserverManager.ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
+                                       $"Parallel (Processors: {Environment.ProcessorCount}):{RunDuration}");
+            }
             LastRunDateTime = DateTime.Now;
         }
 
         public override Task ReportAsync(CancellationToken token)
         {
-            if (deployedTargetList.Count == 0)
+            if (deployedTargetList.IsEmpty)
             {
                 return Task.CompletedTask;
             }
@@ -81,6 +88,8 @@ namespace FabricObserver.Observers
 
             _ = Parallel.For (0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
             {
+                token.ThrowIfCancellationRequested();
+
                 var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 ApplicationInfo app = deployedTargetList.First(
                                             a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
@@ -162,9 +171,7 @@ namespace FabricObserver.Observers
         // be up to date across observer loop iterations.
         private async Task<bool> InitializeAsync(CancellationToken token)
         {
-            SetConfigurationFilePath();
-
-            if (!File.Exists(ConfigurationFilePath))
+            if (!SetConfigurationFilePath())
             {
                 ObserverLogger.LogWarning($"Will not observe container resource consumption as no configuration file has been supplied.");
                 return false;
@@ -202,10 +209,10 @@ namespace FabricObserver.Observers
 
                 var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                              () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                                        deployedAppQueryDesc,
-                                                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                                                        Token),
-                                                              Token);
+                                                                                            deployedAppQueryDesc,
+                                                                                            ConfigurationSettings.AsyncTimeout,
+                                                                                            Token),
+                                                             Token);
 
                 // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
                 // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -216,22 +223,22 @@ namespace FabricObserver.Observers
                 // Check that it is not null, and make a new query passing back the token it gave you.
                 while (appList.ContinuationToken != null)
                 {
-                    Token.ThrowIfCancellationRequested();
+                    token.ThrowIfCancellationRequested();
 
                     deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
                     appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                              () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                                        deployedAppQueryDesc,
-                                                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                                                        Token),
+                                                                                            deployedAppQueryDesc,
+                                                                                            ConfigurationSettings.AsyncTimeout,
+                                                                                            Token),
                                                              Token);
                     apps.AddRange(appList.ToList());
-                    await Task.Delay(250, Token).ConfigureAwait(false);
+                    await Task.Delay(250, Token);
                 }
 
                 foreach (var app in apps)
                 {
-                    Token.ThrowIfCancellationRequested();
+                    token.ThrowIfCancellationRequested();
 
                     if (app.ApplicationName.OriginalString == "fabric:/System")
                     {
@@ -289,21 +296,23 @@ namespace FabricObserver.Observers
             int settingsFail = 0;
             MonitoredAppCount = userTargetList.Count;
 
-            foreach (var application in userTargetList)
+            _ = Parallel.For(0, MonitoredAppCount, async (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
+
+                var application = userTargetList.ElementAt(i);
 
                 if (string.IsNullOrWhiteSpace(application.TargetApp))
                 {
                     ObserverLogger.LogWarning($"InitializeAsync: Required setting, targetApp, is not set.");
                     settingsFail++;
-                    continue;
+                    return;
                 }
 
                 // No required settings for supplied application(s).
                 if (settingsFail == userTargetList.Count)
                 {
-                    return false;
+                    state.Stop();
                 }
 
                 ServiceFilterType filterType = ServiceFilterType.None;
@@ -324,24 +333,24 @@ namespace FabricObserver.Observers
                 {
                     var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                                                                          NodeName,
-                                                                                          new Uri(application.TargetApp),
-                                                                                          null,
-                                                                                          null,
-                                                                                          ConfigurationSettings.AsyncTimeout,
-                                                                                          token),
+                                                                                NodeName,
+                                                                                new Uri(application.TargetApp),
+                                                                                null,
+                                                                                null,
+                                                                                ConfigurationSettings.AsyncTimeout,
+                                                                                token),
                                                Token);
 
                     if (codepackages.Count == 0)
                     {
-                        continue;
+                        return;
                     }
 
                     int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
 
                     if (containerHostCount == 0)
                     {
-                        continue;
+                        return;
                     }
 
                     deployedTargetList.Enqueue(application);
@@ -351,7 +360,7 @@ namespace FabricObserver.Observers
                 {
                     ObserverLogger.LogInfo($"Handled Exception in function InitializeAsync:{e.GetType().Name}.");
                 }
-            }
+            });
 
             MonitoredServiceProcessCount = ReplicaOrInstanceList.Count;
 
@@ -385,16 +394,125 @@ namespace FabricObserver.Observers
 
             try
             {
-                _ = Parallel.For (0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
-                {
-                    Token.ThrowIfCancellationRequested();
+                string args = "/c docker stats --no-stream --format \"table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\"";
+                string filename = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe";
+                string error = string.Empty;
 
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    args = string.Empty;
+
+                    // We need the full path to the currently deployed FO CodePackage, which is where our 
+                    // linux Capabilities-laced proxy binary lives, which is used for elevated_docker_stats call.
+                    string path = FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path;
+                    filename = $"{path}/elevated_docker_stats";
+                }
+
+                var ps = new ProcessStartInfo
+                {
+                    Arguments = args,
+                    FileName = filename,
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardInput = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                var output = new List<string>();
+                using Process p = new Process();
+                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                p.OutputDataReceived += (sender, e) => { output.Add(e.Data); };
+                p.StartInfo = ps;
+                _ = p.Start();
+
+                // Start async reads.
+                p.BeginErrorReadLine();
+                p.BeginOutputReadLine();
+
+                // It should not take 60 seconds for the process that calls docker stats to exit.
+                // If so, then end execution of the outer loop: stop monitoring for this run of ContainerObserver.
+                if (!p.WaitForExit(MaxProcessExitWaitTimeMS))
+                {
+                    try
+                    {
+                        p?.Kill(true);
+                    }
+                    catch (Exception e) when (e is AggregateException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                    {
+
+                    }
+
+                    ObserverLogger.LogWarning($"docker process has run too long ({MaxProcessExitWaitTimeMS} ms). Aborting.");
+                    return;
+                }
+
+                int exitStatus = p.ExitCode;
+
+                // Was there an error running docker stats?
+                if (exitStatus != 0)
+                {
+                    string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        msg += " NOTE: You must run FabricObserver as System user or Admin user on Windows " +
+                                "in order for ContainerObserver to function correctly on Windows.";
+                    }
+
+                    ObserverLogger.LogWarning(msg);
+
+                    var healthReport = new Utilities.HealthReport
+                    {
+                        AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                        EmitLogEvent = EnableVerboseLogging,
+                        HealthMessage = $"{msg}",
+                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        Property = "docker_stats_failure",
+                        ReportType = HealthReportType.Application,
+                        State = HealthState.Warning,
+                        NodeName = NodeName,
+                        Observer = ObserverName,
+                    };
+
+                    // Generate a Service Fabric Health Report.
+                    HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                    // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                    if (IsTelemetryEnabled)
+                    {
+                        _ = TelemetryClient?.ReportHealthAsync(
+                                                    "docker_stats_failure",
+                                                    HealthState.Warning,
+                                                    msg,
+                                                    ObserverName,
+                                                    Token);
+                    }
+
+                    // ETW.
+                    if (IsEtwEnabled)
+                    {
+                        ObserverLogger.LogEtw(
+                                        ObserverConstants.FabricObserverETWEventName,
+                                        new
+                                        {
+                                            Property = "docker_stats_failure",
+                                            Level = "Warning",
+                                            Message = msg,
+                                            ObserverName
+                                        });
+                    }
+
+                    return;
+                }
+
+                _ = Parallel.For(0, ReplicaOrInstanceList.Count, (i, state) =>
+                {
                     var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                     string serviceName = repOrInst.ServiceName.OriginalString.Replace(repOrInst.ApplicationName.OriginalString, "").Replace("/", "");
                     string cpuId = $"{serviceName}_cpu";
                     string memId = $"{serviceName}_mem";
                     string containerId = string.Empty;
-                    string error = string.Empty;
 
                     if (!allCpuDataPercentage.Any(frud => frud.Id == cpuId))
                     {
@@ -404,124 +522,6 @@ namespace FabricObserver.Observers
                     if (!allMemDataMB.Any(frud => frud.Id == memId))
                     {
                         allMemDataMB.Enqueue(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1, false));
-                    }
-
-                    string args = "/c docker stats --no-stream --format \"table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\"";
-                    string filename = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe";
-
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    {
-                        args = string.Empty;
-
-                        // We need the full path to the currently deployed FO CodePackage, which is where our 
-                        // linux Capabilities-laced proxy binary lives, which is used for elevated_docker_stats call.
-                        string path = FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path;
-                        filename = $"{path}/elevated_docker_stats";
-                    }
-
-                    var ps = new ProcessStartInfo
-                    {
-                        Arguments = args,
-                        FileName = filename,
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-                    };
-
-                    using Process p = new Process();
-
-                    // Capture any error information from docker.
-                    p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                    p.StartInfo = ps;
-                    _ = p.Start();
-                    var stdOutput = p.StandardOutput;
-
-                    // Start asynchronous read operation on error stream.  
-                    p.BeginErrorReadLine();
-
-                    List<string> output = new List<string>();
-                    string l;
-
-                    while ((l = p.StandardOutput.ReadLine()) != null)
-                    {
-                        output.Add(l);
-                    }
-
-                    if (!p.WaitForExit(MaxProcessExitWaitTimeMS))
-                    {
-                        try
-                        {
-                            p?.Kill();
-                        }
-                        catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
-                        {
-
-                        }
-
-                        ObserverLogger.LogWarning($"docker process has run too long ({MaxProcessExitWaitTimeMS} ms). Aborting.");
-                        state.Stop();
-                    }
-
-                    int exitStatus = p.ExitCode;
-                    stdOutput.Close();
-
-                    // Was there an error running docker stats?
-                    if (exitStatus != 0)
-                    {
-                        string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
-
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        {
-                            msg += " NOTE: You must run FabricObserver as System user or Admin user on Windows " +
-                                   "in order for ContainerObserver to function correctly on Windows.";
-                        }
-
-                        ObserverLogger.LogWarning(msg);
-
-                        var healthReport = new Utilities.HealthReport
-                        {
-                            AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                            EmitLogEvent = EnableVerboseLogging,
-                            HealthMessage = $"{msg}",
-                            HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                            Property = "docker_stats_failure",
-                            ReportType = HealthReportType.Application,
-                            State = HealthState.Warning,
-                            NodeName = NodeName,
-                            Observer = ObserverName,
-                        };
-
-                        // Generate a Service Fabric Health Report.
-                        HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-                        // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                        if (IsTelemetryEnabled)
-                        {
-                            _ = TelemetryClient?.ReportHealthAsync(
-                                                       "docker_stats_failure",
-                                                       HealthState.Warning,
-                                                       msg,
-                                                       ObserverName,
-                                                       Token);
-                        }
-
-                        // ETW.
-                        if (IsEtwEnabled)
-                        {
-                            ObserverLogger.LogEtw(
-                                            ObserverConstants.FabricObserverETWEventName,
-                                            new
-                                            {
-                                                Property = "docker_stats_failure",
-                                                Level = "Warning",
-                                                Message = msg,
-                                                ObserverName
-                                            });
-                        }
-
-                        state.Stop();
                     }
 
                     foreach (string line in output)
@@ -540,7 +540,7 @@ namespace FabricObserver.Observers
                         if (stats.Length < 4)
                         {
                             ObserverLogger.LogWarning($"docker stats not returning expected information: stats.Count = {stats.Length}. Expected 4.");
-                            state.Stop();
+                            return;
                         }
 
                         if (!stats[1].Contains(repOrInst.ServicePackageActivationId))
@@ -562,33 +562,41 @@ namespace FabricObserver.Observers
                         double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
                         allMemDataMB?.FirstOrDefault(f => f.Id == memId)?.Data.Add(mem_working_set_mb);
 
-                        Thread.Sleep(150);
+                        break;
                     }
-
-                    lock (lockObj)
-                    {
-                        output.Clear();
-                        output = null;
-                    }
-                });
+               });
             }
-            catch (AggregateException e) when (!(e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                ObserverLogger.LogWarning($"Failure in ObserveAsync:{Environment.NewLine}{e}");
-
-                // fix the bug..
+                ObserverLogger.LogError($"Exception in MonitorContainers:{Environment.NewLine}{e}");
                 throw;
             }
         }
 
-        private void SetConfigurationFilePath()
+        private bool SetConfigurationFilePath()
         {
-            string configDataFilename = GetSettingParameterValue(ConfigurationSectionName, "ConfigFileName");
-
-            if (!string.IsNullOrEmpty(configDataFilename) && !ConfigurationFilePath.Contains(configDataFilename))
+            // Already set.
+            if (File.Exists(ConfigurationFilePath))
             {
-                ConfigurationFilePath = Path.Combine(ConfigPackagePath, configDataFilename);
+                return true;
             }
+
+            string configDataFilename = GetSettingParameterValue(ConfigurationSectionName, "ConfigFileName");
+            
+            if (string.IsNullOrWhiteSpace(configDataFilename))
+            {
+                return false;
+            }
+
+            string path = Path.Combine(ConfigPackagePath, configDataFilename);
+            
+            if (File.Exists(path))
+            {
+                ConfigurationFilePath = path;
+                return true;
+            }
+
+            return false;
         }
 
         private async Task SetInstanceOrReplicaMonitoringList(

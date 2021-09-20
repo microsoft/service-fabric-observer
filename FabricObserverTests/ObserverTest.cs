@@ -158,6 +158,20 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public void ContainerObserver_Constructor_test()
+        {
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new ContainerObserver(fabricClient, context);
+
+            Assert.IsTrue(obs.ObserverLogger != null);
+            Assert.IsTrue(obs.HealthReporter != null);
+            Assert.IsTrue(obs.ObserverName == ObserverConstants.ContainerObserverName);
+        }
+
+        [TestMethod]
         public void DiskObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = context;
@@ -327,6 +341,52 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle.json")
+            };
+
+            await obs.ObserveAsync(token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
+        }
+
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+        [TestMethod]
+        public async Task ContainerObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            using var client = new FabricClient();
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricClientInstance = client;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+            ObserverManager.EnableConcurrentExecution = true;
+            ObserverManager.ParallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount >= 4 ? -1 : 1,
+                CancellationToken = token,
+                TaskScheduler = TaskScheduler.Default
+            };
+
+            using var obs = new ContainerObserver(client, context)
+            {
+                ConfigurationFilePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "ContainerObserver.config.json")
             };
 
             await obs.ObserveAsync(token);

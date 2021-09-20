@@ -215,6 +215,12 @@ namespace ClusterObserver
                 }
                 else
                 {
+                    // Cluster is healthy. Don't do anything.
+                    if (clusterHealth.AggregatedHealthState == HealthState.Ok)
+                    {
+                        return;
+                    }
+
                     // If in Warning and you are not sending Warning state reports, then end here.
                     if (!ConfigSettings.EmitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning)
                     {
@@ -225,12 +231,6 @@ namespace ClusterObserver
 
                     // No Unhealthy Evaluations means nothing to see here. 
                     if (unhealthyEvaluations.Count == 0)
-                    {
-                        return;
-                    }
-
-                    // Cluster is healthy. Don't do anything.
-                    if (clusterHealth.AggregatedHealthState == HealthState.Ok)
                     {
                         return;
                     }

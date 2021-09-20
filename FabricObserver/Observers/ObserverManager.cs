@@ -39,6 +39,7 @@ namespace FabricObserver.Observers
         private readonly IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgress;
         private DateTime StartDateTime;
+        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromHours(8);
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.1.17";
@@ -96,17 +97,25 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public bool IsObserverRunning
-        {
-            get;
-            private set;
-        }
-
         public static HealthState ObserverFailureHealthStateLevel
         {
             get;
             set;
         } = HealthState.Unknown;
+
+        /// <summary>
+        /// This is for observers that support parallelized monitor loops. 
+        /// AppObserver, ContainerObserver, FabricSystemObserver.
+        /// </summary>
+        public static ParallelOptions ParallelOptions
+        {
+            get; set;
+        }
+
+        public static bool EnableConcurrentExecution
+        {
+            get; set;
+        }
 
         private ObserverHealthReporter HealthReporter
         {
@@ -128,26 +137,17 @@ namespace FabricObserver.Observers
             get;
         }
 
-        public DateTime LastTelemetrySendDate
-        {
-            get; private set;
-        }
-
-        public TimeSpan OperationalTelemetryRunInterval
-        {
-            get; private set;
-        } = TimeSpan.FromHours(8);
-
-        /// <summary>
-        /// This is for observers that support parallelized monitor loops. 
-        /// AppObserver, ContainerObserver, FabricSystemObserver.
-        /// </summary>
-        public static ParallelOptions ParallelOptions
+        private DateTime LastForcedGCDateTime
         {
             get; set;
         }
 
-        public static bool EnableConcurrentExecution
+        private TimeSpan ForcedGCInterval
+        {
+            get; set;
+        } = TimeSpan.FromMinutes(15);
+
+        private DateTime LastTelemetrySendDate
         {
             get; set;
         }
@@ -212,6 +212,7 @@ namespace FabricObserver.Observers
 
             // this logs error/warning/info messages for ObserverManager.
             Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays > 0 ? MaxArchivedLogFileLifetimeDays : 7);
+            SetPropertiesFromConfigurationParameters();
             serviceCollection = serviceProvider.GetServices<ObserverBase>();
 
             // Populate the Observer list for the sequential run loop.
@@ -229,7 +230,6 @@ namespace FabricObserver.Observers
             }
 
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-            SetPropertiesFromConfigurationParameters();
 
             ParallelOptions = new ParallelOptions
             {
@@ -296,19 +296,13 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
-                       make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
-                       As always, measure and understand what impact your code has on memory before employing the GC API in your own projects.
-                       This is only used here to ensure gen0 and gen1 do not hold unecessary objects for any amount of time before FO goes to sleep and to compact the LOH. 
-
-                       All observers clear and null their internal lists, objects that maintain internal lists. They also dispose/null disposable objects, etc before this code runs.
-                       This is a micro "optimization" and not really necessary. However, it does modestly decrease the already reasonable memory footprint of FO. 
-                       Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
-                       FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
-
-                    // SOH, sweep-only collection (no compaction). This will clear the early generation objects (short-lived) from memory. This only impacts the FO process.
-                    GC.Collect(0, GCCollectionMode.Forced, true, false);
-                    GC.Collect(1, GCCollectionMode.Forced, true, false);
+                    // Force Gen0-Gen2 collection with compaction, including LOH. This runs every 15 minutes.
+                    if (DateTime.UtcNow.Subtract(LastForcedGCDateTime) >= ForcedGCInterval)
+                    {
+                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                        GC.Collect(2, GCCollectionMode.Forced, true, true);
+                        LastForcedGCDateTime = DateTime.UtcNow;
+                    }
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
@@ -520,7 +514,6 @@ namespace FabricObserver.Observers
             if (!isConfigurationUpdateInProgress)
             {
                 SignalAbortToRunningObserver();
-                IsObserverRunning = false;
             }
         }
 
@@ -1001,7 +994,6 @@ namespace FabricObserver.Observers
                     }
 
                     Logger.LogInfo($"Starting {observer.ObserverName}");
-                    IsObserverRunning = true;
 
                     // Synchronous call.
                     bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(ObserverExecutionTimeout);
@@ -1107,16 +1099,12 @@ namespace FabricObserver.Observers
                 }
                 catch (AggregateException ex)
                 {
-                    IsObserverRunning = false;
-
                     if (ex.InnerException is FabricException ||
                         ex.InnerException is OperationCanceledException ||
                         ex.InnerException is TaskCanceledException)
                     {
                         if (isConfigurationUpdateInProgress)
                         {
-                            IsObserverRunning = false;
-
                             return true;
                         }
 
@@ -1130,7 +1118,6 @@ namespace FabricObserver.Observers
                 {
                     if (isConfigurationUpdateInProgress)
                     {
-                        IsObserverRunning = false;
                         return true;
                     }
 
@@ -1142,8 +1129,6 @@ namespace FabricObserver.Observers
                     Logger.LogWarning($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                     allExecuted = false;
                 }
-
-                IsObserverRunning = false;
             }
 
             if (allExecuted)

@@ -31,7 +31,7 @@ namespace FabricObserver.Observers
         private const string FabricSystemAppName = "fabric:/System";
         private bool disposed;
         private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
-        private object lockObj = new object();
+        private readonly object lockObj = new object();
 
         // Process dump settings. Only AppObserver and Windows is supported. \\
         public string DumpsPath

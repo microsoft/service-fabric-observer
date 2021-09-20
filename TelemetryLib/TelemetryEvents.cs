@@ -165,7 +165,7 @@ namespace FabricObserver.TelemetryLib
                 // write a local log file containing the exact information sent to MS \\
                 string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray());
                 telemetryData += "," + string.Join(",", metrics.Select(kv => $"\"{kv.Key}\":" + kv.Value).ToArray()) + "}";
-                TryWriteLogFile(logFilePath, telemetryData);
+                _ = TryWriteLogFile(logFilePath, telemetryData);
 
                 eventProperties.Clear();
                 eventProperties = null;
@@ -174,9 +174,10 @@ namespace FabricObserver.TelemetryLib
 
                 return true;
             }
-            catch
+            catch (Exception e)
             {
                 // Telemetry is non-critical and should not take down FO.
+                _ = TryWriteLogFile(logFilePath, $"{e}");
             }
 
             return false;
@@ -229,11 +230,11 @@ namespace FabricObserver.TelemetryLib
 
                 // write a local log file containing the exact information sent to MS \\
                 string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
-                TryWriteLogFile(logFilePath, telemetryData);
+                _ = TryWriteLogFile(logFilePath, telemetryData);
 
                 return true;
             }
-            catch
+            catch(Exception e)
             {
                 // Telemetry is non-critical and should not take down FO.
             }
@@ -276,7 +277,7 @@ namespace FabricObserver.TelemetryLib
                     File.WriteAllText(path, content);
                     return true;
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                catch
                 {
 
                 }
