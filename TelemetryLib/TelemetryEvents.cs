@@ -53,7 +53,7 @@ namespace FabricObserver.TelemetryLib
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
         {
-            if (!telemetryClient.IsEnabled() || telemetryClient.InstrumentationKey == "$Token$")
+            if (!telemetryClient.IsEnabled())
             {
                 return false;
             }
