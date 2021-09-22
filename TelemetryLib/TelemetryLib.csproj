@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk" InitialTargets="ReplaceAppInsightsKey;">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{7BC6991F-C840-413E-B1CD-4025947CF5FA}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -24,25 +24,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <UsingTask TaskName="TokenReplace" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
-    <ParameterGroup>
-      <Path ParameterType="System.String" Required="true" />
-      <Token ParameterType="System.String" Required="true" />
-      <Replacement ParameterType="System.String" />
-    </ParameterGroup>
-    <Task>
-      <Code Type="Fragment" Language="cs">
-        <![CDATA[
-string content = File.ReadAllText(Path);
-content = content.Replace(Token, Replacement);
-File.WriteAllText(Path, content);
-
-]]>
-      </Code>
-    </Task>
-  </UsingTask>
-  <Target Name="ReplaceAppInsightsKey">
-    <TokenReplace Path="TelemetryConstants.cs" Token="$Token$" Replacement="$(AppInsightsKey)" Condition="'$(AppInsightsKey)' != ''" />
-  </Target>
 </Project>
