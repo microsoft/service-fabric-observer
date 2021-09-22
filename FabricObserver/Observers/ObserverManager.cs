@@ -39,7 +39,7 @@ namespace FabricObserver.Observers
         private readonly IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgress;
         private DateTime StartDateTime;
-        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromHours(8);
+        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.1.17";
@@ -266,7 +266,8 @@ namespace FabricObserver.Observers
                     _ = await RunObserversAsync().ConfigureAwait(false);
 
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
-                    // understanding generic behavior of FO in the real world (no PII).
+                    // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
+                    // than 90 days.
                     if (FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
@@ -294,6 +295,7 @@ namespace FabricObserver.Observers
                         catch
                         {
                             // Telemetry is non-critical and should not take down FO.
+                            // TelemetryLib will log exception details to file in top level FO log folder.
                         }
                     }
 
@@ -848,7 +850,7 @@ namespace FabricObserver.Observers
                 Fqdn = fqdn;
             }
 
-            // FabricObserver runtime telemetry (No PII) - Override
+            // FabricObserver operational telemetry (No PII) - Override
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableFabricObserverOperationalTelemetry, settings), out bool foTelemEnabled))
             {
                 FabricObserverOperationalTelemetryEnabled = foTelemEnabled;
