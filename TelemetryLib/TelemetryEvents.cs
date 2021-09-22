@@ -234,7 +234,7 @@ namespace FabricObserver.TelemetryLib
 
                 return true;
             }
-            catch(Exception e)
+            catch
             {
                 // Telemetry is non-critical and should not take down FO.
             }

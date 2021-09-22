@@ -294,9 +294,8 @@ namespace FabricObserver.Observers
             }
 
             int settingsFail = 0;
-            MonitoredAppCount = userTargetList.Count;
 
-            _ = Parallel.For(0, MonitoredAppCount, async (i, state) =>
+            _ = Parallel.For(0, userTargetList.Count, async (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
 
@@ -353,6 +352,7 @@ namespace FabricObserver.Observers
                         return;
                     }
 
+                    MonitoredAppCount++;
                     deployedTargetList.Enqueue(application);
                     await SetInstanceOrReplicaMonitoringList(new Uri(application.TargetApp), filteredServiceList, filterType, null).ConfigureAwait(false);
                 }
@@ -456,11 +456,12 @@ namespace FabricObserver.Observers
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        msg += " NOTE: You must run FabricObserver as System user or Admin user on Windows " +
+                        msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                 "in order for ContainerObserver to function correctly on Windows.";
                     }
 
                     ObserverLogger.LogWarning(msg);
+                    CurrentWarningCount++;
 
                     var healthReport = new Utilities.HealthReport
                     {

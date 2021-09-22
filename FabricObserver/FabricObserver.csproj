@@ -29,13 +29,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data.Extensions" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data.Interfaces" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="4.2.452" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="5.0.1" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="5.0.1" />
     <PackageReference Include="System.IO" Version="4.3.0" />
     <PackageReference Include="System.Management" Version="5.0.0" />
     <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
