@@ -265,7 +265,8 @@ namespace FabricObserver.Observers
 
                     _ = await RunObserversAsync().ConfigureAwait(false);
 
-                    // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
+                    // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
+                    // understanding generic behavior of FO in the real world (no PII).
                     if (FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
