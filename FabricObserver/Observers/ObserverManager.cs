@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
+using System.Runtime;
 
 namespace FabricObserver.Observers
 {
@@ -28,19 +29,20 @@ namespace FabricObserver.Observers
     // with optional sleeps, and reliable shutdown event handling.
     public class ObserverManager : IDisposable
     {
+        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
+        private const string InternalVersionNumber = "3.1.18";
         private readonly string nodeName;
         private readonly List<ObserverBase> observers;
-        private volatile bool shutdownSignaled;
         private readonly CancellationToken token;
+        private readonly TimeSpan ForcedGCInterval = TimeSpan.FromMinutes(15);
+        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private volatile bool shutdownSignaled;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
         private bool disposed;
         private readonly IEnumerable<ObserverBase> serviceCollection;
         private bool isConfigurationUpdateInProgress;
         private DateTime StartDateTime;
-
-        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.17";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -97,14 +99,12 @@ namespace FabricObserver.Observers
 
         public bool IsObserverRunning
         {
-            get;
-            private set;
+            get; private set;
         }
 
         public static HealthState ObserverFailureHealthStateLevel
         {
-            get;
-            set;
+            get; set;
         } = HealthState.Unknown;
 
         private ObserverHealthReporter HealthReporter
@@ -132,10 +132,10 @@ namespace FabricObserver.Observers
             get; private set; 
         }
 
-        public TimeSpan OperationalTelemetryRunInterval
+        private DateTime LastForcedGCDateTime
         {
-            get; private set;
-        } = TimeSpan.FromHours(8);
+            get; set;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
@@ -274,19 +274,13 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    /* Note the below use of GC.Collect is NOT a general recommendation for what to do in your own managed service code or app code. Please don't 
-                       make that connection. You should generally not have to call GC.Collect from user service code. It just depends on your performance needs.
-                       As always, measure and understand what impact your code has on memory before employing the GC API in your own projects.
-                       This is only used here to ensure gen0 and gen1 do not hold unecessary objects for any amount of time before FO goes to sleep and to compact the LOH. 
-
-                       All observers clear and null their internal lists, objects that maintain internal lists. They also dispose/null disposable objects, etc before this code runs.
-                       This is a micro "optimization" and not really necessary. However, it does modestly decrease the already reasonable memory footprint of FO. 
-                       Out of the box, FO will generally consume less than 100MB of workingset. Most of this (~65-70%) is held in native memory. 
-                       FO workingset can increase depending upon how many services you monitor, how you write your plugins with respect to memory consumption, etc.. */
-
-                    // SOH, sweep-only collection (no compaction). This will clear the early generation objects (short-lived) from memory. This only impacts the FO process.
-                    GC.Collect(0, GCCollectionMode.Forced, true, false);
-                    GC.Collect(1, GCCollectionMode.Forced, true, false);
+                    // Force Gen0-Gen2 collection with compaction, including LOH. This runs every 15 minutes.
+                    if (DateTime.UtcNow.Subtract(LastForcedGCDateTime) >= ForcedGCInterval)
+                    {
+                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                        GC.Collect(2, GCCollectionMode.Forced, true, true);
+                        LastForcedGCDateTime = DateTime.UtcNow;
+                    }
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {

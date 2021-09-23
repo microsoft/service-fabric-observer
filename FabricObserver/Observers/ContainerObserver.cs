@@ -381,13 +381,124 @@ namespace FabricObserver.Observers
             int listcapacity = ReplicaOrInstanceList.Count;
             allCpuDataPercentage ??= new List<FabricResourceUsageData<double>>(listcapacity);
             allMemDataMB ??= new List<FabricResourceUsageData<double>>(listcapacity);
-            
+            string error = string.Empty;
+            string args = "/c docker stats --no-stream --format \"table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\"";
+            string filename = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                args = string.Empty;
+
+                // We need the full path to the currently deployed FO CodePackage, which is where our 
+                // linux Capabilities-laced proxy binary lives, which is used for elevated_docker_stats call.
+                string path = FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path;
+                filename = $"{path}/elevated_docker_stats";
+            }
+
+            var ps = new ProcessStartInfo
+            {
+                Arguments = args,
+                FileName = filename,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            var output = new List<string>();
+            using Process p = new Process();
+            p.ErrorDataReceived += (sender, e) => { error += e.Data; };
+            p.OutputDataReceived += (sender, e) => { output.Add(e.Data); };
+            p.StartInfo = ps;
+            _ = p.Start();
+
+            // Start async reads.
+            p.BeginErrorReadLine();
+            p.BeginOutputReadLine();
+
+            // It should not take 60 seconds for the process that calls docker stats to exit.
+            // If so, then end execution of the outer loop: stop monitoring for this run of ContainerObserver.
+            if (!p.WaitForExit(MaxProcessExitWaitTimeMS))
+            {
+                try
+                {
+                    p?.Kill(true);
+                }
+                catch (Exception e) when (e is AggregateException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                {
+
+                }
+
+                ObserverLogger.LogWarning($"docker process has run too long ({MaxProcessExitWaitTimeMS} ms). Aborting.");
+                return;
+            }
+
+            int exitStatus = p.ExitCode;
+
+            // Was there an error running docker stats?
+            if (exitStatus != 0)
+            {
+                string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
+                            "in order for ContainerObserver to function correctly on Windows.";
+                }
+
+                ObserverLogger.LogWarning(msg);
+                CurrentWarningCount++;
+
+                var healthReport = new Utilities.HealthReport
+                {
+                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                    EmitLogEvent = EnableVerboseLogging,
+                    HealthMessage = $"{msg}",
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = "docker_stats_failure",
+                    ReportType = HealthReportType.Application,
+                    State = HealthState.Warning,
+                    NodeName = NodeName,
+                    Observer = ObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                                                "docker_stats_failure",
+                                                HealthState.Warning,
+                                                msg,
+                                                ObserverName,
+                                                Token);
+                }
+
+                // ETW.
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Property = "docker_stats_failure",
+                                        Level = "Warning",
+                                        Message = msg,
+                                        ObserverName
+                                    });
+                }
+
+                return;
+            }
+
             try
             {
                 foreach (ReplicaOrInstanceMonitoringInfo repOrInst in ReplicaOrInstanceList)
                 {
                     Token.ThrowIfCancellationRequested();
-                    string error = string.Empty;
                     string serviceName = repOrInst.ServiceName.OriginalString.Replace(repOrInst.ApplicationName.OriginalString, "").Replace("/", "");
                     string cpuId = $"{serviceName}_cpu";
                     string memId = $"{serviceName}_mem";
@@ -403,129 +514,11 @@ namespace FabricObserver.Observers
                         allMemDataMB.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1));
                     }
 
-                    var monitorTimer = Stopwatch.StartNew();
-                    string args = "/c docker stats --no-stream --format \"table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\"";
-                    string filename = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe";
-
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    {
-                        args = string.Empty;
-
-                        // We need the full path to the currently deployed FO CodePackage, which is where our 
-                        // linux Capabilities-laced proxy binary lives, which is used for elevated_docker_stats call.
-                        string path = FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path;
-                        filename = $"{path}/elevated_docker_stats";
-                    }
-
-                    var ps = new ProcessStartInfo
-                    {
-                        Arguments = args,
-                        FileName = filename,
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-                    };
-
-                    using Process p = new Process();
-
-                    // Capture any error information from docker.
-                    p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                    p.StartInfo = ps;
-                    _ = p.Start();
-                    var stdOutput = p.StandardOutput;
-
-                    // Start asynchronous read operation on error stream.  
-                    p.BeginErrorReadLine();
-                  
-                    List<string> output = new List<string>();
-                    string l;
-
-                    while ((l = await p.StandardOutput.ReadLineAsync()) != null)
-                    {
-                        output.Add(l);
-                    }
-
-                    if (!p.WaitForExit(MaxProcessExitWaitTimeMS))
-                    {
-                        try
-                        {
-                            p?.Kill();
-                        }
-                        catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
-                        {
-
-                        }
-
-                        return;
-                    }
-
-                    int exitStatus = p.ExitCode;
-                    stdOutput.Close();
-
-                    // Was there an error running docker stats?
-                    if (exitStatus != 0)
-                    {
-                        string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
-
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        {
-                            msg += " NOTE: You must run FabricObserver as System user or Admin user on Windows " +
-                                   "in order for ContainerObserver to function correctly on Windows.";
-                        }
-
-                        ObserverLogger.LogWarning(msg);
-                        
-                        var healthReport = new Utilities.HealthReport
-                        {
-                            AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                            EmitLogEvent = EnableVerboseLogging,
-                            HealthMessage = $"{msg}",
-                            HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                            Property = "docker_stats_failure",
-                            ReportType = HealthReportType.Application,
-                            State = HealthState.Warning,
-                            NodeName = NodeName,
-                            Observer = ObserverName,
-                        };
-
-                        // Generate a Service Fabric Health Report.
-                        HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-                        // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                        if (IsTelemetryEnabled)
-                        {
-                            _ = TelemetryClient?.ReportHealthAsync(
-                                                       "docker_stats_failure",
-                                                       HealthState.Warning,
-                                                       msg,
-                                                       ObserverName,
-                                                       Token);
-                        }
-
-                        // ETW.
-                        if (IsEtwEnabled)
-                        {
-                            ObserverLogger.LogEtw(
-                                            ObserverConstants.FabricObserverETWEventName,
-                                            new
-                                            {
-                                                Property = "docker_stats_failure",
-                                                Level = "Warning",
-                                                Message = msg,
-                                                ObserverName
-                                            });
-                        }
-
-                        return;
-                    }
-
                     foreach (string line in output)
                     {
                         Token.ThrowIfCancellationRequested();
 
-                        if (line.Contains("CPU"))
+                        if (line == null || line.Contains("CPU"))
                         {
                             continue;
                         }
@@ -561,9 +554,6 @@ namespace FabricObserver.Observers
 
                         await Task.Delay(150, Token);
                     }
-
-                    output.Clear();
-                    output = null;
                 }
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
