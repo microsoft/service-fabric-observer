@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.17" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.18" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
              simple configuration updates for them. By design, any observer you make using our 
              extensibility model will employ the same basic config parameters as all observers do.
@@ -173,7 +173,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.17" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.18" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -336,10 +336,10 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!-- Uncomment the to run FO as System user. Also uncomment the Principals node below.
+    <!-- Uncomment the to run FO as System user. Also uncomment the Principals node below. -->
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies> -->
+    </Policies>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -352,12 +352,12 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!-- Uncomment below to run FO as System user. Also uncomment the Policies node above.
+  <!-- Uncomment below to run FO as System user. Also uncomment the Policies node above. -->
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals> -->
+  </Principals>
   <Certificates>
     <SecretsCertificate X509FindValue="" Name="" />
   </Certificates>

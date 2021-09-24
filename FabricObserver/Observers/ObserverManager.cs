@@ -31,18 +31,18 @@ namespace FabricObserver.Observers
     {
         private readonly string nodeName;
         private readonly List<ObserverBase> observers;
-        private volatile bool shutdownSignaled;
+        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
+        private readonly IEnumerable<ObserverBase> serviceCollection;
+        private bool disposed;
+        private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
-        private bool disposed;
-        private readonly IEnumerable<ObserverBase> serviceCollection;
-        private bool isConfigurationUpdateInProgress;
         private DateTime StartDateTime;
-        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private volatile bool shutdownSignaled;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.17";
+        private const string InternalVersionNumber = "3.1.18";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -71,11 +71,6 @@ namespace FabricObserver.Observers
         {
             get; set;
         }
-
-        private TimeSpan ObserverExecutionTimeout
-        {
-            get; set;
-        } = TimeSpan.FromMinutes(30);
 
         private static bool FabricObserverOperationalTelemetryEnabled
         {
@@ -131,6 +126,11 @@ namespace FabricObserver.Observers
         {
             get;
         }
+
+        private TimeSpan ObserverExecutionTimeout 
+        {
+            get; set;
+        } = TimeSpan.FromMinutes(30);
 
         private int MaxArchivedLogFileLifetimeDays
         {

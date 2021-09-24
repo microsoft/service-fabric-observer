@@ -295,23 +295,22 @@ namespace FabricObserver.Observers
 
             int settingsFail = 0;
 
-            _ = Parallel.For(0, userTargetList.Count, async (i, state) =>
+            // This doesn't add any real value for parallelization unless there are hundreds of apps on the node.
+            foreach (var application in userTargetList)
             {
                 token.ThrowIfCancellationRequested();
-
-                var application = userTargetList.ElementAt(i);
 
                 if (string.IsNullOrWhiteSpace(application.TargetApp))
                 {
                     ObserverLogger.LogWarning($"InitializeAsync: Required setting, targetApp, is not set.");
                     settingsFail++;
-                    return;
+                    continue;
                 }
 
                 // No required settings for supplied application(s).
                 if (settingsFail == userTargetList.Count)
                 {
-                    state.Stop();
+                    return false;
                 }
 
                 ServiceFilterType filterType = ServiceFilterType.None;
@@ -342,17 +341,16 @@ namespace FabricObserver.Observers
 
                     if (codepackages.Count == 0)
                     {
-                        return;
+                        continue;
                     }
 
                     int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
 
                     if (containerHostCount == 0)
                     {
-                        return;
+                        continue;
                     }
 
-                    MonitoredAppCount++;
                     deployedTargetList.Enqueue(application);
                     await SetInstanceOrReplicaMonitoringList(new Uri(application.TargetApp), filteredServiceList, filterType, null).ConfigureAwait(false);
                 }
@@ -360,8 +358,9 @@ namespace FabricObserver.Observers
                 {
                     ObserverLogger.LogInfo($"Handled Exception in function InitializeAsync:{e.GetType().Name}.");
                 }
-            });
+            }
 
+            MonitoredAppCount = deployedTargetList.Count;
             MonitoredServiceProcessCount = ReplicaOrInstanceList.Count;
 
             foreach (var rep in ReplicaOrInstanceList)
@@ -419,10 +418,10 @@ namespace FabricObserver.Observers
                     RedirectStandardError = true
                 };
 
-                var output = new List<string>();
+                var output = new ConcurrentQueue<string>();
                 using Process p = new Process();
                 p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                p.OutputDataReceived += (sender, e) => { output.Add(e.Data); };
+                p.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Enqueue(e.Data); } };
                 p.StartInfo = ps;
                 _ = p.Start();
 
@@ -529,7 +528,7 @@ namespace FabricObserver.Observers
                     {
                         Token.ThrowIfCancellationRequested();
 
-                        if (string.IsNullOrWhiteSpace(line) || line.Contains("CPU"))
+                        if (line.Contains("CPU"))
                         {
                             continue;
                         }
