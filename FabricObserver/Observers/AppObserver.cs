@@ -29,9 +29,6 @@ namespace FabricObserver.Observers
     // in AppObserver.config.json. This observer will also emit telemetry (ETW, LogAnalytics/AppInsights) if enabled in Settings.xml (ObserverManagerConfiguration) and ApplicationManifest.xml (AppObserverEnableEtw).
     public class AppObserver : ObserverBase
     {
-        // Health Report data containers - For use in analysis to determine health state.
-        // These lists are cleared after each healthy iteration.
-        // Change this data structure to concurrentqueue....
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppMemDataMb;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppMemDataPercent;
