@@ -35,9 +35,6 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppTotalActivePortsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppEphemeralPortsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppHandlesData;
- 
-        // TOTHINK: experiment with ConcurrentDictionary instead of queues... Why are you using queues in the first place?
-
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration.
         private List<ApplicationInfo> userTargetList;
 
