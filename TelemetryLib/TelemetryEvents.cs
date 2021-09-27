@@ -63,7 +63,7 @@ namespace FabricObserver.TelemetryLib
                 // ETW
                 if (isEtwEnabled)
                 {
-                    serviceEventSource.InternalFODataEvent(new { FOInternalTelemtryData = JsonConvert.SerializeObject(foData) });
+                    serviceEventSource.InternalFODataEvent(new { FOInternalTelemetryData = JsonConvert.SerializeObject(foData) });
                 }
 
                 string nodeHashString = string.Empty;

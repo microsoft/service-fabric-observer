@@ -79,9 +79,13 @@ namespace FabricObserver.Observers.Utilities
 
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
-            Settings = settings;
-            section = settings?.Sections[observerConfiguration];
+            if (settings == null || !settings.Sections.Contains(observerConfiguration))
+            {
+                return;
+            }
 
+            Settings = settings;
+            section = settings.Sections[observerConfiguration];
             UpdateConfigSettings();
         }
 

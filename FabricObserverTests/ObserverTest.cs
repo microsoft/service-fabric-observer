@@ -63,7 +63,7 @@ namespace FabricObserverTests
 
         private static readonly bool isSFRuntimePresentOnTestMachine;
         private static readonly CancellationToken token = new CancellationToken();
-        private static readonly FabricClient fabricClient = new FabricClient(FabricClientRole.User);
+        private static readonly FabricClient fabricClient = new FabricClient();
 
         static ObserverTest()
         {
@@ -247,7 +247,7 @@ namespace FabricObserverTests
         [TestMethod]
         public void SFConfigurationObserver_Constructor_Test()
         {
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             
             ObserverManager.FabricServiceContext = context;
             ObserverManager.FabricClientInstance = client;
@@ -322,7 +322,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -412,7 +412,7 @@ namespace FabricObserverTests
             }
 
             var startDateTime = DateTime.Now;
-            var client = new FabricClient(FabricClientRole.User);
+            var client = new FabricClient();
 
             ClusterObserverManager.FabricServiceContext = context;
             ClusterObserverManager.FabricClientInstance = client;
@@ -442,7 +442,7 @@ namespace FabricObserverTests
             try
             {
                 var startDateTime = DateTime.Now;
-                using var client = new FabricClient(FabricClientRole.User);
+                using var client = new FabricClient();
 
                 ObserverManager.FabricServiceContext = context;
                 ObserverManager.FabricClientInstance = client;
@@ -497,7 +497,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -560,7 +560,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -599,7 +599,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -639,7 +639,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -686,7 +686,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -736,7 +736,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -786,7 +786,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -846,7 +846,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -881,7 +881,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -974,7 +974,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -1025,7 +1025,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -1082,7 +1082,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = context;
@@ -1130,7 +1130,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -1185,7 +1185,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -1240,7 +1240,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -1295,7 +1295,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
             
             // This is meant to be run on your dev machine's one node test cluster.
@@ -1349,7 +1349,7 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient(FabricClientRole.User);
+            using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -1406,18 +1406,6 @@ namespace FabricObserverTests
             }
         }
 
-        private static async Task<bool> WaitAsync(Func<bool> predicate, int timeoutInMilliseconds)
-        {
-            var stopwatch = Stopwatch.StartNew();
-
-            while (stopwatch.Elapsed < TimeSpan.FromMilliseconds(timeoutInMilliseconds) && !predicate())
-            {
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-
-            return predicate();
-        }
-
         private static async Task CleanupTestHealthReportsAsync(ObserverBase obs = null)
         {
             // Clear any existing user app, node or fabric:/System app Test Health Reports.
@@ -1433,7 +1421,7 @@ namespace FabricObserverTests
                 };
 
                 var logger = new Logger("TestCleanUp");
-                var client = new FabricClient(FabricClientRole.User);
+                var client = new FabricClient();
 
                 // App reports
                 if (obs is {HasActiveFabricErrorOrWarning: true} && obs.ObserverName != ObserverConstants.NetworkObserverName)
@@ -1463,11 +1451,12 @@ namespace FabricObserverTests
                                     var healthReporter = new ObserverHealthReporter(logger, client);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    Thread.Sleep(250);
+                                    Thread.Sleep(50);
                                 }
                             }
                             catch (FabricException)
                             {
+
                             }
                         }
                     }
@@ -1478,13 +1467,11 @@ namespace FabricObserverTests
 
                 if (sysAppHealth != null)
                 {
-                    foreach (var evt in sysAppHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains("FabricSystemObserver")))
+                    foreach (var evt in sysAppHealth.HealthEvents?.Where(
+                                            s => s.HealthInformation.SourceId.Contains("FabricSystemObserver") 
+                                                && (s.HealthInformation.HealthState == HealthState.Error
+                                                    || s.HealthInformation.HealthState == HealthState.Warning)))
                     {
-                        if (evt.HealthInformation.HealthState == HealthState.Ok)
-                        {
-                            continue;
-                        }
-
                         healthReport.AppName = new Uri("fabric:/System");
                         healthReport.Property = evt.HealthInformation.Property;
                         healthReport.SourceId = evt.HealthInformation.SourceId;
@@ -1492,17 +1479,18 @@ namespace FabricObserverTests
                         var healthReporter = new ObserverHealthReporter(logger, client);
                         healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                        Thread.Sleep(250);
+                        Thread.Sleep(50);
                     }
                 }
 
                 // Node reports
                 var nodeHealth = await client.HealthManager.GetNodeHealthAsync(context.NodeContext.NodeName).ConfigureAwait(false);
 
-                var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains("NodeObserver")
-                                                                                || s.HealthInformation.SourceId.Contains("DiskObserver")
-                                                                                && (s.HealthInformation.HealthState == HealthState.Error
-                                                                                || s.HealthInformation.HealthState == HealthState.Warning));
+                var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(
+                                                                s => s.HealthInformation.SourceId.Contains("NodeObserver")
+                                                                    || s.HealthInformation.SourceId.Contains("DiskObserver")
+                                                                    && (s.HealthInformation.HealthState == HealthState.Error
+                                                                        || s.HealthInformation.HealthState == HealthState.Warning));
 
                 healthReport.ReportType = HealthReportType.Node;
 
@@ -1516,7 +1504,7 @@ namespace FabricObserverTests
                         var healthReporter = new ObserverHealthReporter(logger, client);
                         healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                        Thread.Sleep(250);
+                        Thread.Sleep(50);
                     }
                 }
             }

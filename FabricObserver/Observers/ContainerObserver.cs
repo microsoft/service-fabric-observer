@@ -25,8 +25,8 @@ namespace FabricObserver.Observers
     public class ContainerObserver : ObserverBase
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
-        private ConcurrentQueue<FabricResourceUsageData<double>> allCpuDataPercentage;
-        private ConcurrentQueue<FabricResourceUsageData<double>> allMemDataMB;
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> allMemDataMB;
 
         // userTargetList is the list of ApplicationInfo objects representing apps supplied in configuration.
         private List<ApplicationInfo> userTargetList;
@@ -64,16 +64,22 @@ namespace FabricObserver.Observers
             }
 
             Token = token;
-            MonitorContainers();
-            await ReportAsync(token);
+            
+            if (MonitorContainers())
+            {
+                await ReportAsync(token);
+            }
+
             CleanUp();
             runDurationTimer.Stop();
             RunDuration = runDurationTimer.Elapsed;
+            
             if (EnableVerboseLogging)
             {
                 ObserverLogger.LogInfo($"Run Duration {(ObserverManager.ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
                                        $"Parallel (Processors: {Environment.ProcessorCount}):{RunDuration}");
             }
+
             LastRunDateTime = DateTime.Now;
         }
 
@@ -90,7 +96,11 @@ namespace FabricObserver.Observers
             {
                 token.ThrowIfCancellationRequested();
 
-                var repOrInst = ReplicaOrInstanceList.ElementAt(i);
+                if (!ReplicaOrInstanceList.TryDequeue(out ReplicaOrInstanceMonitoringInfo repOrInst))
+                {
+                    return;
+                }
+
                 ApplicationInfo app = deployedTargetList.First(
                                             a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
                                                     (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
@@ -98,8 +108,8 @@ namespace FabricObserver.Observers
                 string serviceName = repOrInst.ServiceName.OriginalString.Replace(app.TargetApp, "").Replace("/", "");
                 string cpuId = $"{serviceName}_cpu";
                 string memId = $"{serviceName}_mem";
-                var cpuFrudInst = allCpuDataPercentage.FirstOrDefault(cpu => cpu.Id == cpuId);
-                var memFrudInst = allMemDataMB.FirstOrDefault(mem => mem.Id == memId);
+                var cpuFrudInst = allCpuDataPercentage[cpuId];
+                var memFrudInst = allMemDataMB[memId];
 
                 if (EnableCsvLogging)
                 {
@@ -114,7 +124,7 @@ namespace FabricObserver.Observers
                         CsvFileLogger.DataLogFolder = serviceName;
                     }
 
-                    // Log resource usage data to local CSV file(s).
+                    // Log resource usage data to local CSV file(s). locks are required here.
                     // CPU Time
                     lock (lockObj)
                     {
@@ -139,27 +149,23 @@ namespace FabricObserver.Observers
                 }
 
                 // Report -> Send Telemetry/Write ETW/Create SF Health Warnings (if threshold breach)
-                lock (lockObj)
-                {
-                    ProcessResourceDataReportHealth(
-                                        cpuFrudInst,
-                                        app.CpuErrorLimitPercent,
-                                        app.CpuWarningLimitPercent,
-                                        timeToLive,
-                                        HealthReportType.Application,
-                                        repOrInst);
-                }
-
-                lock (lockObj)
-                {
-                    ProcessResourceDataReportHealth(
-                                        memFrudInst,
-                                        app.MemoryErrorLimitMb,
-                                        app.MemoryWarningLimitMb,
-                                        timeToLive,
-                                        HealthReportType.Application,
-                                        repOrInst);
-                }
+               
+                ProcessResourceDataReportHealth(
+                                    cpuFrudInst,
+                                    app.CpuErrorLimitPercent,
+                                    app.CpuWarningLimitPercent,
+                                    timeToLive,
+                                    HealthReportType.Application,
+                                    repOrInst);
+                
+                ProcessResourceDataReportHealth(
+                                    memFrudInst,
+                                    app.MemoryErrorLimitMb,
+                                    app.MemoryWarningLimitMb,
+                                    timeToLive,
+                                    HealthReportType.Application,
+                                    repOrInst);
+               
             });
 
             return Task.CompletedTask;
@@ -373,7 +379,7 @@ namespace FabricObserver.Observers
             return true;
         }
 
-        private void MonitorContainers()
+        private bool MonitorContainers()
         {
             /* docker stats --no-stream --format "table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
 
@@ -388,8 +394,8 @@ namespace FabricObserver.Observers
                 fed0da6f7bad   sf-243-723d5795-01c7-477f-950e-45a400000000_2cc293c0-929c-5c40-bc96-cd4e596b6b6a   0.05%     27.19MiB / 15.45GiB
              */
 
-            allCpuDataPercentage ??= new ConcurrentQueue<FabricResourceUsageData<double>>();
-            allMemDataMB ??= new ConcurrentQueue<FabricResourceUsageData<double>>();
+            allCpuDataPercentage ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+            allMemDataMB ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
 
             try
             {
@@ -443,7 +449,7 @@ namespace FabricObserver.Observers
                     }
 
                     ObserverLogger.LogWarning($"docker process has run too long ({MaxProcessExitWaitTimeMS} ms). Aborting.");
-                    return;
+                    return false;
                 }
 
                 int exitStatus = p.ExitCode;
@@ -503,25 +509,26 @@ namespace FabricObserver.Observers
                                         });
                     }
 
-                    return;
+                    return false;
                 }
 
                 _ = Parallel.For(0, ReplicaOrInstanceList.Count, (i, state) =>
                 {
+                    // Do not TryDequeue here as ReplicaOrInstanceList is used in other functions (like ReportAsync).
                     var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                     string serviceName = repOrInst.ServiceName.OriginalString.Replace(repOrInst.ApplicationName.OriginalString, "").Replace("/", "");
                     string cpuId = $"{serviceName}_cpu";
                     string memId = $"{serviceName}_mem";
                     string containerId = string.Empty;
 
-                    if (!allCpuDataPercentage.Any(frud => frud.Id == cpuId))
+                    if (!allCpuDataPercentage.ContainsKey(cpuId))
                     {
-                        allCpuDataPercentage.Enqueue(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, 1, false));
+                        _ = allCpuDataPercentage.TryAdd(cpuId, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, 1, false));
                     }
 
-                    if (!allMemDataMB.Any(frud => frud.Id == memId))
+                    if (!allMemDataMB.ContainsKey(memId))
                     {
-                        allMemDataMB.Enqueue(new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1, false));
+                        _ = allMemDataMB.TryAdd(memId, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1, false));
                     }
 
                     foreach (string line in output)
@@ -556,11 +563,11 @@ namespace FabricObserver.Observers
 
                         // CPU (%)
                         double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
-                        allCpuDataPercentage?.FirstOrDefault(f => f.Id == cpuId)?.Data.Add(cpu_percent);
+                        allCpuDataPercentage[cpuId].Data.Add(cpu_percent);
 
                         // Memory (MiB)
                         double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
-                        allMemDataMB?.FirstOrDefault(f => f.Id == memId)?.Data.Add(mem_working_set_mb);
+                        allMemDataMB[memId].Data.Add(mem_working_set_mb);
 
                         break;
                     }
@@ -571,6 +578,8 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogError($"Exception in MonitorContainers:{Environment.NewLine}{e}");
                 throw;
             }
+
+            return true;
         }
 
         private bool SetConfigurationFilePath()

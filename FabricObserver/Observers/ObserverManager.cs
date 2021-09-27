@@ -32,14 +32,15 @@ namespace FabricObserver.Observers
         private readonly string nodeName;
         private readonly List<ObserverBase> observers;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private readonly TimeSpan ForcedGCInterval = TimeSpan.FromMinutes(15);
         private readonly CancellationToken token;
         private readonly IEnumerable<ObserverBase> serviceCollection;
+        private volatile bool shutdownSignaled;
         private bool disposed;
         private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
         private DateTime StartDateTime;
-        private volatile bool shutdownSignaled;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.1.18";
@@ -94,8 +95,7 @@ namespace FabricObserver.Observers
 
         public static HealthState ObserverFailureHealthStateLevel
         {
-            get;
-            set;
+            get; set;
         } = HealthState.Unknown;
 
         /// <summary>
@@ -141,11 +141,6 @@ namespace FabricObserver.Observers
         {
             get; set;
         }
-
-        private TimeSpan ForcedGCInterval
-        {
-            get; set;
-        } = TimeSpan.FromMinutes(15);
 
         private DateTime LastTelemetrySendDate
         {
@@ -462,15 +457,13 @@ namespace FabricObserver.Observers
                                 var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                 healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                await Task.Delay(250).ConfigureAwait(true);
+                                await Task.Delay(50).ConfigureAwait(true);
                             }
                         }
                         catch (FabricException)
                         {
 
                         }
-
-                        await Task.Delay(250).ConfigureAwait(true);
                     }
                 }
                 else
@@ -497,7 +490,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            await Task.Delay(250).ConfigureAwait(true);
+                            await Task.Delay(50).ConfigureAwait(true);
                         }
 
                     }
@@ -505,8 +498,6 @@ namespace FabricObserver.Observers
                     {
 
                     }
-
-                    await Task.Delay(250).ConfigureAwait(true);
                 }
 
                 obs.HasActiveFabricErrorOrWarning = false;

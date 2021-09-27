@@ -34,11 +34,11 @@ namespace FabricObserver.Observers
         private Stopwatch stopwatch;
 
         // Health Report data container - For use in analysis to determine health state.
-        private ConcurrentQueue<FabricResourceUsageData<int>> allCpuData;
-        private ConcurrentQueue<FabricResourceUsageData<float>> allMemData;
-        private ConcurrentQueue<FabricResourceUsageData<int>> allActiveTcpPortData;
-        private ConcurrentQueue<FabricResourceUsageData<int>> allEphemeralTcpPortData;
-        private ConcurrentQueue<FabricResourceUsageData<float>> allHandlesData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<int>> allCpuData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<float>> allMemData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<int>> allActiveTcpPortData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<int>> allEphemeralTcpPortData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<float>> allHandlesData;
 
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList = null;
@@ -200,24 +200,24 @@ namespace FabricObserver.Observers
 
                 if (allMemData != null)
                 {
-                    memHandlesInfo += $"Fabric memory: {allMemData.FirstOrDefault(x => x.Id == "Fabric")?.AverageDataValue} MB{Environment.NewLine}" +
-                                      $"FabricDCA memory: {allMemData.FirstOrDefault(x => x.Id.Contains("FabricDCA"))?.AverageDataValue} MB{Environment.NewLine}" +
-                                      $"FabricGateway memory: {allMemData.FirstOrDefault(x => x.Id.Contains("FabricGateway"))?.AverageDataValue} MB{Environment.NewLine}" +
+                    memHandlesInfo += $"Fabric memory: {allMemData["Fabric"].AverageDataValue} MB{Environment.NewLine}" +
+                                      $"FabricDCA memory: {allMemData.FirstOrDefault(x => x.Key.Contains("FabricDCA")).Value.AverageDataValue} MB{Environment.NewLine}" +
+                                      $"FabricGateway memory: {allMemData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue} MB{Environment.NewLine}" +
 
                                       // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System.
                                       (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                          $"FabricHost memory: {allMemData.FirstOrDefault(x => x.Id == "FabricHost")?.AverageDataValue} MB{Environment.NewLine}" : string.Empty);
+                                          $"FabricHost memory: {allMemData["FabricHost"].AverageDataValue} MB{Environment.NewLine}" : string.Empty);
                 }
 
                 if (allHandlesData != null)
                 {
-                    memHandlesInfo += $"Fabric file handles: {allHandlesData.FirstOrDefault(x => x.Id == "Fabric")?.AverageDataValue}{Environment.NewLine}" +
-                                      $"FabricDCA file handles: {allHandlesData.FirstOrDefault(x => x.Id.Contains("FabricDCA"))?.AverageDataValue}{Environment.NewLine}" +
-                                      $"FabricGateway file handles: {allHandlesData.FirstOrDefault(x => x.Id.Contains("FabricGateway"))?.AverageDataValue}{Environment.NewLine}" +
+                    memHandlesInfo += $"Fabric file handles: {allHandlesData["Fabric"].AverageDataValue}{Environment.NewLine}" +
+                                      $"FabricDCA file handles: {allHandlesData.FirstOrDefault(x => x.Key.Contains("FabricDCA")).Value.AverageDataValue}{Environment.NewLine}" +
+                                      $"FabricGateway file handles: {allHandlesData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue}{Environment.NewLine}" +
 
                                       // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System. 
                                       (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                            $"FabricHost file handles: {allHandlesData.FirstOrDefault(x => x.Id == "FabricHost")?.AverageDataValue}" : string.Empty);
+                                            $"FabricHost file handles: {allHandlesData["FabricHost"]?.AverageDataValue}" : string.Empty);
                 }
 
                 // Informational report.
@@ -545,79 +545,84 @@ namespace FabricObserver.Observers
             // CPU data
             if (allCpuData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0))
             {
-                allCpuData = new ConcurrentQueue<FabricResourceUsageData<int>>();
+                allCpuData = new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allCpuData.Enqueue(
-                        new FabricResourceUsageData<int>(
-                                ErrorWarningProperty.TotalCpuTime,
-                                proc,
-                                frudCapacity,
-                                UseCircularBuffer));
+                    _ = allCpuData.TryAdd(
+                                    proc,
+                                    new FabricResourceUsageData<int>(
+                                            ErrorWarningProperty.TotalCpuTime,
+                                            proc,
+                                            frudCapacity,
+                                            UseCircularBuffer));
                 }
             }
 
             // Memory data
             if (allMemData == null && (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0))
             {
-                allMemData = new ConcurrentQueue<FabricResourceUsageData<float>>();
+                allMemData = new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allMemData.Enqueue(
-                        new FabricResourceUsageData<float>(
-                                ErrorWarningProperty.TotalMemoryConsumptionMb,
-                                proc,
-                                frudCapacity,
-                                UseCircularBuffer));
+                    _ = allMemData.TryAdd(
+                                    proc,
+                                    new FabricResourceUsageData<float>(
+                                            ErrorWarningProperty.TotalMemoryConsumptionMb,
+                                            proc,
+                                            frudCapacity,
+                                            UseCircularBuffer));
                 }
             }
 
             // Ports
             if (allActiveTcpPortData == null && (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0))
             {
-                allActiveTcpPortData = new ConcurrentQueue<FabricResourceUsageData<int>>();
+                allActiveTcpPortData = new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allActiveTcpPortData.Enqueue(
-                        new FabricResourceUsageData<int>(
-                                ErrorWarningProperty.TotalActivePorts,
-                                proc,
-                                frudCapacity,
-                                UseCircularBuffer));
+                    _ = allActiveTcpPortData.TryAdd(
+                                              proc,
+                                              new FabricResourceUsageData<int>(
+                                                    ErrorWarningProperty.TotalActivePorts,
+                                                    proc,
+                                                    frudCapacity,
+                                                    UseCircularBuffer));
                 }
             }
 
             if (allEphemeralTcpPortData == null && (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0))
             {
-                allEphemeralTcpPortData = new ConcurrentQueue<FabricResourceUsageData<int>>();
+                allEphemeralTcpPortData = new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allEphemeralTcpPortData.Enqueue(
-                        new FabricResourceUsageData<int>(
-                                ErrorWarningProperty.TotalEphemeralPorts,
-                                proc,
-                                frudCapacity,
-                                UseCircularBuffer));
+                    _ = allEphemeralTcpPortData.TryAdd(
+                                                 proc,
+                                                 new FabricResourceUsageData<int>(
+                                                        ErrorWarningProperty.TotalEphemeralPorts,
+                                                        proc,
+                                                        frudCapacity,
+                                                        UseCircularBuffer));
                 }
             }
 
             // Handles
             if (allHandlesData == null && (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0))
             {
-                allHandlesData = new ConcurrentQueue<FabricResourceUsageData<float>>();
+                allHandlesData = new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
 
                 foreach (var proc in processWatchList)
                 {
-                    allHandlesData.Enqueue(
-                        new FabricResourceUsageData<float>(
-                                ErrorWarningProperty.TotalFileHandles,
-                                proc,
-                                frudCapacity,
-                                UseCircularBuffer));
+                    _ = allHandlesData.TryAdd(
+                                        proc,
+                                        new FabricResourceUsageData<float>(
+                                                ErrorWarningProperty.TotalFileHandles,
+                                                proc,
+                                                frudCapacity,
+                                                UseCircularBuffer));
                 }
             }
 
@@ -800,7 +805,7 @@ namespace FabricObserver.Observers
                     
                     if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
                     {
-                        allActiveTcpPortData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(activePortCount);
+                        allActiveTcpPortData[dotnetArg].Data.Add(activePortCount);
                     }
 
                     // Ports - Active TCP Ephemeral
@@ -811,7 +816,7 @@ namespace FabricObserver.Observers
                     
                     if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
                     {
-                        allEphemeralTcpPortData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(activeEphemeralPortCount);
+                        allEphemeralTcpPortData[dotnetArg].Data.Add(activeEphemeralPortCount);
                     }
 
                     // Allocated Handles
@@ -831,7 +836,7 @@ namespace FabricObserver.Observers
                     // Handles/FDs
                     if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
                     {
-                        allHandlesData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(handles);
+                        allHandlesData[dotnetArg].Data.Add(handles);
                     }
 
                     CpuUsage cpuUsage = new CpuUsage();
@@ -840,7 +845,7 @@ namespace FabricObserver.Observers
                     if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                     {
                         float mem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, true);
-                        allMemData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(mem);
+                        allMemData[dotnetArg].Data.Add(mem);
                     }
 
                     TimeSpan duration = TimeSpan.FromSeconds(1);
@@ -862,7 +867,7 @@ namespace FabricObserver.Observers
                             if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                             {
                                 int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process.Id);
-                                allCpuData.FirstOrDefault(x => x.Id == dotnetArg).Data.Add(cpu);
+                                allCpuData[dotnetArg].Data.Add(cpu);
                             }
 
                             await Task.Delay(250, Token).ConfigureAwait(true);
@@ -907,7 +912,7 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessResourceDataList<T>(
-                            ConcurrentQueue<FabricResourceUsageData<T>> data,
+                            ConcurrentDictionary<string, FabricResourceUsageData<T>> data,
                             T thresholdError,
                             T thresholdWarning)
                                 where T : struct
@@ -919,11 +924,11 @@ namespace FabricObserver.Observers
                 fileName = $"FabricSystemServices{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
             }
 
-            _ = Parallel.For (0, data.Count, ObserverManager.ParallelOptions, (i, state) =>
+            _ = Parallel.ForEach (data, ObserverManager.ParallelOptions, (state) =>
             {
                 Token.ThrowIfCancellationRequested();
 
-                var dataItem = data.ElementAt(i);
+                var dataItem = state.Value;
 
                 if (dataItem.Data.Count == 0 || dataItem.AverageDataValue <= 0)
                 {
@@ -932,7 +937,7 @@ namespace FabricObserver.Observers
 
                 if (EnableCsvLogging)
                 {
-                    var propertyName = data.First().Property;
+                    var propertyName = dataItem.Property;
 
                     /* Log average data value to long-running store (CSV).*/
 
@@ -993,31 +998,31 @@ namespace FabricObserver.Observers
         {
             processWatchList = null;
 
-            if (allCpuData != null && !allCpuData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
+            if (allCpuData != null && !allCpuData.Any(frud => frud.Value.ActiveErrorOrWarning))
             {
                 allCpuData?.Clear();
                 allCpuData = null;
             }
 
-            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
+            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
             {
                 allEphemeralTcpPortData?.Clear();
                 allEphemeralTcpPortData = null;
             }
 
-            if (allHandlesData != null && !allHandlesData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
+            if (allHandlesData != null && !allHandlesData.Any(frud => frud.Value.ActiveErrorOrWarning))
             {
                 allHandlesData?.Clear();
                 allHandlesData = null;
             }
 
-            if (allMemData != null && !allMemData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
+            if (allMemData != null && !allMemData.Any(frud => frud.Value.ActiveErrorOrWarning))
             {
                 allMemData?.Clear();
                 allMemData = null;
             }
 
-            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud != null && frud.ActiveErrorOrWarning))
+            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
             {
                 allActiveTcpPortData?.Clear();
                 allActiveTcpPortData = null;
