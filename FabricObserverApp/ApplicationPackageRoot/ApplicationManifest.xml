@@ -336,10 +336,10 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!-- Uncomment the to run FO as System user. Also uncomment the Principals node below. -->
+    <!-- Uncomment the to run FO as System user. Also uncomment the Principals node below. 
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies>
+    </Policies> -->
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -352,12 +352,12 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!-- Uncomment below to run FO as System user. Also uncomment the Policies node above. -->
+  <!-- Uncomment below to run FO as System user. Also uncomment the Policies node above. 
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals>
+  </Principals> -->
   <Certificates>
     <SecretsCertificate X509FindValue="" Name="" />
   </Certificates>
