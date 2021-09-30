@@ -64,11 +64,11 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
     <!-- Note that if you are running on capable hardware (logical processors >= 4), then you can set these values higher than normal 
          for AppObserver and FabricSystemObserver, assuming you also enable concurrent execution above (see ObserverManager config). 
          For lesser hardware (logical processors < 4) or sequential execution (Concurrent execution disabled), be very conservative 
          with these values if AppObserver is monitoring several app services. -->
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:03" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:03" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:30" />
