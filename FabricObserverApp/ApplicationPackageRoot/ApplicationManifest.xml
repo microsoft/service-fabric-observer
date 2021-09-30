@@ -49,9 +49,9 @@
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
     <!-- CSV Logging -->
-    <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="true" />
-    <Parameter Name="ContainerObserverEnableCSVDataLogging" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
+    <Parameter Name="ContainerObserverEnableCSVDataLogging" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
@@ -64,19 +64,23 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
+    <!-- Note that if you are running on capable hardware (logical processors >= 4), then you can set these values higher than normal 
+         for AppObserver and FabricSystemObserver, assuming you also enable concurrent execution above (see ObserverManager config). 
+         For lesser hardware (logical processors < 4) or sequential execution (Concurrent execution disabled), be very conservative 
+         with these values if AppObserver is monitoring several app services. -->
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:03" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:03" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:30" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
     <Parameter Name="ContainerObserverRunInterval" DefaultValue="" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
-    <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
-    <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="01:00:00" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="NetworkObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="NodeObserverRunInterval" DefaultValue="00:15:00" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
     <!-- AppObserver -->
@@ -336,7 +340,7 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!-- Uncomment the to run FO as System user. Also uncomment the Principals node below. 
+    <!-- Uncomment the to run FO as System user. Also uncomment the Principals node below.
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
     </Policies> -->
@@ -352,7 +356,7 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!-- Uncomment below to run FO as System user. Also uncomment the Policies node above. 
+  <!-- Uncomment below to run FO as System user. Also uncomment the Policies node above.
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />

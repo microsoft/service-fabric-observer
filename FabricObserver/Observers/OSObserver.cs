@@ -93,6 +93,8 @@ namespace FabricObserver.Observers
                 // OS Health.
                 if (osStatus != null && !string.Equals(osStatus, "OK", StringComparison.OrdinalIgnoreCase))
                 {
+                    CurrentErrorCount++;
+
                     string healthMessage = $"OS reporting unhealthy: {osStatus}";
                     var healthReport = new HealthReport
                     {
@@ -144,6 +146,11 @@ namespace FabricObserver.Observers
                 {
                     // Clear Error or Warning with an OK Health Report.
                     string healthMessage = $"OS reporting healthy: {osStatus}";
+
+                    if (CurrentErrorCount > 0)
+                    {
+                        CurrentErrorCount--;
+                    }
 
                     var healthReport = new HealthReport
                     {
@@ -219,6 +226,8 @@ namespace FabricObserver.Observers
                 // Windows Update automatic download enabled?
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && isAUAutomaticDownloadEnabled)
                 {
+                    CurrentWarningCount++;
+
                     string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
                         "please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\" target=\"blank\">" +

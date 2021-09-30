@@ -27,7 +27,7 @@ namespace FabricObserver.Observers
 {
     public abstract class ObserverBase : IObserver
     {
-        private const int TtlAddMinutes = 5;
+        private const int TtlAddMinutes = 1;
         private const string FabricSystemAppName = "fabric:/System";
         private bool disposed;
         private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
