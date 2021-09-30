@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -221,7 +220,7 @@ namespace FabricObserver.TelemetryLib
                     { "OS", foErrorData.OS }
                 };
 
-                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties);
+                telemetryClient?.TrackEvent($"{TaskName}.{CriticalErrorEventName}", eventProperties);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
