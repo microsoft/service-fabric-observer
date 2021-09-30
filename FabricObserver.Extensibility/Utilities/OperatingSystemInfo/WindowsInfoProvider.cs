@@ -65,12 +65,13 @@ namespace FabricObserver.Observers.Utilities
                     return (lowPortRange, highPortRange);
                 }
                 catch (Exception e) when (
-                        e is ArgumentException
-                        || e is IOException
-                        || e is InvalidOperationException
-                        || e is RegexMatchTimeoutException
-                        || e is Win32Exception)
+                                e is ArgumentException
+                                || e is IOException
+                                || e is InvalidOperationException
+                                || e is RegexMatchTimeoutException
+                                || e is Win32Exception)
                 {
+
                 }
             }
 
@@ -160,7 +161,7 @@ namespace FabricObserver.Observers.Utilities
                                 object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
                                 object installDateObj = mObj.Properties["InstallDate"].Value;
                                 object lastBootDateObj = mObj.Properties["LastBootUpTime"].Value;
-                                
+
                                 osInfo.Name = captionObj?.ToString();
 
                                 if (int.TryParse(numProcsObj?.ToString(), out int numProcesses))
@@ -172,16 +173,16 @@ namespace FabricObserver.Observers.Utilities
                                     osInfo.NumberOfProcesses = -1;
                                 }
 
-                                osInfo.Status = statusObj?.ToString();      
-                                osInfo.Language = osLanguageObj?.ToString();        
-                                osInfo.Version = versionObj?.ToString();     
-                                osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");        
-                                osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");        
-                                osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;  
-                                osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;         
-                                osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;      
+                                osInfo.Status = statusObj?.ToString();
+                                osInfo.Language = osLanguageObj?.ToString();
+                                osInfo.Version = versionObj?.ToString();
+                                osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");
+                                osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");
+                                osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
+                                osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;
+                                osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;
                                 osInfo.TotalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
-                            }  
+                            }
                         }
                         catch (ManagementException me)
                         {
@@ -297,7 +298,7 @@ namespace FabricObserver.Observers.Utilities
                     {
                         continue;
                     }
-                    
+
                     tempLocalPortData.Add((pid, localPort));
                 }
 

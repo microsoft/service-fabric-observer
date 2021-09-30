@@ -109,7 +109,7 @@ namespace FabricObserver.Observers.Utilities
             FileTarget dataLog = (FileTarget)LogManager.Configuration.FindTargetByName("AvgTargetDataStore");
                        dataLog.FileName = csvPath;
                        dataLog.AutoFlush = true;
-                       dataLog.ConcurrentWrites = false;
+                       dataLog.ConcurrentWrites = true;
                        dataLog.EnableFileDelete = true;
                        dataLog.AutoFlush = true;
                        dataLog.CreateDirs = true;

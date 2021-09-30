@@ -192,12 +192,12 @@ namespace FabricObserver.Observers
                                         "Average",
                                         Math.Round(MemDataInUse.AverageDataValue, 1));
 
-                            CsvFileLogger.LogData(
-                                            fileName,
-                                            NodeName,
-                                            "Committed Memory (MB)",
-                                            "Peak",
-                                            Math.Round(MemDataInUse.MaxDataValue));
+                        CsvFileLogger.LogData(
+                                        fileName,
+                                        NodeName,
+                                        "Committed Memory (MB)",
+                                        "Peak",
+                                        Math.Round(MemDataInUse.MaxDataValue));
                     }
 
                     // % of Total
@@ -365,11 +365,11 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
-            { 
-                ObserverLogger.LogWarning($"Unhandled exception re-thrown:{Environment.NewLine}{e}"); 
-                
+            {
+                ObserverLogger.LogWarning($"Unhandled exception re-thrown:{Environment.NewLine}{e}");
+
                 // Fix the bug..
-                throw; 
+                throw;
             }
         }
 
@@ -680,7 +680,7 @@ namespace FabricObserver.Observers
                 }
 
                 timer.Start();
-                
+
                 while (timer.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
@@ -714,11 +714,11 @@ namespace FabricObserver.Observers
                 timer.Reset();
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
-            { 
-                ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}"); 
-                
+            {
+                ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+
                 // Fix the bug..
-                throw; 
+                throw;
             }
             finally
             {

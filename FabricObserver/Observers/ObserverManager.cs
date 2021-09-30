@@ -29,20 +29,21 @@ namespace FabricObserver.Observers
     // with optional sleeps, and reliable shutdown event handling.
     public class ObserverManager : IDisposable
     {
-        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.18";
         private readonly string nodeName;
         private readonly List<ObserverBase> observers;
-        private readonly CancellationToken token;
-        private readonly TimeSpan ForcedGCInterval = TimeSpan.FromMinutes(15);
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private readonly TimeSpan ForcedGCInterval = TimeSpan.FromMinutes(15);
+        private readonly CancellationToken token;
+        private readonly IEnumerable<ObserverBase> serviceCollection;
         private volatile bool shutdownSignaled;
+        private bool disposed;
+        private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
-        private bool disposed;
-        private readonly IEnumerable<ObserverBase> serviceCollection;
-        private bool isConfigurationUpdateInProgress;
         private DateTime StartDateTime;
+
+        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
+        private const string InternalVersionNumber = "3.1.18";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -72,11 +73,6 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        private TimeSpan ObserverExecutionTimeout
-        {
-            get; set;
-        } = TimeSpan.FromMinutes(30);
-
         private static bool FabricObserverOperationalTelemetryEnabled
         {
             get; set;
@@ -97,15 +93,24 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public bool IsObserverRunning
-        {
-            get; private set;
-        }
-
         public static HealthState ObserverFailureHealthStateLevel
         {
             get; set;
         } = HealthState.Unknown;
+
+        /// <summary>
+        /// This is for observers that support parallelized monitor loops. 
+        /// AppObserver, ContainerObserver, FabricSystemObserver.
+        /// </summary>
+        public static ParallelOptions ParallelOptions
+        {
+            get; set;
+        }
+
+        public static bool EnableConcurrentExecution
+        {
+            get; set;
+        }
 
         private ObserverHealthReporter HealthReporter
         {
@@ -122,17 +127,22 @@ namespace FabricObserver.Observers
             get;
         }
 
+        private TimeSpan ObserverExecutionTimeout 
+        {
+            get; set;
+        } = TimeSpan.FromMinutes(30);
+
         private int MaxArchivedLogFileLifetimeDays
         {
             get;
         }
 
-        public DateTime LastTelemetrySendDate 
-        { 
-            get; private set; 
+        private DateTime LastForcedGCDateTime
+        {
+            get; set;
         }
 
-        private DateTime LastForcedGCDateTime
+        private DateTime LastTelemetrySendDate
         {
             get; set;
         }
@@ -197,6 +207,7 @@ namespace FabricObserver.Observers
 
             // this logs error/warning/info messages for ObserverManager.
             Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays > 0 ? MaxArchivedLogFileLifetimeDays : 7);
+            SetPropertiesFromConfigurationParameters();
             serviceCollection = serviceProvider.GetServices<ObserverBase>();
 
             // Populate the Observer list for the sequential run loop.
@@ -214,7 +225,13 @@ namespace FabricObserver.Observers
             }
 
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-            SetPropertiesFromConfigurationParameters();
+
+            ParallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = EnableConcurrentExecution && Environment.ProcessorCount >= 4 ? -1 : 1,
+                CancellationToken = linkedSFRuntimeObserverTokenSource?.Token ?? token,
+                TaskScheduler = TaskScheduler.Default
+            };
         }
 
         public async Task StartObserversAsync()
@@ -243,7 +260,9 @@ namespace FabricObserver.Observers
 
                     _ = await RunObserversAsync().ConfigureAwait(false);
 
-                    // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
+                    // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
+                    // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
+                    // than 90 days.
                     if (FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
@@ -256,7 +275,7 @@ namespace FabricObserver.Observers
                                                                 EtwEnabled);
 
                             var foData = GetFabricObserverInternalTelemetryData();
-                            
+
                             if (foData != null)
                             {
                                 string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_operational_telemetry.log");
@@ -271,6 +290,7 @@ namespace FabricObserver.Observers
                         catch
                         {
                             // Telemetry is non-critical and should not take down FO.
+                            // TelemetryLib will log exception details to file in top level FO log folder.
                         }
                     }
 
@@ -393,7 +413,7 @@ namespace FabricObserver.Observers
 
             if (isConfigurationUpdateLinux)
             {
-                configUpdateLinux = 
+                configUpdateLinux =
                     $" Note: This is due to a configuration update which requires an FO process restart on Linux (with UD walk (one by one) and safety checks).{Environment.NewLine}" +
                     "The reason FO needs to be restarted as part of a parameter-only upgrade is due to the Linux Capabilities set FO employs not persisting across application upgrades (by design) " +
                     "even when the upgrade is just a configuration parameter update. In order to re-create the Capabilities set, FO's setup script must be re-run by SF. Restarting FO is therefore required here.";
@@ -424,7 +444,7 @@ namespace FabricObserver.Observers
                             if (isConfigurationUpdateInProgress)
                             {
                                 fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                                        && s.HealthInformation.HealthState == HealthState.Warning 
+                                                                                        && s.HealthInformation.HealthState == HealthState.Warning
                                                                                         || s.HealthInformation.HealthState == HealthState.Error);
                             }
 
@@ -437,15 +457,13 @@ namespace FabricObserver.Observers
                                 var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                 healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                await Task.Delay(250).ConfigureAwait(true);
+                                await Task.Delay(50).ConfigureAwait(true);
                             }
                         }
                         catch (FabricException)
                         {
 
                         }
-
-                        await Task.Delay(250).ConfigureAwait(true);
                     }
                 }
                 else
@@ -472,16 +490,14 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            await Task.Delay(250).ConfigureAwait(true);
+                            await Task.Delay(50).ConfigureAwait(true);
                         }
-                            
+
                     }
                     catch (FabricException)
                     {
 
                     }
-
-                    await Task.Delay(250).ConfigureAwait(true);
                 }
 
                 obs.HasActiveFabricErrorOrWarning = false;
@@ -492,7 +508,6 @@ namespace FabricObserver.Observers
             if (!isConfigurationUpdateInProgress)
             {
                 SignalAbortToRunningObserver();
-                IsObserverRunning = false;
             }
         }
 
@@ -509,7 +524,7 @@ namespace FabricObserver.Observers
             }
 
             if (disposing)
-            { 
+            {
                 FabricClientInstance?.Dispose();
                 FabricClientInstance = null;
                 linkedSFRuntimeObserverTokenSource?.Dispose();
@@ -618,12 +633,13 @@ namespace FabricObserver.Observers
                     Version = InternalVersionNumber,
                     EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
                     HasPlugins = hasPlugins,
+                    ParallelExecutionEnabled = EnableConcurrentExecution,
                     ObserverData = GetObserverData(),
                 };
             }
             catch (Exception e) when (e is ArgumentException)
             {
-                
+
             }
 
             return telemetryData;
@@ -777,6 +793,21 @@ namespace FabricObserver.Observers
         private void SetPropertiesFromConfigurationParameters(ConfigurationSettings settings = null)
         {
             ApplicationName = FabricServiceContext.CodePackageActivationContext.ApplicationName;
+            
+            // Parallelization settings for capable hardware. \\
+
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableConcurrentExecution, settings), out bool enableConcurrency))
+            {
+                EnableConcurrentExecution = enableConcurrency;
+            }
+
+            ParallelOptions = new ParallelOptions
+            {
+                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
+                MaxDegreeOfParallelism = EnableConcurrentExecution && Environment.ProcessorCount >= 4 ? -1 : 1,
+                CancellationToken = linkedSFRuntimeObserverTokenSource?.Token ?? token,
+                TaskScheduler = TaskScheduler.Default
+            };
 
             // ETW - Overridable
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool etwEnabled))
@@ -810,7 +841,7 @@ namespace FabricObserver.Observers
                 Fqdn = fqdn;
             }
 
-            // FabricObserver runtime telemetry (No PII) - Override
+            // FabricObserver operational telemetry (No PII) - Override
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableFabricObserverOperationalTelemetry, settings), out bool foTelemEnabled))
             {
                 FabricObserverOperationalTelemetryEnabled = foTelemEnabled;
@@ -822,7 +853,7 @@ namespace FabricObserver.Observers
             // ObserverFailure HealthState Level - Override \\
 
             string state = GetConfigSettingValue(ObserverConstants.ObserverFailureHealthStateLevelParameter, settings);
-            
+
             if (string.IsNullOrWhiteSpace(state) || state?.ToLower() == "none")
             {
                 ObserverFailureHealthStateLevel = HealthState.Unknown;
@@ -862,40 +893,40 @@ namespace FabricObserver.Observers
             switch (telemetryProvider)
             {
                 case TelemetryProviderType.AzureLogAnalytics:
-                {
-                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings);
-                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
-                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
-
-                    if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                     {
-                        TelemetryEnabled = false;
-                        return;
+                        string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings);
+                        string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
+                        string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
+
+                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+
+                        TelemetryClient = new LogAnalyticsTelemetry(
+                                                logAnalyticsWorkspaceId,
+                                                logAnalyticsSharedKey,
+                                                logAnalyticsLogType,
+                                                FabricClientInstance,
+                                                token);
+
+                        break;
                     }
-
-                    TelemetryClient = new LogAnalyticsTelemetry(
-                                            logAnalyticsWorkspaceId,
-                                            logAnalyticsSharedKey,
-                                            logAnalyticsLogType,
-                                            FabricClientInstance,
-                                            token);
-
-                    break;
-                }
 
                 case TelemetryProviderType.AzureApplicationInsights:
-                {
-                    string aiKey = GetConfigSettingValue(ObserverConstants.AiKey, settings);
-
-                    if (string.IsNullOrEmpty(aiKey))
                     {
-                        TelemetryEnabled = false;
-                        return;
-                    }
+                        string aiKey = GetConfigSettingValue(ObserverConstants.AiKey, settings);
 
-                    TelemetryClient = new AppInsightsTelemetry(aiKey);
-                    break;
-                }
+                        if (string.IsNullOrEmpty(aiKey))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+
+                        TelemetryClient = new AppInsightsTelemetry(aiKey);
+                        break;
+                    }
 
                 default:
                     TelemetryEnabled = false;
@@ -912,7 +943,7 @@ namespace FabricObserver.Observers
         private void SignalAbortToRunningObserver()
         {
             Logger.LogInfo("Signalling task cancellation to currently running Observer.");
-            
+
             try
             {
                 cts?.Cancel();
@@ -921,7 +952,7 @@ namespace FabricObserver.Observers
             {
 
             }
-          
+
             Logger.LogInfo("Successfully signaled cancellation to currently running Observer.");
         }
 
@@ -957,7 +988,6 @@ namespace FabricObserver.Observers
                     }
 
                     Logger.LogInfo($"Starting {observer.ObserverName}");
-                    IsObserverRunning = true;
 
                     // Synchronous call.
                     bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(ObserverExecutionTimeout);
@@ -1037,7 +1067,6 @@ namespace FabricObserver.Observers
                     if (observer.HasActiveFabricErrorOrWarning)
                     {
                         var errWarnMsg = !string.IsNullOrEmpty(Fqdn) ? $"<a style=\"font-weight: bold; color: red;\" href=\"http://{Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>." : $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
-
                         Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
                     }
                     else
@@ -1064,16 +1093,12 @@ namespace FabricObserver.Observers
                 }
                 catch (AggregateException ex)
                 {
-                    IsObserverRunning = false;
-
                     if (ex.InnerException is FabricException ||
                         ex.InnerException is OperationCanceledException ||
                         ex.InnerException is TaskCanceledException)
                     {
                         if (isConfigurationUpdateInProgress)
                         {
-                            IsObserverRunning = false;
-
                             return true;
                         }
 
@@ -1087,7 +1112,6 @@ namespace FabricObserver.Observers
                 {
                     if (isConfigurationUpdateInProgress)
                     {
-                        IsObserverRunning = false;
                         return true;
                     }
 
@@ -1099,8 +1123,6 @@ namespace FabricObserver.Observers
                     Logger.LogWarning($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                     allExecuted = false;
                 }
-
-                IsObserverRunning = false;
             }
 
             if (allExecuted)
