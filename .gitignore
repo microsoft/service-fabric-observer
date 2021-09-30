@@ -336,3 +336,4 @@ ASALocalRun/
 /FabricObserver/observer_logs
 /FabricObserver/PackageRoot/Data/Plugins/SampleNewObserver.dll
 /nuget.exe
+/FabricObserverApp/ApplicationPackageRoot/ApplicationManifest_MDM.xml
