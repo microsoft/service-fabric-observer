@@ -25,6 +25,9 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="ApplicationInsights.config" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.9.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
@@ -45,9 +48,6 @@
     <Reference Include="..\Interop\Interop.WUApiLib.dll" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ApplicationInsights.config">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="NLog.xsd">
       <SubType>Designer</SubType>
     </None>

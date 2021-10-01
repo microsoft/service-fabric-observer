@@ -283,8 +283,9 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 using (ManagementObject mObj = (ManagementObject)enumerator.Current)
                                 {
-                                    ulong workingSet = (ulong)mObj.Properties["WorkingSetPrivate"].Value / 1024 / 1024;
-                                    return workingSet;
+                                    ulong workingSet = (ulong)mObj.Properties["WorkingSetPrivate"].Value;
+                                    float privWorkingSetMb = Convert.ToSingle(workingSet);
+                                    return privWorkingSetMb / 1024 / 1024;
                                 }
                             }
                             catch (Exception e) when (e is ArgumentException || e is ManagementException)

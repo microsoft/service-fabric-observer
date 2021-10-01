@@ -254,8 +254,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId.ToString() },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
-                    { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "Source", telemetryData.ObserverName },
@@ -263,7 +261,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "OS", telemetryData.OS ?? string.Empty }
                 };
 
-                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
+                var metric = new Dictionary<string, double>
+                {
+                    { telemetryData.Metric, telemetryData.Value }
+                };
+
+                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties, metric);
             }
             catch (Exception e)
             {
@@ -306,9 +309,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ApplicationName", telemData.ApplicationName ?? string.Empty },
                         { "ServiceName", telemData.ServiceName ?? string.Empty },
                         { "ProcessId", telemData.ProcessId.ToString() },
-                        { "Metric", telemData.Metric ?? string.Empty },
-                        { "Value", telemData.Value.ToString() },
-                        { "ChildProcessCount", telemData.ChildProcessCount.ToString() },
                         { "ChildProcessInfo", JsonConvert.SerializeObject(telemData.ChildProcessInfo) },
                         { "PartitionId", telemData.PartitionId },
                         { "ReplicaId", telemData.ReplicaId },
@@ -317,7 +317,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "OS", OS }
                     };
 
-                    telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
+                    var metrics = new Dictionary<string, double>
+                    {
+                        { "ChildProcessCount", telemData.ChildProcessCount },
+                        { $"{telemData.Metric} (Parent + Descendants)", telemData.Value }
+                    };
+
+                    telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties, metrics);
                 }
                 catch (Exception e)
                 {

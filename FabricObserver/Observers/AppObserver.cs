@@ -1326,12 +1326,10 @@ namespace FabricObserver.Observers
 
                     // Memory \\
 
-                    float processMem = 0;
-
                     // private working set.
                     if (checkMemMb)
                     {
-                        processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, true);
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, true);
 
                         if (procId == parentPid)
                         {
@@ -1350,10 +1348,7 @@ namespace FabricObserver.Observers
                     // percent in use (of total).
                     if (checkMemPct)
                     {
-                        if (processMem == 0)
-                        {
-                            processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, true);
-                        }
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, true);
 
                         var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetMemoryInfo();
 
