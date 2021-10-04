@@ -1138,19 +1138,13 @@ namespace FabricObserver.Observers
                         checkHandles = true;
                     }
 
-                    // No need to proceed further if no cpu/mem/file handles thresholds are specified in configuration.
-                    if (!checkCpu && !checkMemMb && !checkMemPct && !checkHandles)
-                    {
-                        return;
-                    }
+                    /* In order to provide accurate resource usage of an SF service process we need to also account for
+                       any processes (children) that the service process (parent) created/spawned. */
 
-                    // Get list of child processes of parentProc should they exist.
-                    // In order to provide accurate resource usage of an SF service process we need to also account for
-                    // any processes (children) that the service process (parent) created/spawned.
                     procs = new ConcurrentDictionary<string, int>();
 
                     // Add parent to the process tree list since we want to monitor all processes in the family. If there are no child processes,
-                    // then only the parent process will be in this dictionary.
+                    // then only the parent process will be in this dictionary..
                     _ = procs.TryAdd(parentProc.ProcessName, parentProc.Id);
 
                     if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
@@ -1221,16 +1215,6 @@ namespace FabricObserver.Observers
                     maxDuration = MonitorDuration;
                 }
 
-                /* Warm up Windows perf counters. */
-
-                if (checkCpu)
-                {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        _ = cpuUsage.GetCpuUsagePercentageProcess(procId);
-                    }
-                }
-
                 // Handles/FDs
                 if (checkHandles)
                 {
@@ -1287,6 +1271,17 @@ namespace FabricObserver.Observers
                         }
                         AllAppEphemeralPortsData[$"{id}:{procName}"].Data.Add(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
                     }
+                }
+
+                // No need to proceed further if no cpu/mem thresholds are specified in configuration.
+                if (!checkCpu && !checkMemMb && !checkMemPct)
+                {
+                    state.Stop();
+                }
+
+                if (checkCpu && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    _ = cpuUsage.GetCpuUsagePercentageProcess(procId);  
                 }
 
                 // Monitor Duration applies to the code below.
@@ -1488,12 +1483,12 @@ namespace FabricObserver.Observers
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>(deployedReplicaList.Count);
 
             SetInstanceOrReplicaMonitoringList(
-                               appName,
-                               serviceFilterList,
-                               filterType,
-                               appTypeName,
-                               deployedReplicaList,
-                               replicaMonitoringList);
+                    appName,
+                    serviceFilterList,
+                    filterType,
+                    appTypeName,
+                    deployedReplicaList,
+                    replicaMonitoringList);
 
             return replicaMonitoringList;
         }
@@ -1538,6 +1533,9 @@ namespace FabricObserver.Observers
                             PartitionId = statefulReplica.Partitionid,
                             ServiceName = statefulReplica.ServiceName
                         };
+
+                        /* In order to provide accurate resource usage of an SF service process we need to also account for
+                        any processes (children) that the service process (parent) created/spawned. */
 
                         if (EnableChildProcessMonitoring)
                         {

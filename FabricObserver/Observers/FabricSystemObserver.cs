@@ -907,7 +907,7 @@ namespace FabricObserver.Observers
                 timer.Stop();
                 timer.Reset();
 
-                await Task.Delay(250, Token).ConfigureAwait(false);
+                await Task.Delay(150, Token).ConfigureAwait(false);
             }
         }
 

@@ -1215,7 +1215,7 @@ namespace FabricObserverTests
                 ActiveEphemeralPortCountWarning = 1 // This will definitely cause Warning.
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1270,7 +1270,7 @@ namespace FabricObserverTests
                 AllocatedHandlesWarning = 100 // This will definitely cause Warning.
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1325,7 +1325,7 @@ namespace FabricObserverTests
                 CpuWarnUsageThresholdPct = -42
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1379,7 +1379,7 @@ namespace FabricObserverTests
                 CpuWarnUsageThresholdPct = 420
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(token).ConfigureAwait(true);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
