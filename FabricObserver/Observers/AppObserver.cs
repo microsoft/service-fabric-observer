@@ -1155,6 +1155,8 @@ namespace FabricObserver.Observers
                         }
                     }
 
+                    // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
+                    // a service process has mulitple descendants.
                     ComputeResourceUsage(
                             capacity,
                             parentPid,
