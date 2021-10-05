@@ -36,9 +36,8 @@ namespace ClusterObserver
         }
 
         private static int ObserverExecutionLoopSleepSeconds 
-        { 
-            get;
-            set; 
+        {
+            get; set;
         } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
         public static int AsyncOperationTimeoutSeconds
@@ -71,8 +70,6 @@ namespace ClusterObserver
         public static bool EtwEnabled
         {
             get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider), out etwEnabled) && etwEnabled;
-
-            set => etwEnabled = value;
         }
 
         public static string LogPath
@@ -285,16 +282,16 @@ namespace ClusterObserver
                 // ETW.
                 if (EtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
-                                        ObserverConstants.ClusterObserverETWEventName,
-                                        new
-                                        {
-                                            HealthScope = "Application",
-                                            HealthState = "Warning",
-                                            HealthEventDescription = message,
-                                            Metric = "ClusterObserverServiceHealth",
-                                            Source = ObserverConstants.ClusterObserverName
-                                        });
+                    Logger.LogEtw(
+                            ObserverConstants.ClusterObserverETWEventName,
+                            new
+                            {
+                                HealthScope = "Application",
+                                HealthState = "Warning",
+                                HealthEventDescription = message,
+                                Metric = "ClusterObserverServiceHealth",
+                                Source = ObserverConstants.ClusterObserverName
+                            });
                 }
 
                 // Don't swallow the unhandled exception. Fix the bug.
@@ -339,16 +336,16 @@ namespace ClusterObserver
                 // ETW.
                 if (EtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
-                                        ObserverConstants.ClusterObserverETWEventName,
-                                        new
-                                        {
-                                            HealthScope = "Application",
-                                            HealthState = "Warning",
-                                            HealthEventDescription = $"{e}",
-                                            Metric = "ClusterObserverServiceHealth",
-                                            Source = ObserverConstants.ClusterObserverName
-                                        });
+                    Logger.LogEtw(
+                            ObserverConstants.ClusterObserverETWEventName,
+                            new
+                            {
+                                HealthScope = "Application",
+                                HealthState = "Warning",
+                                HealthEventDescription = $"{e}",
+                                Metric = "ClusterObserverServiceHealth",
+                                Source = ObserverConstants.ClusterObserverName
+                            });
                 }
             }
 
@@ -392,16 +389,16 @@ namespace ClusterObserver
 
                     if (EtwEnabled)
                     {
-                        Logger.EtwLogger?.Write(
-                                            ObserverConstants.ClusterObserverETWEventName,
-                                            new
-                                            {
-                                                HealthScope = "Application",
-                                                HealthState = "Warning",
-                                                HealthEventDescription = observerHealthWarning,
-                                                Metric = "ClusterObserverServiceHealth",
-                                                Source = ObserverConstants.ClusterObserverName
-                                            });
+                        Logger.LogEtw(
+                                ObserverConstants.ClusterObserverETWEventName,
+                                new
+                                {
+                                    HealthScope = "Application",
+                                    HealthState = "Warning",
+                                    HealthEventDescription = observerHealthWarning,
+                                    Metric = "ClusterObserverServiceHealth",
+                                    Source = ObserverConstants.ClusterObserverName
+                                });
                     }
 
                     // Create new instance of CO.
@@ -427,16 +424,16 @@ namespace ClusterObserver
 
                 if (EtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
-                                        ObserverConstants.ClusterObserverETWEventName,
-                                        new
-                                        {
-                                            HealthScope = "Application",
-                                            HealthState = "Warning",
-                                            HealthEventDescription = msg,
-                                            Metric = "ClusterObserverServiceHealth",
-                                            Source = ObserverConstants.ClusterObserverName
-                                        });
+                    Logger.LogEtw(
+                            ObserverConstants.ClusterObserverETWEventName,
+                            new
+                            {
+                                HealthScope = "Application",
+                                HealthState = "Warning",
+                                HealthEventDescription = msg,
+                                Metric = "ClusterObserverServiceHealth",
+                                Source = ObserverConstants.ClusterObserverName
+                            });
                 }
 
                 throw;

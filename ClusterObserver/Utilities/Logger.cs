@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Tracing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -30,11 +29,6 @@ namespace ClusterObserver.Utilities
 
         private readonly string loggerName;
 
-        public static EventSource EtwLogger
-        {
-            get; private set;
-        }
-
         public bool EnableVerboseLogging
         {
             get; set;
@@ -58,14 +52,6 @@ namespace ClusterObserver.Utilities
         public string Filename
         {
             get;
-        }
-
-        static Logger()
-        {
-            if (EtwLogger == null && ClusterObserverManager.EtwEnabled)
-            {
-                EtwLogger = new EventSource(ObserverConstants.EventSourceProviderName);
-            }
         }
 
         /// <summary>
@@ -117,6 +103,11 @@ namespace ClusterObserver.Utilities
             OLogger.Error(format, parameters);
         }
 
+        public void LogEtw<T>(string eventName, T data)
+        {
+            ServiceEventSource.Current.Write(eventName, data);
+        }
+
         public void LogWarning(string format, params object[] parameters)
         {
             OLogger.Warn(format, parameters);
@@ -146,11 +137,9 @@ namespace ClusterObserver.Utilities
                     File.WriteAllText(path, content);
                     return true;
                 }
-                catch (IOException)
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
                 {
-                }
-                catch (UnauthorizedAccessException)
-                {
+
                 }
 
                 Thread.Sleep(1000);
@@ -224,19 +213,17 @@ namespace ClusterObserver.Utilities
                 {
                     Name = targetName,
                     OptimizeBufferReuse = true,
-                    ConcurrentWrites = true,
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",
                     OpenFileCacheTimeout = 5,
                     ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     ArchiveEvery = FileArchivePeriod.Day,
+                    MaxArchiveDays = 14,
                     AutoFlush = true
                 };
 
                 LogManager.Configuration.AddTarget(loggerName + "LogFile", target);
-
                 var ruleInfo = new LoggingRule(loggerName, NLog.LogLevel.Debug, target);
-
                 LogManager.Configuration.LoggingRules.Add(ruleInfo);
                 LogManager.ReconfigExistingLoggers();
             }

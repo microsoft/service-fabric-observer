@@ -39,15 +39,7 @@ namespace ClusterObserver.Utilities
                 _ = JsonConvert.DeserializeObject<T>(text);
                 return true;
             }
-            catch (JsonSerializationException)
-            {
-                return false;
-            }
-            catch (JsonReaderException)
-            {
-                return false;
-            }
-            catch (JsonWriterException)
+            catch
             {
                 return false;
             }
