@@ -66,6 +66,10 @@ namespace ClusterObserver.Utilities
         public const string NodeErrorTooManyOpenFileHandles = "FO037";
         public const string NodeWarningTooManyOpenFileHandles = "FO038";
 
+        // Process Threads (threads running in process)
+        public const string AppErrorTooManyThreads = "FO039";
+        public const string AppWarningTooManyThreads = "FO040";
+
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
             get;
@@ -85,7 +89,9 @@ namespace ClusterObserver.Utilities
             { AppErrorTooManyActiveEphemeralPorts, "AppErrorTooManyActiveEphemeralPorts" },
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
             { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
-            { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" }
+            { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
+            { AppErrorTooManyThreads, "AppErrorTooManyThreads" },
+            { AppWarningTooManyThreads, "AppWarningTooManyThreads" }
         };
 
         public static Dictionary<string, string> NodeErrorCodesDictionary

@@ -971,6 +971,11 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorTooManyOpenFileHandles : FOErrorWarningCodes.AppWarningTooManyOpenFileHandles;
                         break;
 
+                    case ErrorWarningProperty.TotalThreadCount when healthReportType == HealthReportType.Application:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorTooManyThreads : FOErrorWarningCodes.AppWarningTooManyThreads;
+                        break;
+
                     case ErrorWarningProperty.TotalFileHandles:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyOpenFileHandles : FOErrorWarningCodes.NodeWarningTooManyOpenFileHandles;

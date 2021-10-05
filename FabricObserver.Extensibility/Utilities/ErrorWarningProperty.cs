@@ -32,6 +32,9 @@ namespace FabricObserver.Observers.Utilities
         public const string TotalFileHandles = "Total Allocated File Handles";
         public const string TotalFileHandlesPct = "Total Allocated File Handles %";
 
+        // Threads
+        public const string TotalThreadCount = "Total Thread Count";
+
         // Child procs
         public const string ChildProcessCount = "Child Process Count";
     }

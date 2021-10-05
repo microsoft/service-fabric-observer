@@ -125,19 +125,21 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
-| **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log) |  
-| **memoryWarningLimitMb**| Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log) |  
-| **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate a Fabric Error (SFX and local log) |  
-| **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) | 
-| **cpuErrorLimitPercent** | Maximum CPU percentage that should generate a Fabric Error |
-| **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Fabric Warning |
-| **dumpProcessOnError** | Instructs whether or not FabricObserver should dump your service process when service health is detected to be in an  Error (critical) state... |  
-| **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate a Fabric Error. |
-| **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning. |
-| **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Error. |
-| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Warning. |  
-| **errorOpenFileHandles** | Maximum number of open file handles in use by an app process that will generate a Fabric Error. |  
-| **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Fabric Warning. |  
+| **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate an Error |  
+| **memoryWarningLimitMb**| Minimum service process private working set in Megabytes that should generate a Warning |  
+| **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate an Error |  
+| **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Warning | 
+| **cpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |
+| **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning |
+| **dumpProcessOnError** | Instructs whether or not FabricObserver should dump your service process when service health is detected to be in an  Error (critical) state. |  
+| **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate an Error. |
+| **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Warning. |
+| **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate an Error. |
+| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Warning. |  
+| **errorOpenFileHandles** | Maximum number of open file handles in use by an app process that will generate an Error. |  
+| **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Warning. |  
+| **errorThreadCount** | Maximum number of threads in use by an app process that will generate an Error. |  
+| **warningThreadCount** | Minimum number of threads in use by app process that will generate a Warning.|  
 
 **Output** Log text(Error/Warning), Service Fabric Application Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
 

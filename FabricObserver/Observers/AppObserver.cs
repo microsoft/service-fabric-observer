@@ -35,6 +35,8 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppTotalActivePortsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppEphemeralPortsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppHandlesData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppThreadsData;
+
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration.
         private List<ApplicationInfo> userTargetList;
 
@@ -317,6 +319,26 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
 
+                // Threads - Parent process
+                if (AllAppThreadsData.ContainsKey(id))
+                {
+                    var parentFrud = AllAppThreadsData[id];
+
+                    if (hasChildProcs)
+                    {
+                        ProcessChildProcs(AllAppThreadsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+
+                    ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.ErrorThreadCount,
+                            app.WarningThreadCount,
+                            healthReportTimeToLive,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps);
+                }
+
                 // Child proc info telemetry.
                 if (hasChildProcs && MaxChildProcTelemetryDataCount > 0)
                 {
@@ -475,6 +497,13 @@ namespace FabricObserver.Observers
 
                                     case ErrorWarningProperty.TotalFileHandles:
                                         if (frud.Value.IsUnhealthy(app.ErrorOpenFileHandles))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.TotalThreadCount:
+                                        if (frud.Value.IsUnhealthy(app.ErrorThreadCount))
                                         {
                                             dump = true;
                                         }
@@ -790,6 +819,8 @@ namespace FabricObserver.Observers
                         existingAppConfig.DumpProcessOnError = application.DumpProcessOnError == existingAppConfig.DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig.DumpProcessOnError;
                         existingAppConfig.ErrorOpenFileHandles = existingAppConfig.ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig.ErrorOpenFileHandles;
                         existingAppConfig.WarningOpenFileHandles = existingAppConfig.WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig.WarningOpenFileHandles;
+                        existingAppConfig.ErrorThreadCount = existingAppConfig.ErrorThreadCount == 0 && application.ErrorThreadCount > 0 ? application.ErrorThreadCount : existingAppConfig.ErrorThreadCount;
+                        existingAppConfig.WarningThreadCount = existingAppConfig.WarningThreadCount == 0 && application.WarningThreadCount > 0 ? application.WarningThreadCount : existingAppConfig.WarningThreadCount;
                     }
                     else
                     {
@@ -813,7 +844,9 @@ namespace FabricObserver.Observers
                             NetworkWarningEphemeralPorts = application.NetworkWarningEphemeralPorts,
                             DumpProcessOnError = application.DumpProcessOnError,
                             ErrorOpenFileHandles = application.ErrorOpenFileHandles,
-                            WarningOpenFileHandles = application.WarningOpenFileHandles
+                            WarningOpenFileHandles = application.WarningOpenFileHandles,
+                            ErrorThreadCount = application.ErrorThreadCount,
+                            WarningThreadCount = application.WarningThreadCount
                         };
 
                         userTargetList.Add(appConfig);
@@ -954,6 +987,7 @@ namespace FabricObserver.Observers
             AllAppTotalActivePortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             AllAppEphemeralPortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
+            AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             var exceptions = new ConcurrentQueue<Exception>();
 
             _ = Parallel.For(0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
@@ -963,7 +997,7 @@ namespace FabricObserver.Observers
                 var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
-                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false;
+                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false;
                 var application = deployedTargetList?.First(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString.ToLower() ||
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
@@ -1138,6 +1172,16 @@ namespace FabricObserver.Observers
                         checkHandles = true;
                     }
 
+                    if (!AllAppThreadsData.ContainsKey(id) && (application.ErrorThreadCount > 0 || application.WarningThreadCount > 0))
+                    {
+                        _ = AllAppThreadsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalThreadCount, id, 1, false));
+                    }
+
+                    if (AllAppThreadsData.ContainsKey(id))
+                    {
+                        checkThreads = true;
+                    }
+
                     /* In order to provide accurate resource usage of an SF service process we need to also account for
                        any processes (children) that the service process (parent) created/spawned. */
 
@@ -1166,6 +1210,7 @@ namespace FabricObserver.Observers
                             checkAllPorts,
                             checkEphemeralPorts,
                             checkHandles,
+                            checkThreads,
                             procs,
                             id,
                             token);
@@ -1201,6 +1246,7 @@ namespace FabricObserver.Observers
                             bool checkAllPorts,
                             bool checkEphemeralPorts,
                             bool checkHandles,
+                            bool checkThreads,
                             ConcurrentDictionary<string, int> procs,
                             string id,
                             CancellationToken token)
@@ -1222,7 +1268,7 @@ namespace FabricObserver.Observers
                 {
                     float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
 
-                    if (handles > -1)
+                    if (handles > 0F)
                     {
                         if (procId == parentPid)
                         {
@@ -1235,6 +1281,28 @@ namespace FabricObserver.Observers
                                 _ = AllAppHandlesData.TryAdd($"{id}:{procName}", new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}", capacity, UseCircularBuffer));
                             }
                             AllAppHandlesData[$"{id}:{procName}"].Data.Add(handles);
+                        }
+                    }
+                }
+
+                // Threads
+                if (checkThreads)
+                {
+                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
+
+                    if (threads > 0)
+                    {
+                        if (procId == parentPid)
+                        {
+                            AllAppThreadsData[id].Data.Add(threads);
+                        }
+                        else
+                        {
+                            if (!AllAppThreadsData.ContainsKey($"{id}:{procName}"))
+                            {
+                                _ = AllAppThreadsData.TryAdd($"{id}:{procName}", new FabricResourceUsageData<int>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}", capacity, UseCircularBuffer));
+                            }
+                            AllAppThreadsData[$"{id}:{procName}"].Data.Add(threads);
                         }
                     }
                 }
