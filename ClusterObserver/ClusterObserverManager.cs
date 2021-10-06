@@ -70,6 +70,7 @@ namespace ClusterObserver
         public static bool EtwEnabled
         {
             get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider), out etwEnabled) && etwEnabled;
+            set => etwEnabled = value;
         }
 
         public static string LogPath
