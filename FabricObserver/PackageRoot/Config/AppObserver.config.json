@@ -4,6 +4,6 @@
     "cpuWarningLimitPercent": 85,
     "memoryWarningLimitMb": 1048,
     "networkWarningEphemeralPorts": 7500,
-    "warningThreadCount": 50
+    "warningThreadCount": 500
   }
 ]
