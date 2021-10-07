@@ -82,7 +82,7 @@ namespace FabricObserver.TelemetryLib
                     { "NodeNameHash", nodeHashString },
                     { "FOVersion", foData.Version },
                     { "HasPlugins", foData.HasPlugins.ToString() },
-                    { "ParallelExecution", foData.ParallelExecutionEnabled.ToString() },
+                    { "ParallelCapable", foData.ParallelExecutionCapable.ToString() },
                     { "UpTime", foData.UpTime },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", foData.OS }
@@ -106,6 +106,7 @@ namespace FabricObserver.TelemetryLib
                 const string apps = "TotalMonitoredApps";
                 const string procs = "TotalMonitoredServiceProcesses";
                 const string conts = "TotalMonitoredContainers";
+                const string parallel = "ConcurrencyEnabled";
 
                 foreach (var obData in foData.ObserverData)
                 {
@@ -130,6 +131,16 @@ namespace FabricObserver.TelemetryLib
                             key = $"{obData.ObserverName}{conts}";
                         }
 
+                        metrics.Add(key, data);
+
+                    }
+
+                    // Concurrency
+                    if (obData.ObserverName.Contains("AppObserver") || obData.ObserverName.Contains("FabricSystemObserver")
+                       || obData.ObserverName.Contains("ContainerObserver"))
+                    {
+                        data = ((AppServiceObserverData)obData).ConcurrencyEnabled == false ? 0 : 1;
+                        key = $"{obData.ObserverName}{parallel}";
                         metrics.Add(key, data);
                     }
 

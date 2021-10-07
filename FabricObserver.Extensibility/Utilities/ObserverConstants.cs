@@ -53,6 +53,7 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxArchivedCsvFileLifetimeDays = "MaxArchivedCsvFileLifetimeDays";
         public const string MaxArchivedLogFileLifetimeDays = "MaxArchivedLogFileLifetimeDays";
         public const string CsvFileWriteFormat = "CsvFileWriteFormat";
+        public const string EnableConcurrentMonitoring = "EnableConcurrentMonitoring";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";
@@ -105,6 +106,8 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricSystemObserverMonitorWindowsEventLog = "MonitorWindowsEventLog";
         public const string FabricSystemObserverErrorHandles = "AllocatedHandlesErrorLimit";
         public const string FabricSystemObserverWarningHandles = "AllocatedHandlesWarningLimit";
+        public const string FabricSystemObserverWarningThreadCount = "ThreadCountWarningLimit";
+        public const string FabricSystemObserverErrorThreadCount = "ThreadCountErrorLimit";
 
         // NetworkObserver.
         public const string NetworkObserverName = "NetworkObserver";

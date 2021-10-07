@@ -41,7 +41,7 @@ namespace FabricObserver.Observers
         private List<ApplicationInfo> userTargetList;
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
-        private ConcurrentQueue<ApplicationInfo> deployedTargetList;
+        private List<ApplicationInfo> deployedTargetList;
         private readonly ConfigSettings configSettings;
         private string fileName;
         private readonly Stopwatch stopwatch;
@@ -57,12 +57,22 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
+        public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
             get; set;
         }
 
         public string ConfigPackagePath
+        {
+            get; set;
+        }
+
+        public bool EnableConcurrentMonitoring
+        {
+            get; set;
+        }
+
+        ParallelOptions ParallelOptions
         {
             get; set;
         }
@@ -111,7 +121,7 @@ namespace FabricObserver.Observers
            
             if (EnableVerboseLogging)
             {
-                ObserverLogger.LogInfo($"Run Duration {(ObserverManager.ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
+                ObserverLogger.LogInfo($"Run Duration {(ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
                                        $"Parallel (Processors: {Environment.ProcessorCount}):{RunDuration}");
             }
 
@@ -121,24 +131,19 @@ namespace FabricObserver.Observers
 
         public override Task ReportAsync(CancellationToken token)
         {
-            if (deployedTargetList.IsEmpty)
+            if (deployedTargetList.Count == 0)
             {
                 return Task.CompletedTask;
             }
 
             TimeSpan healthReportTimeToLive = GetHealthReportTimeToLive();
 
-            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
+            _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
             {
                 token.ThrowIfCancellationRequested();
 
                 // For use in process family tree monitoring.
                 ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList = null;
-
-                if (!ReplicaOrInstanceList.TryDequeue(out ReplicaOrInstanceMonitoringInfo repOrInst))
-                {
-                    return;
-                }
 
                 string processName = null;
                 int processId = 0;
@@ -560,23 +565,17 @@ namespace FabricObserver.Observers
         // be up to date across observer loop iterations.
         private async Task<bool> InitializeAsync()
         {
-            ReplicaOrInstanceList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
+            ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             userTargetList = new List<ApplicationInfo>();
-            deployedTargetList = new ConcurrentQueue<ApplicationInfo>();
+            deployedTargetList = new List<ApplicationInfo>();
 
             /* Child/Descendant proc monitoring config */
-            if (bool.TryParse(
-                     GetSettingParameterValue(
-                        ConfigurationSectionName,
-                        ObserverConstants.EnableChildProcessMonitoringParameter), out bool enableDescendantMonitoring))
+            if (bool.TryParse( GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableChildProcessMonitoringParameter), out bool enableDescendantMonitoring))
             {
                 EnableChildProcessMonitoring = enableDescendantMonitoring;
             }
 
-            if (int.TryParse(
-                       GetSettingParameterValue(
-                          ConfigurationSectionName,
-                          ObserverConstants.MaxChildProcTelemetryDataCountParameter), out int maxChildProcs))
+            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxChildProcTelemetryDataCountParameter), out int maxChildProcs))
             {
                 MaxChildProcTelemetryDataCount = maxChildProcs;
             }
@@ -606,6 +605,20 @@ namespace FabricObserver.Observers
             {
                 MaxDumpsTimeWindow = dumpTimeWindow;
             }
+
+            // Concurrency/Parallelism support.
+            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            {
+                EnableConcurrentMonitoring = enableConcurrency;
+            }
+
+            ParallelOptions = new ParallelOptions
+            {
+                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
+                MaxDegreeOfParallelism = EnableConcurrentMonitoring && Environment.ProcessorCount >= 4 ? -1 : 1,
+                CancellationToken = Token,
+                TaskScheduler = TaskScheduler.Default
+            };
 
             configSettings.Initialize(
                             FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
@@ -979,7 +992,7 @@ namespace FabricObserver.Observers
         private Task MonitorDeployedAppsAsync(CancellationToken token)
         {
             Stopwatch execTimer = Stopwatch.StartNew();
-
+            ConcurrentQueue<Exception> exceptions = new ConcurrentQueue<Exception>();
             int capacity = ReplicaOrInstanceList.Count;
             AllAppCpuData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppMemDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
@@ -988,13 +1001,11 @@ namespace FabricObserver.Observers
             AllAppEphemeralPortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
-            var exceptions = new ConcurrentQueue<Exception>();
 
-            _ = Parallel.For(0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
+            _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
             {
                 token.ThrowIfCancellationRequested();
 
-                var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
                 bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false;
@@ -1521,19 +1532,13 @@ namespace FabricObserver.Observers
                 }
 
                 var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType);
-
-                foreach (var rep in replicasOrInstances)
-                {
-                    ReplicaOrInstanceList.Enqueue(rep);
-                }
+                ReplicaOrInstanceList.AddRange(replicasOrInstances);
+                
                
                 var targets = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
                                                             && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
                                                                 || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower()));
-                foreach (var target in targets)
-                {
-                    deployedTargetList.Enqueue(target);
-                }
+                deployedTargetList.AddRange(targets);
             }
 
             deployedApps.Clear();

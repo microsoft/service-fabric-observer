@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- *** Application Parameters - Must Override (set) in ApplicationManifest.xml, not here. *** -->
+    <!-- *** Application Parameters - Must Override, set in ApplicationManifest.xml, not here. *** -->
     
     <!-- Required: Amount of time, in seconds, for FO to sleep before the next iteration of the sequential observers run loop. 
          0 means run continuously with no pausing - not recommended. If you only enable one observer, FO will sleep for 10 seconds between runs, regardless
@@ -37,9 +37,6 @@
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
-    
-    <!-- Optional: Whether or not to turn on parallelized observer monitoring when running on capable hardware (>= 4 processors only). -->
-    <Parameter Name="EnableConcurrentExecution" Value="" MustOverride="true" />
     
     <!-- *** Non-Overridable Parameters - Set these in this file. *** -->
     
@@ -110,6 +107,11 @@
     
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="" MustOverride="true" />
+
+    <!-- Optional: Whether or not AppObserver should try to monitor service processes concurrently.
+         This can significantly decrease the amount of time it takes AppObserver to monitor and report on several application services. 
+         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
+    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
     
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
@@ -209,6 +211,10 @@
   </Section>
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <!-- Optional: Whether or not FabricSystemObserver should try to monitor service processes concurrently.
+         This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
+         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
+    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
@@ -239,6 +245,8 @@
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="AllocatedHandlesErrorLimit" Value="" MustOverride="true" />
     <Parameter Name="AllocatedHandlesWarningLimit" Value="" MustOverride="true" />
+    <Parameter Name="ThreadCountErrorLimit" Value="" MustOverride="true" />
+    <Parameter Name="ThreadCountWarningLimit" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="NetworkObserverConfiguration">
@@ -325,6 +333,7 @@
   </Section>
   <Section Name="ContainerObserverConfiguration">
      <Parameter Name="Enabled" Value="" MustOverride="true" />
+     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
      <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
      <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
      <Parameter Name="EnableEtw" Value="" MustOverride="true"/>

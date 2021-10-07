@@ -98,20 +98,6 @@ namespace FabricObserver.Observers
             get; set;
         } = HealthState.Unknown;
 
-        /// <summary>
-        /// This is for observers that support parallelized monitor loops. 
-        /// AppObserver, ContainerObserver, FabricSystemObserver.
-        /// </summary>
-        public static ParallelOptions ParallelOptions
-        {
-            get; set;
-        }
-
-        public static bool EnableConcurrentExecution
-        {
-            get; set;
-        }
-
         private ObserverHealthReporter HealthReporter
         {
             get;
@@ -225,13 +211,6 @@ namespace FabricObserver.Observers
             }
 
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-
-            ParallelOptions = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = EnableConcurrentExecution && Environment.ProcessorCount >= 4 ? -1 : 1,
-                CancellationToken = linkedSFRuntimeObserverTokenSource?.Token ?? token,
-                TaskScheduler = TaskScheduler.Default
-            };
         }
 
         public async Task StartObserversAsync()
@@ -263,7 +242,9 @@ namespace FabricObserver.Observers
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
-                    if (FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    if (FabricObserverOperationalTelemetryEnabled
+                        && DateTime.UtcNow.Subtract(StartDateTime) >= OperationalTelemetryRunInterval
+                        && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
                         {
@@ -633,7 +614,7 @@ namespace FabricObserver.Observers
                     Version = InternalVersionNumber,
                     EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
                     HasPlugins = hasPlugins,
-                    ParallelExecutionEnabled = EnableConcurrentExecution,
+                    ParallelExecutionCapable = Environment.ProcessorCount >= 4,
                     ObserverData = GetObserverData(),
                 };
             }
@@ -793,21 +774,8 @@ namespace FabricObserver.Observers
         private void SetPropertiesFromConfigurationParameters(ConfigurationSettings settings = null)
         {
             ApplicationName = FabricServiceContext.CodePackageActivationContext.ApplicationName;
-            
-            // Parallelization settings for capable hardware. \\
 
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableConcurrentExecution, settings), out bool enableConcurrency))
-            {
-                EnableConcurrentExecution = enableConcurrency;
-            }
 
-            ParallelOptions = new ParallelOptions
-            {
-                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
-                MaxDegreeOfParallelism = EnableConcurrentExecution && Environment.ProcessorCount >= 4 ? -1 : 1,
-                CancellationToken = linkedSFRuntimeObserverTokenSource?.Token ?? token,
-                TaskScheduler = TaskScheduler.Default
-            };
 
             // ETW - Overridable
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool etwEnabled))

@@ -14,15 +14,14 @@
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
-    <Parameter Name="ObserverManagerEnableConcurrentExecution" DefaultValue="true" />
     <!-- Observers Configuration -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
-    <Parameter Name="ContainerObserverEnabled" DefaultValue="true" />
+    <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
@@ -64,11 +63,7 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers.
-         Note that if you are running on capable hardware (logical processors >= 4), then you can set these values higher than normal 
-         for AppObserver and FabricSystemObserver, assuming you also set ObserverManagerEnableConcurrentExecution to true (see ObserverManager Configuration section above). 
-         For lesser hardware (logical processors < 4) or sequential execution (Concurrent execution disabled), be very conservative 
-         with these values if AppObserver is monitoring several app services. -->
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:02" />
@@ -103,6 +98,8 @@
     <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
+    <!-- Concurrency/Parallelism Support -->
+    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -111,6 +108,8 @@
     <Parameter Name="AppCertCommonNamesToObserve" DefaultValue="[]" />
     <!-- ContainerObserver -->
     <Parameter Name="ContainerObserverConfigurationFile" DefaultValue="ContainerObserver.config.json" />
+    <!-- Concurrency/Parallelism Support -->
+    <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="false" />
     <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="85" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
@@ -120,6 +119,8 @@
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
+    <!-- Concurrency/Parallelism Support -->
+    <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="false" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
@@ -131,6 +132,8 @@
     <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="7000" />
     <Parameter Name="FabricSystemObserverAllocatedHandlesErrorLimit" DefaultValue="" />
     <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverThreadCountErrorLimit" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverThreadCountWarningLimit" DefaultValue="500" />
     <!-- Whether to monitor Windows Event Log. -->
     <Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
     <!-- NodeObserver -->
@@ -183,6 +186,7 @@
         <Settings>
           <Section Name="AppObserverConfiguration">
             <Parameter Name="Enabled" Value="[AppObserverEnabled]" />
+            <Parameter Name="EnableConcurrentMonitoring" Value="[AppObserverEnableConcurrentMonitoring]" />
             <Parameter Name="EnableCSVDataLogging" Value="[AppObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[AppObserverEnableEtw]" />
             <Parameter Name="EnableTelemetry" Value="[AppObserverEnableTelemetry]" />
@@ -226,6 +230,7 @@
           </Section>
           <Section Name="FabricSystemObserverConfiguration">
             <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
+            <Parameter Name="EnableConcurrentMonitoring" Value="[FabricSystemObserverEnableConcurrentMonitoring]" />
             <Parameter Name="EnableCSVDataLogging" Value="[FabricSystemObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[FabricSystemObserverEnableEtw]" />
             <Parameter Name="EnableTelemetry" Value="[FabricSystemObserverEnableTelemetry]" />
@@ -249,6 +254,8 @@
             <Parameter Name="NetworkWarningEphemeralPorts" Value="[FabricSystemObserverNetworkWarningEphemeralPorts]" />
             <Parameter Name="AllocatedHandlesErrorLimit" Value="[FabricSystemObserverAllocatedHandlesErrorLimit]" />
             <Parameter Name="AllocatedHandlesWarningLimit" Value="[FabricSystemObserverAllocatedHandlesWarningLimit]" />
+            <Parameter Name="ThreadCountErrorLimit" Value="[FabricSystemObserverThreadCountErrorLimit]" />
+            <Parameter Name="ThreadCountWarningLimit" Value="[FabricSystemObserverThreadCountWarningLimit]" />
           </Section>
           <Section Name="NetworkObserverConfiguration">
             <Parameter Name="Enabled" Value="[NetworkObserverEnabled]" />
@@ -320,6 +327,7 @@
           </Section>
           <Section Name="ContainerObserverConfiguration">
             <Parameter Name="Enabled" Value="[ContainerObserverEnabled]" />
+            <Parameter Name="EnableConcurrentMonitoring" Value="[ContainerObserverEnableConcurrentMonitoring]" />
             <Parameter Name="EnableTelemetry" Value="[ContainerObserverEnableTelemetry]" />
             <Parameter Name="EnableEtw" Value="[ContainerObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[ContainerObserverEnableVerboseLogging]" />
@@ -335,7 +343,6 @@
             <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
             <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
             <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
-            <Parameter Name="EnableConcurrentExecution" Value="[ObserverManagerEnableConcurrentExecution]" />
           </Section>
         </Settings>
       </ConfigOverride>

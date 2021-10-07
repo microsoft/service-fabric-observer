@@ -39,6 +39,16 @@ namespace FabricObserver.Observers
         private Stopwatch runDurationTimer;
         public string ConfigurationFilePath = string.Empty;
 
+        public bool EnableConcurrentMonitoring
+        {
+            get; set;
+        }
+
+        public ParallelOptions ParallelOptions 
+        { 
+            get; private set; 
+        }
+
         public ContainerObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
@@ -76,7 +86,7 @@ namespace FabricObserver.Observers
             
             if (EnableVerboseLogging)
             {
-                ObserverLogger.LogInfo($"Run Duration {(ObserverManager.ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
+                ObserverLogger.LogInfo($"Run Duration {(ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
                                        $"Parallel (Processors: {Environment.ProcessorCount}):{RunDuration}");
             }
 
@@ -92,14 +102,9 @@ namespace FabricObserver.Observers
 
             TimeSpan timeToLive = GetHealthReportTimeToLive();
 
-            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ObserverManager.ParallelOptions, (i, state) =>
+            _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
             {
                 token.ThrowIfCancellationRequested();
-
-                if (!ReplicaOrInstanceList.TryDequeue(out ReplicaOrInstanceMonitoringInfo repOrInst))
-                {
-                    return;
-                }
 
                 ApplicationInfo app = deployedTargetList.First(
                                             a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
@@ -182,6 +187,20 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogWarning($"Will not observe container resource consumption as no configuration file has been supplied.");
                 return false;
             }
+
+            // Concurrency/Parallelism support.
+            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            {
+                EnableConcurrentMonitoring = enableConcurrency;
+            }
+
+            ParallelOptions = new ParallelOptions
+            {
+                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
+                MaxDegreeOfParallelism = EnableConcurrentMonitoring && Environment.ProcessorCount >= 4 ? -1 : 1,
+                CancellationToken = Token,
+                TaskScheduler = TaskScheduler.Default
+            };
 
             userTargetList = new List<ApplicationInfo>();
             deployedTargetList = new ConcurrentQueue<ApplicationInfo>();
@@ -512,10 +531,8 @@ namespace FabricObserver.Observers
                     return false;
                 }
 
-                _ = Parallel.For(0, ReplicaOrInstanceList.Count, (i, state) =>
+                _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
                 {
-                    // Do not TryDequeue here as ReplicaOrInstanceList is used in other functions (like ReportAsync).
-                    var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                     string serviceName = repOrInst.ServiceName.OriginalString.Replace(repOrInst.ApplicationName.OriginalString, "").Replace("/", "");
                     string cpuId = $"{serviceName}_cpu";
                     string memId = $"{serviceName}_mem";

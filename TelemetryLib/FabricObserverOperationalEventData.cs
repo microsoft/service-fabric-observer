@@ -31,9 +31,9 @@ namespace FabricObserver.TelemetryLib
             get; set;
         }
 
-        public bool ParallelExecutionEnabled
-        {
-            get; set;
+        public bool ParallelExecutionCapable 
+        { 
+            get; set; 
         }
 
         public List<ObserverData> ObserverData
