@@ -228,7 +228,6 @@ namespace FabricObserver.Observers
             }
 
             await ReportAsync(token).ConfigureAwait(true);
-            CleanUp();
 
             // The time it took to run this observer to completion.
             stopwatch.Stop();
@@ -1089,39 +1088,6 @@ namespace FabricObserver.Observers
                         GetHealthReportTimeToLive(),
                         HealthReportType.Application); 
             });
-        }
-
-        private void CleanUp()
-        {
-            if (allCpuData != null && !allCpuData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allCpuData?.Clear();
-                allCpuData = null;
-            }
-
-            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allEphemeralTcpPortData?.Clear();
-                allEphemeralTcpPortData = null;
-            }
-
-            if (allHandlesData != null && !allHandlesData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allHandlesData?.Clear();
-                allHandlesData = null;
-            }
-
-            if (allMemData != null && !allMemData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allMemData?.Clear();
-                allMemData = null;
-            }
-
-            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allActiveTcpPortData?.Clear();
-                allActiveTcpPortData = null;
-            }
         }
     }
 }

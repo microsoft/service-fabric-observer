@@ -116,7 +116,6 @@ namespace FabricObserver.Observers
             await MonitorDeployedAppsAsync(token);
             await ReportAsync(token);
             stopwatch.Stop();
-            CleanUp();
             RunDuration = stopwatch.Elapsed;
            
             if (EnableVerboseLogging)
@@ -1668,54 +1667,6 @@ namespace FabricObserver.Observers
                 {
                     replicaMonitoringList.Add(replicaInfo);
                 }
-            }
-        }
-
-        private void CleanUp()
-        {
-            deployedTargetList?.Clear();
-            deployedTargetList = null;
-
-            userTargetList?.Clear();
-            userTargetList = null;
-
-            ReplicaOrInstanceList?.Clear();
-            ReplicaOrInstanceList = null;
-
-            if (AllAppCpuData != null && AllAppCpuData.All(frud => frud.Value != null && !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppCpuData?.Clear();
-                AllAppCpuData = null;
-            }
-
-            if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.All(frud => frud.Value != null && !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppEphemeralPortsData?.Clear();
-                AllAppEphemeralPortsData = null;
-            }
-
-            if (AllAppHandlesData != null && AllAppHandlesData.All(frud => frud.Value != null && !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppHandlesData?.Clear();
-                AllAppHandlesData = null;
-            }
-
-            if (AllAppMemDataMb != null && AllAppMemDataMb.All(frud => frud.Value != null && !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppMemDataMb?.Clear();
-                AllAppMemDataMb = null;
-            }
-
-            if (AllAppMemDataPercent != null && AllAppMemDataPercent.All(frud => frud.Value != null && !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppMemDataPercent?.Clear();
-                AllAppMemDataPercent = null;
-            }
-
-            if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.All(frud => frud.Value != null && !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppTotalActivePortsData?.Clear();
-                AllAppTotalActivePortsData = null;
             }
         }
 

@@ -231,7 +231,7 @@ namespace FabricObserver.Observers
                         break;
                     }
 
-                    _ = await RunObserversAsync().ConfigureAwait(false);
+                    await RunObserversAsync().ConfigureAwait(false);
 
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
@@ -912,25 +912,22 @@ namespace FabricObserver.Observers
         /// Runs all observers in a sequential loop.
         /// </summary>
         /// <returns>A boolean value indicating success of a complete observer loop run.</returns>
-        private async Task<bool> RunObserversAsync()
+        private async Task RunObserversAsync()
         {
-            var exceptionBuilder = new StringBuilder();
-            bool allExecuted = true;
-
             for (int i = 0; i < observers.Count; ++i)
             {
                 var observer = observers[i];
 
                 if (isConfigurationUpdateInProgress)
                 {
-                    return true;
+                    return;
                 }
 
                 try
                 {
                     if (TaskCancelled || shutdownSignaled)
                     {
-                        return true;
+                        return;
                     }
 
                     // Is it healthy?
@@ -1043,51 +1040,29 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                catch (AggregateException ex)
+                catch (AggregateException ae) when (ae.InnerExceptions.Any(e => e is FabricException ||
+                                                                                e is OperationCanceledException ||
+                                                                                e is TaskCanceledException))
                 {
-                    if (ex.InnerException is FabricException ||
-                        ex.InnerException is OperationCanceledException ||
-                        ex.InnerException is TaskCanceledException)
+                    if (isConfigurationUpdateInProgress)
                     {
-                        if (isConfigurationUpdateInProgress)
-                        {
-                            return true;
-                        }
-
-                        continue;
+                        return;
                     }
 
-                    _ = exceptionBuilder.AppendLine($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ex.InnerException}");
-                    allExecuted = false;
+                    continue;
                 }
                 catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
                 {
                     if (isConfigurationUpdateInProgress)
                     {
-                        return true;
+                        return;
                     }
-
-                    _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
-                    allExecuted = false;
                 }
                 catch (Exception e)
                 {
-                    Logger.LogWarning($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
-                    allExecuted = false;
+                    Logger.LogWarning($"Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                 }
             }
-
-            if (allExecuted)
-            {
-                Logger.LogInfo(ObserverConstants.AllObserversExecutedMessage);
-            }
-            else
-            {
-                Logger.LogWarning(exceptionBuilder.ToString());
-                _ = exceptionBuilder.Clear();
-            }
-
-            return allExecuted;
         }
     }
 }

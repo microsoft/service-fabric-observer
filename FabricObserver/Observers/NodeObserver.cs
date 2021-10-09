@@ -139,7 +139,6 @@ namespace FabricObserver.Observers
             Initialize();
             await GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
             await ReportAsync(token).ConfigureAwait(true);
-            CleanUp();
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -726,52 +725,6 @@ namespace FabricObserver.Observers
                 {
                     CpuUtilizationProvider.Instance?.Dispose();
                     CpuUtilizationProvider.Instance = null;
-                }
-            }
-        }
-
-        private void CleanUp()
-        {
-            if (ActivePortsData != null && !ActivePortsData.ActiveErrorOrWarning)
-            {
-                ActivePortsData = null;
-            }
-
-            if (CpuTimeData != null && !CpuTimeData.ActiveErrorOrWarning)
-            {
-                CpuTimeData = null;
-            }
-
-            if (EphemeralPortsData != null && !EphemeralPortsData.ActiveErrorOrWarning)
-            {
-                EphemeralPortsData = null;
-            }
-
-            if (MemDataInUse != null && !MemDataInUse.ActiveErrorOrWarning)
-            {
-                MemDataInUse = null;
-            }
-
-            if (MemDataPercent != null && !MemDataPercent.ActiveErrorOrWarning)
-            {
-                MemDataPercent = null;
-            }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && FirewallData != null && !FirewallData.ActiveErrorOrWarning)
-            {
-                FirewallData = null;
-            }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (LinuxFileHandlesDataPercentAllocated != null && !LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
-                {
-                    LinuxFileHandlesDataPercentAllocated = null;
-                }
-
-                if (LinuxFileHandlesDataTotalAllocated != null && !LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
-                {
-                    LinuxFileHandlesDataTotalAllocated = null;
                 }
             }
         }

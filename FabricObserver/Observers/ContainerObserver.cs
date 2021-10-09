@@ -80,7 +80,6 @@ namespace FabricObserver.Observers
                 await ReportAsync(token);
             }
 
-            CleanUp();
             runDurationTimer.Stop();
             RunDuration = runDurationTimer.Elapsed;
             
@@ -700,27 +699,6 @@ namespace FabricObserver.Observers
                 }
 
                 ReplicaOrInstanceList.Enqueue(replicaInfo);
-            }
-        }
-
-        private void CleanUp()
-        {
-            deployedTargetList?.Clear();
-            deployedTargetList = null;
-
-            ReplicaOrInstanceList?.Clear();
-            ReplicaOrInstanceList = null;
-
-            userTargetList?.Clear();
-            userTargetList = null;
-
-            if (!HasActiveFabricErrorOrWarning)
-            {
-                allCpuDataPercentage?.Clear();
-                allCpuDataPercentage = null;
-
-                allMemDataMB?.Clear();
-                allMemDataMB = null;
             }
         }
     }
