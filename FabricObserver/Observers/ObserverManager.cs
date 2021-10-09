@@ -32,7 +32,6 @@ namespace FabricObserver.Observers
         private readonly string nodeName;
         private readonly List<ObserverBase> observers;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
-        private readonly TimeSpan ForcedGCInterval = TimeSpan.FromMinutes(15);
         private readonly CancellationToken token;
         private readonly IEnumerable<ObserverBase> serviceCollection;
         private volatile bool shutdownSignaled;
@@ -121,11 +120,6 @@ namespace FabricObserver.Observers
         private int MaxArchivedLogFileLifetimeDays
         {
             get;
-        }
-
-        private DateTime LastForcedGCDateTime
-        {
-            get; set;
         }
 
         private DateTime LastTelemetrySendDate
@@ -242,9 +236,7 @@ namespace FabricObserver.Observers
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
-                    if (FabricObserverOperationalTelemetryEnabled
-                        && DateTime.UtcNow.Subtract(StartDateTime) >= OperationalTelemetryRunInterval
-                        && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    if (FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
                         {
@@ -273,14 +265,6 @@ namespace FabricObserver.Observers
                             // Telemetry is non-critical and should not take down FO.
                             // TelemetryLib will log exception details to file in top level FO log folder.
                         }
-                    }
-
-                    // Force Gen0-Gen2 collection with compaction, including LOH. This runs every 15 minutes.
-                    if (DateTime.UtcNow.Subtract(LastForcedGCDateTime) >= ForcedGCInterval)
-                    {
-                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                        GC.Collect(2, GCCollectionMode.Forced, true, true);
-                        LastForcedGCDateTime = DateTime.UtcNow;
                     }
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
