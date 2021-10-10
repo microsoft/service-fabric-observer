@@ -147,7 +147,7 @@ AppObserver also supports non-JSON parameters for configuration unrelated to thr
 
 #### Non-json settings set in ApplicationManifest.xml  
 
-Version 3.1.18 introduces support for concurrent service process monitoring and reporting by AppObserver. You can enable/disable this feature by setting the boolean value for AppObserverEnableConcurrentMonitoring. Note that this is disabled by default.
+**Version 3.1.18 introduces support for concurrent service process monitoring and reporting by AppObserver**. You can enable/disable this feature by setting the boolean value for AppObserverEnableConcurrentMonitoring. Note that this is disabled by default.
 If your compute configuration includes multiple CPUs (logical processors >= 4) and you monitor several services, then you should consider enabling this capability as it will significantly decrease the time it takes AppObserver to complete monitoring/reporting.
 If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
 
@@ -313,7 +313,7 @@ Monitors CPU and Memory use of Service Fabric containerized (docker) services.
 
 **In order for ContainerObserver to function properly on Windows, FabricObserver must be configured to run as Admin or System user.** This is not the case for Linux deployments.
 
-Version 3.1.18 introduces support for concurrent docker stats data parsing and reporting by ContainerObserver. You can enable/disable this feature by setting the boolean value for ContainerObserverEnableConcurrentMonitoring. Note that this is disabled by default.
+**Version 3.1.18 introduces support for concurrent docker stats data parsing and reporting by ContainerObserver**. You can enable/disable this feature by setting the boolean value for ContainerObserverEnableConcurrentMonitoring. Note that this is disabled by default.
 If your compute configuration includes multiple CPUs (logical processors >= 4) and you monitor several containerized services, then you should consider enabling this capability as it will significantly decrease the time it takes ContainerObserver to complete monitoring/reporting.
 If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
 
@@ -445,7 +445,7 @@ By default, FabricObserver runs as NetworkUser on Windows and sfappsuser on Linu
 running as System or root, default FabricObserver can't monitor process behavior (this is always true on Windows). That said, there are only a few system
 services you would care about: Fabric.exe and FabricGateway.exe. Fabric.exe is generally the system service that your code can directly impact with respect to machine resource usage.
 
-Version 3.1.18 introduces support for concurrent service process monitoring and reporting by FabricSystemObserver. You can enable/disable this feature by setting the boolean value for ContainerObserverEnableConcurrentMonitoring. Note that this is disabled by default.
+**Version 3.1.18 introduces support for concurrent service process monitoring and reporting by FabricSystemObserver**. You can enable/disable this feature by setting the boolean value for ContainerObserverEnableConcurrentMonitoring. Note that this is disabled by default.
 If your compute configuration includes multiple CPUs (logical processors >= 4), then you should consider enabling this capability as it will significantly decrease the time it takes FabricSystemObserver to complete monitoring/reporting.
 If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
 

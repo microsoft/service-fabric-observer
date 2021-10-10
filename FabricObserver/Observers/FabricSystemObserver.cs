@@ -1013,6 +1013,7 @@ namespace FabricObserver.Observers
                                 where T : struct
         {
             string fileName = null;
+            TimeSpan TTL = GetHealthReportTimeToLive();
 
             if (EnableCsvLogging)
             {
@@ -1080,12 +1081,11 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // This function will clear Data items in list (will call Clear() on the supplied FabricResourceUsageData instance's Data field..)
                 ProcessResourceDataReportHealth(
                         dataItem,
                         thresholdError,
                         thresholdWarning,
-                        GetHealthReportTimeToLive(),
+                        TTL,
                         HealthReportType.Application); 
             });
         }

@@ -29,6 +29,7 @@ namespace FabricObserver.Observers
     // in AppObserver.config.json. This observer will also emit telemetry (ETW, LogAnalytics/AppInsights) if enabled in Settings.xml (ObserverManagerConfiguration) and ApplicationManifest.xml (AppObserverEnableEtw).
     public class AppObserver : ObserverBase
     {
+        // Support for concurrent monitoring.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppMemDataMb;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppMemDataPercent;
@@ -37,10 +38,12 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppHandlesData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppThreadsData;
 
-        // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration.
+        // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration. List<T> is thread-safe for reads.
+        // There are no concurrent writes for this List.
         private List<ApplicationInfo> userTargetList;
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
+        // List<T> is thread-safe for reads. There are no concurrent writes for this List.
         private List<ApplicationInfo> deployedTargetList;
         private readonly ConfigSettings configSettings;
         private string fileName;
@@ -57,6 +60,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        // List<T> is thread-safe for reads. There are no concurrent writes for this List.
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
             get; set;
@@ -135,8 +139,9 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
 
-            TimeSpan healthReportTimeToLive = GetHealthReportTimeToLive();
+            TimeSpan TTL = GetHealthReportTimeToLive();
 
+            // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
             _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
             {
                 token.ThrowIfCancellationRequested();
@@ -214,13 +219,13 @@ namespace FabricObserver.Observers
 
                     // Parent's and aggregated (summed) spawned process data (if any).
                     ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.CpuErrorLimitPercent,
-                        app.CpuWarningLimitPercent,
-                        healthReportTimeToLive,
-                        HealthReportType.Application,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps);
+                            parentFrud,
+                            app.CpuErrorLimitPercent,
+                            app.CpuWarningLimitPercent,
+                            TTL,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // Memory MB - Parent process
@@ -234,13 +239,13 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.MemoryErrorLimitMb,
-                        app.MemoryWarningLimitMb,
-                        healthReportTimeToLive,
-                        HealthReportType.Application,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps);
+                            parentFrud,
+                            app.MemoryErrorLimitMb,
+                            app.MemoryWarningLimitMb,
+                            TTL,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // Memory Percent - Parent process
@@ -254,13 +259,13 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.MemoryErrorLimitPercent,
-                        app.MemoryWarningLimitPercent,
-                        healthReportTimeToLive,
-                        HealthReportType.Application,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps);
+                            parentFrud,
+                            app.MemoryErrorLimitPercent,
+                            app.MemoryWarningLimitPercent,
+                            TTL,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // TCP Ports - Active - Parent process
@@ -274,13 +279,13 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.NetworkErrorActivePorts,
-                        app.NetworkWarningActivePorts,
-                        healthReportTimeToLive,
-                        HealthReportType.Application,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps);
+                            parentFrud,
+                            app.NetworkErrorActivePorts,
+                            app.NetworkWarningActivePorts,
+                            TTL,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
 
                 // TCP Ports - Ephemeral (port numbers fall in the dynamic range) - Parent process
@@ -294,13 +299,13 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.NetworkErrorEphemeralPorts,
-                        app.NetworkWarningEphemeralPorts,
-                        healthReportTimeToLive,
-                        HealthReportType.Application,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps);
+                            parentFrud,
+                            app.NetworkErrorEphemeralPorts,
+                            app.NetworkWarningEphemeralPorts,
+                            TTL,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps);
                 }
                 
                 // Allocated (in use) Handles - Parent process
@@ -317,7 +322,7 @@ namespace FabricObserver.Observers
                             parentFrud,
                             app.ErrorOpenFileHandles,
                             app.WarningOpenFileHandles,
-                            healthReportTimeToLive,
+                            TTL,
                             HealthReportType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
@@ -337,7 +342,7 @@ namespace FabricObserver.Observers
                             parentFrud,
                             app.ErrorThreadCount,
                             app.WarningThreadCount,
-                            healthReportTimeToLive,
+                            TTL,
                             HealthReportType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
@@ -930,7 +935,7 @@ namespace FabricObserver.Observers
 
             int repCount = ReplicaOrInstanceList.Count;
 
-            // For use in internal telemetry.
+            // For use in internal diagnostic telemetry.
             MonitoredServiceProcessCount = repCount;
             MonitoredAppCount = deployedTargetList.Count;
 
@@ -991,8 +996,8 @@ namespace FabricObserver.Observers
         private Task MonitorDeployedAppsAsync(CancellationToken token)
         {
             Stopwatch execTimer = Stopwatch.StartNew();
-            ConcurrentQueue<Exception> exceptions = new ConcurrentQueue<Exception>();
             int capacity = ReplicaOrInstanceList.Count;
+            var exceptions = new ConcurrentQueue<Exception>();
             AllAppCpuData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppMemDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppMemDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
@@ -1225,7 +1230,7 @@ namespace FabricObserver.Observers
                             id,
                             token);
                 }
-                catch (AggregateException e) when (e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException)
+                catch (AggregateException e) when (e.InnerExceptions.Any(ex => ex is OperationCanceledException || ex is TaskCanceledException))
                 {
                     state.Stop();
                 }
@@ -1261,7 +1266,7 @@ namespace FabricObserver.Observers
                             string id,
                             CancellationToken token)
         {
-            _ = Parallel.ForEach(procs, (proc, state) =>
+            _ = Parallel.ForEach(procs, ParallelOptions, (proc, state) =>
             {
                 int procId = proc.Value;
                 string procName = proc.Key;
@@ -1445,8 +1450,6 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
-
-                    Thread.Sleep(150);
                 }
             });
         }

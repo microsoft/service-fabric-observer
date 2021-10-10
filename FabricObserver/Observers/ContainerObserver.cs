@@ -442,10 +442,10 @@ namespace FabricObserver.Observers
                     RedirectStandardError = true
                 };
 
-                var output = new ConcurrentQueue<string>();
+                var output = new List<string>();
                 using Process p = new Process();
                 p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                p.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Enqueue(e.Data); } };
+                p.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Add(e.Data); } };
                 p.StartInfo = ps;
                 _ = p.Start();
 

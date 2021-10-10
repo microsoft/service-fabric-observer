@@ -112,7 +112,7 @@ namespace FabricObserver.Observers
             get;
         }
 
-        private TimeSpan ObserverExecutionTimeout 
+        private TimeSpan ObserverExecutionTimeout
         {
             get; set;
         } = TimeSpan.FromMinutes(30);
@@ -231,7 +231,7 @@ namespace FabricObserver.Observers
                         break;
                     }
 
-                    await RunObserversAsync().ConfigureAwait(false);
+                    _ = await RunObserversAsync().ConfigureAwait(false);
 
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
@@ -912,22 +912,25 @@ namespace FabricObserver.Observers
         /// Runs all observers in a sequential loop.
         /// </summary>
         /// <returns>A boolean value indicating success of a complete observer loop run.</returns>
-        private async Task RunObserversAsync()
+        private async Task<bool> RunObserversAsync()
         {
+            var exceptionBuilder = new StringBuilder();
+            bool allExecuted = true;
+
             for (int i = 0; i < observers.Count; ++i)
             {
                 var observer = observers[i];
 
                 if (isConfigurationUpdateInProgress)
                 {
-                    return;
+                    return true;
                 }
 
                 try
                 {
                     if (TaskCancelled || shutdownSignaled)
                     {
-                        return;
+                        return true;
                     }
 
                     // Is it healthy?
@@ -1040,14 +1043,17 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                catch (AggregateException ae) when (ae.InnerExceptions.Any(e => e is FabricException ||
-                                                                                e is OperationCanceledException ||
-                                                                                e is TaskCanceledException))
+                catch (AggregateException ex) when (ex.InnerExceptions.Any(e => e.InnerException is FabricException ||
+                                                                                e.InnerException is OperationCanceledException ||
+                                                                                e.InnerException is TaskCanceledException))
                 {
                     if (isConfigurationUpdateInProgress)
                     {
-                        return;
+                        return true;
                     }
+
+                    _ = exceptionBuilder.AppendLine($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ex.InnerException}");
+                    allExecuted = false;
 
                     continue;
                 }
@@ -1055,14 +1061,30 @@ namespace FabricObserver.Observers
                 {
                     if (isConfigurationUpdateInProgress)
                     {
-                        return;
+                        return true;
                     }
+
+                    _ = exceptionBuilder.AppendLine($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    allExecuted = false;
                 }
                 catch (Exception e)
                 {
-                    Logger.LogWarning($"Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    Logger.LogWarning($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    allExecuted = false;
                 }
             }
+
+            if (allExecuted)
+            {
+                Logger.LogInfo(ObserverConstants.AllObserversExecutedMessage);
+            }
+            else
+            {
+                Logger.LogWarning(exceptionBuilder.ToString());
+                _ = exceptionBuilder.Clear();
+            }
+
+            return allExecuted;
         }
     }
 }
