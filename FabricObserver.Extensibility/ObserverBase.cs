@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -26,17 +27,13 @@ namespace FabricObserver.Observers
 {
     public abstract class ObserverBase : IObserver
     {
-        private const int TtlAddMinutes = 5;
+        private const int TtlAddMinutes = 1;
         private const string FabricSystemAppName = "fabric:/System";
         private bool disposed;
         private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
+        private readonly object lockObj = new object();
 
-        public bool EnableProcessDumps
-        {
-            get;set;
-        }
-
-        /* Process dump settings. TODO: Only AppObserver and Windows is supported today. */
+        // Process dump settings. Only AppObserver and Windows is supported. \\
         public string DumpsPath
         {
             get; set;
@@ -57,7 +54,7 @@ namespace FabricObserver.Observers
             get; set;
         } = DumpType.MiniPlus;
 
-        /* End AO procsess dump settings. */
+        // End AO procsess dump settings. \\
 
         public string ObserverName
         {
@@ -225,10 +222,10 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public List<string> AppNames
+        public ConcurrentQueue<string> AppNames
         {
             get; set;
-        } = new List<string>();
+        } = new ConcurrentQueue<string>();
 
         public int MonitoredServiceProcessCount
         {
@@ -369,11 +366,6 @@ namespace FabricObserver.Observers
             {
                 EnableETWLogging = IsEtwProviderEnabled
             };
-
-            if (string.IsNullOrWhiteSpace(DumpsPath))
-            {
-                SetDumpPath();
-            }
 
             ConfigurationSettings = new ConfigSettings(
                     FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings,
@@ -618,21 +610,24 @@ namespace FabricObserver.Observers
 
                     using (FileStream file = File.Create(dumpFilePath))
                     {
-                        if (!NativeMethods.MiniDumpWriteDump(
-                                            processHandle,
-                                            (uint)processId,
-                                            file.SafeFileHandle,
-                                            miniDumpType,
-                                            IntPtr.Zero,
-                                            IntPtr.Zero,
-                                            IntPtr.Zero))
+                        lock (lockObj)
                         {
-                            throw new Win32Exception(Marshal.GetLastWin32Error());
-                        }
+                            if (!NativeMethods.MiniDumpWriteDump(
+                                                processHandle,
+                                                (uint)processId,
+                                                file.SafeFileHandle,
+                                                miniDumpType,
+                                                IntPtr.Zero,
+                                                IntPtr.Zero,
+                                                IntPtr.Zero))
+                            {
+                                throw new Win32Exception(Marshal.GetLastWin32Error());
+                            }
 
-                        if (!string.IsNullOrWhiteSpace(metric))
-                        {
-                            ServiceDumpCountDictionary[dumpKey] = (ServiceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
+                            if (!string.IsNullOrWhiteSpace(metric))
+                            {
+                                ServiceDumpCountDictionary[dumpKey] = (ServiceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
+                            }
                         }
                     }
                 }
@@ -872,12 +867,16 @@ namespace FabricObserver.Observers
                             using (var proc = Process.GetProcessById(pid))
                             {
                                 string procName = proc?.ProcessName;
-                                _ = DumpWindowsServiceProcess(pid, procName, data.Property);
+
+                                lock (lockObj)
+                                {
+                                    _ = DumpWindowsServiceProcess(pid, procName, data.Property);
+                                }
                             }
                         }
                         catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                         {
-                            ObserverLogger.LogInfo($"Unable to generate dmp file:{Environment.NewLine}{e}");
+                            ObserverLogger.LogWarning($"Unable to generate dmp file:{Environment.NewLine}{e}");
                         }
                     }
                 }
@@ -972,6 +971,11 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorTooManyOpenFileHandles : FOErrorWarningCodes.AppWarningTooManyOpenFileHandles;
                         break;
 
+                    case ErrorWarningProperty.TotalThreadCount when healthReportType == HealthReportType.Application:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorTooManyThreads : FOErrorWarningCodes.AppWarningTooManyThreads;
+                        break;
+
                     case ErrorWarningProperty.TotalFileHandles:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyOpenFileHandles : FOErrorWarningCodes.NodeWarningTooManyOpenFileHandles;
@@ -1062,7 +1066,7 @@ namespace FabricObserver.Observers
 
                 if (AppNames.All(a => a != appName?.OriginalString))
                 {
-                    AppNames.Add(appName?.OriginalString);
+                    AppNames.Enqueue(appName?.OriginalString);
                 }
 
                 // Generate a Service Fabric Health Report.
@@ -1159,13 +1163,19 @@ namespace FabricObserver.Observers
             if (data.Data is List<T> list)
             {
                 // List<T> impl.
-                list.TrimExcess();
-                list.Clear();
+                lock (lockObj)
+                {
+                    list.TrimExcess();
+                    list.Clear();
+                }
             }
             else
             {
                 // CircularBufferCollection<T> impl.
-                data.Data.Clear();
+                lock (lockObj)
+                {
+                    data.Data.Clear();
+                }
             }
         }
 
@@ -1208,31 +1218,6 @@ namespace FabricObserver.Observers
             if (disposing)
             {
                 disposed = true;
-            }
-        }
-
-        private void SetDumpPath()
-        {
-            if (ObserverName != ObserverConstants.AppObserverName)
-            {
-                return;
-            }
-
-            // This only needs to be set once.
-            if (!string.IsNullOrWhiteSpace(DumpsPath) && Directory.Exists(DumpsPath))
-            {
-                return;
-            }
-
-            try
-            {
-                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, "MemoryDumps");
-                Directory.CreateDirectory(DumpsPath);
-            }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
-            {
-                ObserverLogger.LogWarning($"Unable to create dump directory {DumpsPath}.");
-                return;
             }
         }
 

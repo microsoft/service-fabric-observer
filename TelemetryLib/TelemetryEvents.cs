@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -40,8 +39,7 @@ namespace FabricObserver.TelemetryLib
         {
             serviceEventSource = eventSource;
             serviceContext = context;
-            string config = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FOAppInsightsOperational.config"));
-            appInsightsTelemetryConf = TelemetryConfiguration.CreateFromConfiguration(config);
+            appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
@@ -53,7 +51,7 @@ namespace FabricObserver.TelemetryLib
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
         {
-            if (!telemetryClient.IsEnabled() || telemetryClient.InstrumentationKey == "$Token$")
+            if (!telemetryClient.IsEnabled())
             {
                 return false;
             }
@@ -63,7 +61,7 @@ namespace FabricObserver.TelemetryLib
                 // ETW
                 if (isEtwEnabled)
                 {
-                    serviceEventSource.InternalFODataEvent(new { FOInternalTelemtryData = JsonConvert.SerializeObject(foData) });
+                    serviceEventSource.InternalFODataEvent(new { FOInternalTelemetryData = JsonConvert.SerializeObject(foData) });
                 }
 
                 string nodeHashString = string.Empty;
@@ -84,6 +82,7 @@ namespace FabricObserver.TelemetryLib
                     { "NodeNameHash", nodeHashString },
                     { "FOVersion", foData.Version },
                     { "HasPlugins", foData.HasPlugins.ToString() },
+                    { "ParallelCapable", foData.ParallelExecutionCapable.ToString() },
                     { "UpTime", foData.UpTime },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", foData.OS }
@@ -107,6 +106,7 @@ namespace FabricObserver.TelemetryLib
                 const string apps = "TotalMonitoredApps";
                 const string procs = "TotalMonitoredServiceProcesses";
                 const string conts = "TotalMonitoredContainers";
+                const string parallel = "ConcurrencyEnabled";
 
                 foreach (var obData in foData.ObserverData)
                 {
@@ -131,6 +131,16 @@ namespace FabricObserver.TelemetryLib
                             key = $"{obData.ObserverName}{conts}";
                         }
 
+                        metrics.Add(key, data);
+
+                    }
+
+                    // Concurrency
+                    if (obData.ObserverName.Contains("AppObserver") || obData.ObserverName.Contains("FabricSystemObserver")
+                       || obData.ObserverName.Contains("ContainerObserver"))
+                    {
+                        data = ((AppServiceObserverData)obData).ConcurrencyEnabled == false ? 0 : 1;
+                        key = $"{obData.ObserverName}{parallel}";
                         metrics.Add(key, data);
                     }
 
@@ -164,7 +174,7 @@ namespace FabricObserver.TelemetryLib
                 // write a local log file containing the exact information sent to MS \\
                 string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray());
                 telemetryData += "," + string.Join(",", metrics.Select(kv => $"\"{kv.Key}\":" + kv.Value).ToArray()) + "}";
-                TryWriteLogFile(logFilePath, telemetryData);
+                _ = TryWriteLogFile(logFilePath, telemetryData);
 
                 eventProperties.Clear();
                 eventProperties = null;
@@ -173,9 +183,10 @@ namespace FabricObserver.TelemetryLib
 
                 return true;
             }
-            catch
+            catch (Exception e)
             {
                 // Telemetry is non-critical and should not take down FO.
+                _ = TryWriteLogFile(logFilePath, $"{e}");
             }
 
             return false;
@@ -220,7 +231,7 @@ namespace FabricObserver.TelemetryLib
                     { "OS", foErrorData.OS }
                 };
 
-                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties);
+                telemetryClient?.TrackEvent($"{TaskName}.{CriticalErrorEventName}", eventProperties);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
@@ -228,7 +239,7 @@ namespace FabricObserver.TelemetryLib
 
                 // write a local log file containing the exact information sent to MS \\
                 string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
-                TryWriteLogFile(logFilePath, telemetryData);
+                _ = TryWriteLogFile(logFilePath, telemetryData);
 
                 return true;
             }
@@ -275,7 +286,7 @@ namespace FabricObserver.TelemetryLib
                     File.WriteAllText(path, content);
                     return true;
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                catch
                 {
 
                 }

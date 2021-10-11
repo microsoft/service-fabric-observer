@@ -125,28 +125,34 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
-| **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate a Fabric Error (SFX and local log) |  
-| **memoryWarningLimitMb**| Minimum service process private working set in Megabytes that should generate a Fabric Warning (SFX and local log) |  
-| **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate a Fabric Error (SFX and local log) |  
-| **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Fabric Warning (SFX and local log) | 
-| **cpuErrorLimitPercent** | Maximum CPU percentage that should generate a Fabric Error |
-| **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Fabric Warning |
-| **dumpProcessOnError** | Instructs whether or not FabricObserver should dump your service process when service health is detected to be in an  Error (critical) state... |  
-| **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate a Fabric Error. |
-| **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Fabric Warning. |
-| **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Error. |
-| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Fabric Warning. |  
-| **errorOpenFileHandles** | Maximum number of open file handles in use by an app process that will generate a Fabric Error. |  
-| **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Fabric Warning. |  
+| **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate an Error |  
+| **memoryWarningLimitMb**| Minimum service process private working set in Megabytes that should generate a Warning |  
+| **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate an Error |  
+| **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Warning | 
+| **cpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |
+| **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning |
+| **dumpProcessOnError** | Instructs whether or not FabricObserver should dump your service process when service health is detected to be in an  Error (critical) state. |  
+| **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate an Error. |
+| **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Warning. |
+| **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate an Error. |
+| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Warning. |  
+| **errorOpenFileHandles** | Maximum number of open file handles in use by an app process that will generate an Error. |  
+| **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Warning. |  
+| **errorThreadCount** | Maximum number of threads in use by an app process that will generate an Error. |  
+| **warningThreadCount** | Minimum number of threads in use by app process that will generate a Warning.|  
 
 **Output** Log text(Error/Warning), Service Fabric Application Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
 
 AppObserver also supports non-JSON parameters for configuration unrelated to thresholds. Like all observers these settings are located in ApplicationManifest.xml to support versionless configuration updates via application upgrade. 
 
-#### Non-json settings  
+#### Non-json settings set in ApplicationManifest.xml  
+
+**Version 3.1.18 introduces support for concurrent service process monitoring and reporting by AppObserver**. You can enable/disable this feature by setting the boolean value for AppObserverEnableConcurrentMonitoring. Note that this is disabled by default.
+If your compute configuration includes multiple CPUs (logical processors >= 4) and you monitor several services, then you should consider enabling this capability as it will significantly decrease the time it takes AppObserver to complete monitoring/reporting.
+If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
 
 ```XML
-    <!-- AppObserver -->
+     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = true -->
@@ -155,16 +161,19 @@ AppObserver also supports non-JSON parameters for configuration unrelated to thr
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree monitoring. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
+    <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError feature). -->
-    <!-- You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
+    <!-- Service process dumps (dumpProcessOnError feature).
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
          if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
-    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
-    <!-- Max number of dumps to generate per service, per observed metric within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
+    <!-- Max number of dumps to generate per service, per observed metric, within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
     <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
+    <!-- Concurrency/Parallelism Support -->
+    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="false" />
 ```
 
 Example AppObserver Output (Warning - Ephemeral Ports Usage):  
@@ -176,7 +185,7 @@ AppObserver also optionally outputs CSV files for each app containing all resour
 AppObserver error/warning thresholds are user-supplied-only and bound to specific service instances (processes) as dictated by the user,
 as explained above. Like FabricSystemObserver, all data is stored in in-memory data structures for the lifetime of the run (for example, 60 seconds at 5 second intervals). Like all observers, the last thing this observer does is call its *ReportAsync*, which will then determine the health state based on accumulated data across resources, send a Warning if necessary (clear an existing warning if necessary), then clean out the in-memory data structures to limit impact on the system over time. So, each iteration of this observer accumulates *temporary* data for use in health determination.
   
-This observer also monitors the FabricObserver service itself across CPU/Mem/FileHandles/Ports.  
+This observer can also monitor the FabricObserver service itself across CPU/Mem/FileHandles/Ports/Threads.  
 
 ## AzureStorageUploadObserver 
 Runs periodically (you can set its RunInterval setting, just like any observer) and will upload dmp files of user services that AppObserver creates when you set dumpProcessOnError to true and supply Error thresholds in AppObserver configuration. The files are compressed and uploaded to a specified Azure Storage Account (blob storage only) and blob container name (default is fodumps, but you can configure this). It will delete dmp files from local storage after each successful upload. 
@@ -304,6 +313,10 @@ Monitors CPU and Memory use of Service Fabric containerized (docker) services.
 
 **In order for ContainerObserver to function properly on Windows, FabricObserver must be configured to run as Admin or System user.** This is not the case for Linux deployments.
 
+**Version 3.1.18 introduces support for concurrent docker stats data parsing and reporting by ContainerObserver**. You can enable/disable this feature by setting the boolean value for ContainerObserverEnableConcurrentMonitoring. Note that this is disabled by default.
+If your compute configuration includes multiple CPUs (logical processors >= 4) and you monitor several containerized services, then you should consider enabling this capability as it will significantly decrease the time it takes ContainerObserver to complete monitoring/reporting.
+If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
+
 
 ### Configuration 
 
@@ -313,8 +326,12 @@ Settings.xml
 
 ```XML
   <!-- NOTE: FabricObserver must run as System or Admin on *Windows* in order to run ContainerObserver successfully. This is not the case for Linux. -->
-   <Section Name="ContainerObserverConfiguration">
+  <Section Name="ContainerObserverConfiguration">
      <Parameter Name="Enabled" Value="" MustOverride="true" />
+     <!-- Optional: Whether or not ContainerObserver should try to monitor service processes concurrently.
+          This can significantly decrease the amount of time it takes ContainerObserver to monitor several containerized applications. 
+          Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
+     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
      <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
      <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
      <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
@@ -373,8 +390,8 @@ After DiskObserver logs basic disk information, it performs measurements on all 
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="" MustOverride="true" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" MustOverride="true" />
-    <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" MustOverride="true" />
-    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="" MustOverride="true" />
+    <Parameter Name="AverageQueueLengthErrorThreshold" Value="" MustOverride="true" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" Value="" MustOverride="true" />
   </Section>
 ```
 
@@ -428,6 +445,10 @@ By default, FabricObserver runs as NetworkUser on Windows and sfappsuser on Linu
 running as System or root, default FabricObserver can't monitor process behavior (this is always true on Windows). That said, there are only a few system
 services you would care about: Fabric.exe and FabricGateway.exe. Fabric.exe is generally the system service that your code can directly impact with respect to machine resource usage.
 
+**Version 3.1.18 introduces support for concurrent service process monitoring and reporting by FabricSystemObserver**. You can enable/disable this feature by setting the boolean value for ContainerObserverEnableConcurrentMonitoring. Note that this is disabled by default.
+If your compute configuration includes multiple CPUs (logical processors >= 4), then you should consider enabling this capability as it will significantly decrease the time it takes FabricSystemObserver to complete monitoring/reporting.
+If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
+
 **Input - Settings.xml**: Only ClusterOperationTimeoutSeconds is set in Settings.xml.
 
 ```xml
@@ -441,22 +462,46 @@ services you would care about: Fabric.exe and FabricGateway.exe. Fabric.exe is g
 
 ```xml
 <!-- FabricSystemObserver -->
-<Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
-<!-- Required-If UseCircularBuffer = True -->
-<Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
-<!-- FabricSystemObserver Warning/Error Thresholds -->
-<Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
-<Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
-<Parameter Name="FabricSystemObserverMemoryErrorLimitMb" DefaultValue="" />
-<Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="4096" />
-<Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
-<Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="" />
-<Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="4000" />
-<Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="" />
-<Parameter Name="FabricSystemObserverAllocatedHandlesErrorLimit" DefaultValue="" />
-<Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="5000" />
-<!-- Whether to monitor Windows Event Log. -->
-<Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
+<Section Name="FabricSystemObserverConfiguration">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <!-- Optional: Whether or not FabricSystemObserver should try to monitor service processes concurrently.
+         This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
+         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
+    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
+    
+    <!-- Required-If UseCircularBuffer = True -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    
+    <!-- Optional: SF Event Log can be noisy and full of non-error errors., 
+         so it's recommended that you only enable this for debugging purposes. This
+         only works if you deploy the FabricObserverWebApi service and enable it above (ObserverWebApiEnabled). -->
+    <Parameter Name="MonitorWindowsEventLog" Value="" MustOverride="true" />
+    <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
+    <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
+    <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
+    <Parameter Name="MemoryWarningLimitMb" Value="" MustOverride="true" />
+    <Parameter Name="NetworkErrorActivePorts" Value="" MustOverride="true"  />
+    <Parameter Name="NetworkWarningActivePorts" Value="" MustOverride="true"  />
+    <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
+    <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
+    <Parameter Name="AllocatedHandlesErrorLimit" Value="" MustOverride="true" />
+    <Parameter Name="AllocatedHandlesWarningLimit" Value="" MustOverride="true" />
+    <Parameter Name="ThreadCountErrorLimit" Value="" MustOverride="true" />
+    <Parameter Name="ThreadCountWarningLimit" Value="" MustOverride="true" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+  </Section>
 ```
 
 **Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning/Ok), ETW, Telemetry

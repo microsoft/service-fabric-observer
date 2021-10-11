@@ -79,7 +79,7 @@ When you use this property, you can also use either serviceExcludeList or servic
 [
   {
     "targetApp": "fabric:/MyApp",
-    "networkWarningActivePorts": "2000"
+    "networkWarningActivePorts": 2000
   }
 ]
 ```
@@ -94,7 +94,7 @@ When you use this property, you can also use either serviceExcludeList or servic
 [
   {
     "targetApp": "fabric:/MyApp",
-    "networkWarningEphemeralPorts": "1500"
+    "networkWarningEphemeralPorts": 1500
   }
 ]
 ```  
@@ -105,8 +105,8 @@ You should of course combine these into one:
 [
   {
     "targetApp": "fabric:/MyApp",
-    "networkWarningActivePorts": "2000",
-    "networkWarningEphemeralPorts": "1500"
+    "networkWarningActivePorts": 2000,
+    "networkWarningEphemeralPorts": 1500
   }
 ]
 ```
@@ -124,12 +124,27 @@ For an app named MyApp, you would simply add this to PackageRoot/Config/AppObser
 [
   {
     "targetApp": "fabric:/MyApp",
-    "warningOpenFileHandles": "2000"
+    "warningOpenFileHandles": 2000
   }
 ]
 ``` 
 
 So, based on the above configuration, when the number of open file handles held by any of the designated app's services reaches 2000 or higher, FO will emit a Health Warning.  
+
+**Threads**  
+
+***Problem***: I want to know how many threads an App service is using and emit a warning when a specified threshold is reached.
+
+***Solution***: AppObserver is your friend. You can do exactly this. 
+
+```JSON
+[
+  {
+    "targetApp": "fabric:/MyApp42",
+    "warningThreadCount": 500
+  }
+]
+```
 
 **Disk Usage - Space**  
 
@@ -285,11 +300,13 @@ In the example below, the setting for cpuWarningLimitPercent for fabric:/MyApp w
     "cpuWarningLimitPercent": 75,
     "memoryWarningLimitMb" : 500,
     "networkWarningActivePorts": 2000,
-    "networkWarningEphemeralPorts": 1500
+    "networkWarningEphemeralPorts": 1500,
+    "warningThreadCount": 500
   },
   {
     "targetApp": "fabric:/MyApp",
-    "cpuWarningLimitPercent": 50
+    "cpuWarningLimitPercent": 50,
+    "warningThreadCount": 300
   }
 ]
 ```   
@@ -559,7 +576,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.17 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.18 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 Note: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to get the Capabilities in place. For Windows, FO processes will NOT be restarted.

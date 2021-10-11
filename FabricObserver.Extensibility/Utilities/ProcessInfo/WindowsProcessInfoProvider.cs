@@ -40,7 +40,7 @@ namespace FabricObserver.Observers.Utilities
                     return memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
                 }
             }
-            catch(Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
                 Logger.LogWarning($"Exception getting working set for process {processId}:{Environment.NewLine}{e}");
                 return 0F;
@@ -62,7 +62,7 @@ namespace FabricObserver.Observers.Utilities
                 using (var searcher = new ManagementObjectSearcher(query))
                 {
                     var results = searcher.Get();
-                    
+
                     if (results.Count == 0)
                     {
                         return 0F;
@@ -122,56 +122,64 @@ namespace FabricObserver.Observers.Utilities
             {
                 List<(string ProcName, int Pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].Pid);
 
-                if (c1 != null && c1.Count > 0)
+                if (c1 == null || c1.Count <= 0)
                 {
-                    childProcesses.AddRange(c1);
+                    continue;
+                }
+
+                childProcesses.AddRange(c1);
+
+                if (childProcesses.Count >= MaxDescendants)
+                {
+                    return childProcesses.Take(MaxDescendants).ToList();
+                }
+
+                for (int j = 0; j < c1.Count; ++j)
+                {
+                    List<(string ProcName, int Pid)> c2 = TupleGetChildProcessInfo(c1[j].Pid);
+
+                    if (c2 == null || c2.Count <= 0)
+                    {
+                        continue;
+                    }
+
+                    childProcesses.AddRange(c2);
 
                     if (childProcesses.Count >= MaxDescendants)
                     {
                         return childProcesses.Take(MaxDescendants).ToList();
                     }
 
-                    for (int j = 0; j < c1.Count; ++j)  
+                    for (int k = 0; k < c2.Count; ++k)
                     {
-                        List<(string ProcName, int Pid)> c2 = TupleGetChildProcessInfo(c1[j].Pid);
+                        List<(string ProcName, int Pid)> c3 = TupleGetChildProcessInfo(c2[k].Pid);
 
-                        if (c2 != null && c2.Count > 0)
+                        if (c3 == null || c3.Count <= 0)
                         {
-                            childProcesses.AddRange(c2);
+                            continue;
+                        }
+
+                        childProcesses.AddRange(c3);
+
+                        if (childProcesses.Count >= MaxDescendants)
+                        {
+                            return childProcesses.Take(MaxDescendants).ToList();
+                        }
+
+                        for (int l = 0; l < c3.Count; ++l)
+                        {
+                            List<(string ProcName, int Pid)> c4 = TupleGetChildProcessInfo(c3[l].Pid);
+
+                            if (c4 == null || c4.Count <= 0)
+                            {
+                                continue;
+                            }
+
+                            childProcesses.AddRange(c4);
 
                             if (childProcesses.Count >= MaxDescendants)
                             {
                                 return childProcesses.Take(MaxDescendants).ToList();
-                            }
-
-                            for (int k = 0; k < c2.Count; ++k)
-                            {
-                                List<(string ProcName, int Pid)> c3 = TupleGetChildProcessInfo(c2[k].Pid);
-
-                                if (c3 != null && c3.Count > 0)
-                                {
-                                    childProcesses.AddRange(c3);
-
-                                    if (childProcesses.Count >= MaxDescendants)
-                                    {
-                                        return childProcesses.Take(MaxDescendants).ToList();
-                                    }
-
-                                    for (int l = 0; l < c3.Count; ++l)
-                                    {
-                                        List<(string ProcName, int Pid)> c4 = TupleGetChildProcessInfo(c3[l].Pid);
-
-                                        if (c4 != null && c4.Count > 0)
-                                        {
-                                            childProcesses.AddRange(c4);
-
-                                            if (childProcesses.Count >= MaxDescendants)
-                                            {
-                                                return childProcesses.Take(MaxDescendants).ToList();
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
@@ -188,6 +196,7 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
+            string[] ignoreProcessList = new string[] { "conhost.exe", "csrss.exe", "svchost.exe", "wininit.exe" };
             List<(string procName, int pid)> childProcesses = null;
             string query = $"select caption,processid from win32_process where parentprocessid = {processId}";
 
@@ -213,7 +222,7 @@ namespace FabricObserver.Observers.Utilities
                                         continue;
                                     }
 
-                                    if (childProcessNameObj.ToString() == "conhost.exe")
+                                    if (ignoreProcessList.Contains(childProcessNameObj.ToString()))
                                     {
                                         continue;
                                     }
@@ -274,8 +283,9 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 using (ManagementObject mObj = (ManagementObject)enumerator.Current)
                                 {
-                                    ulong workingSet = (ulong)mObj.Properties["WorkingSetPrivate"].Value / 1024 / 1024;
-                                    return workingSet;
+                                    ulong workingSet = (ulong)mObj.Properties["WorkingSetPrivate"].Value;
+                                    float privWorkingSetMb = Convert.ToSingle(workingSet);
+                                    return privWorkingSetMb / 1024 / 1024;
                                 }
                             }
                             catch (Exception e) when (e is ArgumentException || e is ManagementException)

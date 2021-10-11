@@ -19,6 +19,7 @@ namespace FabricObserver.Observers.Utilities
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
         public const string FabricObserverName = "FabricObserver";
         public const string FabricObserverETWEventName = "FabricObserverDataEvent";
+        public const string EnableConcurrentExecution = "EnableConcurrentExecution";
         public const string ObserverFailureHealthStateLevelParameter = "ObserverFailureHealthStateLevel";
 
         // The name of the package that contains this Observer's configuration
@@ -52,6 +53,7 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxArchivedCsvFileLifetimeDays = "MaxArchivedCsvFileLifetimeDays";
         public const string MaxArchivedLogFileLifetimeDays = "MaxArchivedLogFileLifetimeDays";
         public const string CsvFileWriteFormat = "CsvFileWriteFormat";
+        public const string EnableConcurrentMonitoring = "EnableConcurrentMonitoring";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";
@@ -104,6 +106,8 @@ namespace FabricObserver.Observers.Utilities
         public const string FabricSystemObserverMonitorWindowsEventLog = "MonitorWindowsEventLog";
         public const string FabricSystemObserverErrorHandles = "AllocatedHandlesErrorLimit";
         public const string FabricSystemObserverWarningHandles = "AllocatedHandlesWarningLimit";
+        public const string FabricSystemObserverWarningThreadCount = "ThreadCountWarningLimit";
+        public const string FabricSystemObserverErrorThreadCount = "ThreadCountErrorLimit";
 
         // NetworkObserver.
         public const string NetworkObserverName = "NetworkObserver";
@@ -123,7 +127,7 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
-        
+
         // For use by Linux File Descriptors monitor.
         public const string NodeObserverLinuxFileHandlesErrorLimitPct = "LinuxFileHandlesErrorLimitPercent";
         public const string NodeObserverLinuxFileHandlesWarningLimitPct = "LinuxFileHandlesWarningLimitPercent";

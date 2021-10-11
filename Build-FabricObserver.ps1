@@ -26,7 +26,7 @@ function Update-ApplicationManifestForLinux {
          
             $NewFileContent += $newNode
         }
-        elseif ($FileContent[$i] -like "*</ApplicationManifest>*") {
+        elseif ($FileContent[$i] -like "*<Certificates>*") {
        
             $NewFileContent += $newNode2
         }

@@ -72,7 +72,7 @@ namespace FabricObserver.Observers
 
                 if (IsAUCheckSettingEnabled)
                 {
-                    await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(true);  
+                    await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(true);
                 }
             }
 
@@ -93,6 +93,8 @@ namespace FabricObserver.Observers
                 // OS Health.
                 if (osStatus != null && !string.Equals(osStatus, "OK", StringComparison.OrdinalIgnoreCase))
                 {
+                    CurrentErrorCount++;
+
                     string healthMessage = $"OS reporting unhealthy: {osStatus}";
                     var healthReport = new HealthReport
                     {
@@ -144,6 +146,11 @@ namespace FabricObserver.Observers
                 {
                     // Clear Error or Warning with an OK Health Report.
                     string healthMessage = $"OS reporting healthy: {osStatus}";
+
+                    if (CurrentErrorCount > 0)
+                    {
+                        CurrentErrorCount--;
+                    }
 
                     var healthReport = new HealthReport
                     {
@@ -219,6 +226,8 @@ namespace FabricObserver.Observers
                 // Windows Update automatic download enabled?
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && isAUAutomaticDownloadEnabled)
                 {
+                    CurrentWarningCount++;
+
                     string linkText =
                         $"{Environment.NewLine}For clusters of Silver durability or above, " +
                         "please consider <a href=\"https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade\" target=\"blank\">" +
@@ -304,7 +313,7 @@ namespace FabricObserver.Observers
         {
             var allSystemServices =
                 await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => 
+                                               () =>
                                                    FabricClientInstance.QueryManager.GetServiceListAsync(
                                                                                         new Uri("fabric:/System"),
                                                                                         null,
@@ -322,6 +331,11 @@ namespace FabricObserver.Observers
 
         private static string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return null;
+            }
+
             ManagementObject[] resultsOrdered;
             string ret = string.Empty;
 
@@ -331,15 +345,19 @@ namespace FabricObserver.Observers
             {
                 using var searcher = new ManagementObjectSearcher("SELECT HotFixID,InstalledOn FROM Win32_QuickFixEngineering");
                 var results = searcher.Get();
-                
+
                 if (results.Count < 1)
                 {
                     return string.Empty;
                 }
 
                 resultsOrdered = results.Cast<ManagementObject>()
+#pragma warning disable CA1416 // Validate platform compatibility
                                             .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                                             .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
+#pragma warning restore CA1416 // Validate platform compatibility
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";
@@ -371,7 +389,7 @@ namespace FabricObserver.Observers
                 ret = sb.ToString().Trim();
                 _ = sb.Clear();
                 sb = null;
-                
+
             }
             catch (Exception e) when (
                     e is ArgumentException ||

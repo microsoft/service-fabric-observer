@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Fabric;
 using System.Runtime.InteropServices;
 
@@ -51,5 +52,21 @@ namespace FabricObserver.Observers.Utilities
         public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
 
         public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int processId);
+
+        public static int GetProcessThreadCount(int processId)
+        {
+            try
+            {
+                using (Process p = Process.GetProcessById(processId))
+                {
+                    p.Refresh();
+                    return p.Threads.Count;
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is SystemException)
+            {
+                return 0;
+            }
+        }
     }
 }

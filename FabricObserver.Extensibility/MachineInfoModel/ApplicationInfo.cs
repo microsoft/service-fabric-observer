@@ -104,6 +104,16 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public int ErrorThreadCount
+        {
+            get; set;
+        }
+
+        public int WarningThreadCount
+        {
+            get; set;
+        }
+
         public override string ToString() => $"ApplicationName: {TargetApp ?? string.Empty}{Environment.NewLine}" +
                                              $"ApplicationTypeName: {TargetAppType ?? string.Empty}{Environment.NewLine}" +
                                              $"AppExcludeList: {AppExcludeList ?? string.Empty}{Environment.NewLine}" +
@@ -122,6 +132,8 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"NetworkWarningEphemeralPorts: {NetworkWarningEphemeralPorts}{Environment.NewLine}" +
                                              $"DumpProcessOnError: {DumpProcessOnError}{Environment.NewLine}" +
                                              $"ErrorOpenFileHandles: {ErrorOpenFileHandles}{Environment.NewLine}" +
-                                             $"WarningOpenFileHandles: {WarningOpenFileHandles}{Environment.NewLine}";
+                                             $"WarningOpenFileHandles: {WarningOpenFileHandles}{Environment.NewLine}" +
+                                             $"ErrorThreadCount: {ErrorThreadCount}{Environment.NewLine}" +
+                                             $"WarningThreadCount: {WarningThreadCount}{Environment.NewLine}";
     }
 }

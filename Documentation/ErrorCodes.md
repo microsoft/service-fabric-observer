@@ -39,3 +39,7 @@
 | FO034 | Number of allocated File Handles is at or exceeding configured ***Warning*** threshold for an app service process.  |
 | FO035 | Percentage of Maximum number of File Handles in use is at or exceeding configured ***Error*** threshold on a Linux VM instance.  | 
 | FO036 | Percentage of Maximum number of File Handles in use is at or exceeding configured ***Warning*** threshold on a Linux VM instance.  | 
+| FO037 | Number of allocated File Handles is at or exceeding configured ***Error*** threshold on a Linux VM instance. |  
+| FO038 | Number of allocated File Handles is at or exceeding configured ***Warning*** threshold on a Linux VM instance. | 
+| FO039 | Number of threads at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO040 | Number of threads at or exceeding configured ***Warning*** threshold for an app service process. | 

@@ -34,5 +34,10 @@ namespace FabricObserver.TelemetryLib
         {
             get; set;
         }
+
+        public bool ConcurrencyEnabled
+        {
+            get; set;
+        }
     }
 }

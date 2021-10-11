@@ -139,7 +139,6 @@ namespace FabricObserver.Observers
             Initialize();
             await GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
             await ReportAsync(token).ConfigureAwait(true);
-            CleanUp();
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -192,12 +191,12 @@ namespace FabricObserver.Observers
                                         "Average",
                                         Math.Round(MemDataInUse.AverageDataValue, 1));
 
-                            CsvFileLogger.LogData(
-                                            fileName,
-                                            NodeName,
-                                            "Committed Memory (MB)",
-                                            "Peak",
-                                            Math.Round(MemDataInUse.MaxDataValue));
+                        CsvFileLogger.LogData(
+                                        fileName,
+                                        NodeName,
+                                        "Committed Memory (MB)",
+                                        "Peak",
+                                        Math.Round(MemDataInUse.MaxDataValue));
                     }
 
                     // % of Total
@@ -365,11 +364,11 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
-            { 
-                ObserverLogger.LogWarning($"Unhandled exception re-thrown:{Environment.NewLine}{e}"); 
-                
+            {
+                ObserverLogger.LogWarning($"Unhandled exception re-thrown:{Environment.NewLine}{e}");
+
                 // Fix the bug..
-                throw; 
+                throw;
             }
         }
 
@@ -680,7 +679,7 @@ namespace FabricObserver.Observers
                 }
 
                 timer.Start();
-                
+
                 while (timer.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
@@ -714,11 +713,11 @@ namespace FabricObserver.Observers
                 timer.Reset();
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
-            { 
-                ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}"); 
-                
+            {
+                ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
+
                 // Fix the bug..
-                throw; 
+                throw;
             }
             finally
             {
@@ -726,52 +725,6 @@ namespace FabricObserver.Observers
                 {
                     CpuUtilizationProvider.Instance?.Dispose();
                     CpuUtilizationProvider.Instance = null;
-                }
-            }
-        }
-
-        private void CleanUp()
-        {
-            if (ActivePortsData != null && !ActivePortsData.ActiveErrorOrWarning)
-            {
-                ActivePortsData = null;
-            }
-
-            if (CpuTimeData != null && !CpuTimeData.ActiveErrorOrWarning)
-            {
-                CpuTimeData = null;
-            }
-
-            if (EphemeralPortsData != null && !EphemeralPortsData.ActiveErrorOrWarning)
-            {
-                EphemeralPortsData = null;
-            }
-
-            if (MemDataInUse != null && !MemDataInUse.ActiveErrorOrWarning)
-            {
-                MemDataInUse = null;
-            }
-
-            if (MemDataPercent != null && !MemDataPercent.ActiveErrorOrWarning)
-            {
-                MemDataPercent = null;
-            }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && FirewallData != null && !FirewallData.ActiveErrorOrWarning)
-            {
-                FirewallData = null;
-            }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (LinuxFileHandlesDataPercentAllocated != null && !LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
-                {
-                    LinuxFileHandlesDataPercentAllocated = null;
-                }
-
-                if (LinuxFileHandlesDataTotalAllocated != null && !LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
-                {
-                    LinuxFileHandlesDataTotalAllocated = null;
                 }
             }
         }

@@ -19,7 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ApplicationPackageRoot\ApplicationManifest.xml" />
     <None Include="ApplicationParameters\Cloud.xml" />
     <None Include="ApplicationParameters\Local.1Node.xml" />
     <None Include="ApplicationParameters\Local.5Node.xml" />
@@ -31,6 +30,7 @@
     <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="ApplicationPackageRoot\ApplicationManifest.xml" />
     <Content Include="packages.config" />
     <Content Include="PublishProfiles\Cloud.xml" />
   </ItemGroup>

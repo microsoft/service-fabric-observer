@@ -1,18 +1,11 @@
 pool:
   name: Hosted Windows 2019 with VS2019
-  demands:
-  - msbuild
-  - visualstudio
 
 steps:
-- task: VSBuild@1
-  displayName: 'Build TelemetryLib.csproj'
+- task: NuGetToolInstaller@1
+  displayName: 'Use NuGet '
   inputs:
-    solution: TelemetryLib/TelemetryLib.csproj
-    msbuildArgs: '/property:AppInsightsKey="AIF-58ef8eab-a250-4b11-aea8-36435e5be1a7" /restore'
-    platform: x64
-    configuration: Release
-    msbuildArchitecture: x64
+    checkLatest: true
 
 - task: PowerShell@2
   displayName: 'Build FabricObserver'
@@ -49,30 +42,45 @@ steps:
   inputs:
     targetType: filePath
     filePath: './Build-ClusterObserver.ps1'
+  enabled: false
 
 - task: PowerShell@2
   displayName: 'Build Nuget Packages - CO'
   inputs:
     targetType: filePath
     filePath: './Build-CONugetPackages.ps1'
+  enabled: false
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Nuget Packages - CO'
   inputs:
     PathtoPublish: '$(Build.SourcesDirectory)/bin/Release/ClusterObserver/Nugets'
     ArtifactName: ClusterObserverNugets
+  enabled: false
 
 - task: PowerShell@2
   displayName: 'Build Service Fabric Packages - CO'
   inputs:
     targetType: filePath
     filePath: './Build-COSFPkgs.ps1'
+  enabled: false
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Service Fabric Packages - CO'
   inputs:
     PathtoPublish: '$(Build.SourcesDirectory)/bin/Release/ClusterObserver/SFPkgs'
     ArtifactName: ClusterObserverSFPackage
+  enabled: false
+
+- task: VSTest@2
+  displayName: 'VsTest - FabricObserver Unit Tests'
+  inputs:
+    testAssemblyVer2: '$(Parameters.testAssemblyVer2)'
+    vsTestVersion: 16.0
+    runTestsInIsolation: false
+    publishRunAttachments: false
+    rerunFailedTests: true
+  enabled: false
 
 - task: PowerShell@2
   displayName: 'Build FabricObserverWebApi'

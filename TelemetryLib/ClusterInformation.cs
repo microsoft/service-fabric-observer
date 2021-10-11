@@ -24,12 +24,8 @@ namespace FabricObserver.TelemetryLib
         private const string FabricRegistryKeyPath = "Software\\Microsoft\\Service Fabric";
         private static string paasClusterId;
         private static string diagnosticsClusterId;
-
-        // No need to set these more than once.
-        private static string clusterManifestXml;
-        private static string tenantId;
-        private static string clusterId;
-        private static string clusterType;
+        private static XmlDocument clusterManifestXdoc;
+        private static readonly object lockObj = new object();
   
         /// <summary>
         /// Gets ClusterID, tenantID and ClusterType for current ServiceFabric cluster
@@ -37,43 +33,33 @@ namespace FabricObserver.TelemetryLib
         /// </summary>
         public static async Task<(string ClusterId, string TenantId, string ClusterType)> TupleGetClusterIdAndTypeAsync(FabricClient fabricClient, CancellationToken token)
         {
-            if (string.IsNullOrWhiteSpace(clusterManifestXml))
-            {
-                clusterManifestXml = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                 () => fabricClient.ClusterManager.GetClusterManifestAsync(
-                                                            TimeSpan.FromSeconds(TelemetryConstants.AsyncOperationTimeoutSeconds),
-                                                            token), token);
-            }
+            string clusterManifest = await fabricClient.ClusterManager.GetClusterManifestAsync(
+                                        TimeSpan.FromSeconds(TelemetryConstants.AsyncOperationTimeoutSeconds),
+                                        token);
 
             // Get tenantId for PaasV1 clusters or SFRP.
-            if (string.IsNullOrWhiteSpace(tenantId))
+            string tenantId = GetTenantId() ?? TelemetryConstants.Undefined;
+            string clusterId = TelemetryConstants.Undefined;
+            string clusterType = TelemetryConstants.Undefined;
+
+            if (!string.IsNullOrEmpty(clusterManifest))
             {
-                tenantId = GetTenantId() ?? TelemetryConstants.Undefined;
-            }
-
-            if (string.IsNullOrWhiteSpace(clusterId) && string.IsNullOrWhiteSpace(clusterType))
-            {
-                clusterId = TelemetryConstants.Undefined;
-                clusterType = TelemetryConstants.Undefined;
-
-                if (string.IsNullOrWhiteSpace(clusterManifestXml))
-                {
-                    return (TelemetryConstants.Undefined, clusterId, clusterType);
-                }
-
                 // Safe XML pattern - *Do not use LoadXml*.
-                var clusterManifestXdoc = new XmlDocument { XmlResolver = null };
+                clusterManifestXdoc = new XmlDocument { XmlResolver = null };
 
-                using (var sreader = new StringReader(clusterManifestXml))
+                using (var sreader = new StringReader(clusterManifest))
                 {
                     using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
                     {
-                        clusterManifestXdoc?.Load(xreader);
+                        lock (lockObj)
+                        {
+                            clusterManifestXdoc?.Load(xreader);
 
-                        // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
-                        GetValuesFromClusterManifest(clusterManifestXdoc);
+                            // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
+                            GetValuesFromClusterManifest();
+                        }
 
-                        if (!string.IsNullOrWhiteSpace(paasClusterId))
+                        if (paasClusterId != null)
                         {
                             clusterId = paasClusterId;
                             clusterType = TelemetryConstants.ClusterTypeSfrp;
@@ -83,7 +69,7 @@ namespace FabricObserver.TelemetryLib
                             clusterId = tenantId;
                             clusterType = TelemetryConstants.ClusterTypePaasV1;
                         }
-                        else if (!string.IsNullOrWhiteSpace(diagnosticsClusterId))
+                        else if (diagnosticsClusterId != null)
                         {
                             clusterId = diagnosticsClusterId;
                             clusterType = TelemetryConstants.ClusterTypeStandalone;
@@ -101,7 +87,7 @@ namespace FabricObserver.TelemetryLib
         /// <param name="sectionName"></param>
         /// <param name="parameterName"></param>
         /// <returns></returns>
-        private static string GetParamValueFromSection(XmlDocument clusterManifestXdoc, string sectionName, string parameterName)
+        private static string GetParamValueFromSection(string sectionName, string parameterName)
         {
             if (clusterManifestXdoc == null)
             {
@@ -115,14 +101,14 @@ namespace FabricObserver.TelemetryLib
             return attr?.Value;
         }
 
-        private static string GetClusterIdFromPaasSection(XmlDocument clusterManifestXdoc)
+        private static string GetClusterIdFromPaasSection()
         {
-            return GetParamValueFromSection(clusterManifestXdoc, "Paas", "ClusterId");
+            return GetParamValueFromSection("Paas", "ClusterId");
         }
 
-        private static string GetClusterIdFromDiagnosticsSection(XmlDocument clusterManifestXdoc)
+        private static string GetClusterIdFromDiagnosticsSection()
         {
-            return GetParamValueFromSection(clusterManifestXdoc, "Diagnostics", "ClusterId");
+            return GetParamValueFromSection("Diagnostics", "ClusterId");
         }
 
         private static string GetTenantId()
@@ -166,10 +152,10 @@ namespace FabricObserver.TelemetryLib
             return (string)Registry.GetValue(tenantIdKeyName, TenantIdValueName, null);
         }
 
-        private static void GetValuesFromClusterManifest(XmlDocument clusterManifestXdoc)
+        private static void GetValuesFromClusterManifest()
         {
-            paasClusterId = GetClusterIdFromPaasSection(clusterManifestXdoc);
-            diagnosticsClusterId = GetClusterIdFromDiagnosticsSection(clusterManifestXdoc);
+            paasClusterId = GetClusterIdFromPaasSection();
+            diagnosticsClusterId = GetClusterIdFromDiagnosticsSection();
         }
     }
 }

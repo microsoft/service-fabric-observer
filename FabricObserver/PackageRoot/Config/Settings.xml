@@ -1,12 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- *** Application Parameters - Must Override (set) in ApplicationManifest.xml, not here. *** -->
+    <!-- *** Application Parameters - Must Override, set in ApplicationManifest.xml, not here. *** -->
     
     <!-- Required: Amount of time, in seconds, for FO to sleep before the next iteration of the sequential observers run loop. 
          0 means run continuously with no pausing - not recommended. If you only enable one observer, FO will sleep for 10 seconds between runs, regardless
          of this setting. SF Error/Warning Reports have TTLs that are computed in part with this value. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="" MustOverride="true"/>
+    
     <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 120 minutes. If you are not monitoring hundreds of services, then you should decrease this if necessary.
@@ -14,24 +15,28 @@
          your deployment and configuration - like if you watch all services of a all applications and there are hundreds of them. You can do this easily by
          setting EnableVerboseLogging to true on AppObserver, for example, and it will log how long it takes to run each time it runs to completion. Any observer
          that monitors stuff supports run duration logging. Use this these values to determine what constitutes too long and that an observer needs to be fixed. 
-         No Observer should ever take 1 hour to run, for example, so the default setting of 3600 seconds is an extreme maximum. Vary the number to meet your actual needs. -->
+         No Observer should ever take 2 hours to run, so the below setting is an extreme maximum. Vary the number to meet your actual needs. -->
     <Parameter Name="ObserverExecutionTimeout" Value="" MustOverride="true" />
+    
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    
     <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object in Logger instances that will emit 
          FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
     <Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
+    
     <!-- Optional: FabricObserver operational telemetry. No PII.  
          See ObserverManager.cs and TelemetryLib project for FO data that is collected. -->
     <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="" MustOverride="true" />
+    
     <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded), then put FO into Warning or Error state.
          Supported values are Error, Warning or None (which means don't put FO into Warning or Error state..).-->
     <Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
+    
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
-    
     
     <!-- *** Non-Overridable Parameters - Set these in this file. *** -->
     
@@ -40,7 +45,8 @@
     
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          Each observer will write to their own directory on this path.
-        **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you do for Windows).** -->
+        **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you would do for Windows).
+        The below (default) works on both platforms: on Windows it will be C:\observer_logs. On Linux the folder will live in the deployed code package directory.** -->
     <Parameter Name="ObserverLogPath" Value="observer_logs" />
     
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data.
@@ -101,6 +107,11 @@
     
     <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="" MustOverride="true" />
+
+    <!-- Optional: Whether or not AppObserver should try to monitor service processes concurrently.
+         This can significantly decrease the amount of time it takes AppObserver to monitor and report on several application services. 
+         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
+    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
     
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
@@ -144,20 +155,25 @@
          the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
          like 0 or a negative number (or omit the parameter altogether). -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true" />
+    
     <!-- AppObserver will automatically monitor a service process's descendants (max depth = 5, max procs = 50). You should only disable this if you know the services
          that you want AppObserver to monitor do not launch child processes. -->
     <Parameter Name="EnableChildProcessMonitoring" Value ="" MustOverride="true" />
+    
     <!-- Max number of a service process's spawned (child) processes to report via telemetry (ordered by descending value - so, top n consumers).
          The recommended value range for this setting is 5 to 10. See Observers.md for more details on AppObserver's child process monitoring. -->
     <Parameter Name="MaxChildProcTelemetryDataCount" Value="" MustOverride="true" />
+    
     <!-- dumpProcessOnError related configuration. -->
     <!-- This setting will override dumpProcessOnError in AppObserver.config.json. This is a big red button to disable/enable the feature 
          without having to deploy a new json config file for AppObserver as part of a configuration update or App redeployment. This feature will only work
          if you have "dumpProcessOnError"=true setting for your app target(s) in AppObserver.config.json. 
          AppObserver's dumpProcessOnError feature is currently only supported for Windows. -->
     <Parameter Name="EnableProcessDumps" Value="" MustOverride="true" />
+    
     <!-- Supported values are: Mini, MiniPlus, Full. Default is MiniPlus. Full can create giant files - be careful there.. -->
     <Parameter Name="DumpType" Value="" MustOverride="true" />
+    
     <!-- The maximum number of dumps per day per service process per metric. Default is 3. -->
     <Parameter Name="MaxDumps" Value="" MustOverride="true" />
     <Parameter Name="MaxDumpsTimeWindow" Value="" MustOverride="true" />
@@ -195,6 +211,10 @@
   </Section>
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <!-- Optional: Whether or not FabricSystemObserver should try to monitor service processes concurrently.
+         This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
+         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
+    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
@@ -225,6 +245,8 @@
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="AllocatedHandlesErrorLimit" Value="" MustOverride="true" />
     <Parameter Name="AllocatedHandlesWarningLimit" Value="" MustOverride="true" />
+    <Parameter Name="ThreadCountErrorLimit" Value="" MustOverride="true" />
+    <Parameter Name="ThreadCountWarningLimit" Value="" MustOverride="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
   </Section>
   <Section Name="NetworkObserverConfiguration">
@@ -233,6 +255,7 @@
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
          These values are held in a json file, NetworkObserver.config.json". -->
@@ -247,8 +270,10 @@
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
+    
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true"/>
+    
     <Parameter Name="CpuErrorLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="CpuWarningLimitPercent" Value="" MustOverride="true" />
     <Parameter Name="MemoryErrorLimitMb" Value="" MustOverride="true" />
@@ -261,6 +286,7 @@
     <Parameter Name="NetworkWarningFirewallRules" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
+    
     <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
     <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
     <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
@@ -293,6 +319,7 @@
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Azure Blob store container name. -->
     <Parameter Name="BlobContainerName" Value="" MustOverride="true" />
+    
     <!-- For Authenticating to your Storage Account, you can either provide a Connection String OR an Account Name and Account Key. 
          NOTE: If you do not plan on encrypting your account secrets, then set IsEncrypted to false both here and in 
          the AzureStorageUploadObserverConfiguration Section in ApplicationManifest.xml. -->
@@ -300,12 +327,13 @@
     <!-- OR -->
     <Parameter Name="AzureStorageAccountName" Value="" MustOverride="true" />
     <Parameter Name="AzureStorageAccountKey" Value="" IsEncrypted="true" MustOverride="true" />
+    
     <!-- Compression level. dmp files will be compressed to limit network usage. -->
     <Parameter Name="ZipFileCompressionLevel" Value="" MustOverride="true" />
   </Section>
-  <!-- NOTE: FabricObserver must run as System or Admin on *Windows* in order to run ContainerObserver successfully. This is not the case for Linux. -->
-   <Section Name="ContainerObserverConfiguration">
+  <Section Name="ContainerObserverConfiguration">
      <Parameter Name="Enabled" Value="" MustOverride="true" />
+     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
      <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
      <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
      <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
@@ -314,4 +342,19 @@
      <Parameter Name="RunInterval" Value="" MustOverride="true" />
      <Parameter Name="ConfigFileName" Value="" MustOverride="true" />
   </Section>
+  <!-- Plugin model sample. Just add the configuration info here that your observer needs.
+       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
+       Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
+       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. If you want to
+       enable versionless application parameter updates, then MustOverride the Parameters you want to be able to change without
+       redeploying FO and add them to ApplicationManifest.xml like all the other observers.
+  <Section Name="SampleNewObserverConfiguration">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+  </Section> -->
 </Settings>
