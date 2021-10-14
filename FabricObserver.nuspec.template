@@ -2,8 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.18</version>
-    <releaseNotes>This release introduces support for parallel execution of service process monitoring in AppObserver, ContainerObserver and FabricSystemObserver on machines with capable hardware configurations (logical processors >= 4). Support for thread count monitoring by AppObserver and FabricSystemObserver. There are important bug fixes and code improvements in this release. Please see the release notes on the FabricObserver repo for more information.</releaseNotes>
+    <version>3.1.19</version>
+    <releaseNotes>Bug fixes and code improvements.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>

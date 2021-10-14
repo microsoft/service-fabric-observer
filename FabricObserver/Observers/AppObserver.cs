@@ -1006,10 +1006,11 @@ namespace FabricObserver.Observers
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
 
-            _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
+            _ = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
 
+                var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
                 bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false;
@@ -1216,7 +1217,7 @@ namespace FabricObserver.Observers
 
                     // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
                     // a service process has mulitple descendants.
-                    ComputeResourceUsage(
+                     ComputeResourceUsage(
                             capacity,
                             parentPid,
                             checkCpu,
@@ -1266,10 +1267,10 @@ namespace FabricObserver.Observers
                             string id,
                             CancellationToken token)
         {
-            _ = Parallel.ForEach(procs, ParallelOptions, (proc, state) =>
+            _ = Parallel.For(0, procs.Count, ParallelOptions, (i, state) =>
             {
-                int procId = proc.Value;
-                string procName = proc.Key;
+                int procId = procs.ElementAt(i).Value;
+                string procName = procs.ElementAt(i).Key;
                 TimeSpan maxDuration = TimeSpan.FromSeconds(1);
                 CpuUsage cpuUsage = new CpuUsage();
 
@@ -1364,15 +1365,9 @@ namespace FabricObserver.Observers
                     state.Stop();
                 }
 
-                if (checkCpu && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    _ = cpuUsage.GetCpuUsagePercentageProcess(procId);  
-                }
+                Stopwatch timer = Stopwatch.StartNew();
 
-                // Monitor Duration applies to the code below.
-                var timer = Stopwatch.StartNew();
-
-                while (timer.Elapsed <= maxDuration)
+                while (timer.Elapsed.TotalSeconds <= maxDuration.TotalSeconds)
                 {
                     token.ThrowIfCancellationRequested();
 
@@ -1450,7 +1445,10 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
+                    Thread.Sleep(150);
                 }
+                timer.Stop();
+                timer = null;
             });
         }
 
