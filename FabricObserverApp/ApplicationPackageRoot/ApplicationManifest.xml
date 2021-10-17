@@ -101,7 +101,7 @@
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support -->
-    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -111,7 +111,7 @@
     <!-- ContainerObserver -->
     <Parameter Name="ContainerObserverConfigurationFile" DefaultValue="ContainerObserver.config.json" />
     <!-- Concurrency/Parallelism Support -->
-    <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="false" />
     <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="85" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
@@ -122,7 +122,7 @@
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Concurrency/Parallelism Support -->
-    <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="false" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />

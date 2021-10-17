@@ -618,7 +618,7 @@ namespace FabricObserver.Observers
 
             ParallelOptions = new ParallelOptions
             {
-                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
+                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors.
                 MaxDegreeOfParallelism = EnableConcurrentMonitoring && Environment.ProcessorCount >= 4 ? -1 : 1,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
