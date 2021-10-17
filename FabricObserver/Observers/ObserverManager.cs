@@ -20,7 +20,6 @@ using Microsoft.Extensions.DependencyInjection;
 using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
-using System.Runtime;
 
 namespace FabricObserver.Observers
 {
@@ -34,12 +33,12 @@ namespace FabricObserver.Observers
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
         private readonly IEnumerable<ObserverBase> serviceCollection;
+        private readonly DateTime StartDateTime;
         private volatile bool shutdownSignaled;
         private bool disposed;
         private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
-        private DateTime StartDateTime;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.1.19";
@@ -148,6 +147,8 @@ namespace FabricObserver.Observers
             {
                 observer
             });
+
+            StartDateTime = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -205,14 +206,13 @@ namespace FabricObserver.Observers
             }
 
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+            StartDateTime = DateTime.UtcNow;
         }
 
         public async Task StartObserversAsync()
         {
             try
             {
-                StartDateTime = DateTime.UtcNow;
-
                 // Nothing to do here.
                 if (observers == null || observers.Count == 0)
                 {
