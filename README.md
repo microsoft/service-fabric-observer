@@ -150,6 +150,11 @@ New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -Applicatio
 Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.19 -Monitored -FailureAction rollback
 ```  
 
+## Configuration Change Support
+
+When a new version of FabricObserver ships, often (not always) there will be new configuration settings, which requires customers to manually update the latest ApplicationManifest.xml and Settings.xml files with their preferred/established settings (current). In order
+to remove this manual step when upgrading, we wrote a simple tool that will diff/patch FO config (XML-only) automatically, which will be quite useful in devops workflows. Please try out [XmlDiffPatchSF](https://github.com/GitTorre/XmlDiffPatchSF) and use it in your pipelines or other build automation systems. It should save you some time.
+
 ## Observer Model
 
 FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows or Linux (Ubuntu) VM hosting a Service Fabric node.
