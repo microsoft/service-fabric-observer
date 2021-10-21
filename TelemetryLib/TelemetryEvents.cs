@@ -132,14 +132,13 @@ namespace FabricObserver.TelemetryLib
                         }
 
                         metrics.Add(key, data);
-
                     }
 
                     // Concurrency
                     if (obData.ObserverName.Contains("AppObserver") || obData.ObserverName.Contains("FabricSystemObserver")
                        || obData.ObserverName.Contains("ContainerObserver"))
                     {
-                        data = ((AppServiceObserverData)obData).ConcurrencyEnabled == false ? 0 : 1;
+                        data = ((AppServiceObserverData)obData).ConcurrencyEnabled ? 1 : 0;
                         key = $"{obData.ObserverName}{parallel}";
                         metrics.Add(key, data);
                     }

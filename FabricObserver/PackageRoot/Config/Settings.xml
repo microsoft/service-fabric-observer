@@ -30,8 +30,9 @@
          See ObserverManager.cs and TelemetryLib project for FO data that is collected. -->
     <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="" MustOverride="true" />
     
-    <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded), then put FO into Warning or Error state.
-         Supported values are Error, Warning or None (which means don't put FO into Warning or Error state..).-->
+    <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded) or AppObserver can't monitor a service that runs at higher privilege, 
+         then put FO into Warning or Error state or just create a an Ok (info) health message.
+         Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)).-->
     <Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
     
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 

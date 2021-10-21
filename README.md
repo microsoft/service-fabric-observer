@@ -1,15 +1,17 @@
-# FabricObserver 3.1.19
+# FabricObserver 3.1.20
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
 2. Runs on multiple versions of Windows Server and Ubuntu 16.04 and 18.04
-3. Provides [an easy-to-use extensibility model](/Documentation/Plugins.md) for creating [custom Observers](/SampleObserverPlugin) out of band (so, you don't need to clone the repo to build an Observer). See [ContainerObserver](https://github.com/GitTorre/ContainerObserver) for a complete plugin impl that extends FO with SF container app resource monitoring and alerting (note that this observer is built into FO as of version 3.1.19).
+3. Provides [an easy-to-use extensibility model](/Documentation/Plugins.md) for creating [custom Observers](/SampleObserverPlugin) out of band (so, you don't need to clone the repo to build an Observer). See [ContainerObserver](https://github.com/GitTorre/ContainerObserver) for a complete plugin impl that extends FO with SF container app resource monitoring and alerting (note that this observer is built into FO as of version 3.1.17).
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
 5. Is actively developed completely in the open. The latest code (generally in flight and not meant for production) lives in the develop branch. It is highly recommended that you only deploy code built from the main branch into your production clusters.
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
-Note that in version 3.1.18 and higher, AppObserver, ContainerObserver and FabricSystemObserver can run their monitoring loops in parallel on capable hardware (logical CPU processors >= 4). This feature is off by default, so if you do deploy to capable machines, consider enabling it. The setting is found in ApplicationManifest.xml under the AppObserver, ContainerObserver and FabricSystemObserver settings sections. Enabling this feature greatly decreases the time it takes for an observer that supports it to run to completion. This is especially important if you monitor a large number of apps.
+Note that in version 3.1.18 and higher, AppObserver, ContainerObserver and FabricSystemObserver can run their monitoring loops in parallel on capable hardware (logical CPU processors >= 4).
+This feature is enabled by default. You can disable/enable with parameter-only, versionless application upgrades with the related settings found in ApplicationManifest.xml under the AppObserver, ContainerObserver and FabricSystemObserver settings sections.
+Enabling this feature greatly decreases the time it takes for an observer running on capable hardware to complete monitoring. This is especially important if you monitor a large number of services.
 
 
 > FO is not an alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
@@ -141,19 +143,19 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO3117 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO3120 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO3117
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO3120
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.19   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.20   
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.19 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.20 -Monitored -FailureAction rollback
 ```  
 
 ## Configuration Change Support
