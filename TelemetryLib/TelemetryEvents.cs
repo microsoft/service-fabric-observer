@@ -107,6 +107,12 @@ namespace FabricObserver.TelemetryLib
                 const string procs = "TotalMonitoredServiceProcesses";
                 const string conts = "TotalMonitoredContainers";
                 const string parallel = "ConcurrencyEnabled";
+                const string appobs = "AppObserver";
+                const string contobs = "ContainerObserver";
+                const string fsobs = "FabricSystemObserver";
+                const string netobs = "NetworkObserver";
+                const string azobs = "AzureStorageUploadObserver";
+                const string sfobs = "SFConfigurationObserver";
 
                 foreach (var obData in foData.ObserverData)
                 {
@@ -114,52 +120,50 @@ namespace FabricObserver.TelemetryLib
                     string key;
 
                     // These observers monitor app services/containers.
-                    if (obData.ObserverName.Contains("AppObserver") || obData.ObserverName.Contains("FabricSystemObserver")
-                        || obData.ObserverName.Contains("NetworkObserver") || obData.ObserverName.Contains("ContainerObserver"))
+                    if (obData.Key == appobs || obData.Key == fsobs || obData.Key == netobs || obData.Key == contobs)
                     {
                         // App count.
-                        data = ((AppServiceObserverData)obData).MonitoredAppCount;
-                        key = $"{obData.ObserverName}{apps}";
+                        data = (obData.Value as AppServiceObserverData).MonitoredAppCount;
+                        key = $"{obData.Key}{apps}";
                         metrics.Add(key, data);
 
                         // Process (service instance/primary replica/container) count.
-                        data = ((AppServiceObserverData)obData).MonitoredServiceProcessCount;
-                        key = $"{obData.ObserverName}{procs}";
+                        data = (obData.Value as AppServiceObserverData).MonitoredServiceProcessCount;
+                        key = $"{obData.Key}{procs}";
 
-                        if (obData.ObserverName.Contains("ContainerObserver"))
+                        if (obData.Key == contobs)
                         {
-                            key = $"{obData.ObserverName}{conts}";
+                            key = $"{obData.Key}{conts}";
                         }
 
                         metrics.Add(key, data);
                     }
 
                     // Concurrency
-                    if (obData.ObserverName.Contains("AppObserver") || obData.ObserverName.Contains("FabricSystemObserver")
-                       || obData.ObserverName.Contains("ContainerObserver"))
+                    if (obData.Key == appobs || obData.Key == fsobs || obData.Key == contobs)
                     {
-                        data = ((AppServiceObserverData)obData).ConcurrencyEnabled ? 1 : 0;
-                        key = $"{obData.ObserverName}{parallel}";
+                        data = (obData.Value as AppServiceObserverData).ConcurrencyEnabled ? 1 : 0;
+                        key = $"{obData.Key}{parallel}";
                         metrics.Add(key, data);
                     }
 
                     // AzureStorage and SFConfig observers do not generate health events.
-                    if (obData.ObserverName.Contains("AzureStorageUploadObserver") || obData.ObserverName.Contains("SFConfigurationObserver"))
+                    if (obData.Key == azobs || obData.Key == sfobs)
                     {
-                        key = $"{obData.ObserverName}Enabled";
+                        key = $"{obData.Key}Enabled";
                         data = 1; // Enabled.
                         metrics.Add(key, data);
                     }
                     else
                     {
                         // Observer-created Error count
-                        key = $"{obData.ObserverName}{err}";
-                        data = obData.ErrorCount;
+                        key = $"{obData.Key}{err}";
+                        data = obData.Value.ErrorCount;
                         metrics.Add(key, data);
 
                         // Observer-created Warning count
-                        key = $"{obData.ObserverName}{warn}";
-                        data = obData.WarningCount;
+                        key = $"{obData.Key}{warn}";
+                        data = obData.Value.WarningCount;
                         metrics.Add(key, data);
                     }
                 }

@@ -35,7 +35,7 @@ namespace FabricObserver.TelemetryLib
             get; set; 
         }
 
-        public List<ObserverData> ObserverData
+        public Dictionary<string, ObserverData> ObserverData
         {
             get; set;
         }

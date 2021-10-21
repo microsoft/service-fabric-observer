@@ -610,9 +610,9 @@ namespace FabricObserver.Observers
             return telemetryData;
         }
 
-        private List<ObserverData> GetObserverData()
+        private Dictionary<string, ObserverData> GetObserverData()
         {
-            var observerData = new List<ObserverData>();
+            var observerData = new Dictionary<string, ObserverData>();
             var enabledObs = observers.Where(o => o.IsEnabled);
             string[] builtInObservers = new string[]
             {
@@ -642,25 +642,65 @@ namespace FabricObserver.Observers
                     obs.ObserverName == ObserverConstants.NetworkObserverName ||
                     obs.ObserverName == ObserverConstants.FabricSystemObserverName)
                 {
-                    observerData.Add(
-                        new AppServiceObserverData
-                        {
-                            ObserverName = obs.ObserverName,
-                            MonitoredAppCount = obs.MonitoredAppCount,
-                            MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount,
-                            ErrorCount = obs.CurrentErrorCount,
-                            WarningCount = obs.CurrentWarningCount
-                        });
+                    if (!observerData.ContainsKey(obs.ObserverName))
+                    {
+                        _=  observerData.TryAdd(
+                                obs.ObserverName,
+                                new AppServiceObserverData
+                                {
+                                    MonitoredAppCount = obs.MonitoredAppCount,
+                                    MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount,
+                                    ErrorCount = obs.CurrentErrorCount,
+                                    WarningCount = obs.CurrentWarningCount
+                                });
+                    }
+                    else
+                    {
+                        observerData[obs.ObserverName] =
+                                new AppServiceObserverData
+                                {
+                                    MonitoredAppCount = obs.MonitoredAppCount,
+                                    MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount,
+                                    ErrorCount = obs.CurrentErrorCount,
+                                    WarningCount = obs.CurrentWarningCount
+                                };
+                    }
+
+                    // Concurrency
+                    if (obs.ObserverName == ObserverConstants.AppObserverName)
+                    {
+                        (observerData[ObserverConstants.AppObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as AppObserver).EnableConcurrentMonitoring;
+                    }
+                    else if (obs.ObserverName == ObserverConstants.ContainerObserverName)
+                    {
+                        (observerData[ObserverConstants.ContainerObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as ContainerObserver).EnableConcurrentMonitoring;
+                    }
+                    else if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
+                    {
+                        (observerData[ObserverConstants.FabricSystemObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as FabricSystemObserver).EnableConcurrentMonitoring;
+                    }
                 }
                 else
                 {
-                    observerData.Add(
-                        new ObserverData
-                        {
-                            ObserverName = obs.ObserverName,
-                            ErrorCount = obs.CurrentErrorCount,
-                            WarningCount = obs.CurrentWarningCount
-                        });
+                    if (!observerData.ContainsKey(obs.ObserverName))
+                    {
+                        _ = observerData.TryAdd(
+                                obs.ObserverName,
+                                    new ObserverData
+                                    {
+                                        ErrorCount = obs.CurrentErrorCount,
+                                        WarningCount = obs.CurrentWarningCount
+                                    });
+                    }
+                    else
+                    {
+                        observerData[obs.ObserverName] =
+                                 new ObserverData
+                                 {
+                                     ErrorCount = obs.CurrentErrorCount,
+                                     WarningCount = obs.CurrentWarningCount
+                                 };
+                    }
                 }
             }
 
@@ -1043,16 +1083,14 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                catch (AggregateException ex) when (ex.InnerExceptions.Any(e => e.InnerException is FabricException ||
-                                                                                e.InnerException is OperationCanceledException ||
-                                                                                e.InnerException is TaskCanceledException))
+                catch (AggregateException ae)
                 {
                     if (isConfigurationUpdateInProgress)
                     {
                         return true;
                     }
 
-                    _ = exceptionBuilder.AppendLine($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ex.InnerException}");
+                    _ = exceptionBuilder.AppendLine($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ae}");
                     allExecuted = false;
 
                     continue;
