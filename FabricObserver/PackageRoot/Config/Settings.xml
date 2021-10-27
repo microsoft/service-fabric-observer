@@ -7,6 +7,12 @@
          0 means run continuously with no pausing - not recommended. If you only enable one observer, FO will sleep for 10 seconds between runs, regardless
          of this setting. SF Error/Warning Reports have TTLs that are computed in part with this value. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="" MustOverride="true"/>
+
+    <!-- Required: Location on disk to store observer data, including ObserverManager. 
+         Each observer will write to their own directory on this path.
+        **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you would do for Windows).
+        The below (default) works on both platforms: on Windows it will be C:\observer_logs. On Linux the folder will live in the deployed code package directory.** -->
+    <Parameter Name="ObserverLogPath" Value="" MustOverride="true" />
     
     <!-- Required: Amount of time, in seconds, any observer is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
@@ -43,12 +49,6 @@
     
     <!-- How long to wait, in seconds, after a shutdown is signaled. -->
     <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
-    
-    <!-- Required: Location on disk to store observer data, including ObserverManager. 
-         Each observer will write to their own directory on this path.
-        **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you would do for Windows).
-        The below (default) works on both platforms: on Windows it will be C:\observer_logs. On Linux the folder will live in the deployed code package directory.** -->
-    <Parameter Name="ObserverLogPath" Value="observer_logs" />
     
     <!-- Optional: Location on disk to store CSV files that contain all observer monitoring data.
          **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you do for Windows).** -->
