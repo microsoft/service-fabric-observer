@@ -5,7 +5,6 @@
 
 using System;
 using System.Fabric;
-using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Runtime.InteropServices;
