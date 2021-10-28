@@ -1,4 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- Note: You can use an XML diff/merge tool to make upgrading your base configuration to the latest version easier. 
+           Get the tool here: https://github.com/gittorre/XmlDiffPatchSF -->
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
     <!-- *** Application Parameters - Must Override, set in ApplicationManifest.xml, not here. *** -->
