@@ -191,6 +191,7 @@ Just observe it.
 
 # Operational Telemetry 
 Please see [FabricObserver Operational Telemetry](/Documentation/OperationalTelemetry.md) for detailed information on the user agnostic (Non-PII) data FabricObserver sends to Microsoft (opt out with a simple configuration parameter change).
+Please consider leaving this enabled so your friendly neighborhood FabricObserver devs can understand how FO is doing in the real world. We would really appreciate it!
 
 # Contributing
 
