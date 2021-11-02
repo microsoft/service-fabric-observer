@@ -1,0 +1,6 @@
+﻿[
+  {
+    "targetApp": "fabric:/Votig",
+    "cpuWarningLimitPercent": 1
+  }
+]
