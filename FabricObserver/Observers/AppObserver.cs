@@ -1424,16 +1424,15 @@ namespace FabricObserver.Observers
                     if (checkMemPct)
                     {
                         float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, true);
-
                         var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetMemoryInfo();
 
                         if (TotalMemoryGb > 0)
                         {
-                            double usedPct = Math.Round((double)(processMem * 100) / (TotalMemoryGb * 1024), 2);
+                            double usedPct = (double)(processMem * 100) / (TotalMemoryGb * 1024);
 
                             if (procId == parentPid)
                             {
-                                AllAppMemDataPercent[id].Data.Add(Math.Round(usedPct, 1));
+                                AllAppMemDataPercent[id].Data.Add(Math.Round(usedPct, 2));
                             }
                             else
                             {
@@ -1441,11 +1440,11 @@ namespace FabricObserver.Observers
                                 {
                                     _ = AllAppMemDataPercent.TryAdd($"{id}:{procName}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, $"{id}:{procName}", capacity, UseCircularBuffer));
                                 }
-                                AllAppMemDataPercent[$"{id}:{procName}"].Data.Add(Math.Round(usedPct, 1));
+                                AllAppMemDataPercent[$"{id}:{procName}"].Data.Add(Math.Round(usedPct, 2));
                             }
                         }
                     }
-                    Thread.Sleep(150);
+                    Thread.Sleep(100);
                 }
                 timer.Stop();
                 timer = null;

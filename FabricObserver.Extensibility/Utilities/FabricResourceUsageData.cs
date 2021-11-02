@@ -123,19 +123,19 @@ namespace FabricObserver.Observers.Utilities
                 switch (Data)
                 {
                     case IList<long> v when v.Count > 0:
-                        average = Math.Round(v.Average(), 1);
+                        average = Math.Round(v.Average(), 2);
                         break;
 
                     case IList<int> x when x.Count > 0:
-                        average = Math.Round(x.Average(), 1);
+                        average = Math.Round(x.Average(), 2);
                         break;
 
                     case IList<float> y when y.Count > 0:
-                        average = Math.Round(y.Average(), 1);
+                        average = Math.Round(y.Average(), 2);
                         break;
 
                     case IList<double> z when z.Count > 0:
-                        average = Math.Round(z.Average(), 1);
+                        average = Math.Round(z.Average(), 2);
                         break;
                 }
 
