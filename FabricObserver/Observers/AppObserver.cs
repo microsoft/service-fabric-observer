@@ -635,7 +635,47 @@ namespace FabricObserver.Observers
 
             if (!File.Exists(appObserverConfigFileName))
             {
-                ObserverLogger.LogWarning($"Will not observe resource consumption on node {NodeName} as no configuration file has been supplied.");
+                string message = $"Will not observe resource consumption on node {NodeName} as no configuration file has been supplied.";
+                var healthReport = new Utilities.HealthReport
+                {
+                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                    EmitLogEvent = true,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = "MissingAppConfiguration",
+                    ReportType = HealthReportType.Application,
+                    State = HealthState.Warning,
+                    NodeName = NodeName,
+                    Observer = ObserverConstants.AppObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+                CurrentWarningCount++;
+
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                                               "MissingAppConfiguration",
+                                               HealthState.Warning,
+                                               message,
+                                               ObserverName,
+                                               Token);
+                }
+
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Property = "MissingAppConfiguration",
+                                        Level = "Warning",
+                                        Message = message,
+                                        ObserverName
+                                    });
+                }
+
                 return false;
             }
 
@@ -647,7 +687,7 @@ namespace FabricObserver.Observers
                 var healthReport = new Utilities.HealthReport
                 {
                     AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                    EmitLogEvent = EnableVerboseLogging,
+                    EmitLogEvent = true,
                     HealthMessage = message,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     Property = "JsonValidation",
@@ -659,6 +699,7 @@ namespace FabricObserver.Observers
 
                 // Generate a Service Fabric Health Report.
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
+                CurrentWarningCount++;
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
@@ -700,7 +741,7 @@ namespace FabricObserver.Observers
                 var healthReport = new Utilities.HealthReport
                 {
                     AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                    EmitLogEvent = EnableVerboseLogging,
+                    EmitLogEvent = true,
                     HealthMessage = message,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     Property = "Misconfiguration",
@@ -712,7 +753,8 @@ namespace FabricObserver.Observers
 
                 // Generate a Service Fabric Health Report.
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
-
+                CurrentWarningCount++;
+               
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
                 {
@@ -772,7 +814,6 @@ namespace FabricObserver.Observers
                     Token.ThrowIfCancellationRequested();
                     
                     deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
-
                     appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                             () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
                                                                                        deployedAppQueryDesc,
@@ -881,13 +922,12 @@ namespace FabricObserver.Observers
             for (int i = 0; i < userTargetList.Count; ++i) 
             {
                 Token.ThrowIfCancellationRequested();
+
                 Uri appUri = null;
-                ApplicationInfo application = userTargetList.ElementAt(i);
+                ApplicationInfo application = userTargetList[i];
 
                 if (string.IsNullOrWhiteSpace(application.TargetApp) && string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
-                    ObserverLogger.LogWarning($"InitializeAsync: Required setting, targetApp or targetAppType, is not set in AppObserver.config.json.");
-
                     settingsFail++;
                     continue;
                 }
@@ -895,6 +935,51 @@ namespace FabricObserver.Observers
                 // No required settings supplied for deployed application(s).
                 if (settingsFail == userTargetList.Count)
                 {
+                    string message = "No required settings supplied for deployed applications in AppObserver.config.json. " +
+                                     "You must supply either a targetApp or targetAppType setting.";
+
+                    var healthReport = new Utilities.HealthReport
+                    {
+                        AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                        EmitLogEvent = true,
+                        HealthMessage = message,
+                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        Property = "AppMisconfiguration",
+                        ReportType = HealthReportType.Application,
+                        State = HealthState.Warning,
+                        NodeName = NodeName,
+                        Observer = ObserverConstants.AppObserverName,
+                    };
+
+                    // Generate a Service Fabric Health Report.
+                    HealthReporter.ReportHealthToServiceFabric(healthReport);
+                    CurrentWarningCount++;
+
+                    // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                    if (IsTelemetryEnabled)
+                    {
+                        _ = TelemetryClient?.ReportHealthAsync(
+                                                   "AppMisconfiguration",
+                                                   HealthState.Warning,
+                                                   message,
+                                                   ObserverName,
+                                                   Token);
+                    }
+
+                    // ETW.
+                    if (IsEtwEnabled)
+                    {
+                        ObserverLogger.LogEtw(
+                                        ObserverConstants.FabricObserverETWEventName,
+                                        new
+                                        {
+                                            Property = "AppMisconfiguration",
+                                            Level = "Warning",
+                                            Message = message,
+                                            ObserverName
+                                        });
+                    }
+
                     return false;
                 }
 
@@ -948,7 +1033,7 @@ namespace FabricObserver.Observers
             {
                 Token.ThrowIfCancellationRequested();
 
-                var rep = ReplicaOrInstanceList.ElementAt(i);
+                var rep = ReplicaOrInstanceList[i];
 
                 try
                 {
@@ -1075,6 +1160,15 @@ namespace FabricObserver.Observers
 
                             // Generate a Service Fabric Health Report.
                             HealthReporter.ReportHealthToServiceFabric(healthReport);
+                            
+                            if (ObserverManager.ObserverFailureHealthStateLevel == HealthState.Warning)
+                            {
+                                CurrentWarningCount++;
+                            }
+                            else if (ObserverManager.ObserverFailureHealthStateLevel == HealthState.Error)
+                            {
+                                CurrentErrorCount++;
+                            }
 
                             // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                             if (IsTelemetryEnabled)

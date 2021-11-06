@@ -2,13 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.20</version>
+    <version>3.1.21</version>
     <releaseNotes>
-- Bug fix: Internal diagnostic telemetry *ConcurrencyEnabled values are now set correctly.
-- Enhancement: Increased fractional digits for double values representing resource usage (memory, cpu, etc).
-- Enhancement: LocalLogPath setting is now overridable with support for versionless app parameter upgrades.
-- Enhancement: Concurrent monitoring support is now enabled by default.
-- Code improvements.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

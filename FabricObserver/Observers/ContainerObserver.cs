@@ -475,12 +475,18 @@ namespace FabricObserver.Observers
                 // Was there an error running docker stats?
                 if (exitStatus != 0)
                 {
-                    string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
+                    string msg = $"docker stats exited with {exitStatus}: {error}";
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                 "in order for ContainerObserver to function correctly on Windows.";
+                    }
+                    else
+                    {
+                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the caps set. In order to fix this, please redeploy FO. " +
+                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux. " +
+                               "You will need to modify the Policy node in ApplicationManifest.xml to contain <RunAsPolicy CodePackageRef=\"Code\" UserRef=\"SystemUser\" EntryPointType=\"All\" />";
                     }
 
                     ObserverLogger.LogWarning(msg);

@@ -694,7 +694,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            string thresholdName = "Minimum";
+            string thresholdName = "Warning";
             bool warningOrError = false;
             string name = string.Empty, id, drive = string.Empty;
             int procId = 0;
@@ -843,7 +843,7 @@ namespace FabricObserver.Observers
             // Health Error
             if (data.IsUnhealthy(thresholdError))
             {
-                thresholdName = "Maximum";
+                thresholdName = "Error";
                 threshold = thresholdError;
                 warningOrError = true;
                 healthState = HealthState.Error;
@@ -992,17 +992,16 @@ namespace FabricObserver.Observers
 
                 if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
                 {
-                    childProcMsg = $"Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
+                    childProcMsg = $" Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
                                    $"Their cumulative impact on {name}'s resource usage has been applied.";
                 }
 
-                _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
+                _ = healthMessage.Append($"{drive}{data.Property} has exceeded the specified {thresholdName} limit ({threshold}{data.Units})");
                 _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 2)}{data.Units} ");
                 
                 if (childProcMsg != string.Empty)
                 {
-                    _ = healthMessage.AppendLine();
-                    _ = healthMessage.AppendLine(childProcMsg);
+                    _ = healthMessage.Append(childProcMsg);
                 }
 
                 // The health event description will be a serialized instance of telemetryData,
@@ -1163,19 +1162,13 @@ namespace FabricObserver.Observers
             if (data.Data is List<T> list)
             {
                 // List<T> impl.
-                lock (lockObj)
-                {
-                    list.TrimExcess();
-                    list.Clear();
-                }
+                list.TrimExcess();
+                list.Clear();  
             }
             else
             {
                 // CircularBufferCollection<T> impl.
-                lock (lockObj)
-                {
-                    data.Data.Clear();
-                }
+                data.Data.Clear();
             }
         }
 

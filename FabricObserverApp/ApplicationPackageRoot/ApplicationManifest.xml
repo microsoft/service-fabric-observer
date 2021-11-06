@@ -1,7 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- Note: You can use an XML diff/merge tool to make upgrading your base configuration to the latest version easier. 
            Get the tool here: https://github.com/gittorre/XmlDiffPatchSF -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.20" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.21" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <!-- Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
+             simple configuration updates for them. By design, any observer you make using our 
+             extensibility model will employ the same basic config parameters as all observers do.
+             (See ObserverBase.cs) -->
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
     <!-- ObserverManager Configuration -->
@@ -56,7 +60,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
@@ -69,18 +73,18 @@
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. 
          NOTE: If you enable concurrent monitoring for AppObserver, then you should increase this value to be at least the number of cores on the target machine. 
          You have more flexibility with monitor duration with multiple threads on capable hardware. Take advantage of it. -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:03" />
-    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:03" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:03" />
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:01" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
     <Parameter Name="ContainerObserverRunInterval" DefaultValue="" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="01:00:00" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:15:00" />
-    <Parameter Name="NetworkObserverRunInterval" DefaultValue="00:15:00" />
-    <Parameter Name="NodeObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
+    <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
+    <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
     <!-- AppObserver -->
@@ -185,7 +189,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.20" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.21" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
