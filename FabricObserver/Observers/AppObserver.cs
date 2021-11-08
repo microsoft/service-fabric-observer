@@ -142,9 +142,11 @@ namespace FabricObserver.Observers
             TimeSpan TTL = GetHealthReportTimeToLive();
 
             // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
-            _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
+            _ = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
+
+                var repOrInst = ReplicaOrInstanceList[i];
 
                 // For use in process family tree monitoring.
                 ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList = null;
