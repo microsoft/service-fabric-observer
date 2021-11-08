@@ -15,7 +15,7 @@ namespace Aggregator
 
     public interface IMyCommunication : IService
     {
-        Task PutData(int cpu);
+        Task PutData(float cpu);
     }
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
@@ -26,7 +26,7 @@ namespace Aggregator
             : base(context)
         { }
 
-        public async Task PutData(int cpu)
+        public async Task PutData(float cpu)
         {
             Debug.WriteLine("STATEFUL ------------- "+cpu);
         }
