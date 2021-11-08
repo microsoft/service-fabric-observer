@@ -4,6 +4,10 @@
     <id>%PACKAGE_ID%</id>
     <version>3.1.21</version>
     <releaseNotes>
+- Removed redundant code.
+- Added more clarity to warning/error descriptions.
+- Removed line breaks from multi-sentence health report descriptions.
+- Added version check utility. FO will let you know if there is a newer version available on Github (Informational Health Event, Telemetry, ETW).
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

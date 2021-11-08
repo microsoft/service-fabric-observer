@@ -1103,6 +1103,7 @@ namespace FabricObserver.Observers
             return allExecuted;
         }
 
+        // https://stackoverflow.com/questions/25678690/how-can-i-check-github-releases-in-c
         private async Task CheckGithubForNewFOVersionAsync()
         {
             try
