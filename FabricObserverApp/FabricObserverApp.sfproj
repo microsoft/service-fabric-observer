@@ -27,6 +27,7 @@
     <None Include="Scripts\Deploy-FabricApplication.ps1" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Aggregator\Aggregator.csproj" />
     <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
   </ItemGroup>
   <ItemGroup>

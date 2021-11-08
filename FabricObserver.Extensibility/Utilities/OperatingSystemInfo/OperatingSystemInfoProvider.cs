@@ -46,7 +46,8 @@ namespace FabricObserver.Observers.Utilities
             get;
         } = new Logger("OSUtilities");
 
-
+        //this is in Bytes (B) not bits (b) even though it says Gb and Mb instead of GB and MB
+        //why is TotalMemoryGB a long instead of a float? Floors the value so upto <1Gb is lost
         public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo();
 
         public abstract int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null);

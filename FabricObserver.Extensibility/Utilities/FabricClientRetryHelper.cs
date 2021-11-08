@@ -15,6 +15,7 @@ namespace FabricObserver.Observers.Utilities
     /// <summary>
     /// Helper class to execute fabric client operations with retry.
     /// </summary>
+    /// USEFUL_INTERESTING
     public static class FabricClientRetryHelper
     {
         private static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromMinutes(2);

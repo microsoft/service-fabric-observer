@@ -1217,6 +1217,7 @@ namespace FabricObserver.Observers
 
                     // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
                     // a service process has mulitple descendants.
+                    //USEFUL_INTERESTING
                      ComputeResourceUsage(
                             capacity,
                             parentPid,
@@ -1267,6 +1268,7 @@ namespace FabricObserver.Observers
                             string id,
                             CancellationToken token)
         {
+            //USEFUL_INTERESTING
             _ = Parallel.For(0, procs.Count, ParallelOptions, (i, state) =>
             {
                 int procId = procs.ElementAt(i).Value;
@@ -1372,7 +1374,7 @@ namespace FabricObserver.Observers
                     token.ThrowIfCancellationRequested();
 
                     // CPU (all cores) \\
-
+                    // USEFUL_CPU
                     if (checkCpu)
                     {
                         double cpu = cpuUsage.GetCpuUsagePercentageProcess(procId);
@@ -1421,6 +1423,7 @@ namespace FabricObserver.Observers
                     }
 
                     // percent in use (of total).
+                    // USEFUL_MEMEORY
                     if (checkMemPct)
                     {
                         float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, true);
@@ -1544,6 +1547,7 @@ namespace FabricObserver.Observers
             deployedApps = null;
         }
 
+        //USEFUL_GET_PROCESSES
         private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedPrimaryReplicaAsync(
                                                                      Uri appName,
                                                                      string[] serviceFilterList = null,

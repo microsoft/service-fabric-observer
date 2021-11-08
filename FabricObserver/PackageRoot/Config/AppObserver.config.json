@@ -1,7 +1,7 @@
 ﻿[
   {
     "targetApp": "*",
-    "cpuWarningLimitPercent": 85,
+    "cpuWarningLimitPercent": 2,
     "memoryWarningLimitMb": 1048,
     "networkWarningEphemeralPorts": 7500,
     "warningThreadCount": 500

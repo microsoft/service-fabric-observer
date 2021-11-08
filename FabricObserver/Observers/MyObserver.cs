@@ -95,6 +95,16 @@ namespace FabricObserver.Observers
             Debug.WriteLine("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
             await Task.Delay(TimeSpan.FromSeconds(1), token);
             Debug.WriteLine("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
+            float cpu =CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
+            Debug.WriteLine("CPU: ----------- " + cpu + " ------------");
+            var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+            Debug.WriteLine("MEMORY-TOTAL: ----------- " + TotalMemoryGb + " ------------");
+            Debug.WriteLine("MEMORY-USE: ----------- " + MemoryInUseMb + " ------------");
+            Debug.WriteLine("MEMORY-%: ----------- " + PercentInUse + " ------------");
+
+
+
+
 
         }
 
