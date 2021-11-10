@@ -102,10 +102,10 @@ namespace FabricObserver.Observers
             Debug.WriteLine("MEMORY-USE: ----------- " + MemoryInUseMb + " ------------");
             Debug.WriteLine("MEMORY-%: ----------- " + PercentInUse + " ------------");
 
-            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
-                new Uri("fabric:/FabricObserverApp/Aggregator") );
+            //var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+            //    new Uri("fabric:/FabricObserverApp/Aggregator") );
 
-            AggregatorProxy.PutData(cpu);
+            //AggregatorProxy.PutData(cpu);
 
 
 
