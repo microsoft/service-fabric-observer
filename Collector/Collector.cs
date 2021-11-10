@@ -55,6 +55,7 @@ namespace Collector
                 float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
                 var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
                 DriveInfo[] allDrives = DriveInfo.GetDrives();
+                string nodeName = this.Context.NodeContext.NodeName;
 
                 //Remote Procedure Call to Aggregator
                 var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
@@ -62,7 +63,7 @@ namespace Collector
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-                await AggregatorProxy.PutData(new Data(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse,allDrives));
+                await AggregatorProxy.PutData(nodeName,new Data(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse,allDrives));
 
             }
 

@@ -16,7 +16,7 @@ namespace Aggregator
 
     public interface IMyCommunication : IService
     {
-        Task PutData(Data data);
+        Task PutData(string NodeName,Data data);
     }
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
@@ -27,9 +27,10 @@ namespace Aggregator
             : base(context)
         { }
 
-        public async Task PutData(Data data)
+        public async Task PutData(string NodeName,Data data)
         {
             Debug.WriteLine("Aggregator");
+            Debug.WriteLine("------ From node : " + NodeName + " -------");
             Debug.WriteLine("------ cpu: "+data.Cpu+" -------");
             Debug.WriteLine("------ toatal memory: " + data.TotalMemoryGb + " -------");
             Debug.WriteLine("------ memory in use: " + data.MemoryInUseMb + " -------");
