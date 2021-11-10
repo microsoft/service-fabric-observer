@@ -49,14 +49,18 @@ namespace Collector
 
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
-                float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
 
+                // Collect Data
+                float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
+                var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+                
+                //Remote Procedure Call to Aggregator
                 var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-                await AggregatorProxy.PutData(new Data(cpu));
+                await AggregatorProxy.PutData(new Data(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse));
 
             }
 

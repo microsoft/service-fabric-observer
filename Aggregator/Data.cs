@@ -10,12 +10,17 @@ namespace Aggregator
     public class Data
     {
 
-        public Data(float cpu)
+        public Data(float cpu,long TotalMemoryGb, long MemoryInUseMb, double PercentInUse)
         {
             this.cpu = cpu;
+            this.TotalMemoryGb = TotalMemoryGb;
+            this.MemoryInUseMb = MemoryInUseMb;
+            this.PercentInUse = PercentInUse;
         }
 
         public float cpu { get; }
-        
+        public long TotalMemoryGb { get; }
+        public long MemoryInUseMb { get; }
+        public double PercentInUse { get; }
     }
 }

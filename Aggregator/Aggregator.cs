@@ -29,7 +29,12 @@ namespace Aggregator
 
         public async Task PutData(Data data)
         {
-            Debug.WriteLine("STATEFUL ------------- "+data.cpu);
+            Debug.WriteLine("Aggregator");
+            Debug.WriteLine("------ cpu: "+data.cpu+" -------");
+            Debug.WriteLine("------ toatal memory: " + data.TotalMemoryGb + " -------");
+            Debug.WriteLine("------ memory in use: " + data.MemoryInUseMb + " -------");
+            Debug.WriteLine("------ % of memeory: " + data.PercentInUse + " -------");
+
         }
 
 
