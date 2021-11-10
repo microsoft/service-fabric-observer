@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.2.1235" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="5.2.1235" />
   </ItemGroup>
 
 </Project>

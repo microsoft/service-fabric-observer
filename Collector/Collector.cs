@@ -52,9 +52,11 @@ namespace Collector
                 float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
 
                 var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
-                    new Uri("fabric:/Internship/Aggregator"));
+                    new Uri("fabric:/Internship/Aggregator"),
+                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                    );
 
-                AggregatorProxy.PutData(cpu);
+                await AggregatorProxy.PutData(cpu);
 
             }
 
