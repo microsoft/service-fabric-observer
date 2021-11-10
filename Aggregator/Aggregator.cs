@@ -43,6 +43,9 @@ namespace Aggregator
 
             }
 
+            await updateState(NodeName, data);
+            Data dd= await PeekFirst(NodeName);
+
 
 
         }
@@ -72,6 +75,7 @@ namespace Aggregator
             //       or remove this RunAsync override if it's not needed in your service.
 
             var myDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, long>>("myDictionary");
+            
 
             while (true)
             {
@@ -85,6 +89,7 @@ namespace Aggregator
                         result.HasValue ? result.Value.ToString() : "Value does not exist.");
 
                     await myDictionary.AddOrUpdateAsync(tx, "Counter", 0, (key, value) => ++value);
+                    //myDictionary.
 
                     // If an exception is thrown before calling CommitAsync, the transaction aborts, all changes are 
                     // discarded, and nothing is saved to the secondary replicas.
@@ -92,6 +97,38 @@ namespace Aggregator
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            }
+        }
+
+        protected async Task updateState(string nodeName,Data data)
+        {
+            var stateManager = this.StateManager;
+            IReliableQueue<Data> reliableQueue = null ;
+            while (reliableQueue == null) {
+                try
+                {
+                    reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(nodeName);
+                }
+                catch (Exception e) { }
+            }
+            using(var tx = stateManager.CreateTransaction())
+            {
+                await reliableQueue.EnqueueAsync(tx, data);
+                await tx.CommitAsync();
+            }
+
+        }
+
+        protected async Task<Data> PeekFirst(string nodeName)
+        {
+            var stateManager = this.StateManager;
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(nodeName);
+
+            using (var tx = stateManager.CreateTransaction())
+            {
+                
+                return (await reliableQueue.TryPeekAsync(tx)).Value; //why do I have to do this in a transaction ?!
+                
             }
         }
     }
