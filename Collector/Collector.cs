@@ -56,7 +56,7 @@ namespace Collector
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-                await AggregatorProxy.PutData(cpu);
+                await AggregatorProxy.PutData(new Data(cpu));
 
             }
 
