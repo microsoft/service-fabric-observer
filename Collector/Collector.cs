@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,14 +54,15 @@ namespace Collector
                 // Collect Data
                 float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
                 var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
-                
+                DriveInfo[] allDrives = DriveInfo.GetDrives();
+
                 //Remote Procedure Call to Aggregator
                 var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-                await AggregatorProxy.PutData(new Data(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse));
+                await AggregatorProxy.PutData(new Data(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse,allDrives));
 
             }
 

@@ -30,10 +30,19 @@ namespace Aggregator
         public async Task PutData(Data data)
         {
             Debug.WriteLine("Aggregator");
-            Debug.WriteLine("------ cpu: "+data.cpu+" -------");
+            Debug.WriteLine("------ cpu: "+data.Cpu+" -------");
             Debug.WriteLine("------ toatal memory: " + data.TotalMemoryGb + " -------");
             Debug.WriteLine("------ memory in use: " + data.MemoryInUseMb + " -------");
             Debug.WriteLine("------ % of memeory: " + data.PercentInUse + " -------");
+            foreach( var d in data.allDrives)
+            {
+                Debug.WriteLine("------ Drive name: " + d.Name + " -------");
+                Debug.WriteLine("------ Drive total space: " + d.TotalDiskSpaceGB + " -------");
+                Debug.WriteLine("------ Drive available space: " + d.AvailableDiskSpaceGB + " -------");
+
+            }
+
+
 
         }
 
