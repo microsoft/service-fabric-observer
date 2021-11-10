@@ -1158,23 +1158,10 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // No need to keep data in memory.
-            if (data.Data is List<T> list)
+            // this lock probably isn't necessary.
+            lock (lockObj)
             {
-                // List<T> impl.
-                lock (lockObj)
-                {
-                    list.TrimExcess();
-                    list.Clear();
-                }
-            }
-            else
-            {
-                // CircularBufferCollection<T> impl.
-                lock (lockObj)
-                {
-                    data.Data.Clear();
-                }
+                data.ClearData();
             }
         }
 

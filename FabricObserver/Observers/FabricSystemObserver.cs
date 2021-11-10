@@ -894,7 +894,7 @@ namespace FabricObserver.Observers
                     
                     if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
                     {
-                        allActiveTcpPortData[dotnetArg].Data.Add(activePortCount);
+                        allActiveTcpPortData[dotnetArg].AddData(activePortCount);
                     }
 
                     // Ports - Active TCP Ephemeral
@@ -903,7 +903,7 @@ namespace FabricObserver.Observers
                     
                     if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
                     {
-                        allEphemeralTcpPortData[dotnetArg].Data.Add(activeEphemeralPortCount);
+                        allEphemeralTcpPortData[dotnetArg].AddData(activeEphemeralPortCount);
                     }
 
                     // Allocated Handles
@@ -925,13 +925,13 @@ namespace FabricObserver.Observers
                     // Handles/FDs
                     if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
                     {
-                        allHandlesData[dotnetArg].Data.Add(handles);
+                        allHandlesData[dotnetArg].AddData(handles);
                     }
 
                     // Threads
                     if (ThreadCountError > 0 || ThreadCountWarning > 0)
                     {
-                        allThreadsData[dotnetArg].Data.Add(threads);
+                        allThreadsData[dotnetArg].AddData(threads);
                     }
 
                     CpuUsage cpuUsage = new CpuUsage();
@@ -940,7 +940,7 @@ namespace FabricObserver.Observers
                     if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                     {
                         float mem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, true);
-                        allMemData[dotnetArg].Data.Add(mem);
+                        allMemData[dotnetArg].AddData(mem);
                     }
 
                     TimeSpan duration = TimeSpan.FromSeconds(1);
@@ -962,7 +962,7 @@ namespace FabricObserver.Observers
                             if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                             {
                                 int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process.Id);
-                                allCpuData[dotnetArg].Data.Add(cpu);
+                                allCpuData[dotnetArg].AddData(cpu);
                             }
 
                             await Task.Delay(250, Token).ConfigureAwait(true);
@@ -1026,7 +1026,7 @@ namespace FabricObserver.Observers
 
                 var dataItem = state.Value;
 
-                if (dataItem.Data.Count == 0 || dataItem.AverageDataValue <= 0)
+                if (dataItem.Data.Count() == 0 || dataItem.AverageDataValue <= 0)
                 {
                     return;
                 }
@@ -1076,8 +1076,8 @@ namespace FabricObserver.Observers
 
                     lock (lockObj)
                     {
-                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
-                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
+                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", dataItem.AverageDataValue);
+                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Convert.ToDouble(dataItem.MaxDataValue));
                     }
                 }
 

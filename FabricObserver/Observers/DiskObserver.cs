@@ -158,17 +158,17 @@ namespace FabricObserver.Observers
                             // Warm up counter.
                             _ = DiskUsage.GetAverageDiskQueueLength(d.Name[..2]);
                             await Task.Delay(250);
-                            DiskAverageQueueLengthData.Find(x => x.Id == id)?.Data.Add(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
+                            DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
                         }
                     }
 
                     if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
                     {
-                        DiskSpaceUsagePercentageData.Find(x => x.Id == id)?.Data.Add(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
+                        DiskSpaceUsagePercentageData.Find(x => x.Id == id)?.AddData(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
                     }
 
-                    DiskSpaceAvailableMbData.Find(x => x.Id == id)?.Data.Add(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
-                    DiskSpaceTotalMbData.Find(x => x.Id == id)?.Data.Add(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
+                    DiskSpaceAvailableMbData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
+                    DiskSpaceTotalMbData.Find(x => x.Id == id)?.AddData(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
 
                     // This section only needs to run if you have the FabricObserverWebApi app installed.
                     if (!IsObserverWebApiAppDeployed || !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -194,7 +194,6 @@ namespace FabricObserver.Observers
             }
 
             await ReportAsync(token).ConfigureAwait(true);
-            CleanUp();
 
             // The time it took to run this observer.
             stopWatch.Stop();
@@ -356,9 +355,9 @@ namespace FabricObserver.Observers
             }
         }
 
-        private string GetWindowsPerfCounterDetailsText(ICollection<float> data, string counter)
+        private string GetWindowsPerfCounterDetailsText(IEnumerable<float> data, string counter)
         {
-            if (data == null || data.Count == 0)
+            if (data == null || data.Count() == 0)
             {
                 return null;
             }
@@ -380,27 +379,6 @@ namespace FabricObserver.Observers
             _ = sb.Clear();
 
             return ret;
-        }
-
-        private void CleanUp()
-        {
-            if (!HasActiveFabricErrorOrWarning)
-            {
-                DiskSpaceUsagePercentageData?.Clear();
-                DiskSpaceUsagePercentageData = null;
-
-                DiskSpaceAvailableMbData?.Clear();
-                DiskSpaceAvailableMbData = null;
-
-                DiskSpaceTotalMbData?.Clear();
-                DiskSpaceTotalMbData = null;
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    DiskAverageQueueLengthData?.Clear();
-                    DiskAverageQueueLengthData = null;
-                }
-            }
         }
     }
 }

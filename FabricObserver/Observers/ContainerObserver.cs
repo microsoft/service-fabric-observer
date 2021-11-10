@@ -585,11 +585,11 @@ namespace FabricObserver.Observers
 
                         // CPU (%)
                         double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
-                        allCpuDataPercentage[cpuId].Data.Add(cpu_percent);
+                        allCpuDataPercentage[cpuId].AddData(cpu_percent);
 
                         // Memory (MiB)
                         double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
-                        allMemDataMB[memId].Data.Add(mem_working_set_mb);
+                        allMemDataMB[memId].AddData(mem_working_set_mb);
 
                         break;
                     }

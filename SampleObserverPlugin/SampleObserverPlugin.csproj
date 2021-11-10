@@ -13,7 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
-    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.1.20" />
+    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.1.21" />
     <PackageReference Include="Polly" Version="7.2.2" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
