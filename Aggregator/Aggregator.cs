@@ -23,6 +23,8 @@ namespace Aggregator
     /// </summary>
     internal sealed class Aggregator : StatefulService,IMyCommunication
     {
+        protected CancellationToken token { get; set; }
+
         public Aggregator(StatefulServiceContext context)
             : base(context)
         { }
@@ -43,8 +45,9 @@ namespace Aggregator
 
             }
 
-            await updateState(NodeName, data);
-            Data dd= await PeekFirst(NodeName);
+            await AddDataAsync(NodeName, data);
+            var x = await GetDataAsync(NodeName);
+            Data dd= await PeekFirstAsync(NodeName);
 
 
 
@@ -73,7 +76,7 @@ namespace Aggregator
         {
             // TODO: Replace the following sample code with your own logic 
             //       or remove this RunAsync override if it's not needed in your service.
-
+            this.token = cancellationToken;
             var myDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, long>>("myDictionary");
             
 
@@ -100,7 +103,7 @@ namespace Aggregator
             }
         }
 
-        protected async Task updateState(string nodeName,Data data)
+        public async Task AddDataAsync(string nodeName,Data data)
         {
             var stateManager = this.StateManager;
             IReliableQueue<Data> reliableQueue = null ;
@@ -115,11 +118,13 @@ namespace Aggregator
             {
                 await reliableQueue.EnqueueAsync(tx, data);
                 await tx.CommitAsync();
+                
             }
+            
 
         }
 
-        protected async Task<Data> PeekFirst(string nodeName)
+        public async Task<Data> PeekFirstAsync(string nodeName)
         {
             var stateManager = this.StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(nodeName);
@@ -130,6 +135,36 @@ namespace Aggregator
                 return (await reliableQueue.TryPeekAsync(tx)).Value; //why do I have to do this in a transaction ?!
                 
             }
+        }
+
+        public async Task<List<Data>> GetDataAsync(string nodeName)
+        {
+            List < Data > list= new List<Data>();
+
+            var stateManager = this.StateManager;
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(nodeName);
+            try 
+            { 
+                using (var tx = stateManager.CreateTransaction())
+                {
+                    var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
+                    //iterator.Reset(); // this is position -1 - before the first element in the collection
+                
+                    Data data=null;
+                    while (await iterator.MoveNextAsync(token))
+                    {
+                        data = iterator.Current;
+
+                        if (data != null) list.Add(data);
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                var x = e;
+            }
+
+            return list;
         }
     }
 }
