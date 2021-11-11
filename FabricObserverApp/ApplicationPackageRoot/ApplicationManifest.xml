@@ -25,7 +25,7 @@
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
-	<!-- You must run FO as System user on Windows in order to run ContainerObserver. -->
+    <!-- You must run FO as System user on Windows in order to run ContainerObserver. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />

@@ -126,10 +126,11 @@ namespace FabricObserver.Observers
             if (EnableVerboseLogging)
             {
                 ObserverLogger.LogInfo($"Run Duration {(ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
-                                       $"Parallel (Processors: {Environment.ProcessorCount}):{RunDuration}");
+                                       $"Parallel (Processors: {Environment.ProcessorCount} MaximumConcurrencyLevel: {ParallelOptions.TaskScheduler.MaximumConcurrencyLevel}):{RunDuration}");
             }
 
             stopwatch.Reset();
+            CleanUp();
             LastRunDateTime = DateTime.Now;
         }
 
@@ -139,6 +140,8 @@ namespace FabricObserver.Observers
             {
                 return Task.CompletedTask;
             }
+
+            var stopwatch = Stopwatch.StartNew();
 
             TimeSpan TTL = GetHealthReportTimeToLive();
 
@@ -377,6 +380,8 @@ namespace FabricObserver.Observers
                 }
            });
 
+            stopwatch.Stop();
+            //ObserverLogger.LogInfo($"ReportAsync run duration with parallel: {stopwatch.Elapsed}");
             return Task.CompletedTask;
         }
 
@@ -586,6 +591,8 @@ namespace FabricObserver.Observers
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             userTargetList = new List<ApplicationInfo>();
             deployedTargetList = new List<ApplicationInfo>();
+
+            var stopwatch = Stopwatch.StartNew();
 
             /* Child/Descendant proc monitoring config */
             if (bool.TryParse( GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableChildProcessMonitoringParameter), out bool enableDescendantMonitoring))
@@ -1075,6 +1082,9 @@ namespace FabricObserver.Observers
                 }
             }
 
+            stopwatch.Stop();
+            //ObserverLogger.LogInfo($"InitializeAsync run duration: {stopwatch.Elapsed}");
+
             return true;
         }
 
@@ -1105,9 +1115,15 @@ namespace FabricObserver.Observers
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
 
-            var loopResult = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            // DEBUG
+            //var threadData = new ConcurrentQueue<int>();
+
+            _ = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
+                
+                // DEBUG
+                //threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
 
                 var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
@@ -1362,7 +1378,9 @@ namespace FabricObserver.Observers
                 throw new AggregateException(aggEx);
             }
 
-            ObserverLogger.LogInfo($"MonitorDeployedAppsAsync execution time: {execTimer.Elapsed}");
+            // DEBUG 
+            //int threadcount = threadData.Distinct().Count();
+            ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}");// Threads: {threadcount}");
             return Task.CompletedTask;
         }
 
@@ -1568,6 +1586,7 @@ namespace FabricObserver.Observers
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
             var deployedApps = new List<DeployedApplication>();
+            //var stopwatch = Stopwatch.StartNew();
 
             if (applicationNameFilter != null)
             {
@@ -1644,7 +1663,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                var replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType);
+                List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType);
                 ReplicaOrInstanceList.AddRange(replicasOrInstances);
                 
                
@@ -1656,6 +1675,9 @@ namespace FabricObserver.Observers
 
             deployedApps.Clear();
             deployedApps = null;
+
+            //stopwatch.Stop();
+            //ObserverLogger.LogInfo($"SetDeployedApplicationReplicaOrInstanceListAsync for {applicationNameFilter?.OriginalString} run duration: {stopwatch.Elapsed}");
         }
 
         private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedPrimaryReplicaAsync(
@@ -1664,9 +1686,11 @@ namespace FabricObserver.Observers
                                                                      ServiceFilterType filterType = ServiceFilterType.None,
                                                                      string appTypeName = null)
         {
+            //var stopwatch = Stopwatch.StartNew();
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                 () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName),
                                                 Token);
+            //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
 
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>(deployedReplicaList.Count);
 
@@ -1678,6 +1702,8 @@ namespace FabricObserver.Observers
                     deployedReplicaList,
                     replicaMonitoringList);
 
+            //stopwatch.Stop();
+            //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             return replicaMonitoringList;
         }
 
@@ -1689,7 +1715,9 @@ namespace FabricObserver.Observers
                                     DeployedServiceReplicaList deployedReplicaList,
                                     List<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
-            for (int i = 0; i < deployedReplicaList.Count; ++i)
+            //var stopwatch = Stopwatch.StartNew();
+
+            _ = Parallel.For(0, deployedReplicaList.Count, ParallelOptions, (i, state) =>
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -1708,7 +1736,7 @@ namespace FabricObserver.Observers
                             {
                                 case ServiceFilterType.Include when !isInFilterList:
                                 case ServiceFilterType.Exclude when isInFilterList:
-                                    continue;
+                                    return;
                             }
                         }
 
@@ -1727,6 +1755,7 @@ namespace FabricObserver.Observers
 
                         if (EnableChildProcessMonitoring)
                         {
+                            //var sw = Stopwatch.StartNew();
                             var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
 
                             if (childPids != null && childPids.Count > 0)
@@ -1734,6 +1763,8 @@ namespace FabricObserver.Observers
                                 replicaInfo.ChildProcesses = childPids;
                                 ObserverLogger.LogInfo($"{replicaInfo.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
                             }
+                           //sw.Stop();
+                           //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
                         }
 
                         break;
@@ -1748,7 +1779,7 @@ namespace FabricObserver.Observers
                             {
                                 case ServiceFilterType.Include when !isInFilterList:
                                 case ServiceFilterType.Exclude when isInFilterList:
-                                    continue;
+                                    return;
                             }
                         }
 
@@ -1764,13 +1795,16 @@ namespace FabricObserver.Observers
 
                         if (EnableChildProcessMonitoring)
                         {
-                            var childProcs = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
+                            //var sw = Stopwatch.StartNew();
+                            var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
 
-                            if (childProcs != null && childProcs.Count > 0)
+                            if (childPids != null && childPids.Count > 0)
                             {
-                                replicaInfo.ChildProcesses = childProcs;
+                                replicaInfo.ChildProcesses = childPids;
                                 ObserverLogger.LogInfo($"{replicaInfo.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
                             }
+                            //sw.Stop();
+                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
                         }
 
                         break;
@@ -1781,7 +1815,10 @@ namespace FabricObserver.Observers
                 {
                     replicaMonitoringList.Add(replicaInfo);
                 }
-            }
+            });
+
+            //stopwatch.Stop();
+            //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
         }
 
         private void LogAllAppResourceDataToCsv(string appName)
@@ -1878,6 +1915,17 @@ namespace FabricObserver.Observers
             }
 
             DataTableFileLogger.Flush();
+        }
+
+        private void CleanUp()
+        {
+            AllAppCpuData?.Clear();
+            AllAppEphemeralPortsData?.Clear();
+            AllAppHandlesData?.Clear();
+            AllAppMemDataMb?.Clear();
+            AllAppMemDataPercent?.Clear();
+            AllAppThreadsData?.Clear();
+            AllAppTotalActivePortsData?.Clear();
         }
     }
 }
