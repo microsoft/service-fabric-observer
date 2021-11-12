@@ -25,9 +25,9 @@ namespace FabricObserver.Observers.Utilities
             return 0f;
         }
 
-        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context)
+        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null)
         {
-            if (processId < 0)
+            if (processId < 0 || context == null)
             {
                 return -1f;
             }

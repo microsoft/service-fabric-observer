@@ -407,6 +407,7 @@ namespace FabricObserver.Observers
                             }
                             catch (EventLogException)
                             {
+
                             }
                         }
 
@@ -830,13 +831,22 @@ namespace FabricObserver.Observers
             // Concurrency/Parallelism support.
             if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
-                EnableConcurrentMonitoring = enableConcurrency;
+                EnableConcurrentMonitoring = Environment.ProcessorCount >= 4 && enableConcurrency;
+            }
+
+            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+            // FabricObserver has on the resources it monitors and alerts on...
+            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+            {
+                maxDegreeOfParallelism = maxTasks;
             }
 
             ParallelOptions = new ParallelOptions
             {
                 // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
-                MaxDegreeOfParallelism = EnableConcurrentMonitoring && Environment.ProcessorCount >= 4 ? -1 : 1,
+                MaxDegreeOfParallelism = EnableConcurrentMonitoring  ? maxDegreeOfParallelism : 1,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
@@ -907,11 +917,38 @@ namespace FabricObserver.Observers
                     }
 
                     // Allocated Handles
-                    float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, FabricServiceContext);
+                    float handles;
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id);
+                    }
+                    else
+                    {
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, FabricServiceContext);
+                    }
+
                     TotalAllocatedHandlesAllSystemServices += handles;
 
                     // Threads
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(process.Id);
+                    int threads = 0;
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        try
+                        {
+                            threads = NativeMethods.GetProcessThreadCount(process.Id);
+                        }
+                        catch (Win32Exception we)
+                        {
+                            ObserverLogger.LogInfo($"{we}");
+                        }
+                    }
+                    else
+                    {
+                        threads = ProcessInfoProvider.GetProcessThreadCount(process.Id);
+                    }
+
                     TotalThreadsAllSystemServices += threads;
                     
                     // No need to proceed further if there are no configuration settings for CPU, Memory, Handles thresholds.
@@ -935,14 +972,6 @@ namespace FabricObserver.Observers
                     }
 
                     CpuUsage cpuUsage = new CpuUsage();
-
-                    // Mem
-                    if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
-                    {
-                        float mem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, true);
-                        allMemData[dotnetArg].AddData(mem);
-                    }
-
                     TimeSpan duration = TimeSpan.FromSeconds(1);
 
                     if (MonitorDuration > TimeSpan.MinValue)
@@ -963,6 +992,13 @@ namespace FabricObserver.Observers
                             {
                                 int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process.Id);
                                 allCpuData[dotnetArg].AddData(cpu);
+                            }
+
+                            // Memory MB
+                            if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
+                            {
+                                float mem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id);
+                                allMemData[dotnetArg].AddData(mem);
                             }
 
                             await Task.Delay(250, Token).ConfigureAwait(true);

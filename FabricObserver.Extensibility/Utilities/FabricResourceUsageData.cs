@@ -232,12 +232,12 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets SlidingWindow Max: A sorted list of sliding window maximums. This is only availabe when Data is CircularBufferCollection.
         /// </summary>
-        public IList<T> SlidingWindowMax => Data?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : null;
+        public IList<T> SlidingWindowMax => Data is ConcurrentQueue<T> && Data?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : null;
 
         /// <summary>
         ///  Gets SlidingWindow Min: A sorted list of sliding window minimums. This is only availabe when Data is CircularBufferCollection.
         /// </summary>
-        public IList<T> SlidingWindowMin => Data?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : null;
+        public IList<T> SlidingWindowMin => Data is ConcurrentQueue<T> && Data ?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : null;
 
         /// <summary>
         /// Adds numeric data to current instance's Data property. Use this method versus adding directly to Data.

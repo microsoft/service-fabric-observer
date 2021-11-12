@@ -49,9 +49,9 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false);
 
-        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
-
         public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int processId);
+
+        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null);
 
         public static int GetProcessThreadCount(int processId)
         {

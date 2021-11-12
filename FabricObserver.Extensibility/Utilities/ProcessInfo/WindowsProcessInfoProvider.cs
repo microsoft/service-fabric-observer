@@ -17,7 +17,8 @@ namespace FabricObserver.Observers.Utilities
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
         private const int MaxDescendants = 50;
-
+        private readonly object lockObj = new object();
+       
         public override float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false)
         {
             try
@@ -47,54 +48,25 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        // File Handles
         public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context)
         {
             if (processId < 0)
             {
-                return 0F;
+                return -1F;
             }
-
-            string query = $"select handlecount from win32_process where processid = {processId}";
 
             try
             {
-                using (var searcher = new ManagementObjectSearcher(query))
+                using (Process p = Process.GetProcessById(processId))
                 {
-                    var results = searcher.Get();
-
-                    if (results.Count == 0)
-                    {
-                        return 0F;
-                    }
-
-                    using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
-                    {
-                        while (enumerator.MoveNext())
-                        {
-                            try
-                            {
-                                using (ManagementObject mObj = (ManagementObject)enumerator.Current)
-                                {
-                                    uint procHandles = (uint)mObj.Properties["handlecount"].Value;
-                                    return procHandles;
-                                }
-                            }
-                            catch (Exception e) when (e is ArgumentException || e is ManagementException)
-                            {
-                                Logger.LogWarning($"[Inner try-catch] Handled Exception in GetProcessAllocatedHandles: {e}");
-                                continue;
-                            }
-                        }
-                    }
+                    p.Refresh();
+                    return p.HandleCount;
                 }
             }
-            catch (ManagementException me)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is SystemException)
             {
-                Logger.LogWarning($"[Outer try-catch] Handled Exception in GetProcessAllocatedHandles: {me}");
+                return -1F;
             }
-
-            return 0F;
         }
 
         public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
@@ -104,8 +76,8 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
-            // Get child procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessInfo(processId);
+            // Get descendant procs.
+            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcesses(processId);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -120,7 +92,7 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<(string ProcName, int Pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].Pid);
+                List<(string ProcName, int Pid)> c1 = TupleGetChildProcesses(childProcesses[i].Pid);
 
                 if (c1 == null || c1.Count <= 0)
                 {
@@ -136,7 +108,7 @@ namespace FabricObserver.Observers.Utilities
 
                 for (int j = 0; j < c1.Count; ++j)
                 {
-                    List<(string ProcName, int Pid)> c2 = TupleGetChildProcessInfo(c1[j].Pid);
+                    List<(string ProcName, int Pid)> c2 = TupleGetChildProcesses(c1[j].Pid);
 
                     if (c2 == null || c2.Count <= 0)
                     {
@@ -152,7 +124,7 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int k = 0; k < c2.Count; ++k)
                     {
-                        List<(string ProcName, int Pid)> c3 = TupleGetChildProcessInfo(c2[k].Pid);
+                        List<(string ProcName, int Pid)> c3 = TupleGetChildProcesses(c2[k].Pid);
 
                         if (c3 == null || c3.Count <= 0)
                         {
@@ -168,7 +140,7 @@ namespace FabricObserver.Observers.Utilities
 
                         for (int l = 0; l < c3.Count; ++l)
                         {
-                            List<(string ProcName, int Pid)> c4 = TupleGetChildProcessInfo(c3[l].Pid);
+                            List<(string ProcName, int Pid)> c4 = TupleGetChildProcesses(c3[l].Pid);
 
                             if (c4 == null || c4.Count <= 0)
                             {
@@ -185,71 +157,48 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
             }
-
+            
             return childProcesses;
         }
 
-        private List<(string procName, int pid)> TupleGetChildProcessInfo(int processId)
+        private List<(string procName, int pid)> TupleGetChildProcesses(int processId)
         {
             if (processId < 0)
             {
                 return null;
             }
 
-            string[] ignoreProcessList = new string[] { "conhost.exe", "csrss.exe", "svchost.exe", "wininit.exe" };
+            string[] ignoreProcessList = new string[] { "conhost", "csrss", "svchost", "wininit", "lsass" };
             List<(string procName, int pid)> childProcesses = null;
-            string query = $"select caption,processid from win32_process where parentprocessid = {processId}";
 
             try
             {
-                using (var searcher = new ManagementObjectSearcher(query))
+                // Child process monitoring is too expensive (CPU-wise) to not lock here. The cost will be performance, but the CPU will not be hammered.
+                lock (lockObj)
                 {
-                    var results = searcher.Get();
+                    var childProcs = NativeMethods.GetChildProcessesWin32(processId);
 
-                    using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
+                    foreach (var proc in childProcs)
                     {
-                        while (enumerator.MoveNext())
+                        if (!ignoreProcessList.Contains(proc.ProcessName))
                         {
-                            try
+                            if (childProcesses == null)
                             {
-                                using (ManagementObject mObj = (ManagementObject)enumerator.Current)
-                                {
-                                    object childProcessIdObj = mObj.Properties["processid"].Value;
-                                    object childProcessNameObj = mObj.Properties["caption"].Value;
-
-                                    if (childProcessIdObj == null || childProcessNameObj == null)
-                                    {
-                                        continue;
-                                    }
-
-                                    if (ignoreProcessList.Contains(childProcessNameObj.ToString()))
-                                    {
-                                        continue;
-                                    }
-
-                                    if (childProcesses == null)
-                                    {
-                                        childProcesses = new List<(string procName, int pid)>();
-                                    }
-
-                                    int childProcessId = Convert.ToInt32(childProcessIdObj);
-                                    string procName = childProcessNameObj.ToString();
-
-                                    childProcesses.Add((procName, childProcessId));
-                                }
+                                childProcesses = new List<(string procName, int pid)>();
                             }
-                            catch (Exception e) when (e is ArgumentException || e is ManagementException)
-                            {
-                                Logger.LogWarning($"[Inner try-catch (enumeration)] Handled Exception in GetChildProcesses: {e}");
-                                continue;
-                            }
+
+                            childProcesses.Add((proc.ProcessName, proc.Id));
                         }
                     }
                 }
             }
-            catch (ManagementException me)
+            catch (Win32Exception we)
             {
-                Logger.LogWarning($"[Outer try-catch] Handled Exception in GetChildProcesses: {me}");
+                Logger.LogInfo($"Handled Exception in TupleGetChildProcesses: {we}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Unhandled Exception (non-crashing) in TupleGetChildProcesses: {ex}");
             }
 
             return childProcesses;
