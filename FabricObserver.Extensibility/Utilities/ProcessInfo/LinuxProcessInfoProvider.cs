@@ -14,7 +14,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private const int MaxDescendants = 50;
 
-        public override float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false)
+        public override float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false)
         {
             if (LinuxProcFS.TryParseStatusFile(processId, out ParsedStatus status))
             {
@@ -25,7 +25,7 @@ namespace FabricObserver.Observers.Utilities
             return 0f;
         }
 
-        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null)
+        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false)
         {
             if (processId < 0 || context == null)
             {

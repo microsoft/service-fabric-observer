@@ -134,7 +134,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>A List of Process objects.</returns>
         /// <exception cref="Win32Exception">Callers should handle this exception. 
         /// It will generally be thrown when the target process (with parentpid) no longer exists.</exception>
-        public static List<Process> GetChildProcessesWin32(int parentpid)
+        public static List<Process> GetChildProcesses(int parentpid)
         {
             List<Process> childProcs = new List<Process>();
             IntPtr handleToSnapshot = IntPtr.Zero;

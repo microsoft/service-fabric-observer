@@ -1028,7 +1028,8 @@ namespace FabricObserver.Observers
                         }
 
                         int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
-
+                        
+                        // Ignore containerized apps. ContainerObserver is for those types of services.
                         if (containerHostCount > 0)
                         {
                             continue;
@@ -1045,6 +1046,10 @@ namespace FabricObserver.Observers
                         }
 
                         appUri = new Uri(application.TargetApp);
+                    }
+                    catch (FabricException)
+                    {
+                        // This will happen if the specified app is not found in the codepackage query. Ignore.
                     }
                     catch (Exception e) when (e is ArgumentException || e is UriFormatException)
                     {
@@ -1425,11 +1430,11 @@ namespace FabricObserver.Observers
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId);
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, null, ReplicaOrInstanceList.Count >= 50); 
                     }
                     else
                     {
-                        ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
                     }
                   
                     if (handles > 0F)
@@ -1449,9 +1454,8 @@ namespace FabricObserver.Observers
                 // Threads
                 if (checkThreads)
                 {
-                    //int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
                     int threads = 0;
-
+                    
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         try
@@ -1465,6 +1469,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
+                        // Process object is much less expensive on Linux..
                         threads = ProcessInfoProvider.GetProcessThreadCount(procId);
                     }
 
@@ -1555,7 +1560,7 @@ namespace FabricObserver.Observers
                     if (checkMemMb)
                     {
                         float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId);
-
+                       
                         if (procId == parentPid)
                         {
                             AllAppMemDataMb[id].AddData(processMem);
@@ -1598,6 +1603,7 @@ namespace FabricObserver.Observers
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
             var deployedApps = new List<DeployedApplication>();
+            // DEBUG
             //var stopwatch = Stopwatch.StartNew();
 
             if (applicationNameFilter != null)
@@ -1768,6 +1774,7 @@ namespace FabricObserver.Observers
 
                         if (EnableChildProcessMonitoring)
                         {
+                            // DEBUG
                             //var sw = Stopwatch.StartNew();
                             var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
 
@@ -1808,6 +1815,7 @@ namespace FabricObserver.Observers
 
                         if (EnableChildProcessMonitoring)
                         {
+                            // DEBUG
                             //var sw = Stopwatch.StartNew();
                             var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
 
@@ -1829,7 +1837,6 @@ namespace FabricObserver.Observers
                     replicaMonitoringList.Add(replicaInfo);
                 }
             });
-
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
         }

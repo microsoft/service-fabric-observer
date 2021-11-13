@@ -25,7 +25,7 @@
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
-    <!-- You must run FO as System user on Windows in order to run ContainerObserver. -->
+    <!-- Note: You must run FO as System user on Windows in order to run ContainerObserver. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
@@ -61,7 +61,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
@@ -101,7 +101,9 @@
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree (descendants) monitoring. 
 	        Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring. 
-			In that case, enabling this may eat a lot of cpu. Please test, as always. -->
+			In that case, enabling this may eat a lot of cpu. Please test, as always. If you know your target services
+			do not spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you
+			already know.. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
@@ -116,6 +118,9 @@
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <!-- The default value is 1/4 of detected logical processors. This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
+	     You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
+		 eating CPU to complete the parallelized monitoring. Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
@@ -386,7 +391,7 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!-- Uncomment Principals node to run FO as System user. Also uncomment the Policies node above. 
+  <!-- Uncomment Principals node to run FO as System user. Also uncomment the Policies node above.
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />

@@ -11,7 +11,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public interface IProcessInfoProvider
     {
-        float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false);
+        float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
 
         /// <summary>
         /// Returns the number of allocated (in use) file handles for a specified process.
@@ -19,7 +19,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">The id of the process.</param>
         /// <param name="context">StatelessServiceContext instance.</param>
         /// <returns>float value representing number of allocated file handles for the process.</returns>
-        float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null);
+        float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false);
 
         /// <summary>
         /// Returns a list of Process objects that are active descendants (e.g., children and grandchildren) of the provided Process object.

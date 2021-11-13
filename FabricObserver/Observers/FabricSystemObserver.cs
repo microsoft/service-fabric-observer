@@ -27,7 +27,7 @@ namespace FabricObserver.Observers
     // CPU Time, Private Workingset, Ephemeral and Total Active TCP ports, File Handles, Threads.
     public class FabricSystemObserver : ObserverBase
     {
-        private readonly List<string> processWatchList;
+        private List<string> processWatchList;
         private Stopwatch stopwatch;
 
         // Health Report data container - For use in analysis to determine health state.
@@ -191,28 +191,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                Initialize();
-
-                _ = Parallel.ForEach(processWatchList, ParallelOptions, async (procName, state) =>
-                {
-                    Token.ThrowIfCancellationRequested();
-
-                    try
-                    {
-                        string dotnet = string.Empty;
-
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.EndsWith(".dll"))
-                        {
-                            dotnet = "dotnet ";
-                        }
-
-                        await GetProcessInfoAsync($"{dotnet}{procName}");
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-                    {
-                        return;
-                    }
-                });
+                ComputeResourceUsage();
             }
             catch (AggregateException e) when (!(e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException))
             {
@@ -238,8 +217,35 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
             }
 
+            CleanUp();
             stopwatch.Reset();
             LastRunDateTime = DateTime.Now;
+        }
+
+        private void ComputeResourceUsage()
+        {
+            Initialize();
+
+            _ = Parallel.ForEach(processWatchList, ParallelOptions, (procName, state) =>
+            {
+                Token.ThrowIfCancellationRequested();
+
+                try
+                {
+                    string dotnet = string.Empty;
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.EndsWith(".dll"))
+                    {
+                        dotnet = "dotnet ";
+                    }
+
+                    GetProcessInfoAsync($"{dotnet}{procName}").GetAwaiter().GetResult();
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                {
+                    return;
+                }
+            });
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -997,8 +1003,8 @@ namespace FabricObserver.Observers
                             // Memory MB
                             if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                             {
-                                float mem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id);
-                                allMemData[dotnetArg].AddData(mem);
+                                float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id);
+                                allMemData[dotnetArg].AddData(processMem);
                             }
 
                             await Task.Delay(250, Token).ConfigureAwait(true);
@@ -1124,6 +1130,39 @@ namespace FabricObserver.Observers
                         TTL,
                         HealthReportType.Application); 
             });
+        }
+
+        private void CleanUp()
+        {
+            if (allCpuData != null && !allCpuData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allCpuData?.Clear();
+                allCpuData = null;
+            }
+
+            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allEphemeralTcpPortData?.Clear();
+                allEphemeralTcpPortData = null;
+            }
+
+            if (allHandlesData != null && !allHandlesData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allHandlesData?.Clear();
+                allHandlesData = null;
+            }
+
+            if (allMemData != null && !allMemData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allMemData?.Clear();
+                allMemData = null;
+            }
+
+            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allActiveTcpPortData?.Clear();
+                allActiveTcpPortData = null;
+            }
         }
     }
 }
