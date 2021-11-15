@@ -16,7 +16,8 @@ namespace Aggregator
 
     public interface IMyCommunication : IService
     {
-        Task PutData(string NodeName,Data data);
+        Task PutDataRemote(string NodeName,Data data);
+        Task<List<Data>> GetDataRemote(string NodeName);
     }
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
@@ -29,7 +30,7 @@ namespace Aggregator
             : base(context)
         { }
 
-        public async Task PutData(string NodeName,Data data)
+        public async Task PutDataRemote(string NodeName,Data data)
         {
             Debug.WriteLine("Aggregator");
             Debug.WriteLine("------ From node : " + NodeName + " -------");
@@ -53,6 +54,10 @@ namespace Aggregator
 
         }
 
+        public async Task<List<Data>> GetDataRemote(string NodeName)
+        {
+            return await GetDataAsync(NodeName);
+        }
 
 
         /// <summary>
@@ -139,6 +144,7 @@ namespace Aggregator
 
         public async Task<List<Data>> GetDataAsync(string nodeName)
         {
+            if (nodeName == null) return null;
             List < Data > list= new List<Data>();
 
             var stateManager = this.StateManager;
@@ -166,5 +172,7 @@ namespace Aggregator
 
             return list;
         }
+
+        
     }
 }

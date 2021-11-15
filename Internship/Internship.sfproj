@@ -33,6 +33,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aggregator\Aggregator.csproj" />
+    <ProjectReference Include="..\API\API.csproj">
+      <ServiceLaunchUrl>http://localhost:{ServicePort}/weatherforecast</ServiceLaunchUrl>
+    </ProjectReference>
     <ProjectReference Include="..\Collector\Collector.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />

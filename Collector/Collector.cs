@@ -63,7 +63,7 @@ namespace Collector
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-                await AggregatorProxy.PutData(nodeName,new Data(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse,allDrives));
+                await AggregatorProxy.PutDataRemote(nodeName,new Data(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse,allDrives));
 
             }
 
