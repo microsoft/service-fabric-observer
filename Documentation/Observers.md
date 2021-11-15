@@ -45,7 +45,7 @@ For every other observer, it's XML as per usual.
 
 ## AppObserver  
 Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application service processes and the child processes they spawn. If a service process creates child processes, then these processes will be monitored and their summed resource usage for some metric you are observing will be applied to the parent process (added) and a threshold breach will be determined based on the sum of children and parent resource usage.
-This observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please consider employing [ContainerObserver](https://github.com/GitTorre/ContainerObserver), which is designed specifically for container monitoring**. 
+This observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please use [ContainerObserver](#containerobserver), which is designed specifically for container monitoring**. 
 
 ***Important: By default, FabricObserver runs as an unprivileged user (NetworkUser on Windows and sfappsuser on Linux). If you want to monitor services that are running as System user (or Admin user) on Windows, you must run FabricObserver as System user.***  
 
@@ -90,7 +90,7 @@ The AppObserverMaxChildProcTelemetryDataCount setting determines the size of the
 In the vast majority of cases, your services are not going to launch 50 descendant processes, but FO is designed to support such an extreme edge case scenario, which frankly should not be in your service design playbook. Also note that if you do spawn a lot of child processes and 
 you have AppObserverMonitorDuration set to, say, 10 seconds, then you will be running AppObserver for (n + 1) * 10 seconds, where n is total number of processes related to a service instance (n = child procs, +1 to account for the parent..) for every service that launches children. If your Service A spawns 20 descendants, then that would be 21 * 10 = 210 seconds of monitoring time. If Service B launches 10 descendants, then add 110 seconds to that. Etc... Please keep this in mind as you design your configuration. And, please don't design services that launch 50 descendant processes. Why do that?
 
-Finally, if you do not launch child processes from your services please disable this feature by setting ```AppObserverEnableChildProcessMonitoring``` to false in ApplicationManifest.xml. This is important because AppObserver will run code that checks to see if some process has children. If you know this is not the case, then save electrons and disable the feature.
+Finally, ***if you do not launch child processes from your services please disable this feature*** by setting ```AppObserverEnableChildProcessMonitoring``` to false in ApplicationManifest.xml. This is important because AppObserver will run code that checks to see if some process has children. If you know this is not the case, then save electrons and disable the feature.
 
 
 ### Input
@@ -173,7 +173,8 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support -->
-    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
 ```
 
 Example AppObserver Output (Warning - Ephemeral Ports Usage):  
@@ -305,7 +306,6 @@ Monitors the expiration date of the cluster certificate and any other certificat
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="" MustOverride="true" />
     <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
     <Parameter Name="AppCertThumbprintsToObserve" Value="" MustOverride="true" />
-    <Parameter
 ```
 
 ## ContainerObserver 
@@ -332,6 +332,7 @@ Settings.xml
           This can significantly decrease the amount of time it takes ContainerObserver to monitor several containerized applications. 
           Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
      <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+     <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
      <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
      <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
      <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
@@ -468,6 +469,7 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
          This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
          Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+    <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />

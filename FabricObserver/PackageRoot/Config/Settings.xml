@@ -108,14 +108,19 @@
        See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version -->
   <Section Name="AppObserverConfiguration">
     
-    <!-- Required Parameter for all Observers: To enable or not enable, that is the question.-->
+    <!-- Required Parameter for all Observers: To enable or not enable, that is the question. -->
     <Parameter Name="Enabled" Value="" MustOverride="true" />
 
     <!-- Optional: Whether or not AppObserver should try to monitor service processes concurrently.
          This can significantly decrease the amount of time it takes AppObserver to monitor and report on several application services. 
          Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
-    
+	<!-- Optional: The maximum number of concurrent tasks to use when monitoring service processes in parallel. By default, AppObserver will set this to be the number of logical processors
+	     present in the underlying (virtual) machine. Experiment with various values (including -1 which means unlimited) before you ship into production. 
+		 This is especially important if you monitor lots of services (>= 100) and enable concurrent monitoring - 
+		 and have capable hardware: >= 4 logical processors (none of this matters if this is not true.) -->
+	<Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
+	  
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     
@@ -218,6 +223,7 @@
          This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
          Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+	<Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
@@ -337,6 +343,7 @@
   <Section Name="ContainerObserverConfiguration">
      <Parameter Name="Enabled" Value="" MustOverride="true" />
      <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+	 <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
      <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
      <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
      <Parameter Name="EnableEtw" Value="" MustOverride="true"/>

@@ -1,6 +1,6 @@
 ## How to implement an observer plugin using FO's extensibility model
 
-This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver) reference project (ContainerObserver is a part of FO as of 3.1.20).
+This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver) reference project (ContainerObserver is a part of FO as of 3.1.21).
 
 Note: The plugin model depends on the following packages, which **must have the same versions in both your plugin project and FabricObserver**:
 
@@ -21,11 +21,11 @@ Create a new .NET Standard 2.0 library project, install the nupkg you need for y
 You can find the Microsoft-signed packages in the nuget.org gallery [here](https://www.nuget.org/profiles/ServiceFabricApps) or just run this in the package manager console:
 
 ```
-Install-Package Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained -Version 3.1.20   
+Install-Package Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained -Version 3.1.21   
 
 or for Linux:
 
-Install-Package Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained -Version 3.1.20
+Install-Package Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained -Version 3.1.21
 ```
 
 Note:

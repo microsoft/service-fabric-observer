@@ -13,7 +13,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class ConfigSettings
     {
-        private ConfigurationSection section
+        private ConfigurationSection Section
         {
             get;
         }
@@ -79,22 +79,18 @@ namespace FabricObserver.Observers.Utilities
 
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
-            if (settings == null || !settings.Sections.Contains(observerConfiguration))
+            if (settings == null || string.IsNullOrWhiteSpace(observerConfiguration) || !settings.Sections.Contains(observerConfiguration))
             {
                 return;
             }
 
             Settings = settings;
-            section = settings.Sections[observerConfiguration];
+            Section = settings.Sections[observerConfiguration];
             UpdateConfigSettings();
         }
 
-        private void UpdateConfigSettings(ConfigurationSettings settings = null)
+        private void UpdateConfigSettings()
         {
-            if (settings != null)
-            {
-                Settings = settings;
-            }
 
             // Observer enabled?
             if (bool.TryParse(
@@ -113,7 +109,6 @@ namespace FabricObserver.Observers.Utilities
             {
                 IsObserverTelemetryEnabled = telemetryEnabled;
             }
-
 
             // Observer etw enabled?
             if (bool.TryParse(
@@ -192,26 +187,10 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                var configSettings = Settings;
-
-                if (configSettings == null || string.IsNullOrEmpty(section.Name))
+                if (Section.Parameters.Any(p => p.Name == parameterName))
                 {
-                    return null;
+                    return Section.Parameters[parameterName]?.Value;
                 }
-
-                if (section == null)
-                {
-                    return null;
-                }
-
-                ConfigurationProperty parameter = null;
-
-                if (section.Parameters.Any(p => p.Name == parameterName))
-                {
-                    parameter = section.Parameters[parameterName];
-                }
-
-                return parameter?.Value;
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
             {

@@ -27,7 +27,7 @@ namespace FabricObserver.Observers
     // CPU Time, Private Workingset, Ephemeral and Total Active TCP ports, File Handles, Threads.
     public class FabricSystemObserver : ObserverBase
     {
-        private readonly List<string> processWatchList;
+        private List<string> processWatchList;
         private Stopwatch stopwatch;
 
         // Health Report data container - For use in analysis to determine health state.
@@ -191,28 +191,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                Initialize();
-
-                _ = Parallel.ForEach(processWatchList, ParallelOptions, async (procName, state) =>
-                {
-                    Token.ThrowIfCancellationRequested();
-
-                    try
-                    {
-                        string dotnet = string.Empty;
-
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.EndsWith(".dll"))
-                        {
-                            dotnet = "dotnet ";
-                        }
-
-                        await GetProcessInfoAsync($"{dotnet}{procName}");
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-                    {
-                        return;
-                    }
-                });
+                ComputeResourceUsage();
             }
             catch (AggregateException e) when (!(e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException))
             {
@@ -238,8 +217,35 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
             }
 
+            CleanUp();
             stopwatch.Reset();
             LastRunDateTime = DateTime.Now;
+        }
+
+        private void ComputeResourceUsage()
+        {
+            Initialize();
+
+            _ = Parallel.ForEach(processWatchList, ParallelOptions, (procName, state) =>
+            {
+                Token.ThrowIfCancellationRequested();
+
+                try
+                {
+                    string dotnet = string.Empty;
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.EndsWith(".dll"))
+                    {
+                        dotnet = "dotnet ";
+                    }
+
+                    GetProcessInfoAsync($"{dotnet}{procName}").GetAwaiter().GetResult();
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                {
+                    return;
+                }
+            });
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -407,6 +413,7 @@ namespace FabricObserver.Observers
                             }
                             catch (EventLogException)
                             {
+
                             }
                         }
 
@@ -830,13 +837,22 @@ namespace FabricObserver.Observers
             // Concurrency/Parallelism support.
             if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
-                EnableConcurrentMonitoring = enableConcurrency;
+                EnableConcurrentMonitoring = Environment.ProcessorCount >= 4 && enableConcurrency;
+            }
+
+            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+            // FabricObserver has on the resources it monitors and alerts on...
+            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+            {
+                maxDegreeOfParallelism = maxTasks;
             }
 
             ParallelOptions = new ParallelOptions
             {
                 // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
-                MaxDegreeOfParallelism = EnableConcurrentMonitoring && Environment.ProcessorCount >= 4 ? -1 : 1,
+                MaxDegreeOfParallelism = EnableConcurrentMonitoring  ? maxDegreeOfParallelism : 1,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
@@ -894,7 +910,7 @@ namespace FabricObserver.Observers
                     
                     if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
                     {
-                        allActiveTcpPortData[dotnetArg].Data.Add(activePortCount);
+                        allActiveTcpPortData[dotnetArg].AddData(activePortCount);
                     }
 
                     // Ports - Active TCP Ephemeral
@@ -903,15 +919,42 @@ namespace FabricObserver.Observers
                     
                     if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
                     {
-                        allEphemeralTcpPortData[dotnetArg].Data.Add(activeEphemeralPortCount);
+                        allEphemeralTcpPortData[dotnetArg].AddData(activeEphemeralPortCount);
                     }
 
                     // Allocated Handles
-                    float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, FabricServiceContext);
+                    float handles;
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id);
+                    }
+                    else
+                    {
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, FabricServiceContext);
+                    }
+
                     TotalAllocatedHandlesAllSystemServices += handles;
 
                     // Threads
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(process.Id);
+                    int threads = 0;
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        try
+                        {
+                            threads = NativeMethods.GetProcessThreadCount(process.Id);
+                        }
+                        catch (Win32Exception we)
+                        {
+                            ObserverLogger.LogInfo($"{we}");
+                        }
+                    }
+                    else
+                    {
+                        threads = ProcessInfoProvider.GetProcessThreadCount(process.Id);
+                    }
+
                     TotalThreadsAllSystemServices += threads;
                     
                     // No need to proceed further if there are no configuration settings for CPU, Memory, Handles thresholds.
@@ -925,24 +968,16 @@ namespace FabricObserver.Observers
                     // Handles/FDs
                     if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
                     {
-                        allHandlesData[dotnetArg].Data.Add(handles);
+                        allHandlesData[dotnetArg].AddData(handles);
                     }
 
                     // Threads
                     if (ThreadCountError > 0 || ThreadCountWarning > 0)
                     {
-                        allThreadsData[dotnetArg].Data.Add(threads);
+                        allThreadsData[dotnetArg].AddData(threads);
                     }
 
                     CpuUsage cpuUsage = new CpuUsage();
-
-                    // Mem
-                    if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
-                    {
-                        float mem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, true);
-                        allMemData[dotnetArg].Data.Add(mem);
-                    }
-
                     TimeSpan duration = TimeSpan.FromSeconds(1);
 
                     if (MonitorDuration > TimeSpan.MinValue)
@@ -962,7 +997,14 @@ namespace FabricObserver.Observers
                             if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                             {
                                 int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process.Id);
-                                allCpuData[dotnetArg].Data.Add(cpu);
+                                allCpuData[dotnetArg].AddData(cpu);
+                            }
+
+                            // Memory MB
+                            if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
+                            {
+                                float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id);
+                                allMemData[dotnetArg].AddData(processMem);
                             }
 
                             await Task.Delay(250, Token).ConfigureAwait(true);
@@ -1026,7 +1068,7 @@ namespace FabricObserver.Observers
 
                 var dataItem = state.Value;
 
-                if (dataItem.Data.Count == 0 || dataItem.AverageDataValue <= 0)
+                if (dataItem.Data.Count() == 0 || dataItem.AverageDataValue <= 0)
                 {
                     return;
                 }
@@ -1076,8 +1118,8 @@ namespace FabricObserver.Observers
 
                     lock (lockObj)
                     {
-                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", Math.Round(dataItem.AverageDataValue, 2));
-                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Math.Round(Convert.ToDouble(dataItem.MaxDataValue)));
+                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", dataItem.AverageDataValue);
+                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Convert.ToDouble(dataItem.MaxDataValue));
                     }
                 }
 
@@ -1088,6 +1130,39 @@ namespace FabricObserver.Observers
                         TTL,
                         HealthReportType.Application); 
             });
+        }
+
+        private void CleanUp()
+        {
+            if (allCpuData != null && !allCpuData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allCpuData?.Clear();
+                allCpuData = null;
+            }
+
+            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allEphemeralTcpPortData?.Clear();
+                allEphemeralTcpPortData = null;
+            }
+
+            if (allHandlesData != null && !allHandlesData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allHandlesData?.Clear();
+                allHandlesData = null;
+            }
+
+            if (allMemData != null && !allMemData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allMemData?.Clear();
+                allMemData = null;
+            }
+
+            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allActiveTcpPortData?.Clear();
+                allActiveTcpPortData = null;
+            }
         }
     }
 }

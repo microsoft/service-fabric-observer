@@ -694,7 +694,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            string thresholdName = "Minimum";
+            string thresholdName = "Warning";
             bool warningOrError = false;
             string name = string.Empty, id, drive = string.Empty;
             int procId = 0;
@@ -740,7 +740,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     ObserverName = ObserverName,
                     Metric = data.Property,
-                    Value = Math.Round(data.AverageDataValue, 2),
+                    Value = data.AverageDataValue,
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ProcessId = procId,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
@@ -783,7 +783,7 @@ namespace FabricObserver.Observers
                                         NodeName,
                                         ObserverName,
                                         Metric = data.Property,
-                                        Value = Math.Round(data.AverageDataValue, 2),
+                                        Value = data.AverageDataValue,
                                         PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                         ProcessId = procId,
                                         ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
@@ -817,7 +817,7 @@ namespace FabricObserver.Observers
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
                     Source = ObserverConstants.FabricObserverName,
-                    Value = Math.Round(data.AverageDataValue, 2)
+                    Value = data.AverageDataValue
                 };
 
                 if (IsTelemetryEnabled)
@@ -835,7 +835,7 @@ namespace FabricObserver.Observers
                                         ObserverName,
                                         Metric = $"{drive}{data.Property}",
                                         Source = ObserverConstants.FabricObserverName,
-                                        Value = Math.Round(data.AverageDataValue, 2)
+                                        Value = data.AverageDataValue
                                     });
                 }
             }
@@ -843,7 +843,7 @@ namespace FabricObserver.Observers
             // Health Error
             if (data.IsUnhealthy(thresholdError))
             {
-                thresholdName = "Maximum";
+                thresholdName = "Error";
                 threshold = thresholdError;
                 warningOrError = true;
                 healthState = HealthState.Error;
@@ -992,17 +992,16 @@ namespace FabricObserver.Observers
 
                 if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
                 {
-                    childProcMsg = $"Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
+                    childProcMsg = $" Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
                                    $"Their cumulative impact on {name}'s resource usage has been applied.";
                 }
 
-                _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 2)}{data.Units} ");
+                _ = healthMessage.Append($"{drive}{data.Property} has exceeded the specified {thresholdName} limit ({threshold}{data.Units})");
+                _ = healthMessage.Append($" - {data.Property}: {data.AverageDataValue}{data.Units}");
                 
                 if (childProcMsg != string.Empty)
                 {
-                    _ = healthMessage.AppendLine();
-                    _ = healthMessage.AppendLine(childProcMsg);
+                    _ = healthMessage.Append(childProcMsg);
                 }
 
                 // The health event description will be a serialized instance of telemetryData,
@@ -1043,7 +1042,7 @@ namespace FabricObserver.Observers
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
                                         SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                                        Value = Math.Round(data.AverageDataValue, 2)
+                                        Value = data.AverageDataValue
                                     });
                 }
 
@@ -1102,7 +1101,7 @@ namespace FabricObserver.Observers
                     telemetryData.Description = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
                     telemetryData.Source = ObserverConstants.FabricObserverName;
-                    telemetryData.Value = Math.Round(data.AverageDataValue, 2);
+                    telemetryData.Value = data.AverageDataValue;
 
                     // Telemetry
                     if (IsTelemetryEnabled)
@@ -1128,7 +1127,7 @@ namespace FabricObserver.Observers
                                             ServiceName = name ?? string.Empty,
                                             Source = ObserverConstants.FabricObserverName,
                                             SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                                            Value = Math.Round(data.AverageDataValue, 2)
+                                            Value = data.AverageDataValue
                                         });
                     }
 
@@ -1159,23 +1158,10 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // No need to keep data in memory.
-            if (data.Data is List<T> list)
+            // this lock probably isn't necessary.
+            lock (lockObj)
             {
-                // List<T> impl.
-                lock (lockObj)
-                {
-                    list.TrimExcess();
-                    list.Clear();
-                }
-            }
-            else
-            {
-                // CircularBufferCollection<T> impl.
-                lock (lockObj)
-                {
-                    data.Data.Clear();
-                }
+                data.ClearData();
             }
         }
 

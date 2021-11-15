@@ -54,6 +54,7 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxArchivedLogFileLifetimeDays = "MaxArchivedLogFileLifetimeDays";
         public const string CsvFileWriteFormat = "CsvFileWriteFormat";
         public const string EnableConcurrentMonitoring = "EnableConcurrentMonitoring";
+        public const string MaxConcurrentTasks = "MaxConcurrentTasks";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";

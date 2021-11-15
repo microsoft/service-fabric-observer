@@ -190,13 +190,22 @@ namespace FabricObserver.Observers
             // Concurrency/Parallelism support.
             if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
-                EnableConcurrentMonitoring = enableConcurrency;
+                EnableConcurrentMonitoring = Environment.ProcessorCount >= 4 && enableConcurrency;
+            }
+
+            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+            // FabricObserver has on the resources it monitors and alerts on...
+            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+            {
+                maxDegreeOfParallelism = maxTasks;
             }
 
             ParallelOptions = new ParallelOptions
             {
                 // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
-                MaxDegreeOfParallelism = EnableConcurrentMonitoring && Environment.ProcessorCount >= 4 ? -1 : 1,
+                MaxDegreeOfParallelism = EnableConcurrentMonitoring ? maxDegreeOfParallelism : 1,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
@@ -475,12 +484,18 @@ namespace FabricObserver.Observers
                 // Was there an error running docker stats?
                 if (exitStatus != 0)
                 {
-                    string msg = $"docker stats --no-stream exited with {exitStatus}: {error}";
+                    string msg = $"docker stats exited with {exitStatus}: {error}";
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                 "in order for ContainerObserver to function correctly on Windows.";
+                    }
+                    else
+                    {
+                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the caps set. In order to fix this, please redeploy FO. " +
+                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux. " +
+                               "You will need to modify the Policy node in ApplicationManifest.xml to contain <RunAsPolicy CodePackageRef=\"Code\" UserRef=\"SystemUser\" EntryPointType=\"All\" />";
                     }
 
                     ObserverLogger.LogWarning(msg);
@@ -579,11 +594,11 @@ namespace FabricObserver.Observers
 
                         // CPU (%)
                         double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
-                        allCpuDataPercentage[cpuId].Data.Add(cpu_percent);
+                        allCpuDataPercentage[cpuId].AddData(cpu_percent);
 
                         // Memory (MiB)
                         double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
-                        allMemDataMB[memId].Data.Add(mem_working_set_mb);
+                        allMemDataMB[memId].AddData(mem_working_set_mb);
 
                         break;
                     }
