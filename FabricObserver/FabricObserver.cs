@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
@@ -13,14 +14,22 @@ using System.Threading.Tasks;
 using FabricObserver.Observers;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
+using Microsoft.ServiceFabric.Services.Remoting;
+using Microsoft.ServiceFabric.Services.Remoting.Runtime;
 
 namespace FabricObserver
 {
+    public interface IMyService : IService
+    {
+        Task<string> HelloWorldAsync();
+    }
+
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class FabricObserver : StatelessService
+    internal sealed class FabricObserver : StatelessService, IMyService
     {
         private readonly FabricClient fabricClient;
 
@@ -32,6 +41,16 @@ namespace FabricObserver
             : base(context)
         {
             fabricClient = new FabricClient();
+        }
+
+        public Task<string> HelloWorldAsync()
+        {
+            return Task.FromResult("Hello World!");
+        }
+
+        protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
+        {
+            return this.CreateServiceRemotingInstanceListeners();
         }
 
         /// <summary>
