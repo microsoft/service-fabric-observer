@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Services.Remoting.Client;
 using System;
 using System.Collections.Generic;
+using System.Fabric;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -52,6 +53,15 @@ namespace API.Controllers
         public async Task<string> Infoo([FromQuery] string NodeName)
         {
             return "B";
+            //int instances = 0;
+            //var fabricClient = new FabricClient();
+            //var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/AppName/ServiceName"));
+            //foreach (var partition in partitions)
+            //{
+            //    instances += (await fabricClient.QueryManager.GetReplicaListAsync(partition.PartitionInformation.Id)).Where(r => r.ReplicaStatus == ServiceReplicaStatus.Ready).Count();
+            //}
+
+            //return instances.ToString();
         }
     }
 }
