@@ -33,6 +33,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="4.2.452" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="5.0.1" />
     <PackageReference Include="System.Diagnostics.EventLog" Version="5.0.1" />
