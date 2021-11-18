@@ -2,15 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.21</version>
+    <version>3.1.22</version>
     <releaseNotes>
-- Significant changes to concurrent monitoring design and impl, including bug fixes and code improvements related to resource usage efficiency.
-- Added new concurrent monitoring setting: MaxConcurrentTasks, which applies to AppObserver, ContainerObserver and FabricSystemObserver.
-- Significant performance improvements in shared utility impls.
-- Removed redundant code and code that incurs too much resource cost in large service deployments (replaced with more efficient impls).
-- Added more clarity to health report descriptions.
-- Removed line breaks from multi-sentence health report descriptions.
-- Added version check utility. FO will let you know if there is a newer version available on Github (Informational Health Event, Telemetry, ETW).
+
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

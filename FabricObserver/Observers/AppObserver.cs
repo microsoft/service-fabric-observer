@@ -676,7 +676,6 @@ namespace FabricObserver.Observers
 
                 // Generate a Service Fabric Health Report.
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
-                CurrentWarningCount++;
 
                 if (IsTelemetryEnabled)
                 {
@@ -724,7 +723,6 @@ namespace FabricObserver.Observers
 
                 // Generate a Service Fabric Health Report.
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
-                CurrentWarningCount++;
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
@@ -978,7 +976,6 @@ namespace FabricObserver.Observers
 
                     // Generate a Service Fabric Health Report.
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
-                    CurrentWarningCount++;
 
                     // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                     if (IsTelemetryEnabled)
@@ -1197,22 +1194,13 @@ namespace FabricObserver.Observers
 
                             // Generate a Service Fabric Health Report.
                             HealthReporter.ReportHealthToServiceFabric(healthReport);
-                            
-                            if (ObserverManager.ObserverFailureHealthStateLevel == HealthState.Warning)
-                            {
-                                CurrentWarningCount++;
-                            }
-                            else if (ObserverManager.ObserverFailureHealthStateLevel == HealthState.Error)
-                            {
-                                CurrentErrorCount++;
-                            }
 
                             // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                             if (IsTelemetryEnabled)
                             {
                                 _ = TelemetryClient?.ReportHealthAsync(
                                                             $"UserAccountPrivilege({parentProc?.ProcessName})",
-                                                            HealthState.Warning,
+                                                            ObserverManager.ObserverFailureHealthStateLevel,
                                                             message,
                                                             ObserverName,
                                                             token,
@@ -1227,7 +1215,7 @@ namespace FabricObserver.Observers
                                                 new
                                                 {
                                                     Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
-                                                    Level = "Warning",
+                                                    Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
                                                     Message = message,
                                                     ObserverName,
                                                     ServiceName = repOrInst?.ServiceName?.OriginalString

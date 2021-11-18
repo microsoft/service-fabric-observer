@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -64,13 +66,7 @@ namespace FabricObserver.TelemetryLib
                     serviceEventSource.InternalFODataEvent(new { FOInternalTelemetryData = JsonConvert.SerializeObject(foData) });
                 }
 
-                string nodeHashString = string.Empty;
-                int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
-
-                if (nodeNameHash != -1)
-                {
-                    nodeHashString = ((uint)nodeNameHash).ToString();
-                }
+                _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
@@ -210,13 +206,7 @@ namespace FabricObserver.TelemetryLib
                     serviceEventSource.InternalFOCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(foErrorData) });
                 }
 
-                string nodeHashString = string.Empty;
-                int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
-
-                if (nodeNameHash != -1)
-                {
-                    nodeHashString = ((uint)nodeNameHash).ToString();
-                }
+                _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
@@ -225,7 +215,7 @@ namespace FabricObserver.TelemetryLib
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
-                    { "NodeNameHash",  nodeHashString },
+                    { "NodeNameHash",  nodeHashString ?? string.Empty},
                     { "FOVersion", foErrorData.Version },
                     { "CrashTime", foErrorData.CrashTime },
                     { "ErrorMessage", foErrorData.ErrorMessage },
@@ -298,6 +288,45 @@ namespace FabricObserver.TelemetryLib
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Tries to compute sha256 hash of a supplied string and converts the hashed bytes to a string supplied in result.
+        /// </summary>
+        /// <param name="source">The string to be hashed.</param>
+        /// <param name="result">The resulting Sha256 hash string. This will be null if the function returns false.</param>
+        /// <returns>true if it can compute supplied string to a Sha256 hash and convert result to a string. false if it can't.</returns>
+        public static bool TryGetHashStringSha256(string source, out string result)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                result = null;
+                return false;
+            }
+
+            try
+            {
+                StringBuilder Sb = new StringBuilder();
+
+                using (var hash = SHA256.Create())
+                {
+                    Encoding enc = Encoding.UTF8;
+                    byte[] byteVal = hash.ComputeHash(enc.GetBytes(source));
+
+                    foreach (byte b in byteVal)
+                    {
+                        Sb.Append(b.ToString("x2"));
+                    }
+                }
+
+                result = Sb.ToString();
+                return true;
+            }
+            catch (Exception e) when (e is ArgumentException || e is EncoderFallbackException || e is FormatException || e is ObjectDisposedException)
+            {
+                result = null;
+                return false;
+            }
         }
     }
 }

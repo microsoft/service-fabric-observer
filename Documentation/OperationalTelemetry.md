@@ -27,26 +27,33 @@ Setting the value to false as below will immediately stop the transmission of op
 Here is a full example of exactly what is sent in one of these telemetry events, in this case, from an SFRP cluster: 
 
 ```JSON
-{
+  {
     "EventName": "OperationalEvent",
     "TaskName": "FabricObserver",
     "EventRunInterval": "1.00:00:00",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "NodeNameHash": "3024260680",
-    "FOVersion": "3.1.21",
+    "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
+    "FOVersion": "3.1.22",
     "HasPlugins": "False",
     "ParallelCapable": "True",
-    "UpTime": "00:00:10.4892334",
-    "Timestamp": "2021-10-28T18:13:23.8523926Z",
+    "UpTime": "1.00:30:18.8058379",
+    "Timestamp": "2021-11-18T02:45:28.9827940Z",
     "OS": "Windows",
-    "TenantId": "undefined",
     "EnabledObserverCount": 5,
-    "AppObserverTotalMonitoredApps": 7,
-    "AppObserverTotalMonitoredServiceProcesses": 10,
+    "AppObserverTotalMonitoredApps": 5,
+    "AppObserverTotalMonitoredServiceProcesses": 6,
     "AppObserverConcurrencyEnabled": 1,
     "AppObserverErrorDetections": 0,
-    "AppObserverWarningDetections": 0
+    "AppObserverWarningDetections": 0,
+    "CertificateObserverErrorDetections": 0,
+    "CertificateObserverWarningDetections": 0,
+    "DiskObserverErrorDetections": 0,
+    "DiskObserverWarningDetections": 0,
+    "NodeObserverErrorDetections": 0,
+    "NodeObserverWarningDetections": 0,
+    "OSObserverErrorDetections": 0,
+    "OSObserverWarningDetections": 0
   }
 ```
 
@@ -56,7 +63,7 @@ Let's take a look at the data and why we think it is useful to share with us. We
 -	**EventRunInterval** - this is how often this telemetry is sent from a node in a cluster.
 -	**ClusterId** - this is used to both uniquely identify a telemetry event and to correlate data that comes from a cluster.
 -	**ClusterType** - this is the type of cluster: Standalone or SFRP.
--	**NodeNameHash** - this is a hashed expression of the name of the Fabric node from where the data originates. It is used to correlate data from specific nodes in a cluster (the hashed node name will be known to be part of the cluster with a specific cluster id).
+-	**NodeNameHash** - this is a sha256 hash of the name of the Fabric node from where the data originates. It is used to correlate data from specific nodes in a cluster (the hashed node name will be known to be part of the cluster with a specific cluster id).
 -	**FOVersion** - this is the internal version of FO (if you have your own version naming, we will only know what the FO code version is (not your specific FO app version name)).
 -	**HasPlugins** - this informs us about whether or not FO plugins are being used (we would love to know if folks are using the plugin model).
 -   **ParallelCapable** - this informs us about whether or not the underlying (virtual) machine's CPU configuration is parallel capable.
