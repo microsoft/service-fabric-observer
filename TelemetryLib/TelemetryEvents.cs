@@ -320,7 +320,7 @@ namespace FabricObserver.TelemetryLib
                     { "TotalEntityWarningCount", eventData.TotalEntityWarningCount }
                 };
 
-                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties, eventMetrics);
+                telemetryClient?.TrackEvent($"ClusterObserver.{OperationalEventName}", eventProperties, eventMetrics);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
