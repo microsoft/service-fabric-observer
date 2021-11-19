@@ -27,19 +27,14 @@ namespace FabricObserver.TelemetryLib
         private const string TaskName = "FabricObserver";
         private readonly TelemetryClient telemetryClient;
         private readonly ServiceContext serviceContext;
-        private readonly ITelemetryEventSource serviceEventSource;
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
-        private readonly bool isEtwEnabled;
 
         public TelemetryEvents(
                     FabricClient fabricClient,
                     ServiceContext context,
-                    ITelemetryEventSource eventSource,
-                    CancellationToken token,
-                    bool etwEnabled)
+                    CancellationToken token)
         {
-            serviceEventSource = eventSource;
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
@@ -48,7 +43,6 @@ namespace FabricObserver.TelemetryLib
             clusterId = ClusterId;
             tenantId = TenantId;
             clusterType = ClusterType;
-            isEtwEnabled = etwEnabled;
         }
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
@@ -283,6 +277,69 @@ namespace FabricObserver.TelemetryLib
                 }
 
                 Thread.Sleep(1000);
+            }
+
+            return false;
+        }
+
+        public bool EmitClusterObserverOperationalEvent(ClusterObserverOperationalEventData eventData, TimeSpan runInterval, string logFilePath)
+        {
+            if (!telemetryClient.IsEnabled())
+            {
+                return false;
+            }
+
+            try
+            {
+                _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
+
+                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                {
+                    { "EventName", OperationalEventName},
+                    { "TaskName", "ClusterObserver"},
+                    { "EventRunInterval", runInterval.ToString() },
+                    { "ClusterId", clusterId },
+                    { "ClusterType", clusterType },
+                    { "NodeNameHash", nodeHashString ?? string.Empty },
+                    { "COVersion", eventData.Version },
+                    { "UpTime", eventData.UpTime },
+                    { "Timestamp", DateTime.UtcNow.ToString("o") },
+                    { "OS", eventData.OS }
+                };
+
+                if (eventProperties.TryGetValue("ClusterType", out string clustType))
+                {
+                    if (clustType != TelemetryConstants.ClusterTypeSfrp)
+                    {
+                        eventProperties.Add("TenantId", tenantId);
+                    }
+                }
+
+                Dictionary<string, double> eventMetrics = new Dictionary<string, double>
+                {
+                    { "TotalEntityWarningCount", eventData.TotalEntityWarningCount }
+                };
+
+                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties, eventMetrics);
+                telemetryClient?.Flush();
+
+                // allow time for flushing
+                Thread.Sleep(1000);
+
+                // write a local log file containing the exact information sent to MS \\
+                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray());
+                telemetryData += "," + string.Join(",", eventMetrics.Select(kv => $"\"{kv.Key}\":" + kv.Value).ToArray()) + "}";
+                _ = TryWriteLogFile(logFilePath, telemetryData);
+
+                eventProperties.Clear();
+                eventProperties = null;
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                _ = TryWriteLogFile(logFilePath, $"{e}");
             }
 
             return false;

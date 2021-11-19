@@ -59,5 +59,6 @@ namespace ClusterObserver.Utilities
         public const string ClusterTypePaasV1 = "PaasV1";
         public const string ClusterTypeStandalone = "Standalone";
         public const string EnableETWProvider = "EnableETWProvider";
+        public const string OperationalTelemetryEnabledParameter = "EnableOperationalTelemetry";
     }
 }

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using ClusterObserver.Interfaces;
 using ClusterObserver.Utilities;
 using ClusterObserver.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 
 namespace ClusterObserver
 {
@@ -29,6 +30,10 @@ namespace ClusterObserver
         private volatile bool shutdownSignaled;
         private bool hasDisposed;
         private bool appParamsUpdating;
+        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+
+        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
+        private const string InternalVersionNumber = "2.1.12";
 
         public bool IsObserverRunning
         {
@@ -83,6 +88,22 @@ namespace ClusterObserver
             get;
         }
 
+        private DateTime LastTelemetrySendDate
+        {
+            get; set;
+        }
+
+        public DateTime StartDateTime 
+        { 
+            get; 
+            private set; 
+        }
+
+        public static int TotalEntityWarnings 
+        { 
+            get; set; 
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserverManager"/> class.
         /// </summary>
@@ -117,6 +138,7 @@ namespace ClusterObserver
             Logger = new Logger(ObserverConstants.ObserverManagerName, logFolderBasePath);
             SetPropertiesFromConfigurationParameters();
             observer = new ClusterObserver();
+            StartDateTime = DateTime.UtcNow;
         }
 
         private static string GetConfigSettingValue(string parameterName)
@@ -251,11 +273,40 @@ namespace ClusterObserver
                     if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                     {
                         Logger.LogInfo("Shutdown signaled. Stopping.");
-                        await StopAsync().ConfigureAwait(true);
+                        await StopAsync().ConfigureAwait(false);
                         break;
                     }
 
-                    await RunObserverAync().ConfigureAwait(true);
+                    await RunObserverAync().ConfigureAwait(false);
+
+                    // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
+                    // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
+                    // than 90 days.
+                    if (observer.ConfigSettings.EnableOperationalTelemetry && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    {
+                        try
+                        {
+                            using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
+                            ClusterObserverOperationalEventData coData = GetClusterObserverInternalTelemetryData();
+
+                            if (coData != null)
+                            {
+                                string filepath = Path.Combine(Logger.LogFolderBasePath, $"co_operational_telemetry.log");
+
+                                if (telemetryEvents.EmitClusterObserverOperationalEvent(coData, OperationalTelemetryRunInterval, filepath))
+                                {
+                                    LastTelemetrySendDate = DateTime.UtcNow;
+                                    ResetInternalDiagnosticDataCounters();
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // Telemetry is non-critical and should not take down CO.
+                            // TelemetryLib will log exception details to file in top level FO log folder.
+                        }
+                    }
+
                     await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10), token);
                 }
             }
@@ -298,6 +349,31 @@ namespace ClusterObserver
                 // Don't swallow the unhandled exception. Fix the bug.
                 throw;
             }
+        }
+
+        private void ResetInternalDiagnosticDataCounters()
+        {
+            TotalEntityWarnings = 0;
+        }
+
+        private ClusterObserverOperationalEventData GetClusterObserverInternalTelemetryData()
+        {
+            ClusterObserverOperationalEventData telemetryData = null;
+
+            try
+            {
+                telemetryData = new ClusterObserverOperationalEventData
+                {
+                    UpTime = DateTime.UtcNow.Subtract(StartDateTime).ToString(),
+                    Version = InternalVersionNumber
+                };
+            }
+            catch (Exception e) when (e is ArgumentException)
+            {
+
+            }
+
+            return telemetryData;
         }
 
         public async Task StopAsync()
@@ -372,8 +448,7 @@ namespace ClusterObserver
                 if (!isCompleted)
                 {
                     string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. Aborting.";
-                    
-                    await SignalAbortToRunningObserverAsync().ConfigureAwait(true);
+                    await SignalAbortToRunningObserverAsync().ConfigureAwait(false);
 
                     Logger.LogWarning(observerHealthWarning);
 
@@ -457,7 +532,6 @@ namespace ClusterObserver
 
             observer = new ClusterObserver(e.NewPackage.Settings);
             cts = new CancellationTokenSource();
-
             Logger.LogInfo("Application Parameter upgrade complete...");
             appParamsUpdating = false;
         }

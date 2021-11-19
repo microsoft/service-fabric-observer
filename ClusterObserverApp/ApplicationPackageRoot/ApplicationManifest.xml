@@ -10,6 +10,7 @@
     <Parameter Name="RunInterval" DefaultValue="" />
     <Parameter Name="AsyncOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="MonitorRepairJobs" DefaultValue="true" />
+    <Parameter Name="EnableOperationalTelemetry" DefaultValue="true" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -27,6 +28,7 @@
             <Parameter Name="RunInterval" Value="[RunInterval]" />
             <Parameter Name="AsyncOperationTimeoutSeconds" Value="[AsyncOperationTimeoutSeconds]" />
             <Parameter Name="MonitorRepairJobs" Value="[MonitorRepairJobs]" />
+            <Parameter Name="EnableOperationalTelemetry" Value="[EnableOperationalTelemetry]" />
           </Section>
         </Settings>
       </ConfigOverride>

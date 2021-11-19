@@ -29,7 +29,7 @@ namespace FabricObserver.Observers
     public class ObserverManager : IDisposable
     {
         private readonly string nodeName;
-        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromMinutes(1);
+        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
         private readonly List<ObserverBase> observers;
         private readonly DateTime StartDateTime;
@@ -227,9 +227,7 @@ namespace FabricObserver.Observers
                             using var telemetryEvents = new TelemetryEvents(
                                                                 FabricClientInstance,
                                                                 FabricServiceContext,
-                                                                ServiceEventSource.Current,
-                                                                token,
-                                                                EtwEnabled);
+                                                                token);
 
                             var foData = GetFabricObserverInternalTelemetryData();
 
@@ -317,9 +315,7 @@ namespace FabricObserver.Observers
                         using var telemetryEvents = new TelemetryEvents(
                                                             FabricClientInstance,
                                                             FabricServiceContext,
-                                                            ServiceEventSource.Current,
-                                                            token,
-                                                            EtwEnabled);
+                                                            token);
 
                         var foData = new FabricObserverCriticalErrorEventData
                         {
