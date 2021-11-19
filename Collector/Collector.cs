@@ -62,8 +62,8 @@ namespace Collector
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
-
-                await AggregatorProxy.PutDataRemote(nodeName,new Data(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse,allDrives));
+                var data = new HardwareData(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
+                await AggregatorProxy.PutDataRemote(nodeName,ByteSerialization.ObjectToByteArray(data));
 
             }
 

@@ -8,7 +8,8 @@ namespace Aggregator
 {
 
     /// <summary>
-    /// This class implements the conversion from custom Objects to byte[] and vice versa
+    /// This class implements the conversion from custom Objects to byte[] and vice versa/
+    /// Every class that uses these static methods has to be [Serializable]
     /// </summary>
     public class ByteSerialization
     {

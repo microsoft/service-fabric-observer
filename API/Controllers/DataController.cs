@@ -33,8 +33,9 @@ namespace API.Controllers
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-            List<Data> list=await AggregatorProxy.GetDataRemote(NodeName);
-            foreach(var data in list)
+            List<byte[]> originList=await AggregatorProxy.GetDataRemote(NodeName);
+            List<HardwareData> targetList=originList.ConvertAll<HardwareData>(data=>(HardwareData)ByteSerialization.ByteArrayToObject(data));
+            foreach(var data in targetList)
             {
                 response += data.ToString();
             }

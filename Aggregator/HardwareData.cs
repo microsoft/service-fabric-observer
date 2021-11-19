@@ -8,7 +8,7 @@ namespace Aggregator
 
     //This Data is passed to the Aggregator using Remote Procedure Calls from Collector instances
     [Serializable]
-    public class HardwareData : Data
+    public class HardwareData
     {
 
         //This is a wrapper class for DriveInfo to serialize useful data
@@ -27,7 +27,6 @@ namespace Aggregator
         }
 
         public HardwareData(float Cpu, long TotalMemoryGb, long MemoryInUseMb, double PercentInUse, DriveInfo[] Drives)
-            :base()
         {
             this.Cpu = Cpu;
             this.TotalMemoryGb = TotalMemoryGb;

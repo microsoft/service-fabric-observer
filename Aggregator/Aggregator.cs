@@ -16,8 +16,8 @@ namespace Aggregator
 
     public interface IMyCommunication : IService
     {
-        Task PutDataRemote(string queueName,Data data);
-        Task<List<Data>> GetDataRemote(string queueName);
+        Task PutDataRemote(string queueName,byte[] data);
+        Task<List<byte[]>> GetDataRemote(string queueName);
     }
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
@@ -30,31 +30,14 @@ namespace Aggregator
             : base(context)
         { }
 
-        public async Task PutDataRemote(string queueName,Data data)
+        public async Task PutDataRemote(string queueName,byte[] data)
         {
-            Debug.WriteLine("Aggregator");
-            Debug.WriteLine("------ From node : " + queueName + " -------");
-            Debug.WriteLine("------ cpu: "+data.Cpu+" -------");
-            Debug.WriteLine("------ toatal memory: " + data.TotalMemoryGb + " -------");
-            Debug.WriteLine("------ memory in use: " + data.MemoryInUseMb + " -------");
-            Debug.WriteLine("------ % of memeory: " + data.PercentInUse + " -------");
-            foreach( var d in data.allDrives)
-            {
-                Debug.WriteLine("------ Drive name: " + d.Name + " -------");
-                Debug.WriteLine("------ Drive total space: " + d.TotalDiskSpaceGB + " -------");
-                Debug.WriteLine("------ Drive available space: " + d.AvailableDiskSpaceGB + " -------");
-
-            }
-
             await AddDataAsync(queueName, data);
             var x = await GetDataAsync(queueName);
-            Data dd= await PeekFirstAsync(queueName);
-
-
-
+            byte[] dd= await PeekFirstAsync(queueName);
         }
 
-        public async Task<List<Data>> GetDataRemote(string queueName)
+        public async Task<List<byte[]>> GetDataRemote(string queueName)
         {
             return await GetDataAsync(queueName);
         }
@@ -108,14 +91,14 @@ namespace Aggregator
             }
         }
 
-        public async Task AddDataAsync(string queueName,Data data)
+        public async Task AddDataAsync(string queueName,byte[] data)
         {
             var stateManager = this.StateManager;
-            IReliableQueue<Data> reliableQueue = null ;
+            IReliableQueue<byte[]> reliableQueue = null ;
             while (reliableQueue == null) {
                 try
                 {
-                    reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(queueName);
+                    reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
                 }
                 catch (Exception e) { }
             }
@@ -129,10 +112,10 @@ namespace Aggregator
 
         }
 
-        public async Task<Data> PeekFirstAsync(string queueName)
+        public async Task<byte[]> PeekFirstAsync(string queueName)
         {
             var stateManager = this.StateManager;
-            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(queueName);
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
 
             using (var tx = stateManager.CreateTransaction())
             {
@@ -142,13 +125,13 @@ namespace Aggregator
             }
         }
 
-        public async Task<List<Data>> GetDataAsync(string queueName)
+        public async Task<List<byte[]>> GetDataAsync(string queueName)
         {
             if (queueName == null) return null;
-            List < Data > list= new List<Data>();
+            List < byte[] > list= new List<byte[]>();
 
             var stateManager = this.StateManager;
-            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(queueName);
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
             try 
             { 
                 using (var tx = stateManager.CreateTransaction())
@@ -156,7 +139,7 @@ namespace Aggregator
                     var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
                     //iterator.Reset(); // this is position -1 - before the first element in the collection
                 
-                    Data data=null;
+                    byte[] data=null;
                     while (await iterator.MoveNextAsync(token))
                     {
                         data = iterator.Current;
