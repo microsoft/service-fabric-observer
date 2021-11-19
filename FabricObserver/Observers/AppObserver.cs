@@ -50,6 +50,8 @@ namespace FabricObserver.Observers
         private string fileName;
         private readonly Stopwatch stopwatch;
         private readonly object lockObj = new object();
+        private int appCount;
+        private int serviceCount;
 
         public int MaxChildProcTelemetryDataCount
         {
@@ -1068,9 +1070,29 @@ namespace FabricObserver.Observers
 
             int repCount = ReplicaOrInstanceList.Count;
 
-            // For use in internal diagnostic telemetry.
-            MonitoredServiceProcessCount = repCount;
-            MonitoredAppCount = deployedTargetList.Count;
+            // internal diagnostic telemetry \\
+
+            // Do not emit the same service count data over and over again.
+            if (repCount != serviceCount)
+            {
+                MonitoredServiceProcessCount = repCount;
+                serviceCount = repCount;
+            }
+            else
+            {
+                MonitoredServiceProcessCount = 0;
+            }
+
+            // Do not emit the same app count data over and over again.
+            if (deployedTargetList.Count != appCount)
+            {
+                MonitoredAppCount = deployedTargetList.Count;
+                appCount = deployedTargetList.Count;
+            }
+            else
+            {
+                MonitoredAppCount = 0;
+            }
 
             if (!EnableVerboseLogging)
             {

@@ -15,7 +15,7 @@
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
-    <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Ok" />
+    <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="observer_logs" />
     <!-- Observer Configuration 
          Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
@@ -102,7 +102,7 @@
     <!-- Process family tree (descendants) monitoring. 
 	        Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring. 
 			In that case, enabling this may eat a lot of cpu. Please test, as always. If you know your target services
-			do not spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you
+			do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you
 			already know.. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->

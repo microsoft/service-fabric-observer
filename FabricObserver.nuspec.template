@@ -4,7 +4,9 @@
     <id>%PACKAGE_ID%</id>
     <version>3.1.22</version>
     <releaseNotes>
-
+- Bug fixes in telemetry.
+- Changes to default settings values (regression).
+- Code improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

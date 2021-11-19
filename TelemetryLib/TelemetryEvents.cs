@@ -60,12 +60,6 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
-                // ETW
-                if (isEtwEnabled)
-                {
-                    serviceEventSource.InternalFODataEvent(new { FOInternalTelemetryData = JsonConvert.SerializeObject(foData) });
-                }
-
                 _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
@@ -75,7 +69,7 @@ namespace FabricObserver.TelemetryLib
                     { "EventRunInterval", runInterval.ToString() },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
-                    { "NodeNameHash", nodeHashString },
+                    { "NodeNameHash", nodeHashString ?? string.Empty },
                     { "FOVersion", foData.Version },
                     { "HasPlugins", foData.HasPlugins.ToString() },
                     { "ParallelCapable", foData.ParallelExecutionCapable.ToString() },
@@ -120,19 +114,29 @@ namespace FabricObserver.TelemetryLib
                     {
                         // App count.
                         data = (obData.Value as AppServiceObserverData).MonitoredAppCount;
-                        key = $"{obData.Key}{apps}";
-                        metrics.Add(key, data);
+
+                        // if this value is 0, then this data has already been transmitted. Don't send it again.
+                        if (data > 0)
+                        {
+                            key = $"{obData.Key}{apps}";
+                            metrics.Add(key, data);
+                        }
 
                         // Process (service instance/primary replica/container) count.
                         data = (obData.Value as AppServiceObserverData).MonitoredServiceProcessCount;
-                        key = $"{obData.Key}{procs}";
 
-                        if (obData.Key == contobs)
+                        // if this value is 0, then this data has already been transmitted. Don't send it again.
+                        if (data > 0)
                         {
-                            key = $"{obData.Key}{conts}";
-                        }
+                            key = $"{obData.Key}{procs}";
 
-                        metrics.Add(key, data);
+                            if (obData.Key == contobs)
+                            {
+                                key = $"{obData.Key}{conts}";
+                            }
+
+                            metrics.Add(key, data);
+                        }
                     }
 
                     // Concurrency
@@ -200,12 +204,6 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
-                // ETW
-                if (isEtwEnabled)
-                {
-                    serviceEventSource.InternalFOCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(foErrorData) });
-                }
-
                 _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>

@@ -29,7 +29,7 @@ namespace FabricObserver.Observers
     public class ObserverManager : IDisposable
     {
         private readonly string nodeName;
-        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromMinutes(1);
         private readonly CancellationToken token;
         private readonly List<ObserverBase> observers;
         private readonly DateTime StartDateTime;
@@ -240,7 +240,7 @@ namespace FabricObserver.Observers
                                 if (telemetryEvents.EmitFabricObserverOperationalEvent(foData, OperationalTelemetryRunInterval, filepath))
                                 {
                                     LastTelemetrySendDate = DateTime.UtcNow;
-                                    ResetInternalDataCounters();
+                                    ResetInternalErrorWarningDataCounters();
                                 }
                             }
                         }
@@ -345,7 +345,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void ResetInternalDataCounters()
+        private void ResetInternalErrorWarningDataCounters()
         {
             // These props are only set for telemetry purposes. This does not remove err/warn state on an observer.
             foreach (var obs in observers)
