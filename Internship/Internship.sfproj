@@ -37,6 +37,7 @@
       <ServiceLaunchUrl>http://localhost:{ServicePort}/weatherforecast</ServiceLaunchUrl>
     </ProjectReference>
     <ProjectReference Include="..\Collector\Collector.csproj" />
+    <ProjectReference Include="..\CO\CO.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
   <PropertyGroup>

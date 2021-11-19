@@ -16,8 +16,8 @@ namespace Aggregator
 
     public interface IMyCommunication : IService
     {
-        Task PutDataRemote(string NodeName,Data data);
-        Task<List<Data>> GetDataRemote(string NodeName);
+        Task PutDataRemote(string queueName,Data data);
+        Task<List<Data>> GetDataRemote(string queueName);
     }
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
@@ -30,10 +30,10 @@ namespace Aggregator
             : base(context)
         { }
 
-        public async Task PutDataRemote(string NodeName,Data data)
+        public async Task PutDataRemote(string queueName,Data data)
         {
             Debug.WriteLine("Aggregator");
-            Debug.WriteLine("------ From node : " + NodeName + " -------");
+            Debug.WriteLine("------ From node : " + queueName + " -------");
             Debug.WriteLine("------ cpu: "+data.Cpu+" -------");
             Debug.WriteLine("------ toatal memory: " + data.TotalMemoryGb + " -------");
             Debug.WriteLine("------ memory in use: " + data.MemoryInUseMb + " -------");
@@ -46,17 +46,17 @@ namespace Aggregator
 
             }
 
-            await AddDataAsync(NodeName, data);
-            var x = await GetDataAsync(NodeName);
-            Data dd= await PeekFirstAsync(NodeName);
+            await AddDataAsync(queueName, data);
+            var x = await GetDataAsync(queueName);
+            Data dd= await PeekFirstAsync(queueName);
 
 
 
         }
 
-        public async Task<List<Data>> GetDataRemote(string NodeName)
+        public async Task<List<Data>> GetDataRemote(string queueName)
         {
-            return await GetDataAsync(NodeName);
+            return await GetDataAsync(queueName);
         }
 
 
@@ -108,14 +108,14 @@ namespace Aggregator
             }
         }
 
-        public async Task AddDataAsync(string nodeName,Data data)
+        public async Task AddDataAsync(string queueName,Data data)
         {
             var stateManager = this.StateManager;
             IReliableQueue<Data> reliableQueue = null ;
             while (reliableQueue == null) {
                 try
                 {
-                    reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(nodeName);
+                    reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(queueName);
                 }
                 catch (Exception e) { }
             }
@@ -129,10 +129,10 @@ namespace Aggregator
 
         }
 
-        public async Task<Data> PeekFirstAsync(string nodeName)
+        public async Task<Data> PeekFirstAsync(string queueName)
         {
             var stateManager = this.StateManager;
-            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(nodeName);
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(queueName);
 
             using (var tx = stateManager.CreateTransaction())
             {
@@ -142,13 +142,13 @@ namespace Aggregator
             }
         }
 
-        public async Task<List<Data>> GetDataAsync(string nodeName)
+        public async Task<List<Data>> GetDataAsync(string queueName)
         {
-            if (nodeName == null) return null;
+            if (queueName == null) return null;
             List < Data > list= new List<Data>();
 
             var stateManager = this.StateManager;
-            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(nodeName);
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<Data>>(queueName);
             try 
             { 
                 using (var tx = stateManager.CreateTransaction())
