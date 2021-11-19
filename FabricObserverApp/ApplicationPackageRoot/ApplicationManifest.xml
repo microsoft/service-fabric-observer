@@ -17,9 +17,9 @@
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="observer_logs" />
-    <!-- Observer Configuration 
+    <!-- Observer Configuration
          Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
-         simple configuration updates for them. By design, any observer you make using our 
+         simple configuration updates for them. By design, any observer you make using our
          extensibility model will employ the same basic config parameters as all observers do.
          (See ObserverBase.cs) -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
@@ -71,12 +71,11 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. 
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers.
          If you enable concurrent monitoring for AppObserver and you are running on capable CPU (>= 4 logical processors),
 		 then you should increase this value from 1 second to at most (1/2 the number of logical processors) seconds on the target machine.
-		 **However, if you monitor a *very* large number of services (>200) AND you enable concurrent monitoring AND machines have capable CPU(s), 
-		 then keep this value at 1 or 2.**
-		 Leave this set at 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4) -->
+		 **However, if you monitor a *very* large number of services (>200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
+		 Do leave this set at 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4) -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:03" />
@@ -99,16 +98,15 @@
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    <!-- Process family tree (descendants) monitoring. 
-	     Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring. 
+    <!-- Process family tree (descendants) monitoring.
+	     Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring.
 		 In that case, enabling this may eat a lot of cpu. Please test, as always. If you know your target services
-		 do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you
-		 already know.. -->
+		 do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you already know.. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- Service process dumps (dumpProcessOnError feature).
-         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json
          if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
     <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
@@ -189,9 +187,9 @@
     <!-- AzureStorageUploadObserver -->
     <Parameter Name="AzureStorageUploadObserverBlobContainerName" DefaultValue="fodumps" />
     <!-- This can be an encrypted string or not. The decision is yours.
-         For encrypting, please use the Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here. 
+         For encrypting, please use the Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here.
          Any encrypted string must NOT contain line breaks or spaces. This is very important. If you copy/paste the encrypted string incorrectly, then FO will not upload dumps.
-         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps  
+         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps
          for details. Follow the directions in the sample for creating an encryted secret. Note the use of thumbprint in the cmd. -->
     <Parameter Name="AzureStorageUploadObserverStorageConnectionString" DefaultValue="" />
     <!-- OR -->
