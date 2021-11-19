@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
 
-namespace CO
+namespace ClusterCollector
 {
     [EventSource(Name = "MyCompany-Internship-CO")]
 internal sealed class ServiceEventSource : EventSource

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -11,6 +11,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.2.1235" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Aggregator\Aggregator.csproj" />
   </ItemGroup>
 
 </Project>

@@ -14,7 +14,7 @@
   <CodePackage Name="Code" Version="1.0.0">
     <EntryPoint>
       <ExeHost>
-        <Program>CO.exe</Program>
+        <Program>ClusterCollector.exe</Program>
       </ExeHost>
     </EntryPoint>
   </CodePackage>

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using static System.Fabric.FabricClient;
 
-namespace CO
+namespace ClusterCollector
 {
     class SFUtilities
     {

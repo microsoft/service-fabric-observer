@@ -5,20 +5,24 @@ using System.Fabric;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Aggregator;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
+using Microsoft.ServiceFabric.Services.Remoting.Client;
 using Microsoft.ServiceFabric.Services.Runtime;
 
 
 //This is a test class for ClusterObserver
 
-namespace CO
+namespace ClusterCollector
 {
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class CO : StatelessService
+    internal sealed class ClusterCollector : StatelessService
     {
-        public CO(StatelessServiceContext context)
+        
+
+        public ClusterCollector(StatelessServiceContext context)
             : base(context)
         { }
 
@@ -51,6 +55,13 @@ namespace CO
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
                 Debug.WriteLine("----------- "+await SFUtilities.Instance.TupleGetDeployedCountsAsync());
+                var (primaryCount, replicaCount, instanceCount, count) = await SFUtilities.Instance.TupleGetDeployedCountsAsync();
+                var data = new SFData(primaryCount,replicaCount,instanceCount,count);
+                var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                    new Uri("fabric:/Internship/Aggregator"),
+                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                    );
+                await AggregatorProxy.PutDataRemote(SFData.queueName, ByteSerialization.ObjectToByteArray(data));
             }
         }
     }

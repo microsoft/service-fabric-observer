@@ -1,6 +1,5 @@
 ﻿using Aggregator;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Services.Remoting.Client;
 using System;
 using System.Collections.Generic;
@@ -8,6 +7,7 @@ using System.Fabric;
 using System.Fabric.Query;
 using System.Linq;
 using System.Threading.Tasks;
+
 
 namespace API.Controllers
 {
@@ -42,6 +42,25 @@ namespace API.Controllers
             return response;
         }
 
+        [HttpGet]
+        [Route("CustomMetrics")]
+        public async Task<string> CustomMetrics()
+        {
+            string response = "";
+
+            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                    new Uri("fabric:/Internship/Aggregator"),
+                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                    );
+
+            List<byte[]> originList = await AggregatorProxy.GetDataRemote(SFData.queueName);
+            List<SFData> targetList = originList.ConvertAll<SFData>(data => (SFData)ByteSerialization.ByteArrayToObject(data));
+            foreach (var data in targetList)
+            {
+                response += data.ToString();
+            }
+            return response;
+        }
 
 
         [HttpGet]

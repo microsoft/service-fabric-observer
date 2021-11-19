@@ -59,7 +59,7 @@ Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "Internship", "Internship\In
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "API", "API\API.csproj", "{8CC48513-2462-4991-A448-13178A0251DE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CO", "CO\CO.csproj", "{54F421C9-B593-4387-B4B0-FCBCA60C553A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusterCollector", "CO\ClusterCollector.csproj", "{54F421C9-B593-4387-B4B0-FCBCA60C553A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
