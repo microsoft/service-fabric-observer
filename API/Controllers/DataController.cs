@@ -62,6 +62,21 @@ namespace API.Controllers
             return response;
         }
 
+        [HttpGet]
+        [Route("Snapshot")]
+        public async Task<string> Snapshot()
+        {
+            string response = "";
+
+            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                    new Uri("fabric:/Internship/Aggregator"),
+                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                    );
+
+            //CalculateAverageCapacity
+            return response;
+        }
+
 
         [HttpGet]
         [Route("info")]

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Query;
 using System.Linq;
@@ -7,7 +8,7 @@ using static System.Fabric.FabricClient;
 
 namespace ClusterCollector
 {
-    class SFUtilities
+    public class SFUtilities
     {
         private static SFUtilities instance;
         private static readonly object lockObj = new object();
@@ -73,6 +74,11 @@ namespace ClusterCollector
             return (primaryCount, replicaCount, instanceCount, count);
         }
         
+        public async Task<NodeList> GetNodeListAsync()
+        {
+            return await queryManager.GetNodeListAsync();
+            
+        }
 
     }
 }

@@ -18,6 +18,8 @@ namespace Aggregator
     {
         Task PutDataRemote(string queueName,byte[] data);
         Task<List<byte[]>> GetDataRemote(string queueName);
+        Task<Snapshot> GetSnapshotRemote();
+
     }
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
@@ -40,6 +42,12 @@ namespace Aggregator
         public async Task<List<byte[]>> GetDataRemote(string queueName)
         {
             return await GetDataAsync(queueName);
+        }
+
+        public Task<Snapshot> GetSnapshotRemote()
+        {
+            //
+            throw new NotImplementedException();
         }
 
 

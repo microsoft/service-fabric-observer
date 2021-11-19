@@ -10,7 +10,14 @@ namespace Aggregator
     [Serializable]
     public class HardwareData
     {
-
+        
+        public float Cpu { get; }
+        public long TotalMemoryGb { get; }
+        public long MemoryInUseMb { get; }
+        public double PercentInUse { get; }
+        public List<Drive> allDrives = new List<Drive>();
+        //public DriveInfo[] allDrives { get; }
+        
         //This is a wrapper class for DriveInfo to serialize useful data
         [Serializable]
         public class Drive
@@ -25,6 +32,8 @@ namespace Aggregator
             public long TotalDiskSpaceGB { get; }
             public long AvailableDiskSpaceGB { get; }
         }
+
+
 
         public HardwareData(float Cpu, long TotalMemoryGb, long MemoryInUseMb, double PercentInUse, DriveInfo[] Drives)
         {
@@ -43,12 +52,7 @@ namespace Aggregator
             }
         }
 
-        public float Cpu { get; }
-        public long TotalMemoryGb { get; }
-        public long MemoryInUseMb { get; }
-        public double PercentInUse { get; }
-        public List<Drive> allDrives = new List<Drive>();
-        //public DriveInfo[] allDrives { get; }
+        
 
         public override string ToString()
         {
@@ -66,6 +70,20 @@ namespace Aggregator
                     "\n         Available space: " + d.AvailableDiskSpaceGB;
             }
             return res;
+        }
+
+        public float DiskPercentageInUse()
+        {
+            int cnt = 0;
+            float percentageSum = 0;
+
+            foreach(Drive drive in allDrives)
+            {
+                percentageSum += ((float)drive.AvailableDiskSpaceGB) / drive.TotalDiskSpaceGB;
+                cnt++;
+            }
+
+            return percentageSum / cnt; 
         }
     }
 }
