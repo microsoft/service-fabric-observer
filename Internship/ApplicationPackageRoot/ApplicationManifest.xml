@@ -9,7 +9,7 @@
     <Parameter Name="Collector_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="Collector_PartitionCount" DefaultValue="1" />
     <Parameter Name="Collector_TargetReplicaSetSize" DefaultValue="3" />
-    <Parameter Name="Collector_InstanceCount" DefaultValue="1" />
+    <Parameter Name="Collector_InstanceCount" DefaultValue="-1" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 

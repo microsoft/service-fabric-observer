@@ -5,6 +5,7 @@ using Microsoft.ServiceFabric.Services.Remoting.Client;
 using System;
 using System.Collections.Generic;
 using System.Fabric;
+using System.Fabric.Query;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -52,9 +53,41 @@ namespace API.Controllers
         [Route("infoo")]
         public async Task<string> Infoo([FromQuery] string NodeName)
         {
-            return "B";
+            //return "B";
             //int instances = 0;
-            //var fabricClient = new FabricClient();
+            string res;
+            var fabricClient = new FabricClient();
+            var queryManager = fabricClient.QueryManager;
+            var clusterLoad=await queryManager.GetClusterLoadInformationAsync();
+            res =clusterLoad.ToString();
+            ApplicationList appList = await queryManager.GetApplicationListAsync();
+            Uri appUri;
+            int primaryCount = 0; 
+            int replicaCount = 0; //Primary + secondary for statefull services
+            int instanceCount = 0; //Replica count for stateless services
+            int count = 0; //replicaCount + instanceCount
+            foreach(Application app in appList)
+            {
+                //appUri= app.ApplicationName.AbsoluteUri;
+                appUri = app.ApplicationName;
+                ServiceList servicesList =await queryManager.GetServiceListAsync(appUri);
+                foreach(Service service in servicesList)
+                {
+                    var serviceUri = service.ServiceName;
+                    var partitionList = await queryManager.GetPartitionListAsync(serviceUri);
+                    bool isStatefull = typeof(StatefulService).IsInstanceOfType(service);
+                    primaryCount += isStatefull ? partitionList.Count : 0;
+                    foreach(var partition in partitionList)
+                    {
+                        int cnt = (await fabricClient.QueryManager.GetReplicaListAsync(partition.PartitionInformation.Id)).Where(r => r.ReplicaStatus == ServiceReplicaStatus.Ready).Count();
+                        if (isStatefull) replicaCount += cnt;
+                        else instanceCount += cnt;
+                    }
+                }
+                count = instanceCount + replicaCount;
+            }
+            
+            return res;
             //var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/AppName/ServiceName"));
             //foreach (var partition in partitions)
             //{
