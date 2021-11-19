@@ -193,7 +193,7 @@ namespace FabricObserver.Observers
 
         public async Task StartObserversAsync()
         {
-            await CheckGithubForNewFOVersionAsync();
+            await CheckGithubForNewVersionAsync();
 
             try
             {
@@ -1084,7 +1084,7 @@ namespace FabricObserver.Observers
         }
 
         // https://stackoverflow.com/questions/25678690/how-can-i-check-github-releases-in-c
-        private async Task CheckGithubForNewFOVersionAsync()
+        private async Task CheckGithubForNewVersionAsync()
         {
             try
             {
@@ -1129,7 +1129,7 @@ namespace FabricObserver.Observers
                         {
                             Description = message,
                             HealthState = "Ok",
-                            Metric = "NewFOVersionAvailable",
+                            Metric = "NewVersionAvailable",
                             NodeName = nodeName,
                             ObserverName = ObserverConstants.ObserverManagerName,
                             Source = ObserverConstants.FabricObserverName
@@ -1147,7 +1147,7 @@ namespace FabricObserver.Observers
                                 {
                                     Description = message,
                                     HealthState = "Ok",
-                                    Metric = "NewFOVersionAvailable",
+                                    Metric = "NewVersionAvailable",
                                     NodeName = nodeName,
                                     ObserverName = ObserverConstants.ObserverManagerName,
                                     Source = ObserverConstants.FabricObserverName
