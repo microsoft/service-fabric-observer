@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
+//using System.Fabric.Query;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,12 +45,38 @@ namespace Aggregator
             return await GetDataAsync(queueName);
         }
 
-        public Task<Snapshot> GetSnapshotRemote()
+        public async Task<Snapshot> GetSnapshotRemote()
         {
-            //
-            throw new NotImplementedException();
-        }
+            System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
+          
+            if (!await checkQueues(nodeList)) return null;
 
+            
+
+            return null;
+        }
+       
+
+        private async Task<bool> checkQueues(System.Fabric.Query.NodeList nodeList)
+        {
+            bool check = true;
+            foreach(var node in nodeList)
+            {
+                var x = await PeekFirstAsync(node.NodeName);
+                if (x == null)
+                {
+                    check = false;
+                    break;
+                }
+            }
+            if (check)
+            {
+                var x = await PeekFirstAsync(SFData.queueName);
+                if (x == null)check = false;
+                
+            }
+            return check;
+        }
 
         /// <summary>
         /// Optional override to create listeners (e.g., HTTP, Service Remoting, WCF, etc.) for this service replica to handle client or user requests.
@@ -127,9 +154,10 @@ namespace Aggregator
 
             using (var tx = stateManager.CreateTransaction())
             {
-                
-                return (await reliableQueue.TryPeekAsync(tx)).Value; //why do I have to do this in a transaction ?!
-                
+                var conditional = await reliableQueue.TryPeekAsync(tx);
+                if (conditional.HasValue)
+                    return conditional.Value; //why do I have to do this in a transaction ?!
+                else return null;
             }
         }
 
