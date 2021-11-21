@@ -52,16 +52,23 @@ namespace ClusterCollector
 
                 ServiceEventSource.Current.ServiceMessage(this.Context, "Working-{0}", ++iterations);
 
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                var (_, delta) = SFUtilities.getTime();
+
+                await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken);
 
                 Debug.WriteLine("----------- "+await SFUtilities.Instance.TupleGetDeployedCountsAsync());
                 var (primaryCount, replicaCount, instanceCount, count) = await SFUtilities.Instance.TupleGetDeployedCountsAsync();
-                var data = new SFData(primaryCount,replicaCount,instanceCount,count);
+                var (totalMiliseconds, _) = SFUtilities.getTime();
+                var data = new SFData(totalMiliseconds,primaryCount,replicaCount,instanceCount,count);
                 var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
-                await AggregatorProxy.PutDataRemote(SFData.queueName, ByteSerialization.ObjectToByteArray(data));
+                //await AggregatorProxy.PutDataRemote(SFData.queueName, ByteSerialization.ObjectToByteArray(data));
+
+                //this isn't FIFO
+                AggregatorProxy.PutDataRemote(SFData.queueName, ByteSerialization.ObjectToByteArray(data));
+
             }
         }
     }

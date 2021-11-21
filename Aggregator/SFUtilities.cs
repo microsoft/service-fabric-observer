@@ -10,14 +10,25 @@ namespace Aggregator
 {
     public class SFUtilities
     {
+        public static readonly double interval = 10000.00;
+
         private static SFUtilities instance;
         private static readonly object lockObj = new object();
         private FabricClient fabricClient;
         private QueryClient queryManager;
 
-        protected SFUtilities(){
+        protected SFUtilities() {
             fabricClient = new FabricClient();
             queryManager = fabricClient.QueryManager;
+        }
+
+        public static (double totalMiliseconds, double delta)getTime(){
+            var localTime = DateTime.Now;
+            var timeSpan = TimeSpan.FromTicks(localTime.Ticks);
+            double totalMiliseconds = timeSpan.TotalMilliseconds;
+            double remainder = totalMiliseconds % SFUtilities.interval;
+            double delta = SFUtilities.interval - remainder;
+            return (totalMiliseconds, delta);
         }
 
         public static SFUtilities Instance

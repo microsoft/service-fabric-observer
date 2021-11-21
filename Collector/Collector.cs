@@ -48,7 +48,10 @@ namespace Collector
 
                 ServiceEventSource.Current.ServiceMessage(this.Context, "Working-{0}", ++iterations);
 
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                var (_, delta) = SFUtilities.getTime(); 
+                
+
+                await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken);
 
 
                 // Collect Data
@@ -62,12 +65,19 @@ namespace Collector
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
-                var data = new HardwareData(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
-                await AggregatorProxy.PutDataRemote(nodeName,ByteSerialization.ObjectToByteArray(data));
+                var (totalMiliseconds, _) = SFUtilities.getTime();
+                var data = new HardwareData(totalMiliseconds,cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
+
+
+                //await AggregatorProxy.PutDataRemote(nodeName,ByteSerialization.ObjectToByteArray(data));
+                
+                //This isn't FIFO
+                AggregatorProxy.PutDataRemote(nodeName, ByteSerialization.ObjectToByteArray(data));
+
 
             }
 
-            
+
         }
     }
 }

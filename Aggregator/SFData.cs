@@ -8,19 +8,23 @@ namespace Aggregator
     public class SFData
     {
 
+
         /// <summary>
         /// Used for the IRealiableQueue in the Aggregator
         /// </summary>
         public static readonly string queueName = "CustomMetrics";
 
+        public double miliseconds { get; }
         public int PrimaryCount { get; }
         public int ReplicaCount { get; }
         public int Count { get; }
         public int InstanceCount { get; }
 
 
-        public SFData(int primaryCount,int replicaCount, int instanceCount, int count)
+        public SFData(double miliseconds,int primaryCount,int replicaCount, int instanceCount, int count)
         {
+
+            this.miliseconds = miliseconds;
             PrimaryCount = primaryCount;
             ReplicaCount = replicaCount;
             Count = count;
@@ -31,6 +35,7 @@ namespace Aggregator
         {
             String res;
             res =
+                "\n                 Miliseconds: " + this.miliseconds % (SFUtilities.interval * 100) +
                 "\n PrimaryCount: " + this.PrimaryCount +
                 "\n ReplicaCount: " + this.ReplicaCount +
                 "\n InstanceCount: " + this.InstanceCount +

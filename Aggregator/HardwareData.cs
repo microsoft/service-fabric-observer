@@ -10,7 +10,7 @@ namespace Aggregator
     [Serializable]
     public class HardwareData
     {
-        
+        public double miliseconds { get; }
         public float Cpu { get; }
         public long TotalMemoryGb { get; }
         public long MemoryInUseMb { get; }
@@ -35,8 +35,9 @@ namespace Aggregator
 
 
 
-        public HardwareData(float Cpu, long TotalMemoryGb, long MemoryInUseMb, double PercentInUse, DriveInfo[] Drives)
+        public HardwareData(double miliseconds,float Cpu, long TotalMemoryGb, long MemoryInUseMb, double PercentInUse, DriveInfo[] Drives)
         {
+            this.miliseconds = miliseconds;
             this.Cpu = Cpu;
             this.TotalMemoryGb = TotalMemoryGb;
             this.MemoryInUseMb = MemoryInUseMb;
@@ -58,7 +59,8 @@ namespace Aggregator
         {
             String res;
             res =
-                "\nCpu %: " + this.Cpu +
+                "\n                 Miliseconds: "+this.miliseconds%(SFUtilities.interval*100)+
+                "\n Cpu %: " + this.Cpu +
                 "\n Total RAM(GB): " + this.TotalMemoryGb +
                 "\n Used RAM(MB): " + this.MemoryInUseMb +
                 "\n % or RAM: " + this.PercentInUse;
