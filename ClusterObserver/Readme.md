@@ -143,7 +143,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "COVersion": "2.1.12",
     "Timestamp": "2021-11-22T19:02:04.4287671Z",
     "OS": "Windows"
-  }
+}
 ```
 
 Let's take a look at the data and why we think it is useful to share with us. We'll go through each object property in the JSON above.
