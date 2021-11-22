@@ -63,6 +63,26 @@ namespace API.Controllers
         }
 
         [HttpGet]
+        [Route("AllSnapshots")]
+        public async Task<string> allSnapshots()
+        {
+            string response = "";
+
+            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                    new Uri("fabric:/Internship/Aggregator"),
+                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                    );
+
+            List<byte[]> originList = await AggregatorProxy.GetDataRemote(Snapshot.queueName);
+            List<Snapshot> targetList = originList.ConvertAll<Snapshot>(data => (Snapshot)ByteSerialization.ByteArrayToObject(data));
+            foreach (var data in targetList)
+            {
+                response += data.ToString();
+            }
+            return response;
+        }
+
+        [HttpGet]
         [Route("Snapshot")]
         public async Task<string> GetSnapshot()
         {

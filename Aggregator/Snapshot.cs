@@ -7,6 +7,8 @@ namespace Aggregator
     [Serializable]
     public class Snapshot
     {
+
+        public static readonly string queueName = "snapshot";
         public SFData customMetrics { get; }
         public List<HardwareData> nodeMetrics { get; }
 
@@ -60,6 +62,17 @@ namespace Aggregator
             AverageClusterRamUsage = ((float)ramSum) / cnt;
             AverageClusterDiskUsage = ((float)diskSum) / cnt;
             return (AverageClusterCpuUsage, AverageClusterRamUsage, AverageClusterDiskUsage);
+        }
+
+
+        public override string ToString()
+        {
+            String res;
+            res =
+                "\n Average cluster capacity: " + this.CalculateAverageCapacity() +
+                "\n Average resource usage: " + this.AverageClusterResourseUsage() +
+                "\n";
+            return res;
         }
 
     }

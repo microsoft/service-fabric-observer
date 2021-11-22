@@ -47,6 +47,8 @@ namespace Aggregator
 
         public async Task<Snapshot> GetSnapshotRemote()
         {
+            //Multiuple threads enter -> RunAsync -> this breaks -> it seems that the IRealiableQueue isn't thread safe 
+            Debug.WriteLine("--------GetSnapshots----------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
             System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
 
             List<HardwareData> HWList = new List<HardwareData>();
@@ -82,6 +84,40 @@ namespace Aggregator
             return null; //Something failed
         }
        
+        private async Task ProduceSnapshot() 
+        {
+            Debug.WriteLine("---------PRODUCE---------" + Thread.CurrentThread.ManagedThreadId + "----------------------");
+            try
+            {
+                Snapshot snap = await GetSnapshotRemote();
+                if (snap != null) await AddDataAsync(Snapshot.queueName, ByteSerialization.ObjectToByteArray(snap));
+            }
+            catch (Exception x)
+            {
+                Debug.WriteLine(x.ToString());
+            }
+        }
+        private async Task<int> GetMinQueueCount()
+        {
+            int min_count = int.MaxValue;
+            System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
+
+            
+            using (var tx = this.StateManager.CreateTransaction())
+            {
+                int count;
+                foreach(var node in nodeList)
+                {
+                    count =(int)(await(await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(node.NodeName)).GetCountAsync(tx));
+                    if (count < min_count) min_count = count;
+                }
+
+                count = (int)(await (await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(SFData.queueName)).GetCountAsync(tx));
+                if (count < min_count) min_count = count;
+
+            }
+            return min_count;
+        }
         /// <summary>
         /// returns the min timestamp at the beginning of all queues
         /// if none return -1
@@ -141,24 +177,32 @@ namespace Aggregator
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                using (var tx = this.StateManager.CreateTransaction())
+                //using (var tx = this.StateManager.CreateTransaction())
+                //{
+                //    var result = await myDictionary.TryGetValueAsync(tx, "Counter");
+
+                //    ServiceEventSource.Current.ServiceMessage(this.Context, "Current Counter Value: {0}",
+                //        result.HasValue ? result.Value.ToString() : "Value does not exist.");
+
+                //    await myDictionary.AddOrUpdateAsync(tx, "Counter", 0, (key, value) => ++value);
+                //    //myDictionary.
+
+                //    // If an exception is thrown before calling CommitAsync, the transaction aborts, all changes are 
+                //    // discarded, and nothing is saved to the secondary replicas.
+                //    await tx.CommitAsync();
+                //}
+
+                Debug.WriteLine("---------RUN---------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
+
+
+                await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.interval), cancellationToken);
+                while(await GetMinQueueCount() > 1)
                 {
-                    var result = await myDictionary.TryGetValueAsync(tx, "Counter");
-
-                    ServiceEventSource.Current.ServiceMessage(this.Context, "Current Counter Value: {0}",
-                        result.HasValue ? result.Value.ToString() : "Value does not exist.");
-
-                    await myDictionary.AddOrUpdateAsync(tx, "Counter", 0, (key, value) => ++value);
-                    //myDictionary.
-
-                    // If an exception is thrown before calling CommitAsync, the transaction aborts, all changes are 
-                    // discarded, and nothing is saved to the secondary replicas.
-                    await tx.CommitAsync();
+                   await ProduceSnapshot();
                 }
-
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
         }
+
 
         public async Task AddDataAsync(string queueName,byte[] data)
         {
@@ -185,7 +229,7 @@ namespace Aggregator
         {
             var stateManager = this.StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
-
+           
             using (var tx = stateManager.CreateTransaction())
             {
                 var conditional = await reliableQueue.TryPeekAsync(tx);
