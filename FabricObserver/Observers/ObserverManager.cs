@@ -125,6 +125,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        private DateTime LastVersionCheckDateTime 
+        { 
+            get; set; 
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// This is only used by unit tests.
@@ -193,8 +198,6 @@ namespace FabricObserver.Observers
 
         public async Task StartObserversAsync()
         {
-            await CheckGithubForNewVersionAsync();
-
             try
             {
                 // Nothing to do here.
@@ -247,6 +250,13 @@ namespace FabricObserver.Observers
                             // Telemetry is non-critical and should not take down FO.
                             // TelemetryLib will log exception details to file in top level FO log folder.
                         }
+                    }
+
+                    // Check for new version once a day.
+                    if (DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                    {
+                        await CheckGithubForNewVersionAsync();
+                        LastVersionCheckDateTime = DateTime.UtcNow;
                     }
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
