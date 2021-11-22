@@ -64,7 +64,7 @@ namespace API.Controllers
 
         [HttpGet]
         [Route("Snapshot")]
-        public async Task<string> Snapshot()
+        public async Task<string> GetSnapshot()
         {
             string response = "";
 
@@ -73,7 +73,11 @@ namespace API.Controllers
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-            //CalculateAverageCapacity
+            Snapshot snap = await AggregatorProxy.GetSnapshotRemote();
+            if (snap == null) return "Empty queue";
+            response+=
+                "\n Average cluster capacity: "+snap.CalculateAverageCapacity()+
+                "\n Average resource usage: "+snap.AverageClusterResourseUsage();
             return response;
         }
 

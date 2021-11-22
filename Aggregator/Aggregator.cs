@@ -48,34 +48,68 @@ namespace Aggregator
         public async Task<Snapshot> GetSnapshotRemote()
         {
             System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
-          
-            if (!await checkQueues(nodeList)) return null;
 
-            
+            List<HardwareData> HWList = new List<HardwareData>();
+            SFData sf = null;
+            bool check=false;
+            double minTime =await MinTimeStampInQueue(nodeList);
+            bool success=true;
+            if (minTime == -1) return null; //queues empty
 
-            return null;
-        }
-       
-
-        private async Task<bool> checkQueues(System.Fabric.Query.NodeList nodeList)
-        {
-            bool check = true;
+            byte[] sfb = await PeekFirstAsync(SFData.queueName);
+            if (sfb != null)
+            {
+                sf = (SFData)ByteSerialization.ByteArrayToObject(sfb);
+                check = Snapshot.checkTime(minTime, sf.miliseconds);
+                if (!check) success = false; //Snapshot must contain SFData
+                else await DequeueAsync(SFData.queueName);
+            }
+            else  success=false; //QUEUE is empty
             foreach(var node in nodeList)
             {
-                var x = await PeekFirstAsync(node.NodeName);
-                if (x == null)
+                byte[] hwb = await PeekFirstAsync(node.NodeName);
+                if (hwb == null) continue; // QUEUE in empty
+                HardwareData hw = (HardwareData)ByteSerialization.ByteArrayToObject(hwb);
+                check = Snapshot.checkTime(minTime, hw.miliseconds);
+                if (check)
                 {
-                    check = false;
-                    break;
+                    HWList.Add(hw);
+                    await DequeueAsync(node.NodeName);
                 }
             }
-            if (check)
+            if (HWList.Count == 0) success=false; //Snapshot must have at least 1 HWData
+            if(success)return new Snapshot(sf, HWList);
+            return null; //Something failed
+        }
+       
+        /// <summary>
+        /// returns the min timestamp at the beginning of all queues
+        /// if none return -1
+        /// </summary>
+        /// <param name="nodeList"></param>
+        /// <returns></returns>
+        private async Task<double> MinTimeStampInQueue(System.Fabric.Query.NodeList nodeList)
+        {
+            double timeStamp = -1;
+            foreach(var node in nodeList)
             {
-                var x = await PeekFirstAsync(SFData.queueName);
-                if (x == null)check = false;
-                
+                var hw = await PeekFirstAsync(node.NodeName);
+                if (hw != null)
+                {
+                    var data=(HardwareData)ByteSerialization.ByteArrayToObject(hw);
+                    if (data.miliseconds < timeStamp || timeStamp == -1) timeStamp = data.miliseconds;
+                }
             }
-            return check;
+            
+            var sf = await PeekFirstAsync(SFData.queueName);
+            if (sf != null)
+            {
+                var data = (SFData)ByteSerialization.ByteArrayToObject(sf);
+                if (data.miliseconds < timeStamp || timeStamp == -1) timeStamp = data.miliseconds;
+            }
+                
+            
+            return timeStamp;
         }
 
         /// <summary>
@@ -155,6 +189,21 @@ namespace Aggregator
             using (var tx = stateManager.CreateTransaction())
             {
                 var conditional = await reliableQueue.TryPeekAsync(tx);
+                if (conditional.HasValue)
+                    return conditional.Value; //why do I have to do this in a transaction ?!
+                else return null;
+            }
+        }
+
+        public async Task<byte[]> DequeueAsync(string queueName)
+        {
+            var stateManager = this.StateManager;
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
+
+            using (var tx = stateManager.CreateTransaction())
+            {
+                var conditional = await reliableQueue.TryDequeueAsync(tx);
+                await tx.CommitAsync();
                 if (conditional.HasValue)
                     return conditional.Value; //why do I have to do this in a transaction ?!
                 else return null;

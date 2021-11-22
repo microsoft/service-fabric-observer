@@ -31,6 +31,14 @@ namespace Aggregator
             return (float)Math.Floor((100 * customMetrics.Count) / bottleneck);
             return 0;
         }
+
+        public static bool checkTime(double minTime, double dataTime)
+        {
+            double delta = Math.Abs(minTime - dataTime);
+            if (delta < SFUtilities.interval) return true;
+            return false;
+        }
+
         /// <summary>
         /// Calculates the average % resourse usage of the cluster at this snapshot
         /// </summary>
