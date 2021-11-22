@@ -1,6 +1,6 @@
 ## How to implement an observer plugin using FO's extensibility model
 
-This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver) reference project (ContainerObserver is a part of FO).
+This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver) reference project (ContainerObserver is a part of FO (since version 3.1.17)).
 
 Note: The plugin model depends on the following packages, which **must have the same versions in both your plugin project and FabricObserver**:
 

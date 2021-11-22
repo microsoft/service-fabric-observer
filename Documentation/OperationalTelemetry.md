@@ -2,11 +2,11 @@
 
 FabricObserver operational data is transmitted to Microsoft and contains information about FabricObserver.  This information helps us understand which observers matter in the real world, what type of environment they run in, and how many services are being monitored. This information will help us make sure we invest time in the right places. This data does not contain PII or any information about the services running in your cluster or the data handled by the applications. Nor do we capture the configurations set for FO. 
 
-**This information is only used by the Service Fabric team and will be stored (data retention) for no more than 90 days.** 
+**This information is only used by the Service Fabric team and will be retained for no more than 90 days.** 
 
 Disabling / Enabling transmission of Operational Data: 
 
-Transmission of operational data is controlled by a setting and can be easily turned off. ObserverManagerEnableOperationalTelemetry setting in ApplicationManifest.xml controls transmission of Operational data. 
+Transmission of operational data is controlled by a setting and can be easily turned off. ```ObserverManagerEnableOperationalTelemetry``` setting in ```ApplicationManifest.xml``` controls transmission of Operational data. 
 
 Setting the value to false as below will immediately stop the transmission of operational data: 
 
@@ -20,7 +20,7 @@ Setting the value to false as below will immediately stop the transmission of op
     -	Helps us focus effort on the most useful observers.
 -	Are there any FO plugins running?
 -	Is FO finding issues (generating health events)? This data is represented in the total number of Warnings/Errors an observer finds in an 8 hour window.
--	This telemetry is sent every 8 hours and internal error/warning counters are reset after each telemetry transmission.
+-	This telemetry is sent once every 24 hours and internal error/warning counters are reset after each telemetry transmission.
 
 #### Operational data details: 
 
