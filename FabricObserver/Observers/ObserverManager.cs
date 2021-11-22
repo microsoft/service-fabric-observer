@@ -317,7 +317,7 @@ namespace FabricObserver.Observers
                                                             FabricServiceContext,
                                                             token);
 
-                        var foData = new FabricObserverCriticalErrorEventData
+                        var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,
                             ErrorMessage = e.Message,
@@ -327,7 +327,7 @@ namespace FabricObserver.Observers
                         };
 
                         string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_critical_error_telemetry.log");
-                        _ = telemetryEvents.EmitFabricObserverCriticalErrorEvent(foData, filepath);
+                        _ = telemetryEvents.EmitCriticalErrorEvent(data, ObserverConstants.FabricObserverName, filepath);
                     }
                     catch
                     {

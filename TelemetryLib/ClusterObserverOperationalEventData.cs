@@ -10,22 +10,11 @@ namespace FabricObserver.TelemetryLib
 {
     public class ClusterObserverOperationalEventData
     {
-        public string UpTime
-        {
-            get; set;
-        }
-
         public string Version
         {
             get; set;
         }
 
         public string OS => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
-
-        public double TotalEntityWarningCount 
-        { 
-            get; 
-            internal set; 
-        }
     }
 }

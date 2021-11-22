@@ -439,9 +439,6 @@ namespace ClusterObserver
 
                         // Reset 
                         telemetryDescription = string.Empty;
-
-                        // Operational telemetry counter
-                        ClusterObserverManager.TotalEntityWarnings++;
                     }
                     else
                     {
@@ -484,9 +481,6 @@ namespace ClusterObserver
 
                         // Reset 
                         telemetryDescription = string.Empty;
-
-                        // Operational telemetry counter
-                        ClusterObserverManager.TotalEntityWarnings++;
                     }
                 } 
             }
@@ -604,9 +598,6 @@ namespace ClusterObserver
 
                     // Reset 
                     telemetryDescription = string.Empty;
-
-                    // Operational telemetry counter
-                    ClusterObserverManager.TotalEntityWarnings++;
                 }
             }
         }
@@ -643,9 +634,6 @@ namespace ClusterObserver
                                     Source = ObserverName
                                 });
             }
-
-            // Operational telemetry counter
-            ClusterObserverManager.TotalEntityWarnings++;
         }
 
         private async Task MonitorNodeStatusAsync(CancellationToken token, bool isTest = false)

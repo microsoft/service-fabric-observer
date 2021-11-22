@@ -16,7 +16,7 @@
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
-    <Parameter Name="ObserverLogPath" DefaultValue="observer_logs" />
+    <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
     <!-- Observer Configuration
          Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our

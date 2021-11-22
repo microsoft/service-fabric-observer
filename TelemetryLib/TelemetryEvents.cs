@@ -24,7 +24,8 @@ namespace FabricObserver.TelemetryLib
     {
         private const string OperationalEventName = "OperationalEvent";
         private const string CriticalErrorEventName = "CriticalErrorEvent";
-        private const string TaskName = "FabricObserver";
+        private const string COTaskName = "ClusterObserver";
+        private const string FOTaskName = "FabricObserver";
         private readonly TelemetryClient telemetryClient;
         private readonly ServiceContext serviceContext;
         private readonly string clusterId, tenantId, clusterType;
@@ -59,7 +60,7 @@ namespace FabricObserver.TelemetryLib
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
                     { "EventName", OperationalEventName},
-                    { "TaskName", TaskName},
+                    { "TaskName", FOTaskName},
                     { "EventRunInterval", runInterval.ToString() },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
@@ -162,7 +163,7 @@ namespace FabricObserver.TelemetryLib
                     }
                 }
 
-                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties, metrics);
+                telemetryClient?.TrackEvent($"{FOTaskName}.{OperationalEventName}", eventProperties, metrics);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
@@ -189,7 +190,7 @@ namespace FabricObserver.TelemetryLib
             return false;
         }
 
-        public bool EmitFabricObserverCriticalErrorEvent(FabricObserverCriticalErrorEventData foErrorData, string logFilePath)
+        public bool EmitCriticalErrorEvent(CriticalErrorEventData errorData, string source, string logFilePath)
         {
             if (!telemetryClient.IsEnabled())
             {
@@ -198,25 +199,30 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
-                _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
-
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
                     { "EventName", CriticalErrorEventName},
-                    { "TaskName", TaskName},
+                    { "TaskName", source},
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
-                    { "NodeNameHash",  nodeHashString ?? string.Empty},
-                    { "FOVersion", foErrorData.Version },
-                    { "CrashTime", foErrorData.CrashTime },
-                    { "ErrorMessage", foErrorData.ErrorMessage },
-                    { "CrashData", foErrorData.ErrorStack },
+                    { "FOVersion", errorData.Version },
+                    { "CrashTime", errorData.CrashTime },
+                    { "ErrorMessage", errorData.ErrorMessage },
+                    { "CrashData", errorData.ErrorStack },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
-                    { "OS", foErrorData.OS }
+                    { "OS", errorData.OS }
                 };
 
-                telemetryClient?.TrackEvent($"{TaskName}.{CriticalErrorEventName}", eventProperties);
+                string nodeHashString = string.Empty;
+
+                if (source == FOTaskName)
+                {
+                    _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out nodeHashString);
+                    eventProperties.Add("NodeNameHash", nodeHashString);
+                }
+
+                telemetryClient?.TrackEvent($"{FOTaskName}.{CriticalErrorEventName}", eventProperties);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
@@ -282,7 +288,7 @@ namespace FabricObserver.TelemetryLib
             return false;
         }
 
-        public bool EmitClusterObserverOperationalEvent(ClusterObserverOperationalEventData eventData, TimeSpan runInterval, string logFilePath)
+        public bool EmitClusterObserverOperationalEvent(ClusterObserverOperationalEventData eventData, string logFilePath)
         {
             if (!telemetryClient.IsEnabled())
             {
@@ -291,18 +297,13 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
-                _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
-
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
                     { "EventName", OperationalEventName},
-                    { "TaskName", "ClusterObserver"},
-                    { "EventRunInterval", runInterval.ToString() },
+                    { "TaskName", COTaskName},
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
-                    { "NodeNameHash", nodeHashString ?? string.Empty },
                     { "COVersion", eventData.Version },
-                    { "UpTime", eventData.UpTime },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", eventData.OS }
                 };
@@ -315,25 +316,18 @@ namespace FabricObserver.TelemetryLib
                     }
                 }
 
-                Dictionary<string, double> eventMetrics = new Dictionary<string, double>
-                {
-                    { "TotalEntityWarningCount", eventData.TotalEntityWarningCount }
-                };
-
-                telemetryClient?.TrackEvent($"ClusterObserver.{OperationalEventName}", eventProperties, eventMetrics);
+                telemetryClient?.TrackEvent($"{COTaskName}.{OperationalEventName}", eventProperties);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
                 Thread.Sleep(1000);
 
                 // write a local log file containing the exact information sent to MS \\
-                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray());
-                telemetryData += "," + string.Join(",", eventMetrics.Select(kv => $"\"{kv.Key}\":" + kv.Value).ToArray()) + "}";
+                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
                 _ = TryWriteLogFile(logFilePath, telemetryData);
 
                 eventProperties.Clear();
                 eventProperties = null;
-
                 return true;
             }
             catch (Exception e)
@@ -344,6 +338,7 @@ namespace FabricObserver.TelemetryLib
 
             return false;
         }
+
 
         /// <summary>
         /// Tries to compute sha256 hash of a supplied string and converts the hashed bytes to a string supplied in result.
