@@ -97,8 +97,8 @@ Example Configuration:
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Report on currently executing Repair Jobs in the cluster. -->
     <Parameter Name="MonitorRepairJobs" Value="" MustOverride ="true" />
-	<!-- CO diagnostic telemetry. -->
-	<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+    <!-- CO diagnostic telemetry. -->
+    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
 </Settings>
 ``` 
