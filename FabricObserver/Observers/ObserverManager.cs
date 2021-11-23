@@ -1018,7 +1018,7 @@ namespace FabricObserver.Observers
                                 Property = $"{observer.ObserverName}_HealthState",
                                 ReportType = HealthReportType.Application,
                                 State = ObserverFailureHealthStateLevel,
-                                NodeName = this.nodeName,
+                                NodeName = nodeName,
                                 Observer = ObserverConstants.ObserverManagerName,
                             };
 
@@ -1116,12 +1116,12 @@ namespace FabricObserver.Observers
                     {
                         AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
                         EmitLogEvent = false,
-                        HealthMessage = $"{message}",
-                        HealthReportTimeToLive = TimeSpan.MaxValue,
+                        HealthMessage = message,
+                        HealthReportTimeToLive = TimeSpan.FromDays(1),
                         Property = "NewVersionAvailable",
                         ReportType = HealthReportType.Application,
                         State = HealthState.Ok,
-                        NodeName = this.nodeName,
+                        NodeName = nodeName,
                         Observer = ObserverConstants.ObserverManagerName
                     };
 
