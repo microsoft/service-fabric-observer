@@ -5,6 +5,7 @@
     <version>3.1.22</version>
     <releaseNotes>
 - Bug fixes in telemetry.
+- Bug fix in version check feature.
 - Changes to default settings values (regression).
 - Code improvements.
 	</releaseNotes>

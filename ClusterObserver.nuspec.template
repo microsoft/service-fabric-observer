@@ -3,7 +3,11 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>2.1.12</version>
-    <releaseNotes>Added FabricClient retry logic.</releaseNotes>
+	  <releaseNotes>
+- Added FabricClient retry logic.
+- Added Operational Telemetry feature.
+- Minor improvements.
+	  </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
