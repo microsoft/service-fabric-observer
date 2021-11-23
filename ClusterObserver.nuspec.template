@@ -2,8 +2,12 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>2.1.11</version>
-    <releaseNotes>Bug fixes.</releaseNotes>
+    <version>2.1.12</version>
+	  <releaseNotes>
+- Added FabricClient retry logic.
+- Added Operational Telemetry feature.
+- Minor improvements.
+	  </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
@@ -15,7 +19,7 @@
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
     <dependencies>
-      <group targetFramework=".NETStandard2.1" />
+      <group targetFramework=".NETStandard2.0" />
     </dependencies>
     <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
     <tags>azure servicefabric clusterobserver utility watchdog-service observability</tags>
@@ -23,7 +27,7 @@
   </metadata>
   <files>
     <file src="**" target="contentFiles\any\any" />
-    <file src="ClusterObserverPkg\Code\ClusterObserver.dll" target="lib\netstandard2.1"/>
+    <file src="ClusterObserverPkg\Code\ClusterObserver.dll" target="lib\netstandard2.0"/>
     <file src="%ROOT_PATH%\icon.png" target="" />
   </files>
 </package>

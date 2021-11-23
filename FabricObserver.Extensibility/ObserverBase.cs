@@ -847,7 +847,13 @@ namespace FabricObserver.Observers
                 threshold = thresholdError;
                 warningOrError = true;
                 healthState = HealthState.Error;
-                CurrentErrorCount++;
+
+                // FO emits a health report each time it detects an Error threshold breach for some metric for some supported entity (target).
+                // Don't increment this internal counter if the target is already in error for the same metric.
+                if (!data.ActiveErrorOrWarning)
+                {
+                    CurrentErrorCount++;
+                }
 
                 // **Windows-only**. This is used by AppObserver, but makes sense to be
                 // part of the base class for future use, like for plugins that manage service processes.
@@ -887,7 +893,13 @@ namespace FabricObserver.Observers
             {
                 warningOrError = true;
                 healthState = HealthState.Warning;
-                CurrentWarningCount++;
+
+                // FO emits a health report each time it detects a Warning threshold breach for some metric for some supported entity (target).
+                // Don't increment this internal counter if the target is already in warning for the same metric.
+                if (!data.ActiveErrorOrWarning)
+                {
+                    CurrentWarningCount++;
+                }
             }
 
             if (warningOrError)

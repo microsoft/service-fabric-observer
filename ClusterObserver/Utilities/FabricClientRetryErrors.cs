@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Fabric;
 
-namespace FabricObserver.TelemetryLib
+namespace ClusterObserver.Utilities
 {
     /// <summary>
     /// Class to define retry-able fabric client errors.

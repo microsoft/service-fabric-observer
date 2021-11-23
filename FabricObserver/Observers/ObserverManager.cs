@@ -40,7 +40,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.21";
+        private const string InternalVersionNumber = "3.1.22";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -125,6 +125,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        private DateTime LastVersionCheckDateTime 
+        { 
+            get; set; 
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// This is only used by unit tests.
@@ -193,8 +198,6 @@ namespace FabricObserver.Observers
 
         public async Task StartObserversAsync()
         {
-            await CheckGithubForNewFOVersionAsync();
-
             try
             {
                 // Nothing to do here.
@@ -227,9 +230,7 @@ namespace FabricObserver.Observers
                             using var telemetryEvents = new TelemetryEvents(
                                                                 FabricClientInstance,
                                                                 FabricServiceContext,
-                                                                ServiceEventSource.Current,
-                                                                token,
-                                                                EtwEnabled);
+                                                                token);
 
                             var foData = GetFabricObserverInternalTelemetryData();
 
@@ -240,7 +241,7 @@ namespace FabricObserver.Observers
                                 if (telemetryEvents.EmitFabricObserverOperationalEvent(foData, OperationalTelemetryRunInterval, filepath))
                                 {
                                     LastTelemetrySendDate = DateTime.UtcNow;
-                                    ResetInternalDataCounters();
+                                    ResetInternalErrorWarningDataCounters();
                                 }
                             }
                         }
@@ -249,6 +250,13 @@ namespace FabricObserver.Observers
                             // Telemetry is non-critical and should not take down FO.
                             // TelemetryLib will log exception details to file in top level FO log folder.
                         }
+                    }
+
+                    // Check for new version once a day.
+                    if (DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                    {
+                        await CheckGithubForNewVersionAsync();
+                        LastVersionCheckDateTime = DateTime.UtcNow;
                     }
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
@@ -317,11 +325,9 @@ namespace FabricObserver.Observers
                         using var telemetryEvents = new TelemetryEvents(
                                                             FabricClientInstance,
                                                             FabricServiceContext,
-                                                            ServiceEventSource.Current,
-                                                            token,
-                                                            EtwEnabled);
+                                                            token);
 
-                        var foData = new FabricObserverCriticalErrorEventData
+                        var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,
                             ErrorMessage = e.Message,
@@ -331,7 +337,7 @@ namespace FabricObserver.Observers
                         };
 
                         string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_critical_error_telemetry.log");
-                        _ = telemetryEvents.EmitFabricObserverCriticalErrorEvent(foData, filepath);
+                        _ = telemetryEvents.EmitCriticalErrorEvent(data, ObserverConstants.FabricObserverName, filepath);
                     }
                     catch
                     {
@@ -345,7 +351,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void ResetInternalDataCounters()
+        private void ResetInternalErrorWarningDataCounters()
         {
             // These props are only set for telemetry purposes. This does not remove err/warn state on an observer.
             foreach (var obs in observers)
@@ -1012,7 +1018,7 @@ namespace FabricObserver.Observers
                                 Property = $"{observer.ObserverName}_HealthState",
                                 ReportType = HealthReportType.Application,
                                 State = ObserverFailureHealthStateLevel,
-                                NodeName = this.nodeName,
+                                NodeName = nodeName,
                                 Observer = ObserverConstants.ObserverManagerName,
                             };
 
@@ -1084,7 +1090,7 @@ namespace FabricObserver.Observers
         }
 
         // https://stackoverflow.com/questions/25678690/how-can-i-check-github-releases-in-c
-        private async Task CheckGithubForNewFOVersionAsync()
+        private async Task CheckGithubForNewVersionAsync()
         {
             try
             {
@@ -1110,12 +1116,12 @@ namespace FabricObserver.Observers
                     {
                         AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
                         EmitLogEvent = false,
-                        HealthMessage = $"{message}",
-                        HealthReportTimeToLive = TimeSpan.MaxValue,
+                        HealthMessage = message,
+                        HealthReportTimeToLive = TimeSpan.FromDays(1),
                         Property = "NewVersionAvailable",
                         ReportType = HealthReportType.Application,
                         State = HealthState.Ok,
-                        NodeName = this.nodeName,
+                        NodeName = nodeName,
                         Observer = ObserverConstants.ObserverManagerName
                     };
 
@@ -1129,7 +1135,7 @@ namespace FabricObserver.Observers
                         {
                             Description = message,
                             HealthState = "Ok",
-                            Metric = "NewFOVersionAvailable",
+                            Metric = "NewVersionAvailable",
                             NodeName = nodeName,
                             ObserverName = ObserverConstants.ObserverManagerName,
                             Source = ObserverConstants.FabricObserverName
@@ -1147,7 +1153,7 @@ namespace FabricObserver.Observers
                                 {
                                     Description = message,
                                     HealthState = "Ok",
-                                    Metric = "NewFOVersionAvailable",
+                                    Metric = "NewVersionAvailable",
                                     NodeName = nodeName,
                                     ObserverName = ObserverConstants.ObserverManagerName,
                                     Source = ObserverConstants.FabricObserverName

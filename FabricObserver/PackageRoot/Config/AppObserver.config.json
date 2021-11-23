@@ -5,6 +5,6 @@
     "memoryWarningLimitMb": 1024,
     "networkWarningEphemeralPorts": 7500,
     "warningThreadCount": 500,
-    "warningOpenFileHandles": 2000
+    "warningOpenFileHandles": 5000
   }
 ]

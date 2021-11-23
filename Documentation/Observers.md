@@ -81,17 +81,32 @@ You configure FO's user account type in ApplicationManifest.xml (only Windows wo
 
 ### A note on child process monitoring
 
-AppObserver (FO version >= 3.1.15) will automatically monitor up to 50 process descendants of your primary service process (50 is extreme. You should not design services that own that many descendant processes..). If your services launch child processes, then AppObserver will automatically monitor them for the same metrics and thresholds you supply for the containing Application. 
+AppObserver (FO version >= 3.1.15) will automatically monitor up to 50 child processes spawned by your primary service process (50 is extreme. You should not design services that own that many descendant processes..). If your services launch child processes, then AppObserver will automatically monitor them for the same metrics and thresholds you supply for the containing Application. 
 Their culmative impact on some monitored metric will be added to that of the parent process (your service process) and this combined (sum) value will be used to determine health state based on supplied threshold for the related metric.  
 
-You can disable this feature (you shouldn't if you **do** launch child processes from your service and they run for a while or for the lifetime of your service and compute (use resources)) by setting AppObserverEnableChildProcessMonitoring to false. For telemetry, you can control how many offspring are present in the event data by setting AppObserverMaxChildProcTelemetryDataCount (default is 5). Both of these settings are located in ApplicationManifest.xml.
+You can disable this feature (you shouldn't if you **do** launch child processes from your service and they run for a while or for the lifetime of your service and compute (use resources)) by setting AppObserverEnableChildProcessMonitoring to false.
+For telemetry, you can control how many offspring are present in the event data by setting AppObserverMaxChildProcTelemetryDataCount (default is 5). Both of these settings are located in ApplicationManifest.xml.
 The AppObserverMaxChildProcTelemetryDataCount setting determines the size of the list used in family tree process data telemetry transmission, which corresponds to the size of the telemetry data event. You should keep this below 10. AppObserver will order the list of ChildProcessInfo (a member of ChildProcessTelemetryData) by resoure usage value, from highest to lowest. 
 
 In the vast majority of cases, your services are not going to launch 50 descendant processes, but FO is designed to support such an extreme edge case scenario, which frankly should not be in your service design playbook. Also note that if you do spawn a lot of child processes and 
-you have AppObserverMonitorDuration set to, say, 10 seconds, then you will be running AppObserver for (n + 1) * 10 seconds, where n is total number of processes related to a service instance (n = child procs, +1 to account for the parent..) for every service that launches children. If your Service A spawns 20 descendants, then that would be 21 * 10 = 210 seconds of monitoring time. If Service B launches 10 descendants, then add 110 seconds to that. Etc... Please keep this in mind as you design your configuration. And, please don't design services that launch 50 descendant processes. Why do that?
+you have AppObserverMonitorDuration set to, say, 10 seconds, then you will be running AppObserver for (n + 1) * 10 seconds, where n is total number of processes related to a service instance (n = child procs, +1 to account for the parent..) for every service that launches children.
+If your Service A spawns 20 descendants, then that would be 21 * 10 = 210 seconds of monitoring time. If Service B launches 10 descendants, then add 110 seconds to that. Etc... Please keep this in mind as you design your configuration. And, please don't design services that launch 50 descendant processes. Why do that?
 
 Finally, ***if you do not launch child processes from your services please disable this feature*** by setting ```AppObserverEnableChildProcessMonitoring``` to false in ApplicationManifest.xml. This is important because AppObserver will run code that checks to see if some process has children. If you know this is not the case, then save electrons and disable the feature.
 
+### A note on concurrent process monitoring
+
+AppObserver, by default, will monitor and report on services using concurrent Tasks if FO is running on capable CPU(s). 
+
+You can turn this feature on/off by setting ```AppObserverEnableConcurrentMonitoring``` in ApplicationManifest.xml. Further, you can control "how much" parallelism you can handle (which means, really, how much of the CPU do you want FO to use).
+You set this with ```AppObserverMaxConcurrentTasks``` in ApplicationManifest.xml. The default value for ```AppObserverMaxConcurrentTasks``` is automatically calculated by FO and is 1/4 of the detected logical processors (LPs) on the VM/Machine.
+This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
+You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
+eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). **The impact of default parallelization settings on machines with less than 200 monitored services is minimal**.
+Please test and choose a value that suits your needs or simply leave AppObserverMaxConcurrentTasks unset and go with the default. 
+
+Finally, if you enable concurrent monitoring AND you do not launch child processes from your services please disable ```AppObserverEnableChildProcessMonitoring``` in ApplicationManifest.xml.
+This is very important because AppObserver will run code, in parallel, that checks to see if some process has children. This has some CPU cost on nodes where you are monitoring (in parallel) a lot of services, so if you already know that your services do not spawn child processes, then please save electrons and disable ```AppObserverEnableChildProcessMonitoring```.
 
 ### Input
 JSON config file supplied by user, stored in PackageRoot\Config folder. This configuration is composed of JSON array

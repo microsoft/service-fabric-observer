@@ -13,7 +13,7 @@
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          ClusterObserver will write to its own directory on this path.
          **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
-    <Parameter Name="ObserverLogPath" Value="clusterobserver_logs" />
+    <Parameter Name="ObserverLogPath" Value="cluster_observer_logs" />
     <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -60,5 +60,7 @@
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Report on currently executing Repair Jobs in the cluster. -->
     <Parameter Name="MonitorRepairJobs" Value="" MustOverride ="true" />
+	<!-- CO diagnostic telemetry. -->
+	<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
 </Settings>

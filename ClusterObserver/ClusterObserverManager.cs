@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using ClusterObserver.Interfaces;
 using ClusterObserver.Utilities;
 using ClusterObserver.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 
 namespace ClusterObserver
 {
@@ -28,7 +29,11 @@ namespace ClusterObserver
         private CancellationTokenSource cts;
         private volatile bool shutdownSignaled;
         private bool hasDisposed;
+        private bool internalTelemetrySent;
         private bool appParamsUpdating;
+
+        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
+        private const string InternalVersionNumber = "2.1.12";
 
         public bool IsObserverRunning
         {
@@ -107,14 +112,14 @@ namespace ClusterObserver
             }
             else
             {
-                string logFolderBase = Path.Combine(Environment.CurrentDirectory, "observer_logs");
+                string logFolderBase = Path.Combine(Environment.CurrentDirectory, "cluster_observer_logs");
                 logFolderBasePath = logFolderBase;
             }
 
             LogPath = logFolderBasePath;
 
             // This logs error/warning/info messages for ObserverManager.
-            Logger = new Logger(ObserverConstants.ObserverManagerName, logFolderBasePath);
+            Logger = new Logger(ObserverConstants.ClusterObserverManagerName, logFolderBasePath);
             SetPropertiesFromConfigurationParameters();
             observer = new ClusterObserver();
         }
@@ -246,16 +251,42 @@ namespace ClusterObserver
         {
             try
             {
+                // This data is sent once over the lifetime of the deployed service instance and will be retained for no more
+                // than 90 days.
+                if (observer.ConfigSettings.EnableOperationalTelemetry && !internalTelemetrySent)
+                {
+                    try
+                    {
+                        using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
+                        ClusterObserverOperationalEventData coData = GetClusterObserverInternalTelemetryData();
+
+                        if (coData != null)
+                        {
+                            string filepath = Path.Combine(Logger.LogFolderBasePath, $"co_operational_telemetry.log");
+
+                            if (telemetryEvents.EmitClusterObserverOperationalEvent(coData, filepath))
+                            {
+                                internalTelemetrySent = true;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Telemetry is non-critical and should not take down CO.
+                        // TelemetryLib will log exception details to file in top level FO log folder.
+                    }
+                }
+
                 while (true)
                 {
                     if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                     {
                         Logger.LogInfo("Shutdown signaled. Stopping.");
-                        await StopAsync().ConfigureAwait(true);
+                        await StopAsync().ConfigureAwait(false);
                         break;
                     }
 
-                    await RunObserverAync().ConfigureAwait(true);
+                    await RunObserverAync().ConfigureAwait(false);
                     await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10), token);
                 }
             }
@@ -276,7 +307,7 @@ namespace ClusterObserver
                                             "ClusterObserverServiceHealth",
                                             HealthState.Warning,
                                             message,
-                                            ObserverConstants.ObserverManagerName,
+                                            ObserverConstants.ClusterObserverManagerName,
                                             token);
                 }
 
@@ -295,9 +326,56 @@ namespace ClusterObserver
                             });
                 }
 
+                // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
+                if (observer.ConfigSettings.EnableOperationalTelemetry)
+                {
+                    try
+                    {
+                        using var telemetryEvents = new TelemetryEvents(
+                                                            FabricClientInstance,
+                                                            FabricServiceContext,
+                                                            token);
+
+                        var data = new CriticalErrorEventData
+                        {
+                            Source = ObserverConstants.ClusterObserverManagerName,
+                            ErrorMessage = e.Message,
+                            ErrorStack = e.StackTrace,
+                            CrashTime = DateTime.UtcNow.ToString("o"),
+                            Version = InternalVersionNumber
+                        };
+
+                        string filepath = Path.Combine(Logger.LogFolderBasePath, $"co_critical_error_telemetry.log");
+                        _ = telemetryEvents.EmitCriticalErrorEvent(data, ObserverConstants.ClusterObserverName, filepath);
+                    }
+                    catch
+                    {
+                        // Telemetry is non-critical and should not take down FO.
+                    }
+                }
+
                 // Don't swallow the unhandled exception. Fix the bug.
                 throw;
             }
+        }
+
+        private ClusterObserverOperationalEventData GetClusterObserverInternalTelemetryData()
+        {
+            ClusterObserverOperationalEventData telemetryData = null;
+
+            try
+            {
+                telemetryData = new ClusterObserverOperationalEventData
+                {
+                    Version = InternalVersionNumber
+                };
+            }
+            catch (Exception e) when (e is ArgumentException)
+            {
+
+            }
+
+            return telemetryData;
         }
 
         public async Task StopAsync()
@@ -330,7 +408,7 @@ namespace ClusterObserver
                                             "ClusterObserverServiceHealth",
                                             HealthState.Warning,
                                             $"{e}",
-                                            ObserverConstants.ObserverManagerName,
+                                            ObserverConstants.ClusterObserverManagerName,
                                             token);
                 }
 
@@ -372,8 +450,7 @@ namespace ClusterObserver
                 if (!isCompleted)
                 {
                     string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. Aborting.";
-                    
-                    await SignalAbortToRunningObserverAsync().ConfigureAwait(true);
+                    await SignalAbortToRunningObserverAsync().ConfigureAwait(false);
 
                     Logger.LogWarning(observerHealthWarning);
 
@@ -384,7 +461,7 @@ namespace ClusterObserver
                                                 "ObserverHealthReport",
                                                 HealthState.Warning,
                                                 observerHealthWarning,
-                                                ObserverConstants.ObserverManagerName,
+                                                ObserverConstants.ClusterObserverManagerName,
                                                 token);
                     }
 
@@ -419,7 +496,7 @@ namespace ClusterObserver
                                             "ObserverHealthReport",
                                             HealthState.Warning,
                                             msg,
-                                            ObserverConstants.ObserverManagerName,
+                                            ObserverConstants.ClusterObserverManagerName,
                                             token);
                 }
 
@@ -457,7 +534,6 @@ namespace ClusterObserver
 
             observer = new ClusterObserver(e.NewPackage.Settings);
             cts = new CancellationTokenSource();
-
             Logger.LogInfo("Application Parameter upgrade complete...");
             appParamsUpdating = false;
         }

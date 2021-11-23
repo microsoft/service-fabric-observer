@@ -50,6 +50,8 @@ namespace FabricObserver.Observers
         private string fileName;
         private readonly Stopwatch stopwatch;
         private readonly object lockObj = new object();
+        private int appCount;
+        private int serviceCount;
 
         public int MaxChildProcTelemetryDataCount
         {
@@ -676,7 +678,6 @@ namespace FabricObserver.Observers
 
                 // Generate a Service Fabric Health Report.
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
-                CurrentWarningCount++;
 
                 if (IsTelemetryEnabled)
                 {
@@ -724,7 +725,6 @@ namespace FabricObserver.Observers
 
                 // Generate a Service Fabric Health Report.
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
-                CurrentWarningCount++;
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
@@ -978,7 +978,6 @@ namespace FabricObserver.Observers
 
                     // Generate a Service Fabric Health Report.
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
-                    CurrentWarningCount++;
 
                     // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                     if (IsTelemetryEnabled)
@@ -1071,9 +1070,29 @@ namespace FabricObserver.Observers
 
             int repCount = ReplicaOrInstanceList.Count;
 
-            // For use in internal diagnostic telemetry.
-            MonitoredServiceProcessCount = repCount;
-            MonitoredAppCount = deployedTargetList.Count;
+            // internal diagnostic telemetry \\
+
+            // Do not emit the same service count data over and over again.
+            if (repCount != serviceCount)
+            {
+                MonitoredServiceProcessCount = repCount;
+                serviceCount = repCount;
+            }
+            else
+            {
+                MonitoredServiceProcessCount = 0;
+            }
+
+            // Do not emit the same app count data over and over again.
+            if (deployedTargetList.Count != appCount)
+            {
+                MonitoredAppCount = deployedTargetList.Count;
+                appCount = deployedTargetList.Count;
+            }
+            else
+            {
+                MonitoredAppCount = 0;
+            }
 
             if (!EnableVerboseLogging)
             {
@@ -1197,22 +1216,13 @@ namespace FabricObserver.Observers
 
                             // Generate a Service Fabric Health Report.
                             HealthReporter.ReportHealthToServiceFabric(healthReport);
-                            
-                            if (ObserverManager.ObserverFailureHealthStateLevel == HealthState.Warning)
-                            {
-                                CurrentWarningCount++;
-                            }
-                            else if (ObserverManager.ObserverFailureHealthStateLevel == HealthState.Error)
-                            {
-                                CurrentErrorCount++;
-                            }
 
                             // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                             if (IsTelemetryEnabled)
                             {
                                 _ = TelemetryClient?.ReportHealthAsync(
                                                             $"UserAccountPrivilege({parentProc?.ProcessName})",
-                                                            HealthState.Warning,
+                                                            ObserverManager.ObserverFailureHealthStateLevel,
                                                             message,
                                                             ObserverName,
                                                             token,
@@ -1227,7 +1237,7 @@ namespace FabricObserver.Observers
                                                 new
                                                 {
                                                     Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
-                                                    Level = "Warning",
+                                                    Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
                                                     Message = message,
                                                     ObserverName,
                                                     ServiceName = repOrInst?.ServiceName?.OriginalString

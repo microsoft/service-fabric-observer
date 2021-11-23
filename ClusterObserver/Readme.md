@@ -38,23 +38,24 @@ Example Configuration:
 <?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. 0 means run continuously (not recommended if RunInterval not set). -->
+    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. Internally, the run loop will sleep for 10 seconds if this
+         setting is not greater than 0. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
-         Below setting represents 30 minutes. -->
+         Below setting represents 60 minutes. -->
     <Parameter Name="ObserverExecutionTimeout" Value="3600" />
     <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large clusters. -->
     <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          ClusterObserver will write to its own directory on this path.
          **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
-    <Parameter Name="ObserverLogPath" Value="clusterobserver_logs" />
+    <Parameter Name="ObserverLogPath" Value="cluster_observer_logs" />
     <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="false" />
-    <Parameter Name="EnableEventSourceProvider" Value="true" />
+    <Parameter Name="EnableETWProvider" Value="true" />
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. This can be overriden by the setting 
          in the ClusterObserverConfiguration section. The idea there is that you can do an application parameter update and turn this feature on and off. -->
     <Parameter Name="EnableTelemetry" Value="true" />
@@ -95,13 +96,68 @@ Example Configuration:
     <!-- How often to run ClusterObserver. This is a Timespan value, e.g., 00:10:00 means every 10 minutes, for example. -->
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Report on currently executing Repair Jobs in the cluster. -->
-    <Parameter Name="MonitorRepairJobs" Value="" MustOverride="true" />
+    <Parameter Name="MonitorRepairJobs" Value="" MustOverride ="true" />
+    <!-- CO diagnostic telemetry. -->
+    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
 </Settings>
-
 ``` 
+
 Example LogAnalytics Query  
 
 ![alt text](/Documentation/Images/COQueryFileHandles.png "") 
 
 You should configure FabricObserver to monitor ClusterObserver, of course. :)
+
+## Operational Telemetry
+
+ClusterObserver operational data is transmitted to Microsoft and contains information about ClusterObserver. 
+
+**This information is only used by the Service Fabric team and will be retained for no more than 90 days.** 
+
+Disabling / Enabling transmission of Operational Data: 
+
+Transmission of operational data is controlled by a setting and can be easily turned off. ```EnableOperationalTelemetry``` setting in ```ApplicationManifest.xml``` controls transmission of Operational data. 
+
+Setting the value to false as below will immediately stop the transmission of operational data: 
+
+**\<Parameter Name="EnableOperationalTelemetry" DefaultValue="false" />** 
+
+#### Questions we want to answer from data: 
+
+- CO started successfully.
+-	Health of CO 
+       -	If CO crashes with an unhandled exception that can be caught, related error information will be sent to us (this will include the offending FO stack). This will help us improve quality. 
+-	This telemetry is sent only once, after the deployed CO instance starts monitoring.
+
+#### Operational data details: 
+
+Here is a full example of exactly what is sent in one of these telemetry events, in this case, from an SFRP cluster: 
+
+```JSON
+{
+    "EventName": "OperationalEvent",
+    "TaskName": "ClusterObserver",
+    "ClusterId": "00000000-1111-1111-0000-00f00d000d",
+    "ClusterType": "SFRP",
+    "COVersion": "2.1.12",
+    "Timestamp": "2021-11-22T19:02:04.4287671Z",
+    "OS": "Windows"
+}
+```
+
+Let's take a look at the data and why we think it is useful to share with us. We'll go through each object property in the JSON above.
+-	**EventName** - this is the name of the telemetry event.
+-	**TaskName** - this specifies that the event is from ClusterObserver.
+-	**ClusterId** - this is used to both uniquely identify a telemetry event and to correlate data that comes from a cluster.
+-	**ClusterType** - this is the type of cluster: Standalone, SFRP or undefined.
+-	**COVersion** - this is the internal version of CO (if you have your own version naming, we will only know what the CO code version is (not your specific CO app version name)).
+-	**Timestamp** - this is the time, in UTC, when CO sent the telemetry.
+-	**OS** - this is the operating system CO is running on (Windows or Linux).
+
+If the ClusterType is not SFRP then a TenantId (Guid) is sent for use in the same way we use ClusterId. 
+
+We would greatly appreciate you sharing this information with us!
+
+
+

@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace FabricObserver.TelemetryLib
+namespace ClusterObserver.Utilities
 {
     /// <summary>
     /// Helper class to execute fabric client operations with retry.
@@ -18,6 +18,7 @@ namespace FabricObserver.TelemetryLib
     public static class FabricClientRetryHelper
     {
         private static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromMinutes(2);
+        private static readonly Logger Logger = new Logger("FabricClientRetryHelper");
 
         /// <summary>
         /// Helper method to execute given function with defaultFabricClientRetryErrors and default Operation Timeout.
@@ -74,8 +75,16 @@ namespace FabricObserver.TelemetryLib
 
                     if (retryElseSuccess)
                     {
+                        Logger.LogInfo($"ExecuteFabricActionWithRetryAsync: Retrying due to Exception: {e}");
+
                         if (watch.Elapsed > operationTimeout)
                         {
+                            Logger.LogWarning(
+                                    "ExecuteFabricActionWithRetryAsync: Done Retrying. " +
+                                    $"Time Elapsed: {watch.Elapsed.TotalSeconds}, " +
+                                    $"Timeout: {operationTimeout.TotalSeconds}. " +
+                                    $"Throwing Exception: {e}");
+
                             throw;
                         }
 
@@ -83,6 +92,8 @@ namespace FabricObserver.TelemetryLib
 
                         continue;
                     }
+
+                    Logger.LogInfo($"ExecuteFabricActionWithRetryAsync: Exception {e} Handled but No Retry.");
 
                     return default;
                 }
