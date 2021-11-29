@@ -32,8 +32,8 @@ namespace FabricObserver.Observers
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
         private readonly List<ObserverBase> observers;
-        private readonly DateTime StartDateTime;
         private volatile bool shutdownSignaled;
+        private DateTime StartDateTime;
         private bool disposed;
         private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
@@ -150,8 +150,6 @@ namespace FabricObserver.Observers
             {
                 observer
             });
-
-            StartDateTime = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -193,11 +191,12 @@ namespace FabricObserver.Observers
             SetPropertiesFromConfigurationParameters();
             observers = serviceProvider.GetServices<ObserverBase>().ToList();
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-            StartDateTime = DateTime.UtcNow;
         }
 
         public async Task StartObserversAsync()
         {
+            StartDateTime = DateTime.UtcNow;
+
             try
             {
                 // Nothing to do here.
