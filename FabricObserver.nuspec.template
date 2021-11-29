@@ -2,12 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.22</version>
+    <version>3.1.23</version>
     <releaseNotes>
 - Bug fixes in telemetry.
-- Bug fix in version check feature.
-- Changes to default settings values (regression).
-- Code improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

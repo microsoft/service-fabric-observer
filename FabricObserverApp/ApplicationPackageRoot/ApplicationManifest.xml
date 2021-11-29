@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can use an XML diff/merge tool to make upgrading your base configuration to the latest version easier. 
      Get the tool here: https://github.com/gittorre/XmlDiffPatchSF -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.22" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.23" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <!-- Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
        simple configuration updates for them. By design, any observer you make using our 
        extensibility model will employ the same basic config parameters as all observers do.
@@ -203,7 +203,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.22" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.23" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

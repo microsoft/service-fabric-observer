@@ -40,7 +40,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.22";
+        private const string InternalVersionNumber = "3.1.23";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -634,40 +634,43 @@ namespace FabricObserver.Observers
                 {
                     if (!observerData.ContainsKey(obs.ObserverName))
                     {
-                        _=  observerData.TryAdd(
+                        _ = observerData.TryAdd(
                                 obs.ObserverName,
-                                new AppServiceObserverData
+                                new ObserverData
                                 {
-                                    MonitoredAppCount = obs.MonitoredAppCount,
-                                    MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount,
                                     ErrorCount = obs.CurrentErrorCount,
-                                    WarningCount = obs.CurrentWarningCount
+                                    WarningCount = obs.CurrentWarningCount,
+                                    ServiceData = new ServiceData()
+                                    {
+                                        MonitoredAppCount = obs.MonitoredAppCount,
+                                        MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount
+                                    }
                                 });
                     }
                     else
                     {
-                        observerData[obs.ObserverName] =
-                                new AppServiceObserverData
+                        observerData[obs.ObserverName].ErrorCount = obs.CurrentErrorCount;
+                        observerData[obs.ObserverName].WarningCount = obs.CurrentWarningCount;
+                        observerData[obs.ObserverName].ServiceData =
+                                new ServiceData
                                 {
                                     MonitoredAppCount = obs.MonitoredAppCount,
-                                    MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount,
-                                    ErrorCount = obs.CurrentErrorCount,
-                                    WarningCount = obs.CurrentWarningCount
+                                    MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount
                                 };
                     }
 
                     // Concurrency
                     if (obs.ObserverName == ObserverConstants.AppObserverName)
                     {
-                        (observerData[ObserverConstants.AppObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as AppObserver).EnableConcurrentMonitoring;
+                        observerData[ObserverConstants.AppObserverName].ServiceData.ConcurrencyEnabled = (obs as AppObserver).EnableConcurrentMonitoring;
                     }
                     else if (obs.ObserverName == ObserverConstants.ContainerObserverName)
                     {
-                        (observerData[ObserverConstants.ContainerObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as ContainerObserver).EnableConcurrentMonitoring;
+                        observerData[ObserverConstants.ContainerObserverName].ServiceData.ConcurrencyEnabled = (obs as ContainerObserver).EnableConcurrentMonitoring;
                     }
                     else if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
                     {
-                        (observerData[ObserverConstants.FabricSystemObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as FabricSystemObserver).EnableConcurrentMonitoring;
+                        observerData[ObserverConstants.FabricSystemObserverName].ServiceData.ConcurrencyEnabled = (obs as FabricSystemObserver).EnableConcurrentMonitoring;
                     }
                 }
                 else

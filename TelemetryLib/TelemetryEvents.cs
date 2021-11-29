@@ -64,7 +64,7 @@ namespace FabricObserver.TelemetryLib
                     { "EventRunInterval", runInterval.ToString() },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
-                    { "NodeNameHash", nodeHashString ?? string.Empty },
+                    { "NodeNameHash", nodeHashString },
                     { "FOVersion", foData.Version },
                     { "HasPlugins", foData.HasPlugins.ToString() },
                     { "ParallelCapable", foData.ParallelExecutionCapable.ToString() },
@@ -104,40 +104,75 @@ namespace FabricObserver.TelemetryLib
                     double data = 0;
                     string key;
 
-                    // These observers monitor app services/containers.
+                    // These observers monitor app services/containers and therefore the ServiceData property will not be null.
                     if (obData.Key == appobs || obData.Key == fsobs || obData.Key == netobs || obData.Key == contobs)
                     {
+                        var serviceData = obData.Value.ServiceData;
+
+                        if (serviceData == null)
+                        {
+                            continue;
+                        }
+
                         // App count.
-                        data = (obData.Value as AppServiceObserverData).MonitoredAppCount;
+                        data = serviceData.MonitoredAppCount;
 
                         // if this value is 0, then this data has already been transmitted. Don't send it again.
                         if (data > 0)
                         {
-                            key = $"{obData.Key}{apps}";
-                            metrics.Add(key, data);
+                            bool addMetric = true;
+
+                            // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
+                            if (File.Exists(logFilePath) && TryDeserializeJson(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
+                            {
+                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData[obData.Key].ServiceData?.MonitoredAppCount == data)
+                                {
+                                    addMetric = false;
+                                }
+                            }
+
+                            if (addMetric)
+                            {
+                                key = $"{obData.Key}{apps}";
+                                metrics.Add(key, data);
+                            }
                         }
 
                         // Process (service instance/primary replica/container) count.
-                        data = (obData.Value as AppServiceObserverData).MonitoredServiceProcessCount;
+                        data = serviceData.MonitoredServiceProcessCount;
 
                         // if this value is 0, then this data has already been transmitted. Don't send it again.
                         if (data > 0)
                         {
-                            key = $"{obData.Key}{procs}";
+                            bool addMetric = true;
 
-                            if (obData.Key == contobs)
+                            // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
+                            if (File.Exists(logFilePath) && TryDeserializeJson(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
                             {
-                                key = $"{obData.Key}{conts}";
+                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData[obData.Key].ServiceData?.MonitoredServiceProcessCount == data)
+                                {
+                                    addMetric = false;
+                                }
                             }
 
-                            metrics.Add(key, data);
+                            if (addMetric)
+                            {
+                                key = $"{obData.Key}{procs}";
+
+                                if (obData.Key == contobs)
+                                {
+                                    key = $"{obData.Key}{conts}";
+                                }
+
+                                metrics.Add(key, data);
+                            }
                         }
                     }
 
                     // Concurrency
                     if (obData.Key == appobs || obData.Key == fsobs || obData.Key == contobs)
                     {
-                        data = (obData.Value as AppServiceObserverData).ConcurrencyEnabled ? 1 : 0;
+                        data = obData.Value.ServiceData.ConcurrencyEnabled ? 1 : 0;
                         key = $"{obData.Key}{parallel}";
                         metrics.Add(key, data);
                     }
@@ -169,10 +204,9 @@ namespace FabricObserver.TelemetryLib
                 // allow time for flushing
                 Thread.Sleep(1000);
 
-                // write a local log file containing the exact information sent to MS \\
-                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray());
-                telemetryData += "," + string.Join(",", metrics.Select(kv => $"\"{kv.Key}\":" + kv.Value).ToArray()) + "}";
-                _ = TryWriteLogFile(logFilePath, telemetryData);
+                // Write a local log file containing the data that was sent to MS.
+                // This file is also used to prevent redundant service data from being transmitted more than once.
+                _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(foData));
 
                 eventProperties.Clear();
                 eventProperties = null;
@@ -375,6 +409,20 @@ namespace FabricObserver.TelemetryLib
             catch (Exception e) when (e is ArgumentException || e is EncoderFallbackException || e is FormatException || e is ObjectDisposedException)
             {
                 result = null;
+                return false;
+            }
+        }
+
+        private bool TryDeserializeJson<FabricObserverOperationalEventData>(string json, out FabricObserverOperationalEventData obj)
+        {
+            try
+            {
+                obj = JsonConvert.DeserializeObject<FabricObserverOperationalEventData>(json);
+                return true;
+            }
+            catch
+            {
+                obj = default;
                 return false;
             }
         }
