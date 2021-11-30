@@ -1013,7 +1013,7 @@ namespace FabricObserver.Observers
                     {
                         // Try and fix malformed app names, if possible. \\
 
-                        if (!application.TargetApp.StartsWith("fabric:/"))
+                        if (application.TargetApp.StartsWith("fabric:/") == false)
                         {
                             application.TargetApp = application.TargetApp.Insert(0, "fabric:/");
                         }
@@ -1702,12 +1702,16 @@ namespace FabricObserver.Observers
                 }
 
                 List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType);
-                ReplicaOrInstanceList.AddRange(replicasOrInstances);
-                
-                var targets = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
-                                                            && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                                || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower()));
-                deployedTargetList.AddRange(targets);
+
+                if (!ReplicaOrInstanceList.Any(r => r.ApplicationName.OriginalString == deployedApp.ApplicationName.OriginalString))
+                {
+                    ReplicaOrInstanceList.AddRange(replicasOrInstances);
+
+                    var targets = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
+                                                                && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
+                                                                    || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower()));
+                    deployedTargetList.AddRange(targets);
+                }
             }
 
             deployedApps.Clear();
@@ -1786,7 +1790,8 @@ namespace FabricObserver.Observers
                             HostProcessId = statefulReplica.HostProcessId,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
-                            ServiceName = statefulReplica.ServiceName
+                            ServiceName = statefulReplica.ServiceName,
+                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId
                         };
 
                         /* In order to provide accurate resource usage of an SF service process we need to also account for
@@ -1830,7 +1835,8 @@ namespace FabricObserver.Observers
                             HostProcessId = statelessInstance.HostProcessId,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
-                            ServiceName = statelessInstance.ServiceName
+                            ServiceName = statelessInstance.ServiceName,
+                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId
                         };
 
                         if (EnableChildProcessMonitoring)
