@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="5.2.1235" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
+  </ItemGroup>
+
 </Project>

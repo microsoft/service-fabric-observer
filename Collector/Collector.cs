@@ -66,8 +66,20 @@ namespace Collector
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
                 var (totalMiliseconds, _) = SFUtilities.getTime();
+
+
+                Dictionary<long, Uri> pids = await SFUtilities.Instance.GetDeployedProcesses(this.Context.NodeContext.NodeName);
+
+                //for instead of Parallel.For because Parallel.For bursts the CPU before we load it and this is more lightweigh on the cpu even though timing isn't exact. This is more relevant
+                for(int i = 0; i<pids.Count; i++)
+                {
+                    long pid=pids.ElementAt(i).Key;
+                    var (cpuPercentage, ram) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
+                }
+
                 var data = new HardwareData(totalMiliseconds,cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
 
+                
 
                 //await AggregatorProxy.PutDataRemote(nodeName,ByteSerialization.ObjectToByteArray(data));
                 

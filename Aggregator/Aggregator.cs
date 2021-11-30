@@ -199,6 +199,7 @@ namespace Aggregator
                 while(await GetMinQueueCount() > 1)
                 {
                    await ProduceSnapshot();
+                   
                 }
             }
         }

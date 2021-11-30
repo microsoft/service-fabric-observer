@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FabricObserver.Observers.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Query;
@@ -89,6 +90,35 @@ namespace Aggregator
         {
             return await queryManager.GetNodeListAsync();
             
+        }
+        /// <summary>
+        /// Return a Dictionary where keys are PIDs and values are service URIs for a given node
+        /// </summary>
+        /// <param name="NodeName"></param>
+        /// <returns></returns>
+        public async Task<Dictionary<long,Uri>> GetDeployedProcesses(string NodeName)
+        {
+            var appList =await queryManager.GetDeployedApplicationListAsync(NodeName);
+            Dictionary<long, Uri> pid=new Dictionary<long, Uri>();
+            foreach(var app in appList)
+            {
+                var replicaList =await queryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
+                foreach(var replica in replicaList)
+                {
+                    //replica.ServiceName
+                    pid.Add(replica.HostProcessId, replica.ServiceName);
+                }
+            }
+            return pid;
+        }
+        public async Task<(double cpuPercentage, float ramMB)> TupleGetResourceUsageForProcess(long pid)
+        {
+            var cpuUsage = new CpuUsage();
+            double cpu=cpuUsage.GetCpuUsagePercentageProcess((int) pid);
+
+            float ramMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb((int)pid, true);
+
+            return (cpu, ramMb);
         }
 
     }

@@ -106,7 +106,22 @@ namespace API.Controllers
         [Route("info")]
         public async Task<string> Info([FromQuery] string NodeName)
         {
-            return "A";
+            string res;
+            var fabricClient = new FabricClient();
+            var queryManager = fabricClient.QueryManager;
+            var appList =await queryManager.GetDeployedApplicationListAsync(NodeName);
+            Dictionary<long, Uri> pid=new Dictionary<long, Uri>();
+            foreach(var app in appList)
+            {
+                var replicaList =await queryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
+                foreach(var replica in replicaList)
+                {
+                    //replica.ServiceName
+                    pid.Add(replica.HostProcessId, replica.ServiceName);
+                }
+            }
+            return pid.ToString();
+            //return "A";
         }
         [HttpGet]
         [Route("infoo")]
