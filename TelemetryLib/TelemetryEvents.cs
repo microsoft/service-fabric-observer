@@ -123,9 +123,9 @@ namespace FabricObserver.TelemetryLib
                             bool addMetric = true;
 
                             // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
-                            if (File.Exists(logFilePath) && TryDeserializeJson(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
+                            if (File.Exists(logFilePath) && TryDeserializeFOEventData(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
                             {
-                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData[obData.Key].ServiceData?.MonitoredAppCount == data)
+                                if (foEventDataFromLogFile?.ObserverData != null && foEventDataFromLogFile?.ObserverData[obData.Key]?.ServiceData?.MonitoredAppCount == data)
                                 {
                                     addMetric = false;
                                 }
@@ -147,9 +147,9 @@ namespace FabricObserver.TelemetryLib
                             bool addMetric = true;
 
                             // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
-                            if (File.Exists(logFilePath) && TryDeserializeJson(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
+                            if (File.Exists(logFilePath) && TryDeserializeFOEventData(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
                             {
-                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData[obData.Key].ServiceData?.MonitoredServiceProcessCount == data)
+                                if (foEventDataFromLogFile?.ObserverData != null && foEventDataFromLogFile?.ObserverData[obData.Key]?.ServiceData?.MonitoredServiceProcessCount == data)
                                 {
                                     addMetric = false;
                                 }
@@ -413,7 +413,7 @@ namespace FabricObserver.TelemetryLib
             }
         }
 
-        private bool TryDeserializeJson<FabricObserverOperationalEventData>(string json, out FabricObserverOperationalEventData obj)
+        private bool TryDeserializeFOEventData(string json, out FabricObserverOperationalEventData obj)
         {
             try
             {
@@ -422,7 +422,7 @@ namespace FabricObserver.TelemetryLib
             }
             catch
             {
-                obj = default;
+                obj = null;
                 return false;
             }
         }

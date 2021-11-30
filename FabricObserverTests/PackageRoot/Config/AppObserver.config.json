@@ -1,28 +1,10 @@
 ﻿[
   {
     "targetApp": "*",
-    "cpuWarningLimitPercent": 90,
-    "networkWarningActivePorts": 8000,
-    "networkWarningEphemeralPorts": 5000
-  },
-  {
-    "targetAppType": "MyAppType",
-    "cpuWarningLimitPercent": 30,
-    "memoryWarningLimitPercent": 20
-  },
-  {
-    "targetApp": "fabric:/MyHardWorkingApp42",
-    "cpuWarningLimitPercent": 90,
-    "memoryWarningLimitPercent": 60
-  },
-  {
-    "targetApp": "MalformedValueApp0",
-    "cpuWarningLimitPercent": 50,
-    "memoryWarningLimitPercent": 40
-  },
-  {
-    "targetApp": "Malformed Value App1",
-    "cpuWarningLimitPercent": 70,
-    "memoryWarningLimitPercent": 20
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 7500,
+    "warningThreadCount": 500,
+    "warningOpenFileHandles": 5000
   }
 ]

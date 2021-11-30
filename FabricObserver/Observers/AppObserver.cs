@@ -1011,10 +1011,31 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
+                        // Try and fix malformed app names, if possible. \\
+
+                        if (!application.TargetApp.StartsWith("fabric:/"))
+                        {
+                            application.TargetApp = application.TargetApp.Insert(0, "fabric:/");
+                        }
+
+                        if (application.TargetApp.Contains("://"))
+                        {
+                            application.TargetApp = application.TargetApp.Replace("://", ":/");
+                        }
+
+                        if (application.TargetApp.Contains(" "))
+                        {
+                            application.TargetApp = application.TargetApp.Replace(" ", string.Empty);
+                        }
+
+                        appUri = new Uri(application.TargetApp);
+
+                        // Make sure app is deployed and not a containerized app. \\
+
                         var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                               () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
                                                                                NodeName,
-                                                                               new Uri(application.TargetApp),
+                                                                               appUri,
                                                                                null,
                                                                                null,
                                                                                ConfigurationSettings.AsyncTimeout,
@@ -1027,28 +1048,17 @@ namespace FabricObserver.Observers
                         }
 
                         int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
-                        
-                        // Ignore containerized apps. ContainerObserver is for those types of services.
+
+                        // Ignore containerized apps. ContainerObserver is designed for those types of services.
                         if (containerHostCount > 0)
                         {
                             continue;
                         }
-
-                        if (!application.TargetApp.StartsWith("fabric:/"))
-                        {
-                            application.TargetApp = application.TargetApp.Insert(0, "fabric:/");
-                        }
-
-                        if (application.TargetApp.Contains(" "))
-                        {
-                            application.TargetApp = application.TargetApp.Replace(" ", string.Empty);
-                        }
-
-                        appUri = new Uri(application.TargetApp);
                     }
                     catch (FabricException)
                     {
-                        // This will happen if the specified app is not found in the codepackage query. Ignore.
+                        // This will happen if the specified app is not found in the codepackage query (so, not deployed). Ignore.
+                        continue;
                     }
                     catch (Exception e) when (e is ArgumentException || e is UriFormatException)
                     {
@@ -1142,14 +1152,14 @@ namespace FabricObserver.Observers
             processInfo ??= new ConcurrentDictionary<int, string>();
 
             // DEBUG
-            var threadData = new ConcurrentQueue<int>();
+            //var threadData = new ConcurrentQueue<int>();
 
             _ = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
                 
                 // DEBUG
-                threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
+                //threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
 
                 var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
@@ -1346,7 +1356,7 @@ namespace FabricObserver.Observers
                     }
 
                     /* In order to provide accurate resource usage of an SF service process we need to also account for
-                       any processes (children) that the service process (parent) created/spawned. */
+                       any processes that the service process (parent) created/spawned (children). */
 
                     procs = new ConcurrentDictionary<string, int>();
 
@@ -1401,8 +1411,8 @@ namespace FabricObserver.Observers
             }
 
             // DEBUG 
-            int threadcount = threadData.Distinct().Count();
-            ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed} Threads: {threadcount}");
+            //int threadcount = threadData.Distinct().Count();
+            ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}"); //Threads: {threadcount}");
             return Task.CompletedTask;
         }
 
