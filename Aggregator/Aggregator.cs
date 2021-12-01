@@ -51,27 +51,27 @@ namespace Aggregator
             Debug.WriteLine("--------GetSnapshots----------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
             System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
 
-            List<HardwareData> HWList = new List<HardwareData>();
-            SFData sf = null;
+            List<NodeData> HWList = new List<NodeData>();
+            ClusterData sf = null;
             bool check=false;
             double minTime =await MinTimeStampInQueue(nodeList);
             bool success=true;
             if (minTime == -1) return null; //queues empty
 
-            byte[] sfb = await PeekFirstAsync(SFData.queueName);
+            byte[] sfb = await PeekFirstAsync(ClusterData.queueName);
             if (sfb != null)
             {
-                sf = (SFData)ByteSerialization.ByteArrayToObject(sfb);
+                sf = (ClusterData)ByteSerialization.ByteArrayToObject(sfb);
                 check = Snapshot.checkTime(minTime, sf.miliseconds);
                 if (!check) success = false; //Snapshot must contain SFData
-                else await DequeueAsync(SFData.queueName);
+                else await DequeueAsync(ClusterData.queueName);
             }
             else  success=false; //QUEUE is empty
             foreach(var node in nodeList)
             {
                 byte[] hwb = await PeekFirstAsync(node.NodeName);
                 if (hwb == null) continue; // QUEUE in empty
-                HardwareData hw = (HardwareData)ByteSerialization.ByteArrayToObject(hwb);
+                NodeData hw = (NodeData)ByteSerialization.ByteArrayToObject(hwb);
                 check = Snapshot.checkTime(minTime, hw.miliseconds);
                 if (check)
                 {
@@ -112,7 +112,7 @@ namespace Aggregator
                     if (count < min_count) min_count = count;
                 }
 
-                count = (int)(await (await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(SFData.queueName)).GetCountAsync(tx));
+                count = (int)(await (await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(ClusterData.queueName)).GetCountAsync(tx));
                 if (count < min_count) min_count = count;
 
             }
@@ -132,15 +132,15 @@ namespace Aggregator
                 var hw = await PeekFirstAsync(node.NodeName);
                 if (hw != null)
                 {
-                    var data=(HardwareData)ByteSerialization.ByteArrayToObject(hw);
+                    var data=(NodeData)ByteSerialization.ByteArrayToObject(hw);
                     if (data.miliseconds < timeStamp || timeStamp == -1) timeStamp = data.miliseconds;
                 }
             }
             
-            var sf = await PeekFirstAsync(SFData.queueName);
+            var sf = await PeekFirstAsync(ClusterData.queueName);
             if (sf != null)
             {
-                var data = (SFData)ByteSerialization.ByteArrayToObject(sf);
+                var data = (ClusterData)ByteSerialization.ByteArrayToObject(sf);
                 if (data.miliseconds < timeStamp || timeStamp == -1) timeStamp = data.miliseconds;
             }
                 

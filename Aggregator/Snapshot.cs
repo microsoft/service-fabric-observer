@@ -9,15 +9,15 @@ namespace Aggregator
     {
 
         public static readonly string queueName = "snapshot";
-        public SFData customMetrics { get; }
-        public List<HardwareData> nodeMetrics { get; }
+        public ClusterData customMetrics { get; }
+        public List<NodeData> nodeMetrics { get; }
 
         // All these attributes represent cluster usage in % at this snapshot
         private float AverageClusterCpuUsage;
         private float AverageClusterRamUsage;
         private float AverageClusterDiskUsage;
 
-        public Snapshot(SFData customMetrics,List<HardwareData> nodeMetrics)
+        public Snapshot(ClusterData customMetrics,List<NodeData> nodeMetrics)
         {
             this.customMetrics = customMetrics;
             this.nodeMetrics = nodeMetrics;
@@ -51,11 +51,11 @@ namespace Aggregator
             float ramSum = 0;
             float diskSum = 0;
             int cnt = nodeMetrics.Count;
-            foreach(HardwareData nodeMetric in nodeMetrics)
+            foreach(NodeData nodeMetric in nodeMetrics)
             {
-                cpuSum += nodeMetric.Cpu;
-                ramSum += (float) nodeMetric.PercentInUse;
-                diskSum += nodeMetric.DiskPercentageInUse();
+                cpuSum += nodeMetric.hardware.Cpu;
+                ramSum += (float) nodeMetric.hardware.PercentInUse;
+                diskSum += nodeMetric.hardware.DiskPercentageInUse();
 
             }
             AverageClusterCpuUsage = ((float)cpuSum) / cnt;

@@ -5,7 +5,7 @@ using System.Text;
 namespace Aggregator
 {
     [Serializable]
-    public class SFData
+    public class ClusterData
     {
 
 
@@ -21,7 +21,7 @@ namespace Aggregator
         public int InstanceCount { get; }
 
 
-        public SFData(double miliseconds,int primaryCount,int replicaCount, int instanceCount, int count)
+        public ClusterData(double miliseconds,int primaryCount,int replicaCount, int instanceCount, int count)
         {
 
             this.miliseconds = miliseconds;

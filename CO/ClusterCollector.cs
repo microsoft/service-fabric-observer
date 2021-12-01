@@ -59,7 +59,7 @@ namespace ClusterCollector
                 Debug.WriteLine("----------- "+await SFUtilities.Instance.TupleGetDeployedCountsAsync());
                 var (primaryCount, replicaCount, instanceCount, count) = await SFUtilities.Instance.TupleGetDeployedCountsAsync();
                 var (totalMiliseconds, _) = SFUtilities.getTime();
-                var data = new SFData(totalMiliseconds,primaryCount,replicaCount,instanceCount,count);
+                var data = new ClusterData(totalMiliseconds,primaryCount,replicaCount,instanceCount,count);
                 var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
@@ -67,7 +67,7 @@ namespace ClusterCollector
                 //await AggregatorProxy.PutDataRemote(SFData.queueName, ByteSerialization.ObjectToByteArray(data));
 
                 //this isn't FIFO
-                AggregatorProxy.PutDataRemote(SFData.queueName, ByteSerialization.ObjectToByteArray(data));
+                AggregatorProxy.PutDataRemote(ClusterData.queueName, ByteSerialization.ObjectToByteArray(data));
 
             }
         }

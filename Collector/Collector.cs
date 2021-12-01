@@ -77,8 +77,8 @@ namespace Collector
                     var (cpuPercentage, ram) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
                 }
 
-                var data = new HardwareData(totalMiliseconds,cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
-
+                var data = new NodeData(totalMiliseconds);
+                data.hardware = new Hardware(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
                 
 
                 //await AggregatorProxy.PutDataRemote(nodeName,ByteSerialization.ObjectToByteArray(data));

@@ -34,7 +34,7 @@ namespace API.Controllers
                     );
 
             List<byte[]> originList=await AggregatorProxy.GetDataRemote(NodeName);
-            List<HardwareData> targetList=originList.ConvertAll<HardwareData>(data=>(HardwareData)ByteSerialization.ByteArrayToObject(data));
+            List<NodeData> targetList=originList.ConvertAll<NodeData>(data=>(NodeData)ByteSerialization.ByteArrayToObject(data));
             foreach(var data in targetList)
             {
                 response += data.ToString();
@@ -53,8 +53,8 @@ namespace API.Controllers
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-            List<byte[]> originList = await AggregatorProxy.GetDataRemote(SFData.queueName);
-            List<SFData> targetList = originList.ConvertAll<SFData>(data => (SFData)ByteSerialization.ByteArrayToObject(data));
+            List<byte[]> originList = await AggregatorProxy.GetDataRemote(ClusterData.queueName);
+            List<ClusterData> targetList = originList.ConvertAll<ClusterData>(data => (ClusterData)ByteSerialization.ByteArrayToObject(data));
             foreach (var data in targetList)
             {
                 response += data.ToString();
