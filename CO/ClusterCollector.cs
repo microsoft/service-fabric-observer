@@ -64,10 +64,10 @@ namespace ClusterCollector
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
-                //await AggregatorProxy.PutDataRemote(SFData.queueName, ByteSerialization.ObjectToByteArray(data));
+                
 
-                //this isn't FIFO
-                AggregatorProxy.PutDataRemote(ClusterData.queueName, ByteSerialization.ObjectToByteArray(data));
+                
+                await AggregatorProxy.PutDataRemote(ClusterData.queueName, ByteSerialization.ObjectToByteArray(data));
 
             }
         }

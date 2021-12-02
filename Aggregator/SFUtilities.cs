@@ -96,22 +96,32 @@ namespace Aggregator
         /// </summary>
         /// <param name="NodeName"></param>
         /// <returns></returns>
-        public async Task<Dictionary<long,Uri>> GetDeployedProcesses(string NodeName)
+        public async Task<Dictionary<int,ProcessData>> GetDeployedProcesses(string NodeName)
         {
             var appList =await queryManager.GetDeployedApplicationListAsync(NodeName);
-            Dictionary<long, Uri> pid=new Dictionary<long, Uri>();
+            Dictionary<int, ProcessData> pid=new Dictionary<int, ProcessData>();
             foreach(var app in appList)
             {
                 var replicaList =await queryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
                 foreach(var replica in replicaList)
                 {
+                    int id=(int)replica.HostProcessId;
                     //replica.ServiceName
-                    pid.Add(replica.HostProcessId, replica.ServiceName);
+                    if (pid.ContainsKey(id))
+                    {
+                        var processData = pid[id];
+                        processData.serviceUris.Add(replica.ServiceName);
+                    }
+                    else
+                    {
+                        pid.Add(id, new ProcessData(id));
+                        pid[id].serviceUris.Add(replica.ServiceName);
+                    }
                 }
             }
             return pid;
         }
-        public async Task<(double cpuPercentage, float ramMB)> TupleGetResourceUsageForProcess(long pid)
+        public async Task<(double cpuPercentage, float ramMB)> TupleGetResourceUsageForProcess(int pid)
         {
             var cpuUsage = new CpuUsage();
             double cpu=cpuUsage.GetCpuUsagePercentageProcess((int) pid);

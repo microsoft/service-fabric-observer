@@ -68,23 +68,30 @@ namespace Collector
                 var (totalMiliseconds, _) = SFUtilities.getTime();
 
 
-                Dictionary<long, Uri> pids = await SFUtilities.Instance.GetDeployedProcesses(this.Context.NodeContext.NodeName);
-
+                Dictionary<int, ProcessData> pids = await SFUtilities.Instance.GetDeployedProcesses(nodeName);
+                List<ProcessData> processDataList = new List<ProcessData>();
                 //for instead of Parallel.For because Parallel.For bursts the CPU before we load it and this is more lightweigh on the cpu even though timing isn't exact. This is more relevant
                 for(int i = 0; i<pids.Count; i++)
                 {
-                    long pid=pids.ElementAt(i).Key;
-                    var (cpuPercentage, ram) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
+                    int pid=pids.ElementAt(i).Key;
+                    var processData = pids[pid];
+                    var (cpuPercentage, ramMb) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
+                    processData.cpuPercentage = cpuPercentage;
+                    processData.ramMb = ramMb;
+                    
+                    float ramPercentage = 100;
+                    if (TotalMemoryGb > 0)ramPercentage = (100 * ramMb) / (1024 * TotalMemoryGb);
+                 
+                    processData.ramPercentage = ramPercentage;
+                    processDataList.Add(processData);
                 }
 
-                var data = new NodeData(totalMiliseconds);
+                var data = new NodeData(totalMiliseconds,nodeName);
                 data.hardware = new Hardware(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
-                
+                data.processList = processDataList;
 
-                //await AggregatorProxy.PutDataRemote(nodeName,ByteSerialization.ObjectToByteArray(data));
                 
-                //This isn't FIFO
-                AggregatorProxy.PutDataRemote(nodeName, ByteSerialization.ObjectToByteArray(data));
+                await AggregatorProxy.PutDataRemote(nodeName, ByteSerialization.ObjectToByteArray(data));
 
 
             }

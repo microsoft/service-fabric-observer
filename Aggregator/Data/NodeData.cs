@@ -12,14 +12,18 @@ namespace Aggregator
     public class NodeData
     {   
         //You extend this class by adding new properties bellow. They must be serializable. 
-
+        public string nodeName { get; }
         public double miliseconds { get; }
         public Hardware hardware { get; set; }
+        public List<ProcessData> processList { get; set; }
+
+        //Implement List<byte[]> to store arbitrary data
 
 
-        public NodeData(double miliseconds)
+        public NodeData(double miliseconds,string nodeName)
         {
             this.miliseconds = miliseconds;
+            this.nodeName = nodeName;
         }
 
         
@@ -28,6 +32,7 @@ namespace Aggregator
         {
             String res;
             res =
+                "\n  Node: "+nodeName+
                 "\n                 Miliseconds: "+this.miliseconds%(SFUtilities.interval*100)+
                 "\n Cpu %: " + hardware.Cpu +
                 "\n Total RAM(GB): " + hardware.TotalMemoryGb +
@@ -36,10 +41,15 @@ namespace Aggregator
 
             foreach (var d in hardware.allDrives)
             {
-                res += "\n      Drive name: " + d.Name +
-                    "\n         Drive total size: " + d.TotalDiskSpaceGB +
-                    "\n         Available space: " + d.AvailableDiskSpaceGB;
+                res += d.ToString();
             }
+            foreach(var p in processList)
+            {
+                res += p.ToString();
+            }
+
+
+
             return res;
         }
 

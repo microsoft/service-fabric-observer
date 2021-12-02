@@ -17,5 +17,14 @@ namespace Aggregator
         public string Name { get; }
         public long TotalDiskSpaceGB { get; }
         public long AvailableDiskSpaceGB { get; }
+
+        public override string ToString()
+        {
+            string res = "\n      Drive name: " + Name +
+                    "\n         Drive total size: " + TotalDiskSpaceGB +
+                    "\n         Available space: " + AvailableDiskSpaceGB; ;
+            
+            return res;
+        }
     }
 }

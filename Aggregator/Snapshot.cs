@@ -31,7 +31,7 @@ namespace Aggregator
             float bottleneck = 0;
             bottleneck = Math.Max(AverageClusterCpuUsage, Math.Max(AverageClusterRamUsage, AverageClusterDiskUsage));
             return (float)Math.Floor((100 * customMetrics.Count) / bottleneck);
-            return 0;
+            
         }
 
         public static bool checkTime(double minTime, double dataTime)
@@ -64,10 +64,20 @@ namespace Aggregator
             return (AverageClusterCpuUsage, AverageClusterRamUsage, AverageClusterDiskUsage);
         }
 
+        public string ToStringAllData()
+        {
+            string res=customMetrics.ToString();
+            foreach(var n in nodeMetrics)
+            {
+                res += n.ToString();
+            }
+            res += "\n************************************************************************************************";
+            return res;
+        }
 
         public override string ToString()
         {
-            String res;
+            string res;
             res =
                 "\n Average cluster capacity: " + this.CalculateAverageCapacity() +
                 "\n Average resource usage: " + this.AverageClusterResourseUsage() +
