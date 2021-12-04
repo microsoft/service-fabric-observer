@@ -133,3 +133,5 @@ namespace Aggregator
 
     }
 }
+
+//public Task<PartitionLoadInformation> GetPartitionLoadInformationAsync(Guid partitionId);
