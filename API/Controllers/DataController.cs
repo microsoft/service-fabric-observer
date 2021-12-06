@@ -102,6 +102,36 @@ namespace API.Controllers
         }
 
         [HttpGet]
+        [Route("NodeAdvice")]
+        public async Task<string> NodeAdvice([FromQuery] string NodeName)
+        {
+            string response = "";
+
+            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                    new Uri("fabric:/Internship/Aggregator"),
+                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                    );
+
+            List<byte[]> originList = await AggregatorProxy.GetDataRemote(Snapshot.queueName);
+            List<Snapshot> targetList = originList.ConvertAll<Snapshot>(data => (Snapshot)ByteSerialization.ByteArrayToObject(data));
+            
+            NodeData data = Snapshot.AverageNodeData(NodeName, targetList);
+
+            response +=
+                "\n Node: " + NodeName +
+                "\n Number of Snaphsot: " + targetList.Count +
+                "\n Average Node CPU: " + data.hardware.Cpu +
+                "\n Average Node RAM: " + data.hardware.PercentInUse +
+                "\n Average Node Disk: " + data.hardware.DiskPercentInUse;
+            foreach(var process in data.processList)
+            {
+                response += process.ToString();
+            }
+
+                return response;
+        }
+
+        [HttpGet]
         [Route("Snapshot")]
         public async Task<string> GetSnapshot()
         {
@@ -113,6 +143,7 @@ namespace API.Controllers
                     );
 
             Snapshot snap = await AggregatorProxy.GetSnapshotRemote();
+            //snap.GetNodeProcessesHardwareData("_Node_3");
             if (snap == null) return "Empty queue";
             response+=
                 "\n Average cluster capacity: "+snap.CalculateAverageCapacity()+

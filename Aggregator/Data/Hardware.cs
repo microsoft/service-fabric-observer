@@ -12,6 +12,9 @@ namespace Aggregator
         public long TotalMemoryGb { get; }
         public long MemoryInUseMb { get; }
         public double PercentInUse { get; }
+
+        public float DiskPercentInUse { get; set; }
+
         public List<Drive> allDrives = new List<Drive>();
 
         public Hardware( float Cpu, long TotalMemoryGb, long MemoryInUseMb, double PercentInUse, DriveInfo[] Drives)
@@ -21,6 +24,7 @@ namespace Aggregator
             this.TotalMemoryGb = TotalMemoryGb;
             this.MemoryInUseMb = MemoryInUseMb;
             this.PercentInUse = PercentInUse;
+            if (Drives == null) return;
             foreach (var d in Drives)
             {
                 var drive = new Drive(
@@ -30,8 +34,9 @@ namespace Aggregator
                     );
                 this.allDrives.Add(drive);
             }
+            this.DiskPercentInUse = DiskPercentageInUse();
         }
-        public float DiskPercentageInUse()
+        private float DiskPercentageInUse()
         {
             int cnt = 0;
             float percentageSum = 0;
@@ -41,7 +46,7 @@ namespace Aggregator
                 percentageSum += ((float)drive.AvailableDiskSpaceGB) / drive.TotalDiskSpaceGB;
                 cnt++;
             }
-
+            if (cnt == 0) return -1;
             return percentageSum / cnt;
         }
     }

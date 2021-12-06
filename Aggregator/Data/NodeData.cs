@@ -25,8 +25,54 @@ namespace Aggregator
             this.miliseconds = miliseconds;
             this.nodeName = nodeName;
         }
-
         
+        public static NodeData AverageNodeData(List<NodeData> list)
+        {
+            AverageDictionary avg = new AverageDictionary();
+            Dictionary<Uri, List<ProcessData>> dic = new Dictionary<Uri, List<ProcessData>>();
+            foreach(var data in list) 
+            {
+                avg.addValue("cpu%", data.hardware.Cpu);
+                avg.addValue("ramTotalGB", data.hardware.TotalMemoryGb);
+                avg.addValue("ramInUseMB", data.hardware.MemoryInUseMb);
+                avg.addValue("ram%", data.hardware.PercentInUse);
+                avg.addValue("disk%", data.hardware.DiskPercentInUse);
+                foreach(var process in data.processList)
+                {
+                    Uri key = process.GetProcessUri();
+                    if (dic.ContainsKey(key))
+                    {
+                        dic[key].Add(process);
+                    }
+                    else
+                    {
+                        List<ProcessData> pList = new List<ProcessData>();
+                        pList.Add(process);
+                        dic.Add(key, pList);
+                    }
+                }
+                
+            }
+            List<ProcessData> finalData = new List<ProcessData>();
+            foreach (var key in dic.Keys)
+            {
+                finalData.Add(ProcessData.AverageProcessData(dic[key],key));
+            }
+                
+            NodeData result = new NodeData(-1, "");
+            Hardware hw = new Hardware(
+                (float)avg.getAverage("cpu%"),
+                (long)avg.getAverage("ramTotalGB"),
+                (long)avg.getAverage("ramInUseMB"),
+                avg.getAverage("ram%"),
+                null);
+            hw.DiskPercentInUse =(float)avg.getAverage("disk%");
+            result.hardware = hw;
+            result.processList = finalData;
+            return result;
+
+
+        }
 
         public override string ToString()
         {

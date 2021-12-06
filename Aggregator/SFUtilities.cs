@@ -105,18 +105,38 @@ namespace Aggregator
                 var replicaList =await queryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
                 foreach(var replica in replicaList)
                 {
+                    int instanceCount = 0;
+                    int replicaCount = 0;
+                    int primaryCount = 0;
+
+                    if (replica.ServiceKind == ServiceKind.Stateful)
+                    {
+                        replicaCount++;
+                        if (((DeployedStatefulServiceReplica)replica).ReplicaRole == ReplicaRole.Primary)
+                        {
+                            primaryCount++;
+                        }
+                    }
+                    else instanceCount++;
+
                     int id=(int)replica.HostProcessId;
+
+                    ProcessData processData = null;
                     //replica.ServiceName
                     if (pid.ContainsKey(id))
                     {
-                        var processData = pid[id];
-                        processData.serviceUris.Add(replica.ServiceName);
+                        processData = pid[id];    
                     }
                     else
                     {
-                        pid.Add(id, new ProcessData(id));
-                        pid[id].serviceUris.Add(replica.ServiceName);
+                        processData = new ProcessData(id);
+                        pid.Add(id, processData);            
                     }
+                    processData.serviceUris.Add(replica.ServiceName);
+                    processData.primaryCount += primaryCount;
+                    processData.replicaCount += replicaCount;
+                    processData.instaceCount += instanceCount;
+                    processData.count++;
                 }
             }
             return pid;
