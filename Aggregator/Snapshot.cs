@@ -147,5 +147,42 @@ namespace Aggregator
             }
             return NodeData.AverageNodeData(list);
         }
+
+        public static Snapshot AverageClusterData(List<Snapshot> snapshots)
+        {
+            Dictionary<string, List<NodeData>> nodeDic= new Dictionary<string, List<NodeData>>();
+            List<ClusterData> clusterList = new List<ClusterData>();
+
+            foreach (Snapshot s in snapshots)
+            {
+                foreach (var nodeData in s.nodeMetrics)
+                {
+                    string nodeName = nodeData.nodeName;
+                    if (nodeDic.ContainsKey(nodeName))
+                    {
+                        nodeDic[nodeName].Add(nodeData);
+                    }
+                    else
+                    {
+                        List<NodeData> l = new List<NodeData>();
+                        l.Add(nodeData);
+                        nodeDic.Add(nodeName, l);
+                    }
+                  
+                }
+                clusterList.Add(s.customMetrics);
+            }
+
+            List<NodeData> averageFromAllNodes = new List<NodeData>();
+            foreach(var list in nodeDic.Values)
+            {
+                averageFromAllNodes.Add(NodeData.AverageNodeData(list));
+            }
+            ClusterData finalClusterData = ClusterData.AverageClusterData(clusterList);
+            //NodeData finalNodeData = NodeData.AverageNodeData(averageFromAllNodes);
+            return new Snapshot(finalClusterData, averageFromAllNodes);
+            
+            
+        }
     }
 }

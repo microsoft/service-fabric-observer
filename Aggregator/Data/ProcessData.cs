@@ -13,7 +13,7 @@ namespace Aggregator
         public float ramPercentage { get; set; }
         public int primaryCount { get; set; }
         public int replicaCount { get; set; }
-        public int instaceCount { get; set; }
+        public int instanceCount { get; set; }
         public int count { get; set; }
         public List<Uri> serviceUris { get; }
 
@@ -27,7 +27,7 @@ namespace Aggregator
                 avg.addValue("ram%", data.ramPercentage);
                 avg.addValue("primary", data.primaryCount);
                 avg.addValue("replica", data.replicaCount);
-                avg.addValue("instance", data.instaceCount);
+                avg.addValue("instance", data.instanceCount);
                 avg.addValue("count", data.count);
 
 
@@ -38,7 +38,7 @@ namespace Aggregator
             p.ramPercentage =(float) avg.getAverage("ram%");
             p.primaryCount =(int) avg.getAverage("primary");
             p.replicaCount =(int) avg.getAverage("replica");
-            p.instaceCount =(int) avg.getAverage("instance");
+            p.instanceCount =(int) avg.getAverage("instance");
             p.count = (int)avg.getAverage("count");
             p.serviceUris.Add(processUri);
             return p;
@@ -60,7 +60,7 @@ namespace Aggregator
             this.serviceUris = new List<Uri>();
             primaryCount = 0;
             replicaCount = 0;
-            instaceCount = 0;
+            instanceCount = 0;
             count = 0;
         }
 

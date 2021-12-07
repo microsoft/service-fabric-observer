@@ -31,6 +31,26 @@ namespace Aggregator
             InstanceCount = instanceCount;
         }
 
+        public static ClusterData AverageClusterData(List<ClusterData> list)
+        {
+            AverageDictionary avg = new AverageDictionary();
+            foreach (var data in list)
+            {
+                avg.addValue("primary", data.PrimaryCount);
+                avg.addValue("replica", data.ReplicaCount);
+                avg.addValue("instance", data.InstanceCount);
+                avg.addValue("count", data.Count);
+            }
+            return new ClusterData(
+               -1,
+               (int)avg.getAverage("primary"),
+               (int)avg.getAverage("replica"),
+               (int)avg.getAverage("instance"),
+               (int)avg.getAverage("count")
+                );
+
+        }
+
         public override string ToString()
         {
             String res;

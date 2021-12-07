@@ -130,6 +130,39 @@ namespace API.Controllers
 
                 return response;
         }
+        [HttpGet]
+        [Route("ClusterAdvice")]
+        public async Task<string> ClusterAdvice()
+        {
+            string response = "";
+
+            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                    new Uri("fabric:/Internship/Aggregator"),
+                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                    );
+
+            List<byte[]> originList = await AggregatorProxy.GetDataRemote(Snapshot.queueName);
+            List<Snapshot> targetList = originList.ConvertAll<Snapshot>(data => (Snapshot)ByteSerialization.ByteArrayToObject(data));
+
+            Snapshot data = Snapshot.AverageClusterData(targetList);
+            NodeData nodeData = NodeData.AverageNodeData(data.nodeMetrics);
+            response +=
+                
+                "\n Number of Snaphsot: " + targetList.Count +
+                "\n Average primary: "+data.customMetrics.PrimaryCount+
+                "\n Average replica: " + data.customMetrics.ReplicaCount +
+                "\n Average instance: " + data.customMetrics.InstanceCount +
+                "\n Average count: " + data.customMetrics.Count +
+                "\n Average CPU: " + nodeData.hardware.Cpu +
+                "\n Average RAM: " + nodeData.hardware.PercentInUse +
+                "\n Average Disk: " + nodeData.hardware.DiskPercentInUse;
+            foreach (var process in nodeData.processList)
+            {
+                response += process.ToString();
+            }
+
+            return response;
+        }
 
         [HttpGet]
         [Route("Snapshot")]

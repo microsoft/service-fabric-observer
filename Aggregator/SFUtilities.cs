@@ -135,7 +135,7 @@ namespace Aggregator
                     processData.serviceUris.Add(replica.ServiceName);
                     processData.primaryCount += primaryCount;
                     processData.replicaCount += replicaCount;
-                    processData.instaceCount += instanceCount;
+                    processData.instanceCount += instanceCount;
                     processData.count++;
                 }
             }
