@@ -472,7 +472,9 @@ namespace FabricObserver.TelemetryLib
             Next.Process(item);
         }
 
+#pragma warning disable IDE0060 // Remove unused parameter: This parameter is required by interface definition.
         private bool SafetoSend(ITelemetry item)
+#pragma warning restore IDE0060 // Remove unused parameter
         {
             IPHostEntry hostEntry;
             int resolvedHostCount = 0;
