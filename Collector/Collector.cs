@@ -20,7 +20,7 @@ namespace Collector
     /// </summary>
     internal sealed class Collector : StatelessService
     {
-        // CT: Don't create a new FabricClient each iteration. Just use one instance.
+        // CT: Don't create a new FabricClient each iteration. Just use one instance. This is important for memory use.
         private readonly FabricClient fabricClient;
         private readonly ObserverHealthReporter healthReporter;
         private readonly Logger logger;
@@ -29,6 +29,8 @@ namespace Collector
             : base(context)
         {
             fabricClient = new FabricClient();
+            
+            // CT: you can use FO Logger to stuff to Collector folder.
             logger = new Logger("Collector");
             healthReporter = new ObserverHealthReporter(logger, fabricClient);
         }
@@ -54,9 +56,11 @@ namespace Collector
                 try
                 {
                     //ServiceEventSource.Current.ServiceMessage(this.Context, "Working-{0}", ++iterations);
+                 
                     var (_, delta) = SFUtilities.getTime();
 
                     // CT: This will throw when the cancellation token is cancelled if it happens after the iteration started.
+                    // This will take down the replica (which is what we want here).
                     await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken); 
 
                     // Collect Data
@@ -104,7 +108,9 @@ namespace Collector
                     // You should await this call.
                     await AggregatorProxy.PutDataRemote(nodeName, ByteSerialization.ObjectToByteArray(data));
                 }
-                catch (Exception e) when (!(e is OperationCanceledException)) // CT: Don't handle the exception thrown when an operation is cancelled. cancellationToken here is the runtime cancellation token. If you do not honor it, then SF will not remove the application. It will be blocked from doing so.
+                // CT: Don't handle the exception thrown when an operation is cancelled. Here, cancellationToken here is the SF runtime cancellation token.
+                // If you do not honor its cancellation, then SF will be blocked from progressing in replica/service Close.
+                catch (Exception e) when (!(e is OperationCanceledException)) 
                 {
                     /*var healthInfo = new HealthInformation("99", "Collector", HealthState.Warning)
                     {
@@ -124,13 +130,15 @@ namespace Collector
                         ServiceName = Context.ServiceName,
                         SourceId = "Collector",
                         Property = "Data Collection Failure",
-                        State = HealthState.Warning
+                        State = HealthState.Warning,
+                        HealthReportTimeToLive = TimeSpan.FromMinutes(10),
+                        EmitLogEvent = true, // This info will also be written to C:\fabric_observer_logs\Collector folder
                     };
 
                     healthReporter.ReportHealthToServiceFabric(appHealthReport);
                     //fabricClient.HealthManager.ReportHealth(appHealthReport);
 
-                    throw; // CT: Fix the bugs.
+                    throw; // CT: Fix the bugs. This will take down the replica/service process. SF will then restart it, per usual.
                 }
             }
         }
