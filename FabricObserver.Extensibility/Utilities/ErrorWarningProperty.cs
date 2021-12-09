@@ -37,5 +37,8 @@ namespace FabricObserver.Observers.Utilities
 
         // Child procs
         public const string ChildProcessCount = "Child Process Count";
+
+        // KVS LVIDs
+        public const string TotalKvsLvidsPercent = "Total LVID Consumption %";
     }
 }

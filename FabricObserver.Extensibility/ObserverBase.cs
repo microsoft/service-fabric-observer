@@ -28,7 +28,6 @@ namespace FabricObserver.Observers
     public abstract class ObserverBase : IObserver
     {
         private const int TtlAddMinutes = 1;
-        private const string FabricSystemAppName = "fabric:/System";
         private bool disposed;
         private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new object();
@@ -716,7 +715,7 @@ namespace FabricObserver.Observers
                 }
                 else // System service report from FabricSystemObserver.
                 {
-                    appName = new Uri(FabricSystemAppName);
+                    appName = new Uri(ObserverConstants.SystemAppName);
                     name = data.Id;
 
                     try
@@ -745,12 +744,12 @@ namespace FabricObserver.Observers
                     ProcessId = procId,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ServiceName = serviceName?.OriginalString ?? string.Empty,
-                    SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
+                    SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
                     Source = ObserverConstants.FabricObserverName
                 };
 
                 // If the source issue is from FSO, then set the SystemServiceProcessName on TD instance.
-                if (appName != null && appName.OriginalString == FabricSystemAppName)
+                if (appName != null && appName.OriginalString == ObserverConstants.SystemAppName)
                 {
                     telemetryData.SystemServiceProcessName = name;
                 }
@@ -789,7 +788,7 @@ namespace FabricObserver.Observers
                                         ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
-                                        SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty
+                                        SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty
                                     });
                 }
             }
@@ -988,6 +987,11 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorTooManyThreads : FOErrorWarningCodes.AppWarningTooManyThreads;
                         break;
 
+                    // Internal monitor for Windows KVS LVID consumption. Only Warning state is supported. This is a non-configurable monitor.
+                    case ErrorWarningProperty.TotalKvsLvidsPercent when healthReportType == HealthReportType.Application:
+                        errorWarningCode = FOErrorWarningCodes.AppWarningKvsLvidsPercentUsed;
+                        break;
+
                     case ErrorWarningProperty.TotalFileHandles:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyOpenFileHandles : FOErrorWarningCodes.NodeWarningTooManyOpenFileHandles;
@@ -1053,7 +1057,7 @@ namespace FabricObserver.Observers
                                         ProcessId = procId,
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
-                                        SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
+                                        SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
                                         Value = data.AverageDataValue
                                     });
                 }
@@ -1138,7 +1142,7 @@ namespace FabricObserver.Observers
                                             ProcessId = replicaOrInstance?.HostProcessId.ToString(),
                                             ServiceName = name ?? string.Empty,
                                             Source = ObserverConstants.FabricObserverName,
-                                            SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
+                                            SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
                                             Value = data.AverageDataValue
                                         });
                     }

@@ -38,8 +38,10 @@ namespace FabricObserver.Observers.Utilities
                 throw new ArgumentException($"Must provide a non-empty {id}.");
             }
 
-            // This can be either a straight List<T>, a CircularBufferCollection<T> or a ConcurrentQueue<T>.
-            if (useCircularBuffer)
+            // Data can be a List<T>, a CircularBufferCollection<T>, or a ConcurrentQueue<T>. \\
+
+            // CircularBufferCollection is not thread safe for writes. 
+            if (useCircularBuffer && !isParallel)
             {
                 Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 3);
             }
@@ -232,12 +234,12 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets SlidingWindow Max: A sorted list of sliding window maximums. This is only availabe when Data is CircularBufferCollection.
         /// </summary>
-        public IList<T> SlidingWindowMax => Data is ConcurrentQueue<T> && Data?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : null;
+        public IList<T> SlidingWindowMax => Data is CircularBufferCollection<T> && Data?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : null;
 
         /// <summary>
         ///  Gets SlidingWindow Min: A sorted list of sliding window minimums. This is only availabe when Data is CircularBufferCollection.
         /// </summary>
-        public IList<T> SlidingWindowMin => Data is ConcurrentQueue<T> && Data ?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : null;
+        public IList<T> SlidingWindowMin => Data is CircularBufferCollection<T> && Data ?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : null;
 
         /// <summary>
         /// Adds numeric data to current instance's Data property. Use this method versus adding directly to Data.

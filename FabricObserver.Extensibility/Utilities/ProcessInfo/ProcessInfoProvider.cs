@@ -54,6 +54,8 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false);
 
+        public abstract double ProcessGetCurrentKvsLvidsUsedPercentage(string procName);
+
         public static int GetProcessThreadCount(int processId)
         {
             try

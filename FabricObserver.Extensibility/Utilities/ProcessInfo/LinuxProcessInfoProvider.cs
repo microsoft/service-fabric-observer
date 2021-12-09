@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
@@ -151,6 +152,12 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return childProcesses;
+        }
+
+        public override double ProcessGetCurrentKvsLvidsUsedPercentage(string procName)
+        {
+            // Not supported on Linux.
+            return -1;
         }
 
         private List<(string ProcName, int Pid)> TupleGetChildProcessInfo(int processId)

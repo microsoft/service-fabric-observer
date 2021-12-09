@@ -25,6 +25,7 @@ namespace FabricObserver.Observers
     public class ContainerObserver : ObserverBase
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
+        private readonly bool isWindows;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allMemDataMB;
 
@@ -54,6 +55,7 @@ namespace FabricObserver.Observers
         {
             var configSettings = new MachineInfoModel.ConfigSettings(context);
             ConfigPackagePath = configSettings.ConfigPackagePath;
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         // OsbserverManager passes in a special token to ObserveAsync and ReportAsync that enables it to stop this observer outside of
@@ -273,7 +275,7 @@ namespace FabricObserver.Observers
                 {
                     token.ThrowIfCancellationRequested();
 
-                    if (app.ApplicationName.OriginalString == "fabric:/System")
+                    if (app.ApplicationName.OriginalString == ObserverConstants.SystemAppName)
                     {
                         continue;
                     }
@@ -486,7 +488,7 @@ namespace FabricObserver.Observers
                 {
                     string msg = $"docker stats exited with {exitStatus}: {error}";
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                 "in order for ContainerObserver to function correctly on Windows.";

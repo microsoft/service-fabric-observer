@@ -138,7 +138,7 @@ namespace FabricObserverTests
                 }
 
                 // System reports
-                var sysAppHealth = await client.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System")).ConfigureAwait(false);
+                var sysAppHealth = await client.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName)).ConfigureAwait(false);
 
                 if (sysAppHealth != null)
                 {
@@ -147,7 +147,7 @@ namespace FabricObserverTests
                                                 && (s.HealthInformation.HealthState == HealthState.Error
                                                     || s.HealthInformation.HealthState == HealthState.Warning)))
                     {
-                        healthReport.AppName = new Uri("fabric:/System");
+                        healthReport.AppName = new Uri(ObserverConstants.SystemAppName);
                         healthReport.Property = evt.HealthInformation.Property;
                         healthReport.SourceId = evt.HealthInformation.SourceId;
 

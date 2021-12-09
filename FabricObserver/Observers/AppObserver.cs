@@ -29,6 +29,9 @@ namespace FabricObserver.Observers
     // in AppObserver.config.json. This observer will also emit telemetry (ETW, LogAnalytics/AppInsights) if enabled in Settings.xml (ObserverManagerConfiguration) and ApplicationManifest.xml (AppObserverEnableEtw).
     public class AppObserver : ObserverBase
     {
+        private const double KvsLvidsWarningPercentage = 75.0;
+        private readonly bool isWindows;
+
         // Support for concurrent monitoring.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppMemDataMb;
@@ -37,6 +40,7 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppEphemeralPortsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppHandlesData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppThreadsData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppKvsLvidsData;
         private ConcurrentDictionary<int, string> processInfo;
 
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration. List<T> is thread-safe for reads.
@@ -89,6 +93,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        public bool EnableKvsLvidMonitoring
+        {
+            get; set;
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
         /// </summary>
@@ -98,6 +107,7 @@ namespace FabricObserver.Observers
             configSettings = new ConfigSettings(FabricServiceContext);
             ConfigPackagePath = configSettings.ConfigPackagePath;
             stopwatch = new Stopwatch();
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -356,6 +366,27 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
 
+                // KVS LVIDs - Parent process
+                if (EnableKvsLvidMonitoring && AllAppKvsLvidsData.ContainsKey(id))
+                {
+                    var parentFrud = AllAppKvsLvidsData[id];
+
+                    if (hasChildProcs)
+                    {
+                        ProcessChildProcs(AllAppKvsLvidsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+
+                    // FO will warn if the stateful (Actor, for example) service process has used 75% or greater of available LVIDs. This is not configurable (and a temporary feature).
+                    ProcessResourceDataReportHealth(
+                            parentFrud,
+                            0,
+                            KvsLvidsWarningPercentage,
+                            TTL,
+                            HealthReportType.Application,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps);
+                }
+
                 // Child proc info telemetry.
                 if (hasChildProcs && MaxChildProcTelemetryDataCount > 0)
                 {
@@ -476,7 +507,7 @@ namespace FabricObserver.Observers
 
                             // Windows process dump support for descendant/child processes \\
 
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && app.DumpProcessOnError && EnableProcessDumps)
+                            if (isWindows && app.DumpProcessOnError && EnableProcessDumps)
                             {
                                 string prop = frud.Value.Property;
                                 bool dump = false;
@@ -650,6 +681,12 @@ namespace FabricObserver.Observers
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
+
+            // KVS LVID Monitoring - Windows-only.
+            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
+            {
+                EnableKvsLvidMonitoring = enableLvidMonitoring && isWindows;
+            }
 
             configSettings.Initialize(
                             FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
@@ -1149,6 +1186,7 @@ namespace FabricObserver.Observers
             AllAppEphemeralPortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
+            AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             processInfo ??= new ConcurrentDictionary<int, string>();
 
             // DEBUG
@@ -1164,7 +1202,7 @@ namespace FabricObserver.Observers
                 var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
-                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false;
+                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false, checkLvids = false;
                 var application = deployedTargetList?.First(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString.ToLower() ||
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
@@ -1186,8 +1224,7 @@ namespace FabricObserver.Observers
                     {
                         parentProc = Process.GetProcessById(parentPid);
 
-                        // This is strange and can happen during a redeployment.
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && parentProc?.ProcessName == "Idle")
+                        if (isWindows && parentProc?.ProcessName == "Idle")
                         {
                             return;
                         }
@@ -1355,6 +1392,13 @@ namespace FabricObserver.Observers
                         checkThreads = true;
                     }
 
+                    // This feature (KVS LVIDs percentage in use monitoring) is only available on Windows. This is non-configurable and will be removed when SF ships with the latest version of ESE.
+                    if (EnableKvsLvidMonitoring && repOrInst.ServiceKind == ServiceKind.Stateful)
+                    {
+                        _ = AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring));
+                        checkLvids = true;
+                    }
+
                     /* In order to provide accurate resource usage of an SF service process we need to also account for
                        any processes that the service process (parent) created/spawned (children). */
 
@@ -1389,6 +1433,7 @@ namespace FabricObserver.Observers
                             checkEphemeralPorts,
                             checkHandles,
                             checkThreads,
+                            checkLvids,
                             procs,
                             id,
                             token);
@@ -1426,6 +1471,7 @@ namespace FabricObserver.Observers
                             bool checkEphemeralPorts,
                             bool checkHandles,
                             bool checkThreads,
+                            bool checkLvids,
                             ConcurrentDictionary<string, int> procs,
                             string id,
                             CancellationToken token)
@@ -1448,7 +1494,7 @@ namespace FabricObserver.Observers
                 {
                     float handles = 0F;
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, null, ReplicaOrInstanceList.Count >= 50); 
                     }
@@ -1476,7 +1522,7 @@ namespace FabricObserver.Observers
                 {
                     int threads = 0;
                     
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         try
                         {
@@ -1534,6 +1580,22 @@ namespace FabricObserver.Observers
                     {
                         _ = AllAppEphemeralPortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                         AllAppEphemeralPortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
+                    }
+                }
+
+                // KVS LVIDs
+                if (isWindows && checkLvids && ReplicaOrInstanceList.Any(r => r.HostProcessId == procId && r.ServiceKind == ServiceKind.Stateful))
+                {
+                    var lvidPct = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage(procName);
+
+                    if (procId == parentPid)
+                    {
+                        AllAppKvsLvidsData[id].AddData(lvidPct);
+                    }
+                    else
+                    {
+                        _ = AllAppKvsLvidsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                        AllAppKvsLvidsData[$"{id}:{procName}{procId}"].AddData(lvidPct);
                     }
                 }
 
@@ -1769,7 +1831,7 @@ namespace FabricObserver.Observers
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
                     {
                         if (filterList != null && filterType != ServiceFilterType.None)
                         {
@@ -1788,6 +1850,7 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
+                            ServiceKind = statefulReplica.ServiceKind,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
                             ServiceName = statefulReplica.ServiceName,
@@ -1833,6 +1896,7 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
+                            ServiceKind = statelessInstance.ServiceKind,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
                             ServiceName = statelessInstance.ServiceName,
@@ -1916,6 +1980,18 @@ namespace FabricObserver.Observers
             {
                 AllAppTotalActivePortsData?.Clear();
                 AllAppTotalActivePortsData = null;
+            }
+
+            if (AllAppThreadsData != null && AllAppThreadsData.All(frud => !frud.Value.ActiveErrorOrWarning))
+            {
+                AllAppThreadsData?.Clear();
+                AllAppThreadsData = null;
+            }
+
+            if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.All(frud => !frud.Value.ActiveErrorOrWarning))
+            {
+                AllAppKvsLvidsData?.Clear();
+                AllAppKvsLvidsData = null;
             }
         }
 
@@ -2013,6 +2089,33 @@ namespace FabricObserver.Observers
             }
 
             DataTableFileLogger.Flush();
+        }
+
+        public double GetMaximumLvidPercentInUseForProcess(string procName)
+        {
+            // KVS is not supported on Linux.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return -1;
+            }
+
+            try
+            {
+                using var performanceCounter = new PerformanceCounter(
+                                                    categoryName: "Windows Fabric Database",
+                                                    counterName: "Long-Value Maximum LID",
+                                                    instanceName: procName,
+                                                    readOnly: true);
+
+                float result = performanceCounter.NextValue();
+                long maxLvids = (long)Math.Pow(2, 31);
+                double usedPct = (double)(result * 100) / maxLvids;
+                return usedPct;
+            }
+            catch
+            {
+                return 0;
+            }
         }
     }
 }

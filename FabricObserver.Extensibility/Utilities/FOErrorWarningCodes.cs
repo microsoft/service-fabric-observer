@@ -70,6 +70,9 @@ namespace FabricObserver.Observers.Utilities
         public const string AppErrorTooManyThreads = "FO039";
         public const string AppWarningTooManyThreads = "FO040";
 
+        // Process KVS LVIDs (Percent of maximum available currently in use)
+        public const string AppWarningKvsLvidsPercentUsed = "FO041";
+
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
             get;
@@ -91,7 +94,8 @@ namespace FabricObserver.Observers.Utilities
             { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
             { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
             { AppErrorTooManyThreads, "AppErrorTooManyThreads" },
-            { AppWarningTooManyThreads, "AppWarningTooManyThreads" }
+            { AppWarningTooManyThreads, "AppWarningTooManyThreads" },
+            { AppWarningKvsLvidsPercentUsed, "AppWarningKvsLvidsPercentUsed"}
         };
 
         public static Dictionary<string, string> NodeErrorCodesDictionary

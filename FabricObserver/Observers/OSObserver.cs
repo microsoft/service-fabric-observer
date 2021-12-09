@@ -31,6 +31,7 @@ namespace FabricObserver.Observers
     public class OSObserver : ObserverBase
     {
         private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
+        private readonly bool isWindows;
         private string osReport;
         private string osStatus;
         private bool auStateUnknown;
@@ -52,7 +53,7 @@ namespace FabricObserver.Observers
         public OSObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -66,7 +67,7 @@ namespace FabricObserver.Observers
             Token = token;
 
             // This only makes sense for Windows and only for non-dev clusters.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (isWindows)
             {
                 await InitializeAUCheckAsync();
 
@@ -224,7 +225,7 @@ namespace FabricObserver.Observers
                 HealthReporter.ReportHealthToServiceFabric(report);
 
                 // Windows Update automatic download enabled?
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && isAUAutomaticDownloadEnabled)
+                if (isWindows && isAUAutomaticDownloadEnabled)
                 {
                     CurrentWarningCount++;
 
@@ -295,7 +296,7 @@ namespace FabricObserver.Observers
 
         private async Task InitializeAUCheckAsync()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!isWindows)
             {
                 return;
             }
@@ -315,7 +316,7 @@ namespace FabricObserver.Observers
                 await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () =>
                                                    FabricClientInstance.QueryManager.GetServiceListAsync(
-                                                                                        new Uri("fabric:/System"),
+                                                                                        new Uri(ObserverConstants.SystemAppName),
                                                                                         null,
                                                                                         ConfigurationSettings.AsyncTimeout,
                                                                                         Token),
@@ -329,9 +330,9 @@ namespace FabricObserver.Observers
             return infraInstances;
         }
 
-        private static string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
+        private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!isWindows)
             {
                 return null;
             }
@@ -471,7 +472,7 @@ namespace FabricObserver.Observers
 
                 _ = sb.AppendLine($"LastBootUpTime*: {osInfo.LastBootUpTime}");
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (isWindows)
                 {
                     // WU AutoUpdate - Automatic Download enabled.
                     if (IsAUCheckSettingEnabled)
@@ -555,7 +556,7 @@ namespace FabricObserver.Observers
 
                     string drvSize;
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         string systemDrv = "Data";
 
@@ -578,7 +579,7 @@ namespace FabricObserver.Observers
 
                 string osHotFixes = string.Empty;
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (isWindows)
                 {
                     osHotFixes = GetWindowsHotFixes(true, token);
 
@@ -596,7 +597,7 @@ namespace FabricObserver.Observers
                 // Telemetry
                 if (IsTelemetryEnabled)
                 {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
                     }
@@ -631,7 +632,7 @@ namespace FabricObserver.Observers
                 // ETW.
                 if (IsEtwEnabled)
                 {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && kbOnlyHotFixes == null)
+                    if (isWindows && kbOnlyHotFixes == null)
                     {
                         kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
                     }

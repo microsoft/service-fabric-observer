@@ -20,6 +20,8 @@ using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
 using Octokit;
+using System.Diagnostics;
+using System.ComponentModel;
 
 namespace FabricObserver.Observers
 {
@@ -197,6 +199,15 @@ namespace FabricObserver.Observers
         {
             StartDateTime = DateTime.UtcNow;
 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // This will fail (handled) if FO is not running as System or Admin user on Windows.
+                if(!TryEnableKVSPerfCounter())
+                {
+                    // TODO: Let the user know...
+                }
+            }
+
             try
             {
                 // Nothing to do here.
@@ -226,11 +237,7 @@ namespace FabricObserver.Observers
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(
-                                                                FabricClientInstance,
-                                                                FabricServiceContext,
-                                                                token);
-
+                            using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
                             var foData = GetFabricObserverInternalTelemetryData();
 
                             if (foData != null)
@@ -321,11 +328,7 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(
-                                                            FabricClientInstance,
-                                                            FabricServiceContext,
-                                                            token);
-
+                        using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
                         var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,
@@ -334,7 +337,6 @@ namespace FabricObserver.Observers
                             CrashTime = DateTime.UtcNow.ToString("o"),
                             Version = InternalVersionNumber
                         };
-
                         string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_critical_error_telemetry.log");
                         _ = telemetryEvents.EmitCriticalErrorEvent(data, ObserverConstants.FabricObserverName, filepath);
                     }
@@ -1166,6 +1168,71 @@ namespace FabricObserver.Observers
             catch
             {
                 // Don't take down FO due to error in version check...
+            }
+        }
+
+        private bool TryEnableKVSPerfCounter()
+        {
+            // First see if the counter is enabled.
+            // Query the LVID counter for Fabric (the result will always be greater than 0 if the performance counter is enabled).
+            // The function ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
+            double x = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage("Fabric");
+
+            if (x > -1)
+            {
+                // Counter is already enabled.
+                return true;
+            }
+
+            try
+            {
+                string error = null, output = null;
+                string batch = Path.Combine(FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path, "install_kvs_perfcounter.bat");
+
+                var ps = new ProcessStartInfo
+                {
+                    Arguments = $"/c {batch}",
+                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    WorkingDirectory = $"{Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)}\\Microsoft Service Fabric\\bin\\Fabric\\Fabric.Code"
+                };
+
+                using var p = new Process();
+
+                // Capture any error information.
+                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                p.OutputDataReceived += (sender, e) => { output += e.Data; };
+                p.StartInfo = ps;
+                _ = p.Start();
+
+                // Start asynchronous read operations on error/output streams.  
+                p.BeginErrorReadLine();
+                p.BeginOutputReadLine();
+                p.WaitForExit();
+                int exitCode = p.ExitCode;
+
+                if (exitCode != 0)
+                {
+                    string message = "Failed to enable Windows Fabric Database LVID performance counter.";
+
+                    // Access Denied.
+                    if (exitCode == 5)
+                    {
+                        message += $" NOTE: FO must run as System or Admin to complete this task.";
+                    }
+
+                    Logger.LogWarning($"{message}{Environment.NewLine}Command Output: {output}{Environment.NewLine}Failure Message(s): {error}");
+                }
+
+                return exitCode == 0;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"TryEnableKVSPerfCounter:{Environment.NewLine}{ex}");
+                return false;
             }
         }
     }

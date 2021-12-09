@@ -30,6 +30,7 @@ namespace FabricObserver.Observers
         private List<FabricResourceUsageData<double>> DiskSpaceAvailableMbData;
         private List<FabricResourceUsageData<double>> DiskSpaceTotalMbData;
         private readonly Stopwatch stopWatch;
+        private readonly bool isWindows;
         private StringBuilder diskInfo = new StringBuilder();
 
         public int DiskSpacePercentErrorThreshold
@@ -58,11 +59,7 @@ namespace FabricObserver.Observers
         public DiskObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                DiskAverageQueueLengthData = new List<FabricResourceUsageData<float>>();
-            }
-
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             stopWatch = new Stopwatch();
         }
 
@@ -90,7 +87,7 @@ namespace FabricObserver.Observers
             DiskSpaceAvailableMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceTotalMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (isWindows)
             {
                 DiskAverageQueueLengthData ??= new List<FabricResourceUsageData<float>>(driveCount);
             }
@@ -133,7 +130,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Current disk queue length. Windows only.
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
+                    if (isWindows && DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                     {
                         DiskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, 1));
                     }
@@ -151,7 +148,7 @@ namespace FabricObserver.Observers
                     }
 
                     // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
                         {
@@ -171,7 +168,7 @@ namespace FabricObserver.Observers
                     DiskSpaceTotalMbData.Find(x => x.Id == id)?.AddData(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
 
                     // This section only needs to run if you have the FabricObserverWebApi app installed.
-                    if (!IsObserverWebApiAppDeployed || !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (!IsObserverWebApiAppDeployed || !isWindows)
                     {
                         continue;
                     }
@@ -228,7 +225,7 @@ namespace FabricObserver.Observers
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (isWindows)
                 {
                     for (int i = 0; i <  DiskAverageQueueLengthData.Count; ++i)
                     {

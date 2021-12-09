@@ -8,10 +8,13 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Newtonsoft.Json;
 
@@ -31,15 +34,18 @@ namespace FabricObserver.TelemetryLib
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
 
-        public TelemetryEvents(
-                    FabricClient fabricClient,
-                    ServiceContext context,
-                    CancellationToken token)
+        public TelemetryEvents(FabricClient fabricClient, ServiceContext context, CancellationToken token)
         {
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
-            appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
+            appInsightsTelemetryConf.ConnectionString = TelemetryConstants.ConnectionString;
+
+            // Attempt to filter and block transmission from restricted regions/clouds. Note, it is really the user's responsibilty to prevent internal diagnostics from being
+            // sent from restricted regions (China) and clouds (Gov) by simply disabling the feature (ObserverManagerEnableOperationalFOTelemetry setting) before deploying FO to the data-restricted location.
+            var telemetryProcessorChainBuilder = appInsightsTelemetryConf.DefaultTelemetrySink.TelemetryProcessorChainBuilder.Use((next) => new RestrictedCloudFilter(next));
+            telemetryProcessorChainBuilder.Build();
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
+
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
             clusterId = ClusterId;
             tenantId = TenantId;
@@ -48,7 +54,7 @@ namespace FabricObserver.TelemetryLib
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
         {
-            if (!telemetryClient.IsEnabled())
+            if (telemetryClient == null || !telemetryClient.IsEnabled())
             {
                 return false;
             }
@@ -149,9 +155,12 @@ namespace FabricObserver.TelemetryLib
                             // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
                             if (File.Exists(logFilePath) && TryDeserializeFOEventData(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
                             {
-                                if (foEventDataFromLogFile?.ObserverData != null && foEventDataFromLogFile?.ObserverData[obData.Key]?.ServiceData?.MonitoredServiceProcessCount == data)
+                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData.ContainsKey(obData.Key))
                                 {
-                                    addMetric = false;
+                                    if (foEventDataFromLogFile.ObserverData[obData.Key].ServiceData.MonitoredServiceProcessCount == data)
+                                    {
+                                        addMetric = false;
+                                    }
                                 }
                             }
 
@@ -198,15 +207,18 @@ namespace FabricObserver.TelemetryLib
                     }
                 }
 
-                telemetryClient?.TrackEvent($"{FOTaskName}.{OperationalEventName}", eventProperties, metrics);
-                telemetryClient?.Flush();
+                telemetryClient.TrackEvent($"{FOTaskName}.{OperationalEventName}", eventProperties, metrics);
+                telemetryClient.Flush();
 
                 // allow time for flushing
                 Thread.Sleep(1000);
 
                 // Write a local log file containing the data that was sent to MS.
                 // This file is also used to prevent redundant service data from being transmitted more than once.
-                _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(foData));
+                if (RestrictedCloudFilter.IsRestricted == false)
+                {
+                    _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(foData));
+                }
 
                 eventProperties.Clear();
                 eventProperties = null;
@@ -226,7 +238,7 @@ namespace FabricObserver.TelemetryLib
 
         public bool EmitCriticalErrorEvent(CriticalErrorEventData errorData, string source, string logFilePath)
         {
-            if (!telemetryClient.IsEnabled())
+            if (telemetryClient == null || !telemetryClient.IsEnabled())
             {
                 return false;
             }
@@ -252,19 +264,21 @@ namespace FabricObserver.TelemetryLib
 
                 if (source == FOTaskName)
                 {
-                    _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out nodeHashString);
+                    _ = TryGetHashStringSha256(serviceContext.NodeContext.NodeName, out nodeHashString);
                     eventProperties.Add("NodeNameHash", nodeHashString);
                 }
 
-                telemetryClient?.TrackEvent($"{FOTaskName}.{CriticalErrorEventName}", eventProperties);
-                telemetryClient?.Flush();
+                telemetryClient.TrackEvent($"{FOTaskName}.{CriticalErrorEventName}", eventProperties);
+                telemetryClient.Flush();
 
                 // allow time for flushing
                 Thread.Sleep(1000);
 
                 // write a local log file containing the exact information sent to MS \\
-                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
-                _ = TryWriteLogFile(logFilePath, telemetryData);
+                if (RestrictedCloudFilter.IsRestricted == false)
+                {
+                    _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(errorData));
+                }
 
                 return true;
             }
@@ -278,7 +292,7 @@ namespace FabricObserver.TelemetryLib
 
         public void Dispose()
         {
-            telemetryClient?.Flush();
+            telemetryClient.Flush();
 
             // allow time for flushing.
             Thread.Sleep(1000);
@@ -324,7 +338,7 @@ namespace FabricObserver.TelemetryLib
 
         public bool EmitClusterObserverOperationalEvent(ClusterObserverOperationalEventData eventData, string logFilePath)
         {
-            if (!telemetryClient.IsEnabled())
+            if (telemetryClient == null || !telemetryClient.IsEnabled())
             {
                 return false;
             }
@@ -350,15 +364,18 @@ namespace FabricObserver.TelemetryLib
                     }
                 }
 
-                telemetryClient?.TrackEvent($"{COTaskName}.{OperationalEventName}", eventProperties);
-                telemetryClient?.Flush();
+                telemetryClient.TrackEvent($"{COTaskName}.{OperationalEventName}", eventProperties);
+                telemetryClient.Flush();
 
                 // allow time for flushing
                 Thread.Sleep(1000);
 
                 // write a local log file containing the exact information sent to MS \\
-                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
-                _ = TryWriteLogFile(logFilePath, telemetryData);
+                if (RestrictedCloudFilter.IsRestricted == false)
+                {
+                    string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
+                    _ = TryWriteLogFile(logFilePath, telemetryData);
+                }
 
                 eventProperties.Clear();
                 eventProperties = null;
@@ -425,6 +442,89 @@ namespace FabricObserver.TelemetryLib
                 obj = null;
                 return false;
             }
+        }
+    }
+
+    internal class RestrictedCloudFilter : ITelemetryProcessor
+    {
+        private ITelemetryProcessor Next { get; set; }
+
+        public static bool IsRestricted { get; set; } = false;
+
+        // next will point to the next TelemetryProcessor in the chain.
+        public RestrictedCloudFilter(ITelemetryProcessor next)
+        {
+            Next = next;
+        }
+
+        public void Process(ITelemetry item)
+        {
+            // To filter out an item, return without calling the next processor.
+            if (!SafetoSend(item)) 
+            {
+                IsRestricted = true;
+                return; 
+            }
+
+            Next.Process(item);
+        }
+
+        private bool SafetoSend(ITelemetry item)
+        {
+            IPHostEntry hostEntry;
+            int resolvedHostCount = 0;
+
+            try
+            {
+                var localMachine = Dns.GetHostName();
+                hostEntry = Dns.GetHostEntry(localMachine);
+            }
+            catch (SocketException)
+            {
+                // Can't figure this out, so don't send telemetry.
+                return false;
+            }
+
+            foreach (IPAddress address in hostEntry.AddressList)
+            {
+                try
+                {
+                    // IPV4-only...
+                    if (address.AddressFamily != AddressFamily.InterNetwork)
+                    {
+                        continue;
+                    }
+
+                    var host = Dns.GetHostEntry(address.ToString());
+
+                    if (host == null)
+                    {
+                        continue;
+                    }
+
+                    resolvedHostCount++;
+
+                    if (host.HostName.Contains(".cn") || host.HostName.Contains(".gov"))
+                    {
+                        // Do not process the telemetry event. This is a restricted cloud.
+                        return false;
+                    }
+                }
+                catch (SocketException)
+                {
+                    // We get here if the host is not known, which is fine. Try the next address in the list.
+                }
+            }
+
+            // We couldn't answer the question, so the answer is do not send the telemetry item.
+            if (resolvedHostCount == 0)
+            {
+                return false;
+            }
+
+            // One of the resolved IPV4 addresses had to be an actual public IP with a hostname (and without a restricted domain suffix of interest),
+            // so if we get here, then we "know" we are probably not running in a restricted cloud.
+            return true;
         }
     }
 }

@@ -15,7 +15,7 @@
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
-    <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Ok" />
+    <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
     <!-- Observer Configuration
          Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
@@ -121,6 +121,8 @@
 		 eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
 		 Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+    <!-- KVS LVID Monitoring -->
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -144,6 +146,8 @@
     <!-- Concurrency/Parallelism Support -->
     <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverMaxConcurrentTasks" DefaultValue="" />
+    <!-- KVS LVID Monitoring -->
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
@@ -210,6 +214,7 @@
           <Section Name="AppObserverConfiguration">
             <Parameter Name="Enabled" Value="[AppObserverEnabled]" />
             <Parameter Name="EnableConcurrentMonitoring" Value="[AppObserverEnableConcurrentMonitoring]" />
+            <Parameter Name="EnableKvsLvidMonitoring" Value="[AppObserverEnableKvsLvidMonitoring]" />
             <Parameter Name="MaxConcurrentTasks" Value="[AppObserverMaxConcurrentTasks]" />
             <Parameter Name="EnableCSVDataLogging" Value="[AppObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[AppObserverEnableEtw]" />
@@ -255,6 +260,7 @@
           <Section Name="FabricSystemObserverConfiguration">
             <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
             <Parameter Name="EnableConcurrentMonitoring" Value="[FabricSystemObserverEnableConcurrentMonitoring]" />
+            <Parameter Name="EnableKvsLvidMonitoring" Value="[FabricSystemObserverEnableKvsLvidMonitoring]" />
             <Parameter Name="MaxConcurrentTasks" Value="[FabricSystemObserverMaxConcurrentTasks]" />
             <Parameter Name="EnableCSVDataLogging" Value="[FabricSystemObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[FabricSystemObserverEnableEtw]" />
