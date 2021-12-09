@@ -110,6 +110,7 @@ namespace Collector
                 }
                 // CT: Don't handle the exception thrown when an operation is cancelled. Here, cancellationToken here is the SF runtime cancellation token.
                 // If you do not honor its cancellation, then SF will be blocked from progressing in replica/service Close.
+                // We don't care about logging this type of exception here. So, let it pass through and take things down. For unexpected errors, handle them and log, then throw.
                 catch (Exception e) when (!(e is OperationCanceledException)) 
                 {
                     /*var healthInfo = new HealthInformation("99", "Collector", HealthState.Warning)
