@@ -131,9 +131,12 @@ namespace FabricObserver.TelemetryLib
                             // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
                             if (File.Exists(logFilePath) && TryDeserializeFOEventData(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
                             {
-                                if (foEventDataFromLogFile?.ObserverData != null && foEventDataFromLogFile?.ObserverData[obData.Key]?.ServiceData?.MonitoredAppCount == data)
+                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData.ContainsKey(obData.Key))
                                 {
-                                    addMetric = false;
+                                    if (foEventDataFromLogFile?.ObserverData != null && foEventDataFromLogFile?.ObserverData[obData.Key]?.ServiceData?.MonitoredAppCount == data)
+                                    {
+                                        addMetric = false;
+                                    }
                                 }
                             }
 

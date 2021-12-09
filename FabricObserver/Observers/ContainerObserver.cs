@@ -657,7 +657,7 @@ namespace FabricObserver.Observers
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
 
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                         {
@@ -666,6 +666,7 @@ namespace FabricObserver.Observers
                             HostProcessId = statefulReplica.HostProcessId,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
+                            ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
                         };
@@ -692,6 +693,7 @@ namespace FabricObserver.Observers
                             HostProcessId = statelessInstance.HostProcessId,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
+                            ServiceKind= statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
                         };
