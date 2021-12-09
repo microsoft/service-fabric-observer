@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
+using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -44,55 +45,68 @@ namespace Collector
 
             while (true)
             {
+                
                 cancellationToken.ThrowIfCancellationRequested();
-
-                ServiceEventSource.Current.ServiceMessage(this.Context, "Working-{0}", ++iterations);
-
-                var (_, delta) = SFUtilities.getTime(); 
-                
-
-                await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken);
-
-
-                // Collect Data
-                float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
-                var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
-                DriveInfo[] allDrives = DriveInfo.GetDrives();
-                string nodeName = this.Context.NodeContext.NodeName;
-
-                //Remote Procedure Call to Aggregator
-                var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
-                    new Uri("fabric:/Internship/Aggregator"),
-                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
-                    );
-                var (totalMiliseconds, _) = SFUtilities.getTime();
-
-
-                Dictionary<int, ProcessData> pids = await SFUtilities.Instance.GetDeployedProcesses(nodeName);
-                List<ProcessData> processDataList = new List<ProcessData>();
-                //for instead of Parallel.For because Parallel.For bursts the CPU before we load it and this is more lightweigh on the cpu even though timing isn't exact. This is more relevant
-                for(int i = 0; i<pids.Count; i++)
+                try
                 {
-                    int pid=pids.ElementAt(i).Key;
-                    var processData = pids[pid];
-                    var (cpuPercentage, ramMb) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
-                    processData.cpuPercentage = cpuPercentage;
-                    processData.ramMb = ramMb;
                     
-                    float ramPercentage = 100;
-                    if (TotalMemoryGb > 0)ramPercentage = (100 * ramMb) / (1024 * TotalMemoryGb);
-                 
-                    processData.ramPercentage = ramPercentage;
-                    processDataList.Add(processData);
+
+                    ServiceEventSource.Current.ServiceMessage(this.Context, "Working-{0}", ++iterations);
+
+                    var (_, delta) = SFUtilities.getTime();
+
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken);
+
+
+                    // Collect Data
+                    float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
+                    var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+                    DriveInfo[] allDrives = DriveInfo.GetDrives();
+                    string nodeName = this.Context.NodeContext.NodeName;
+
+                    //Remote Procedure Call to Aggregator
+                    var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                        new Uri("fabric:/Internship/Aggregator"),
+                        new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                        );
+                    var (totalMiliseconds, _) = SFUtilities.getTime();
+
+
+                    Dictionary<int, ProcessData> pids = await SFUtilities.Instance.GetDeployedProcesses(nodeName);
+                    List<ProcessData> processDataList = new List<ProcessData>();
+                    //for instead of Parallel.For because Parallel.For bursts the CPU before we load it and this is more lightweigh on the cpu even though timing isn't exact. This is more relevant
+                    for (int i = 0; i < pids.Count; i++)
+                    {
+                        int pid = pids.ElementAt(i).Key;
+                        var processData = pids[pid];
+                        var (cpuPercentage, ramMb) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
+                        processData.cpuPercentage = cpuPercentage;
+                        processData.ramMb = ramMb;
+
+                        float ramPercentage = 100;
+                        if (TotalMemoryGb > 0) ramPercentage = (100 * ramMb) / (1024 * TotalMemoryGb);
+
+                        processData.ramPercentage = ramPercentage;
+                        processDataList.Add(processData);
+                    }
+
+                    var data = new NodeData(totalMiliseconds, nodeName);
+                    data.hardware = new Hardware(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
+                    data.processList = processDataList;
+
+
+                    AggregatorProxy.PutDataRemote(nodeName, ByteSerialization.ObjectToByteArray(data));
                 }
+                catch(Exception e)
+                {
 
-                var data = new NodeData(totalMiliseconds,nodeName);
-                data.hardware = new Hardware(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives);
-                data.processList = processDataList;
+                    var healthInfo = new HealthInformation("99", "Collector", HealthState.Warning);
+                    healthInfo.Description = e.ToString();
+                    var appHealthReport = new ApplicationHealthReport(new Uri("fabric:/Internship"), healthInfo);
+                   ( new FabricClient()).HealthManager.ReportHealth(appHealthReport);
 
-                
-                await AggregatorProxy.PutDataRemote(nodeName, ByteSerialization.ObjectToByteArray(data));
-
+                }
 
             }
 

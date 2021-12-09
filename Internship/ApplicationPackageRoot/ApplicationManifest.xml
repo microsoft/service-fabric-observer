@@ -17,6 +17,11 @@
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="COPkg" ServiceManifestVersion="1.0.0" />
+    <!--
+	  <Policies>
+		  <ServicePackageResourceGovernancePolicy CpuCores="2"/>
+	  </Policies>
+	   -->
     <ConfigOverrides />
   </ServiceManifestImport>
   <ServiceManifestImport>
@@ -32,6 +37,11 @@
   </ServiceManifestImport>
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="CollectorPkg" ServiceManifestVersion="1.0.0" />
+    <!--
+	  <Policies>
+		  <ServicePackageResourceGovernancePolicy CpuCores="2"/>
+	  </Policies>
+	  -->
     <ConfigOverrides />
   </ServiceManifestImport>
   <DefaultServices>

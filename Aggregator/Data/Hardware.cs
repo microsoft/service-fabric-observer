@@ -27,12 +27,19 @@ namespace Aggregator
             if (Drives == null) return;
             foreach (var d in Drives)
             {
-                var drive = new Drive(
-                    d.Name,
-                    d.TotalSize / 1024 / 1024 / 1024,
-                    d.AvailableFreeSpace / 1024 / 1024 / 1024
-                    );
-                this.allDrives.Add(drive);
+                try
+                {
+                    var drive = new Drive(
+                        d.Name,
+                        d.TotalSize / 1024 / 1024 / 1024,
+                        d.AvailableFreeSpace / 1024 / 1024 / 1024
+                        );
+                    this.allDrives.Add(drive);
+                }
+                catch(Exception e)
+                {
+
+                }
             }
             this.DiskPercentInUse = DiskPercentageInUse();
         }
