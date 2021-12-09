@@ -158,12 +158,12 @@ namespace FabricObserver.Observers
         public bool EnableConcurrentMonitoring
         {
             get; set;
-        }
+        } = false;
 
         public bool EnableKvsLvidMonitoring
         {
             get; set;
-        }
+        } = false;
 
         public ParallelOptions ParallelOptions
         {
@@ -360,7 +360,7 @@ namespace FabricObserver.Observers
                     ProcessResourceDataList(allThreadsData, ThreadCountError, ThreadCountWarning);
                 }
 
-                // KVS LVIDs
+                // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
                 if (EnableKvsLvidMonitoring)
                 {
                     ProcessResourceDataList(allAppKvsLvidsData, 0, KvsLvidsWarningPercentage);
@@ -716,7 +716,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // KVS LVIDs
+            // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
             if (EnableKvsLvidMonitoring && allAppKvsLvidsData == null)
             {
                 allAppKvsLvidsData = new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
@@ -885,9 +885,9 @@ namespace FabricObserver.Observers
             }
 
             // Concurrency/Parallelism support.
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
-                EnableConcurrentMonitoring = Environment.ProcessorCount >= 4 && enableConcurrency;
+                EnableConcurrentMonitoring = enableConcurrency;
             }
 
             // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
@@ -907,10 +907,10 @@ namespace FabricObserver.Observers
                 TaskScheduler = TaskScheduler.Default
             };
 
-            // KVS LVID Monitoring
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
+            // KVS LVID Monitoring - Windows-only.
+            if (isWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
             {
-                EnableKvsLvidMonitoring = enableLvidMonitoring && isWindows;
+                EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
             }
 
             // Monitor Windows event log for SF and System Error/Critical events?
@@ -921,7 +921,6 @@ namespace FabricObserver.Observers
             }
 
             var watchEvtLog = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
-
             if (!string.IsNullOrEmpty(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
             {
                 monitorWinEventLog = watchEl;

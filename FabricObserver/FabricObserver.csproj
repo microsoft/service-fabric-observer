@@ -83,7 +83,7 @@
     <None Update="elevated_proc_fd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="install_kvs_perfcounter.bat">
+    <None Update="install_lvid_perfcounter.bat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="setcaps.sh">

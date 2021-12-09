@@ -43,7 +43,7 @@ namespace FabricObserver.Observers
         public bool EnableConcurrentMonitoring
         {
             get; set;
-        }
+        } = false;
 
         public ParallelOptions ParallelOptions 
         { 
@@ -190,9 +190,9 @@ namespace FabricObserver.Observers
             }
 
             // Concurrency/Parallelism support.
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
-                EnableConcurrentMonitoring = Environment.ProcessorCount >= 4 && enableConcurrency;
+                EnableConcurrentMonitoring = enableConcurrency;
             }
 
             // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.

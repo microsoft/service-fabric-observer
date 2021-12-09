@@ -21,7 +21,6 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
 using Octokit;
 using System.Diagnostics;
-using System.ComponentModel;
 
 namespace FabricObserver.Observers
 {
@@ -47,27 +46,12 @@ namespace FabricObserver.Observers
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
 
-        public static FabricClient FabricClientInstance
-        {
-            get; set;
-        }
-
         private static int ObserverExecutionLoopSleepSeconds
         {
             get; set;
         } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
-        public static StatelessServiceContext FabricServiceContext
-        {
-            get; set;
-        }
-
         private static ITelemetryProvider TelemetryClient
-        {
-            get; set;
-        }
-
-        public static bool TelemetryEnabled
         {
             get; set;
         }
@@ -76,26 +60,6 @@ namespace FabricObserver.Observers
         {
             get; set;
         }
-
-        public static bool ObserverWebAppDeployed
-        {
-            get; set;
-        }
-
-        public static bool EtwEnabled
-        {
-            get; set;
-        }
-
-        public string ApplicationName
-        {
-            get; set;
-        }
-
-        public static HealthState ObserverFailureHealthStateLevel
-        {
-            get; set;
-        } = HealthState.Unknown;
 
         private ObserverHealthReporter HealthReporter
         {
@@ -130,6 +94,46 @@ namespace FabricObserver.Observers
         private DateTime LastVersionCheckDateTime 
         { 
             get; set; 
+        }
+
+        public static StatelessServiceContext FabricServiceContext
+        {
+            get; set;
+        }
+
+        public static FabricClient FabricClientInstance
+        {
+            get; set;
+        }
+
+        public static bool TelemetryEnabled
+        {
+            get; set;
+        }
+
+        public static bool IsLvidCounterEnabled
+        {
+            get; private set;
+        }
+
+        public static bool ObserverWebAppDeployed
+        {
+            get; set;
+        }
+
+        public static bool EtwEnabled
+        {
+            get; set;
+        }
+
+        public static HealthState ObserverFailureHealthStateLevel
+        {
+            get; set;
+        } = HealthState.Unknown;
+
+        public string ApplicationName
+        {
+            get; set;
         }
 
         /// <summary>
@@ -201,11 +205,9 @@ namespace FabricObserver.Observers
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                // This will fail (handled) if FO is not running as System or Admin user on Windows.
-                if(!TryEnableKVSPerfCounter())
-                {
-                    // TODO: Let the user know...
-                }
+                // TryEnableKVSPerfCounter will fail (handled) if FO is not running as System or Admin user on Windows.
+                // Observers that monitor LVIDs should ensure the static CanInstallLvidCounter is true before attempting to monitor LVID usage.
+                IsLvidCounterEnabled = TryEnableKVSPerfCounter();
             }
 
             try
@@ -1187,7 +1189,7 @@ namespace FabricObserver.Observers
             try
             {
                 string error = null, output = null;
-                string batch = Path.Combine(FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path, "install_kvs_perfcounter.bat");
+                string batch = Path.Combine(FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path, "install_lvid_perfcounter.bat");
 
                 var ps = new ProcessStartInfo
                 {
@@ -1229,9 +1231,9 @@ namespace FabricObserver.Observers
 
                 return exitCode == 0;
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Logger.LogWarning($"TryEnableKVSPerfCounter:{Environment.NewLine}{ex}");
+                Logger.LogWarning($"TryEnableKVSPerfCounter failed:{Environment.NewLine}{e}");
                 return false;
             }
         }

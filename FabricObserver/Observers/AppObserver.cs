@@ -65,7 +65,7 @@ namespace FabricObserver.Observers
         public bool EnableChildProcessMonitoring
         {
             get; set;
-        }
+        } = false;
 
         // List<T> is thread-safe for reads. There are no concurrent writes for this List.
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
@@ -81,7 +81,7 @@ namespace FabricObserver.Observers
         public bool EnableConcurrentMonitoring
         {
             get; set;
-        }
+        } = false;
 
         ParallelOptions ParallelOptions
         {
@@ -91,12 +91,12 @@ namespace FabricObserver.Observers
         public bool EnableProcessDumps
         {
             get; set;
-        }
+        } = false;
 
         public bool EnableKvsLvidMonitoring
         {
             get; set;
-        }
+        } = false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
@@ -366,7 +366,7 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
 
-                // KVS LVIDs - Parent process
+                // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
                 if (EnableKvsLvidMonitoring && AllAppKvsLvidsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppKvsLvidsData[id];
@@ -408,6 +408,7 @@ namespace FabricObserver.Observers
            });
 
             stopwatch.Stop();
+
             //ObserverLogger.LogInfo($"ReportAsync run duration with parallel: {stopwatch.Elapsed}");
             return Task.CompletedTask;
         }
@@ -584,7 +585,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is ArgumentException || e is Win32Exception || e is InvalidOperationException)
                 {
-                    
+                    // ignore
                 }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
@@ -659,11 +660,10 @@ namespace FabricObserver.Observers
                 MaxDumpsTimeWindow = dumpTimeWindow;
             }
 
-            // Concurrency/Parallelism support.
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
+            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
-                // The minimum requirement is 4 logical processors, regardless of this user setting.
-                EnableConcurrentMonitoring = enableConcurrency && Environment.ProcessorCount >= 4;
+                EnableConcurrentMonitoring = enableConcurrency;
             }
 
             // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
@@ -683,9 +683,9 @@ namespace FabricObserver.Observers
             };
 
             // KVS LVID Monitoring - Windows-only.
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
+            if (isWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
             {
-                EnableKvsLvidMonitoring = enableLvidMonitoring && isWindows;
+                EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
             }
 
             configSettings.Initialize(
