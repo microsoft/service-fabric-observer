@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
 //using System.Fabric.Query;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Data.Collections;
@@ -194,12 +193,10 @@ namespace Aggregator
 
                 Debug.WriteLine("---------RUN---------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
 
-
                 await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.interval), cancellationToken);
                 while(await GetMinQueueCount() > 1)
                 {
-                   await ProduceSnapshot();
-                   
+                   await ProduceSnapshot(); 
                 }
             }
         }
