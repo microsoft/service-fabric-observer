@@ -205,9 +205,9 @@ namespace FabricObserver.Observers
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                // TryEnableKVSPerfCounter will fail (handled) if FO is not running as System or Admin user on Windows.
+                // TryEnableLvidPerfCounter will fail (handled) if FO is not running as System or Admin user on Windows.
                 // Observers that monitor LVIDs should ensure the static CanInstallLvidCounter is true before attempting to monitor LVID usage.
-                IsLvidCounterEnabled = TryEnableKVSPerfCounter();
+                IsLvidCounterEnabled = TryEnableLvidPerfCounter();
             }
 
             try
@@ -1173,8 +1173,28 @@ namespace FabricObserver.Observers
             }
         }
 
-        private bool TryEnableKVSPerfCounter()
+        private bool TryEnableLvidPerfCounter()
         {
+            /* This counter will be enabled by default in a future version of SF (probably an 8.2 CU release).
+
+                SF Version scheme: 
+                
+                8.2.1363.9590
+
+                Major = 8
+                Minor = 2
+                Revision = 1363 (this is what is interesting for CUs)
+                Build = 9590 (a Windows release build)
+            */
+
+            //var currentSFRuntimeVersion = ServiceFabricConfiguration.Instance.FabricVersion;
+            //Version version = new Version(currentSFRuntimeVersion);
+            // Windows 8.2 CUx with the fix.
+            //if (version.Major == 8 && version.Minor == 2 && version.Revision >= 1365 /* This is not the right revision number. This is just placeholder code. */)
+            //{
+              //  return true;
+            //}
+
             // First see if the counter is enabled.
             // Query the LVID counter for Fabric (the result will always be greater than 0 if the performance counter is enabled).
             // The function ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
@@ -1186,6 +1206,7 @@ namespace FabricObserver.Observers
                 return true;
             }
 
+            // This will fail (gracefully) if FO is not running as Admin/System given the location of the hive.
             try
             {
                 string error = null, output = null;
