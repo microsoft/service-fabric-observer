@@ -39,11 +39,6 @@ namespace FabricObserver.TelemetryLib
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.ConnectionString = TelemetryConstants.ConnectionString;
-
-            // Attempt to filter and block transmission from restricted regions/clouds. Note, it is really the user's responsibilty to prevent internal diagnostics from being
-            // sent from restricted regions (China) and clouds (Gov) by simply disabling the feature (ObserverManagerEnableOperationalFOTelemetry setting) before deploying FO to the data-restricted location.
-            var telemetryProcessorChainBuilder = appInsightsTelemetryConf.DefaultTelemetrySink.TelemetryProcessorChainBuilder.Use((next) => new RestrictedCloudFilter(next));
-            telemetryProcessorChainBuilder.Build();
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
 
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
@@ -216,13 +211,8 @@ namespace FabricObserver.TelemetryLib
                 // allow time for flushing
                 Thread.Sleep(1000);
 
-                // Write a local log file containing the data that was sent to MS.
-                // This file is also used to prevent redundant service data from being transmitted more than once.
-                if (RestrictedCloudFilter.IsRestricted == false)
-                {
-                    _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(foData));
-                }
-
+                _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(foData));
+                
                 eventProperties.Clear();
                 eventProperties = null;
                 metrics.Clear();
@@ -277,11 +267,7 @@ namespace FabricObserver.TelemetryLib
                 // allow time for flushing
                 Thread.Sleep(1000);
 
-                // write a local log file containing the exact information sent to MS \\
-                if (RestrictedCloudFilter.IsRestricted == false)
-                {
-                    _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(errorData));
-                }
+                _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(errorData));
 
                 return true;
             }
@@ -373,12 +359,8 @@ namespace FabricObserver.TelemetryLib
                 // allow time for flushing
                 Thread.Sleep(1000);
 
-                // write a local log file containing the exact information sent to MS \\
-                if (RestrictedCloudFilter.IsRestricted == false)
-                {
-                    string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
-                    _ = TryWriteLogFile(logFilePath, telemetryData);
-                }
+                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
+                _ = TryWriteLogFile(logFilePath, telemetryData);
 
                 eventProperties.Clear();
                 eventProperties = null;
@@ -445,91 +427,6 @@ namespace FabricObserver.TelemetryLib
                 obj = null;
                 return false;
             }
-        }
-    }
-
-    internal class RestrictedCloudFilter : ITelemetryProcessor
-    {
-        private ITelemetryProcessor Next { get; set; }
-
-        public static bool IsRestricted { get; set; } = false;
-
-        // next will point to the next TelemetryProcessor in the chain.
-        public RestrictedCloudFilter(ITelemetryProcessor next)
-        {
-            Next = next;
-        }
-
-        public void Process(ITelemetry item)
-        {
-            // To filter out an item, return without calling the next processor.
-            if (!SafetoSend(item)) 
-            {
-                IsRestricted = true;
-                return; 
-            }
-
-            Next.Process(item);
-        }
-
-#pragma warning disable IDE0060 // Remove unused parameter: This parameter is required by interface definition.
-        private bool SafetoSend(ITelemetry item)
-#pragma warning restore IDE0060 // Remove unused parameter
-        {
-            IPHostEntry hostEntry;
-            int resolvedHostCount = 0;
-
-            try
-            {
-                var localMachine = Dns.GetHostName();
-                hostEntry = Dns.GetHostEntry(localMachine);
-            }
-            catch (SocketException)
-            {
-                // Can't figure this out, so don't send telemetry.
-                return false;
-            }
-
-            foreach (IPAddress address in hostEntry.AddressList)
-            {
-                try
-                {
-                    // IPV4-only...
-                    if (address.AddressFamily != AddressFamily.InterNetwork)
-                    {
-                        continue;
-                    }
-
-                    var host = Dns.GetHostEntry(address.ToString());
-
-                    if (host == null)
-                    {
-                        continue;
-                    }
-
-                    resolvedHostCount++;
-
-                    if (host.HostName.Contains(".cn") || host.HostName.Contains(".gov"))
-                    {
-                        // Do not process the telemetry event. This is a restricted cloud.
-                        return false;
-                    }
-                }
-                catch (SocketException)
-                {
-                    // We get here if the host is not known, which is fine. Try the next address in the list.
-                }
-            }
-
-            // We couldn't answer the question, so the answer is do not send the telemetry item.
-            if (resolvedHostCount == 0)
-            {
-                return false;
-            }
-
-            // One of the resolved IPV4 addresses had to be an actual public IP with a hostname (and without a restricted domain suffix of interest),
-            // so if we get here, then we "know" we are probably not running in a restricted cloud.
-            return true;
         }
     }
 }
