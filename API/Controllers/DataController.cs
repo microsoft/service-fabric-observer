@@ -161,6 +161,12 @@ namespace API.Controllers
                 response += process.ToString();
             }
 
+            float scalingFactorCpu = (100 - nodeData.hardware.Cpu) / nodeData.sfHardware.Cpu;
+            float scalingFactorRam = (float)((100 - nodeData.hardware.PercentInUse) / nodeData.sfHardware.PercentInUse);
+            float scalingFactor = Math.Min(scalingFactorRam, scalingFactorCpu);
+
+            response += "\n \n \n \n You can scale out your cluster porportionally " + scalingFactor + " times";
+
             return response;
         }
 

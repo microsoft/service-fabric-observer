@@ -17,6 +17,7 @@ namespace Aggregator
         public Hardware hardware { get; set; }
         public List<ProcessData> processList { get; set; }
 
+        public Hardware sfHardware { get; set; }
         //Implement List<byte[]> to store arbitrary data
 
 
@@ -37,7 +38,12 @@ namespace Aggregator
                 avg.addValue("ramInUseMB", data.hardware.MemoryInUseMb);
                 avg.addValue("ram%", data.hardware.PercentInUse);
                 avg.addValue("disk%", data.hardware.DiskPercentInUse);
-                foreach(var process in data.processList)
+                avg.addValue("cpu%SF", data.sfHardware.Cpu);
+                avg.addValue("ramInUseMB-SF", data.sfHardware.MemoryInUseMb);
+                avg.addValue("ram%SF", data.sfHardware.PercentInUse);
+
+
+                foreach (var process in data.processList)
                 {
                     Uri key = process.GetProcessUri();
                     if (dic.ContainsKey(key))
@@ -66,9 +72,16 @@ namespace Aggregator
                 (long)avg.getAverage("ramInUseMB"),
                 avg.getAverage("ram%"),
                 null);
+            Hardware SfHw = new Hardware(
+                (float)avg.getAverage("cpu%SF"),
+                (long)avg.getAverage("ramTotalGB"),
+                (long)avg.getAverage("ramInUseMB-SF"),
+                avg.getAverage("ram%SF"),
+                null);
             hw.DiskPercentInUse =(float)avg.getAverage("disk%");
             result.hardware = hw;
             result.processList = finalData;
+            result.sfHardware = SfHw;
             return result;
 
 
@@ -99,6 +112,6 @@ namespace Aggregator
             return res;
         }
 
-      
+        
     }
 }
