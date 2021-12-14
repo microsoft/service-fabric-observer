@@ -8,13 +8,10 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Newtonsoft.Json;
 
@@ -41,6 +38,7 @@ namespace FabricObserver.TelemetryLib
             appInsightsTelemetryConf.ConnectionString = TelemetryConstants.ConnectionString;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
 
+            // Set instance fields.
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
             clusterId = ClusterId;
             tenantId = TenantId;

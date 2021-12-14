@@ -361,7 +361,7 @@ namespace FabricObserver.Observers
                 }
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
-                if (EnableKvsLvidMonitoring)
+                if (EnableKvsLvidMonitoring && allAppKvsLvidsData.Count > 0)
                 {
                     ProcessResourceDataList(allAppKvsLvidsData, 0, KvsLvidsWarningPercentage);
                 }
@@ -1015,7 +1015,7 @@ namespace FabricObserver.Observers
                     // No need to proceed further if there are no configuration settings for CPU, Memory, Handles thresholds.
                     // Returning here is correct as supplied thresholds apply to all system services.
                     if (CpuErrorUsageThresholdPct <= 0 && CpuWarnUsageThresholdPct <= 0 && MemErrorUsageThresholdMb <= 0 && MemWarnUsageThresholdMb <= 0
-                        && AllocatedHandlesError <= 0 && AllocatedHandlesWarning <= 0 && ThreadCountError <= 0 && ThreadCountWarning <= 0)
+                        && AllocatedHandlesError <= 0 && AllocatedHandlesWarning <= 0 && ThreadCountError <= 0 && ThreadCountWarning <= 0 && !EnableKvsLvidMonitoring)
                     {
                         return;
                     }
@@ -1035,7 +1035,13 @@ namespace FabricObserver.Observers
                     // KVS LVIDs
                     if (EnableKvsLvidMonitoring && (dotnetArg == "Fabric" || dotnetArg == "FabricRM"))
                     {
-                        allAppKvsLvidsData[dotnetArg].AddData(ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage(dotnetArg));
+                        double lvidPct = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage(dotnetArg);
+
+                        // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
+                        if (lvidPct > -1)
+                        {
+                            allAppKvsLvidsData[dotnetArg].AddData(lvidPct);
+                        }
                     }
 
                     CpuUsage cpuUsage = new CpuUsage();

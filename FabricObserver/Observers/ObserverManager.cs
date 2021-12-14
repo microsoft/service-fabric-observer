@@ -33,6 +33,7 @@ namespace FabricObserver.Observers
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
         private readonly List<ObserverBase> observers;
+        private readonly bool isWindows;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool disposed;
@@ -113,7 +114,7 @@ namespace FabricObserver.Observers
 
         public static bool IsLvidCounterEnabled
         {
-            get; private set;
+            get; set;
         }
 
         public static bool ObserverWebAppDeployed
@@ -149,6 +150,7 @@ namespace FabricObserver.Observers
             Logger = new Logger("ObserverManagerSingleObserverRun");
             FabricClientInstance ??= fabricClient;
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
             // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
@@ -173,6 +175,7 @@ namespace FabricObserver.Observers
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -203,10 +206,10 @@ namespace FabricObserver.Observers
         {
             StartDateTime = DateTime.UtcNow;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (isWindows)
             {
                 // TryEnableLvidPerfCounter will fail (handled) if FO is not running as System or Admin user on Windows.
-                // Observers that monitor LVIDs should ensure the static CanInstallLvidCounter is true before attempting to monitor LVID usage.
+                // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
                 IsLvidCounterEnabled = TryEnableLvidPerfCounter();
             }
 
@@ -1175,6 +1178,11 @@ namespace FabricObserver.Observers
 
         private bool TryEnableLvidPerfCounter()
         {
+            if (!isWindows)
+            {
+                return false;
+            }
+
             /* This counter will be enabled by default in a future version of SF (probably an 8.2 CU release).
 
                 SF Version scheme: 
@@ -1192,21 +1200,21 @@ namespace FabricObserver.Observers
             // Windows 8.2 CUx with the fix.
             //if (version.Major == 8 && version.Minor == 2 && version.Revision >= 1365 /* This is not the right revision number. This is just placeholder code. */)
             //{
-              //  return true;
+            //  return true;
             //}
 
-            // First see if the counter is enabled.
-            // Query the LVID counter for Fabric (the result will always be greater than 0 if the performance counter is enabled).
-            // The function ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
+            // First see if the Long-Value Maximum LID counter is enabled.
+            // Query the Long-Value Maximum LID counter for local Fabric process (the result for Fabric will *always* be greater than 0 if the performance counter is enabled).
             double x = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage("Fabric");
 
+            // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
             if (x > -1)
             {
                 // Counter is already enabled.
                 return true;
             }
 
-            // This will fail (gracefully) if FO is not running as Admin/System given the location of the hive.
+            // This will fail (gracefully) if FO is not running as Admin/System given the location of the reg hive.
             try
             {
                 string error = null, output = null;
@@ -1239,12 +1247,12 @@ namespace FabricObserver.Observers
 
                 if (exitCode != 0)
                 {
-                    string message = "Failed to enable Windows Fabric Database LVID performance counter.";
+                    string message = "Failed to enable Long-Value Maximum LID Windows performance counter.";
 
                     // Access Denied.
                     if (exitCode == 5)
                     {
-                        message += $" NOTE: FO must run as System or Admin to complete this task.";
+                        message += $" NOTE: FO must run as System or Admin on Windows to complete this task.";
                     }
 
                     Logger.LogWarning($"{message}{Environment.NewLine}Command Output: {output}{Environment.NewLine}Failure Message(s): {error}");

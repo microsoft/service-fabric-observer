@@ -1587,15 +1587,19 @@ namespace FabricObserver.Observers
                 if (isWindows && checkLvids && ReplicaOrInstanceList.Any(r => r.HostProcessId == procId && r.ServiceKind == ServiceKind.Stateful))
                 {
                     var lvidPct = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage(procName);
-
-                    if (procId == parentPid)
+                    
+                    // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
+                    if (lvidPct > -1)
                     {
-                        AllAppKvsLvidsData[id].AddData(lvidPct);
-                    }
-                    else
-                    {
-                        _ = AllAppKvsLvidsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                        AllAppKvsLvidsData[$"{id}:{procName}{procId}"].AddData(lvidPct);
+                        if (procId == parentPid)
+                        {
+                            AllAppKvsLvidsData[id].AddData(lvidPct);
+                        }
+                        else
+                        {
+                            _ = AllAppKvsLvidsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            AllAppKvsLvidsData[$"{id}:{procName}{procId}"].AddData(lvidPct);
+                        }
                     }
                 }
 
