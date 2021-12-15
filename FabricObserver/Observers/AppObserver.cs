@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.Utilities.ServiceFabric;
 using Newtonsoft.Json;
 using ConfigSettings = FabricObserver.Observers.MachineInfoModel.ConfigSettings;
 
@@ -51,9 +52,10 @@ namespace FabricObserver.Observers
         // List<T> is thread-safe for reads. There are no concurrent writes for this List.
         private List<ApplicationInfo> deployedTargetList;
         private readonly ConfigSettings configSettings;
-        private string fileName;
         private readonly Stopwatch stopwatch;
         private readonly object lockObj = new object();
+        private readonly Client client;
+        private string fileName;
         private int appCount;
         private int serviceCount;
 
@@ -108,6 +110,7 @@ namespace FabricObserver.Observers
             ConfigPackagePath = configSettings.ConfigPackagePath;
             stopwatch = new Stopwatch();
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            client = new Client(fabricClient, context);
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -849,45 +852,7 @@ namespace FabricObserver.Observers
             if (userTargetList != null && userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*"))
             {
                 ApplicationInfo application = userTargetList.First(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
-
-                // Get info for 50 apps at a time that are deployed to the same node this FO instance is running on.
-                var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
-                {
-                    IncludeHealthState = false,
-                    MaxResults = 50
-                };
-
-                var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                       deployedAppQueryDesc,
-                                                                                       ConfigurationSettings.AsyncTimeout,
-                                                                                       Token),
-                                            Token);
-
-                // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
-                // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
-                // all-app service process monitoring with a very simple configuration pattern.
-                var apps = appList.ToList();
-
-                // The GetDeployedApplicationPagedList api will set a continuation token value if it knows it did not return all the results in one swoop.
-                // Check that it is not null, and make a new query passing back the token it gave you.
-                while (appList.ContinuationToken != null)
-                {
-                    Token.ThrowIfCancellationRequested();
-                    
-                    deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
-                    appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                       deployedAppQueryDesc,
-                                                                                       ConfigurationSettings.AsyncTimeout,
-                                                                                       Token),
-                                            Token);
-
-                    apps.AddRange(appList.ToList());
-
-                    // TODO: Add random wait (ms) impl, include cluster size in calc.
-                    await Task.Delay(250, Token);
-                }
+                List<DeployedApplication> apps = await client.GetAllLocalDeployedAppsAsync(Token);
 
                 for (int i = 0; i < apps.Count; ++i)
                 {
@@ -1694,46 +1659,15 @@ namespace FabricObserver.Observers
 
             if (applicationNameFilter != null)
             {
-                var app = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter);
-                deployedApps.AddRange(app.ToList());
+                var apps = await client.GetAllLocalDeployedAppsAsync(Token, applicationNameFilter);
+                deployedApps.AddRange(apps.ToList());
+                apps.Clear();
+                apps = null;
             }
             else if (!string.IsNullOrWhiteSpace(applicationType))
             {
-                // There is no typename filter (unfortunately), so do a paged query for app data and then filter on supplied typename.
-                var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
-                {
-                    IncludeHealthState = false,
-                    MaxResults = 50
-                };
-
-                var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                               deployedAppQueryDesc,
-                                                                               ConfigurationSettings.AsyncTimeout,
-                                                                               Token),
-                                    Token);
-
-                deployedApps = appList.ToList();
-
-                while (appList.ContinuationToken != null)
-                {
-                    Token.ThrowIfCancellationRequested();
-
-                    deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
-
-                    appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                               deployedAppQueryDesc,
-                                                                               ConfigurationSettings.AsyncTimeout,
-                                                                               Token),
-                                    Token);
-
-                    deployedApps.AddRange(appList.ToList());
-                    await Task.Delay(250, Token);
-                }
-
-                deployedApps = deployedApps.Where(a => a.ApplicationTypeName == applicationType).ToList();
-
+                List<DeployedApplication> appList = await client.GetAllLocalDeployedAppsAsync(Token);
+                deployedApps = appList.Where(a => a.ApplicationTypeName == applicationType).ToList();
                 appList.Clear();
                 appList = null;
             }
@@ -1767,7 +1701,11 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType);
+                List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
+                                                                                    deployedApp.ApplicationName, 
+                                                                                    filteredServiceList,
+                                                                                    filterType,
+                                                                                    applicationType);
 
                 if (!ReplicaOrInstanceList.Any(r => r.ApplicationName.OriginalString == deployedApp.ApplicationName.OriginalString))
                 {
@@ -1778,8 +1716,11 @@ namespace FabricObserver.Observers
                                                                     || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower()));
                     deployedTargetList.AddRange(targets);
                 }
-            }
 
+                replicasOrInstances.Clear();
+                replicasOrInstances = null;
+            }
+           
             deployedApps.Clear();
             deployedApps = null;
 
@@ -1803,12 +1744,12 @@ namespace FabricObserver.Observers
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>(deployedReplicaList.Count);
 
             SetInstanceOrReplicaMonitoringList(
-                    appName,
-                    serviceFilterList,
-                    filterType,
-                    appTypeName,
-                    deployedReplicaList,
-                    replicaMonitoringList);
+                           appName,
+                           serviceFilterList,
+                           filterType,
+                           appTypeName,
+                           deployedReplicaList,
+                           replicaMonitoringList);
 
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
@@ -1858,7 +1799,8 @@ namespace FabricObserver.Observers
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
                             ServiceName = statefulReplica.ServiceName,
-                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId
+                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            Status = statefulReplica.ReplicaStatus
                         };
 
                         /* In order to provide accurate resource usage of an SF service process we need to also account for
@@ -1868,7 +1810,7 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -1904,14 +1846,15 @@ namespace FabricObserver.Observers
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
                             ServiceName = statelessInstance.ServiceName,
-                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId
+                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            Status = statelessInstance.ReplicaStatus
                         };
 
                         if (EnableChildProcessMonitoring)
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -2095,31 +2038,5 @@ namespace FabricObserver.Observers
             DataTableFileLogger.Flush();
         }
 
-        public double GetMaximumLvidPercentInUseForProcess(string procName)
-        {
-            // KVS is not supported on Linux.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                return -1;
-            }
-
-            try
-            {
-                using var performanceCounter = new PerformanceCounter(
-                                                    categoryName: "Windows Fabric Database",
-                                                    counterName: "Long-Value Maximum LID",
-                                                    instanceName: procName,
-                                                    readOnly: true);
-
-                float result = performanceCounter.NextValue();
-                long maxLvids = (long)Math.Pow(2, 31);
-                double usedPct = (double)(result * 100) / maxLvids;
-                return usedPct;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
     }
 }
