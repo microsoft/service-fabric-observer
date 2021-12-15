@@ -140,9 +140,12 @@ namespace API.Controllers
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
-
-            List<byte[]> originList = await AggregatorProxy.GetDataRemote(Snapshot.queueName);
-            List<Snapshot> targetList = originList.ConvertAll<Snapshot>(data => (Snapshot)ByteSerialization.ByteArrayToObject(data));
+            var (milisecondsLow, _) = SFUtilities.getTime();
+            milisecondsLow -= SFUtilities.intervalMiliseconds * 10;
+            double miliecondsHigh = milisecondsLow + SFUtilities.intervalMiliseconds * 5;
+            //List<byte[]> originList = await AggregatorProxy.GetDataRemote(Snapshot.queueName);
+            //List<Snapshot> targetList = originList.ConvertAll<Snapshot>(data => (Snapshot)ByteSerialization.ByteArrayToObject(data));
+            List<Snapshot> targetList = await AggregatorProxy.GetSnapshotsRemote(milisecondsLow,miliecondsHigh);
 
             Snapshot data = Snapshot.AverageClusterData(targetList);
             NodeData nodeData = NodeData.AverageNodeData(data.nodeMetrics);

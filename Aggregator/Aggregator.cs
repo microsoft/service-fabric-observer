@@ -19,6 +19,7 @@ namespace Aggregator
         Task PutDataRemote(string queueName,byte[] data);
         Task<List<byte[]>> GetDataRemote(string queueName);
         Task<Snapshot> GetSnapshotRemote();
+        Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh);
 
     }
     /// <summary>
@@ -79,7 +80,7 @@ namespace Aggregator
                 }
             }
             if (HWList.Count == 0) success=false; //Snapshot must have at least 1 HWData
-            if(success)return new Snapshot(sf, HWList);
+            if(success)return new Snapshot(minTime,sf, HWList);
             return null; //Something failed
         }
        
@@ -193,7 +194,7 @@ namespace Aggregator
 
                 Debug.WriteLine("---------RUN---------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
 
-                await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.interval), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.intervalMiliseconds), cancellationToken);
                 while(await GetMinQueueCount() > 1)
                 {
                    await ProduceSnapshot(); 
@@ -283,6 +284,42 @@ namespace Aggregator
             return list;
         }
 
-        
+        public async Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh)
+        {
+            List<Snapshot> list = new List<Snapshot>();
+
+            var stateManager = this.StateManager;
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(Snapshot.queueName);
+            try
+            {
+                using (var tx = stateManager.CreateTransaction())
+                {
+                    var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
+                    //iterator.Reset(); // this is position -1 - before the first element in the collection
+
+                    byte[] data = null;
+                    while (await iterator.MoveNextAsync(token))
+                    {
+                        data = iterator.Current;
+
+                        if (data != null) {
+                            Snapshot s = (Snapshot)ByteSerialization.ByteArrayToObject(data);
+                            if (s.miliseconds >= milisecondsLow && s.miliseconds <= milisecondsHigh) list.Add(s);
+                            else 
+                            {//help garbage collector to free memory
+                                s = null;
+                                data = null;
+                            }
+                        } 
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                var x = e;
+            }
+
+            return list;
+        }
     }
 }

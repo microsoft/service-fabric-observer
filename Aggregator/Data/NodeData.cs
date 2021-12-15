@@ -92,7 +92,7 @@ namespace Aggregator
             String res;
             res =
                 "\n  Node: "+nodeName+
-                "\n                 Miliseconds: "+this.miliseconds%(SFUtilities.interval*100)+
+                "\n                 Miliseconds: "+this.miliseconds%(SFUtilities.intervalMiliseconds*100)+
                 "\n Cpu %: " + hardware.Cpu +
                 "\n Total RAM(GB): " + hardware.TotalMemoryGb +
                 "\n Used RAM(MB): " + hardware.MemoryInUseMb +

@@ -9,6 +9,7 @@ namespace Aggregator
     {
 
         public static readonly string queueName = "snapshot";
+        public double miliseconds { get; }
         public ClusterData customMetrics { get; }
         public List<NodeData> nodeMetrics { get; }
 
@@ -17,8 +18,9 @@ namespace Aggregator
         private float AverageClusterRamUsage;
         private float AverageClusterDiskUsage;
 
-        public Snapshot(ClusterData customMetrics,List<NodeData> nodeMetrics)
+        public Snapshot(double miliseconds,ClusterData customMetrics,List<NodeData> nodeMetrics)
         {
+            this.miliseconds = miliseconds;
             this.customMetrics = customMetrics;
             this.nodeMetrics = nodeMetrics;
         }
@@ -37,7 +39,7 @@ namespace Aggregator
         public static bool checkTime(double minTime, double dataTime)
         {
             double delta = Math.Abs(minTime - dataTime);
-            if (delta < SFUtilities.interval) return true;
+            if (delta < SFUtilities.intervalMiliseconds) return true;
             return false;
         }
 
@@ -152,9 +154,10 @@ namespace Aggregator
         {
             Dictionary<string, List<NodeData>> nodeDic= new Dictionary<string, List<NodeData>>();
             List<ClusterData> clusterList = new List<ClusterData>();
-
+            AverageDictionary avg = new AverageDictionary();
             foreach (Snapshot s in snapshots)
             {
+                avg.addValue("miliseconds", s.miliseconds);
                 foreach (var nodeData in s.nodeMetrics)
                 {
                     string nodeName = nodeData.nodeName;
@@ -180,7 +183,7 @@ namespace Aggregator
             }
             ClusterData finalClusterData = ClusterData.AverageClusterData(clusterList);
             //NodeData finalNodeData = NodeData.AverageNodeData(averageFromAllNodes);
-            return new Snapshot(finalClusterData, averageFromAllNodes);
+            return new Snapshot(avg.getAverage("miliseconds"),finalClusterData, averageFromAllNodes);
             
             
         }

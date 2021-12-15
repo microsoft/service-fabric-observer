@@ -55,7 +55,7 @@ namespace Aggregator
         {
             String res;
             res =
-                "\n                 Miliseconds: " + this.miliseconds % (SFUtilities.interval * 100) +
+                "\n                 Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100) +
                 "\n PrimaryCount: " + this.PrimaryCount +
                 "\n ReplicaCount: " + this.ReplicaCount +
                 "\n InstanceCount: " + this.InstanceCount +
