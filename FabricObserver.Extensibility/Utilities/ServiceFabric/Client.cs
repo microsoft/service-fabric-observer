@@ -3,6 +3,8 @@ using FabricObserver.Observers.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Query;
@@ -186,17 +188,28 @@ namespace FabricObserver.Utilities.ServiceFabric
         }
 
         /// <summary>
-        /// Builds a List of tuple (string ServiceName, int Pid) from a List of ReplicaOrInstanceMonitoringInfo.
+        /// Builds a List of tuple (string ServiceName, string ProcName, int Pid) from a List of ReplicaOrInstanceMonitoringInfo.
         /// </summary>
         /// <param name="repOrInsts">List of ReplicaOrInstanceMonitoringInfo</param>
-        /// <returns>A List of tuple (string ServiceName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance.</returns>
-        public List<(string ServiceName, int Pid)> GetServiceNamesAndPids(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
+        /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance.</returns>
+        public List<(string ServiceName, string ProcName, int Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
         {
-            List<(string ServiceName, int Pid)> pids = new List<(string ServiceName, int Pid)>();
+            List<(string ServiceName, string ProcName, int Pid)> pids = new List<(string ServiceName, string ProcName, int Pid)>();
 
             foreach (var repOrInst in repOrInsts)
             {
-                pids.Add((repOrInst.ServiceName.OriginalString, (int)repOrInst.HostProcessId));
+                try
+                {
+                    using (var proc = Process.GetProcessById((int)repOrInst.HostProcessId))
+                    {
+                        pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId));
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                {
+                    // process with supplied pid may not be running..
+                    continue;
+                }
             }
 
             return pids;
