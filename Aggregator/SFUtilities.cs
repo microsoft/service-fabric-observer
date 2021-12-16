@@ -11,7 +11,7 @@ namespace Aggregator
 {
     public class SFUtilities
     {
-        public static readonly double intervalMiliseconds = 5000.00;
+        public static readonly double intervalMiliseconds = 10000.00;
 
         private static SFUtilities instance;
         private static readonly object lockObj = new object();
