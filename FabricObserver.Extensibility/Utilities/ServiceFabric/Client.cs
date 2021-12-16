@@ -184,5 +184,22 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             return replicaMonitoringList.ToList();
         }
+
+        /// <summary>
+        /// Builds a List of tuple (string ServiceName, int Pid) from a List of ReplicaOrInstanceMonitoringInfo.
+        /// </summary>
+        /// <param name="repOrInsts">List of ReplicaOrInstanceMonitoringInfo</param>
+        /// <returns>A List of tuple (string ServiceName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance.</returns>
+        public List<(string ServiceName, int Pid)> GetServiceNamesAndPids(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
+        {
+            List<(string ServiceName, int Pid)> pids = new List<(string ServiceName, int Pid)>();
+
+            foreach (var repOrInst in repOrInsts)
+            {
+                pids.Add((repOrInst.ServiceName.OriginalString, (int)repOrInst.HostProcessId));
+            }
+
+            return pids;
+        }
     }
 }
