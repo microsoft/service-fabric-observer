@@ -140,8 +140,10 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
-| **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate an Error |  
-| **memoryWarningLimitMb**| Minimum service process private working set in Megabytes that should generate a Warning |  
+| **memoryErrorLimitMb** | Maximum service process total working set in Megabytes that should generate an Error |  
+| **memoryWarningLimitMb**| Minimum service process total working set in Megabytes that should generate a Warning | 
+| **memoryErrorLimitMbPrivate** | Maximum service process private working set in Megabytes that should generate an Error |  
+| **memoryWarningLimitMbPrivate**| Minimum service process private working set in Megabytes that should generate a Warning |  
 | **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate an Error |  
 | **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Warning | 
 | **cpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |
@@ -155,6 +157,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Warning. |  
 | **errorThreadCount** | Maximum number of threads in use by an app process that will generate an Error. |  
 | **warningThreadCount** | Minimum number of threads in use by app process that will generate a Warning.|  
+
+**Note**: for memoryWarningLimit\* configuration, you can chose either Private or not (which is total). You can't supply both. If you do, then Private will override total.
 
 **Output** Log text(Error/Warning), Application Level Service Fabric Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
 

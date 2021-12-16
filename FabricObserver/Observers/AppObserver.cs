@@ -893,6 +893,8 @@ namespace FabricObserver.Observers
                         existingAppConfig.ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig.ServiceIncludeList;
                         existingAppConfig.MemoryWarningLimitMb = existingAppConfig.MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig.MemoryWarningLimitMb;
                         existingAppConfig.MemoryErrorLimitMb = existingAppConfig.MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig.MemoryErrorLimitMb;
+                        existingAppConfig.MemoryWarningLimitMbPrivate = existingAppConfig.MemoryWarningLimitMbPrivate == 0 && application.MemoryWarningLimitMbPrivate > 0 ? application.MemoryWarningLimitMbPrivate : existingAppConfig.MemoryWarningLimitMbPrivate;
+                        existingAppConfig.MemoryErrorLimitMbPrivate = existingAppConfig.MemoryErrorLimitMbPrivate == 0 && application.MemoryErrorLimitMbPrivate > 0 ? application.MemoryErrorLimitMbPrivate : existingAppConfig.MemoryErrorLimitMbPrivate;
                         existingAppConfig.MemoryWarningLimitPercent = existingAppConfig.MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig.MemoryWarningLimitPercent;
                         existingAppConfig.MemoryErrorLimitPercent = existingAppConfig.MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig.MemoryErrorLimitPercent;
                         existingAppConfig.CpuErrorLimitPercent = existingAppConfig.CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig.CpuErrorLimitPercent;
@@ -919,6 +921,8 @@ namespace FabricObserver.Observers
                             ServiceIncludeList = application.ServiceIncludeList,
                             MemoryWarningLimitMb = application.MemoryWarningLimitMb,
                             MemoryErrorLimitMb = application.MemoryErrorLimitMb,
+                            MemoryWarningLimitMbPrivate = application.MemoryWarningLimitMbPrivate,
+                            MemoryErrorLimitMbPrivate = application.MemoryErrorLimitMbPrivate,
                             MemoryWarningLimitPercent = application.MemoryWarningLimitPercent,
                             MemoryErrorLimitPercent = application.MemoryErrorLimitPercent,
                             CpuErrorLimitPercent = application.CpuErrorLimitPercent,
@@ -1167,7 +1171,7 @@ namespace FabricObserver.Observers
                 var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
-                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false, checkLvids = false;
+                bool checkCpu = false, checkMemMb = false, checkMemMbPrivate = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false, checkLvids = false;
                 var application = deployedTargetList?.First(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString.ToLower() ||
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
@@ -1297,7 +1301,7 @@ namespace FabricObserver.Observers
                         checkCpu = true;
                     }
 
-                    if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0)
+                    if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0 || application.MemoryErrorLimitMbPrivate > 0 || application.MemoryWarningLimitMbPrivate > 0)
                     {
                         _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
@@ -1305,6 +1309,11 @@ namespace FabricObserver.Observers
                     if (AllAppMemDataMb.ContainsKey(id))
                     {
                         checkMemMb = true;
+
+                        if (application.MemoryErrorLimitMbPrivate > 0 || application.MemoryWarningLimitMbPrivate > 0)
+                        {
+                            checkMemMbPrivate = true;
+                        }
                     }
 
                     if (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0)
@@ -1393,6 +1402,7 @@ namespace FabricObserver.Observers
                             parentPid,
                             checkCpu,
                             checkMemMb,
+                            checkMemMbPrivate,
                             checkMemPct,
                             checkAllPorts,
                             checkEphemeralPorts,
@@ -1431,6 +1441,7 @@ namespace FabricObserver.Observers
                             int parentPid,
                             bool checkCpu,
                             bool checkMemMb,
+                            bool checkMemMbPrivate,
                             bool checkMemPct,
                             bool checkAllPorts,
                             bool checkEphemeralPorts,
@@ -1610,7 +1621,7 @@ namespace FabricObserver.Observers
                     // private working set.
                     if (checkMemMb)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId);
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkMemMbPrivate ? procName : null, checkMemMbPrivate);
                        
                         if (procId == parentPid)
                         {
@@ -1626,7 +1637,7 @@ namespace FabricObserver.Observers
                     // percent in use (of total).
                     if (checkMemPct)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId);
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkMemMbPrivate ? procName : null, checkMemMbPrivate);
                         var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetMemoryInfo();
 
                         if (TotalMemoryGb > 0)

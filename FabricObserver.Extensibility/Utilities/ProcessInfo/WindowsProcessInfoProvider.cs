@@ -343,6 +343,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
+        // This function is CPU intensive for large service deployments (large number of observed processes).
         private float WmiGetProcessPrivateWorkingSetMb(int processId)
         {
             if (processId < 0)
