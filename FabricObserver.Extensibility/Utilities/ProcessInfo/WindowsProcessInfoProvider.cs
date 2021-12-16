@@ -243,10 +243,13 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
+                // Get list of Process objects.
                 var childProcs = NativeMethods.GetChildProcesses(processId);
 
-                foreach (var proc in childProcs)
+                for (int i = 0; i < childProcs.Count; ++i)
                 {
+                    var proc = childProcs[i];   
+
                     if (!ignoreProcessList.Contains(proc.ProcessName))
                     {
                         if (childProcesses == null)
@@ -256,6 +259,10 @@ namespace FabricObserver.Observers.Utilities
 
                         childProcesses.Add((proc.ProcessName, proc.Id));
                     }
+
+                    // Clean up Process objects.
+                    proc.Dispose();
+                    proc = null;
                 }
             }
             catch (Win32Exception we)
