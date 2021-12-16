@@ -262,7 +262,6 @@ namespace FabricObserver.Observers.Utilities
 
                     // Clean up Process objects.
                     proc.Dispose();
-                    proc = null;
                 }
             }
             catch (Win32Exception we)
