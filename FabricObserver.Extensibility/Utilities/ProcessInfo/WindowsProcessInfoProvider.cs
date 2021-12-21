@@ -40,15 +40,15 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid)
         {
-            if (processId < 1)
+            if (parentPid < 1)
             {
                 return null;
             }
 
             // Get descendant procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(processId);
+            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -243,7 +243,6 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                // Get child Process objects.
                 var childProcs = NativeMethods.GetChildProcesses(processId);
 
                 for (int i = 0; i < childProcs.Count; ++i)
@@ -343,6 +342,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
+        // This function is CPU intensive for large service deployments (large number of observed processes).
         private float WmiGetProcessPrivateWorkingSetMb(int processId)
         {
             if (processId < 0)

@@ -19,16 +19,16 @@ Service Fabric Error Health Events can block upgrades and other important Fabric
 
 | Observer | Description |
 | :--- | :--- |
-| [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes) and their spawn (child processes). Alerts when user-supplied thresholds are breached. |
+| [AppObserver](#appobserver) | Monitors CPU usage (Total CPU Time; percentage), Memory usage (Working Set; total or private, MB or percentage of total), and logical Disk space consumption for Service Fabric service processes and their descendants (aka child processes). Alerts when user-supplied thresholds are breached. |
 | [AzureStorageUploadObserver](#azurestorageuploadobserver) | Runs periodically (do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true. It will clean up files after successful upload. |
 | [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
 | [ContainerObserver](#containerobserver) | Monitors container CPU and Memory use. Alerts when user-supplied thresholds are breached. |
-| [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are breached. |
-| [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric System services (compare to AppObserver) |
-| [NetworkObserver](#networkobserver) | Monitors outbound connection state for user-supplied endpoints (hostname/port pairs), i.e. it checks that the node can reach specific endpoints. |
-| [NodeObserver](#nodeobserver) | This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports), File Handles (Linux). |
-| [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. |
-| [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. |
+| [DiskObserver](#diskobserver) | Monitors logical disk space conusumption and IO queue wait time. Alerts when user-supplied thresholds are breached. |
+| [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use (Working Set, Mb only), and Disk space consumption for Service Fabric System service processes. Alerts when user-supplied thresholds are breached. |
+| [NetworkObserver](#networkobserver) | Monitors outbound connection state for user-supplied endpoints (hostname/port pairs). This observer checks that the node can reach specific endpoints (over both http (e.g., REST) and direct tcp socket). |
+| [NodeObserver](#nodeobserver) | Monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports), File Handles (Linux). |
+| [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules (Windows), list of recent patches/hotfixes (with hyper-links to related KB articles). |
+| [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. This observer is currently only useful if the FO Web Api service is deployed. |
 
 # Observers - What they do and how to configure them  
 
@@ -140,8 +140,10 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
-| **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate an Error |  
-| **memoryWarningLimitMb**| Minimum service process private working set in Megabytes that should generate a Warning |  
+| **memoryErrorLimitMb** | Maximum service process total working set in Megabytes that should generate an Error |  
+| **memoryWarningLimitMb**| Minimum service process total working set in Megabytes that should generate a Warning | 
+| **memoryErrorLimitMbPrivate** | Maximum service process private working set in Megabytes that should generate an Error |  
+| **memoryWarningLimitMbPrivate**| Minimum service process private working set in Megabytes that should generate a Warning |  
 | **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate an Error |  
 | **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Warning | 
 | **cpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |
@@ -155,6 +157,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Warning. |  
 | **errorThreadCount** | Maximum number of threads in use by an app process that will generate an Error. |  
 | **warningThreadCount** | Minimum number of threads in use by app process that will generate a Warning.|  
+
+**Note**: for memoryWarningLimit\* configuration, you can choose either Private or not (which is total). You can't supply both. If you do, then Private will override total. Please also consider that the on Windows (where Perf counter is used), if you have a lot of service processes being monitored, you will see a little bit more CPU and Memory use by FO for Private Working Set detection. This is especially true (for CPU) when you are monitoring several same-named processes.
 
 **Output** Log text(Error/Warning), Application Level Service Fabric Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
 

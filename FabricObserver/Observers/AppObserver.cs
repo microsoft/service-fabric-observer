@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
-using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
@@ -20,6 +19,7 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.Utilities.ServiceFabric;
 using Newtonsoft.Json;
 using ConfigSettings = FabricObserver.Observers.MachineInfoModel.ConfigSettings;
 
@@ -51,9 +51,10 @@ namespace FabricObserver.Observers
         // List<T> is thread-safe for reads. There are no concurrent writes for this List.
         private List<ApplicationInfo> deployedTargetList;
         private readonly ConfigSettings configSettings;
-        private string fileName;
         private readonly Stopwatch stopwatch;
         private readonly object lockObj = new object();
+        private readonly Client client;
+        private string fileName;
         private int appCount;
         private int serviceCount;
 
@@ -108,6 +109,7 @@ namespace FabricObserver.Observers
             ConfigPackagePath = configSettings.ConfigPackagePath;
             stopwatch = new Stopwatch();
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            client = new Client(fabricClient, context);
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -849,45 +851,7 @@ namespace FabricObserver.Observers
             if (userTargetList != null && userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*"))
             {
                 ApplicationInfo application = userTargetList.First(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
-
-                // Get info for 50 apps at a time that are deployed to the same node this FO instance is running on.
-                var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
-                {
-                    IncludeHealthState = false,
-                    MaxResults = 50
-                };
-
-                var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                       deployedAppQueryDesc,
-                                                                                       ConfigurationSettings.AsyncTimeout,
-                                                                                       Token),
-                                            Token);
-
-                // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
-                // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
-                // all-app service process monitoring with a very simple configuration pattern.
-                var apps = appList.ToList();
-
-                // The GetDeployedApplicationPagedList api will set a continuation token value if it knows it did not return all the results in one swoop.
-                // Check that it is not null, and make a new query passing back the token it gave you.
-                while (appList.ContinuationToken != null)
-                {
-                    Token.ThrowIfCancellationRequested();
-                    
-                    deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
-                    appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                       deployedAppQueryDesc,
-                                                                                       ConfigurationSettings.AsyncTimeout,
-                                                                                       Token),
-                                            Token);
-
-                    apps.AddRange(appList.ToList());
-
-                    // TODO: Add random wait (ms) impl, include cluster size in calc.
-                    await Task.Delay(250, Token);
-                }
+                List<DeployedApplication> apps = await client.GetAllLocalDeployedAppsAsync(Token);
 
                 for (int i = 0; i < apps.Count; ++i)
                 {
@@ -928,6 +892,8 @@ namespace FabricObserver.Observers
                         existingAppConfig.ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig.ServiceIncludeList;
                         existingAppConfig.MemoryWarningLimitMb = existingAppConfig.MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig.MemoryWarningLimitMb;
                         existingAppConfig.MemoryErrorLimitMb = existingAppConfig.MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig.MemoryErrorLimitMb;
+                        existingAppConfig.MemoryWarningLimitMbPrivate = existingAppConfig.MemoryWarningLimitMbPrivate == 0 && application.MemoryWarningLimitMbPrivate > 0 ? application.MemoryWarningLimitMbPrivate : existingAppConfig.MemoryWarningLimitMbPrivate;
+                        existingAppConfig.MemoryErrorLimitMbPrivate = existingAppConfig.MemoryErrorLimitMbPrivate == 0 && application.MemoryErrorLimitMbPrivate > 0 ? application.MemoryErrorLimitMbPrivate : existingAppConfig.MemoryErrorLimitMbPrivate;
                         existingAppConfig.MemoryWarningLimitPercent = existingAppConfig.MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig.MemoryWarningLimitPercent;
                         existingAppConfig.MemoryErrorLimitPercent = existingAppConfig.MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig.MemoryErrorLimitPercent;
                         existingAppConfig.CpuErrorLimitPercent = existingAppConfig.CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig.CpuErrorLimitPercent;
@@ -954,6 +920,8 @@ namespace FabricObserver.Observers
                             ServiceIncludeList = application.ServiceIncludeList,
                             MemoryWarningLimitMb = application.MemoryWarningLimitMb,
                             MemoryErrorLimitMb = application.MemoryErrorLimitMb,
+                            MemoryWarningLimitMbPrivate = application.MemoryWarningLimitMbPrivate,
+                            MemoryErrorLimitMbPrivate = application.MemoryErrorLimitMbPrivate,
                             MemoryWarningLimitPercent = application.MemoryWarningLimitPercent,
                             MemoryErrorLimitPercent = application.MemoryErrorLimitPercent,
                             CpuErrorLimitPercent = application.CpuErrorLimitPercent,
@@ -1186,13 +1154,18 @@ namespace FabricObserver.Observers
             AllAppEphemeralPortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
-            AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+            
+            if (isWindows)
+            {
+                AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+            }
+
             processInfo ??= new ConcurrentDictionary<int, string>();
 
             // DEBUG
             //var threadData = new ConcurrentQueue<int>();
 
-            _ = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
                 
@@ -1202,7 +1175,7 @@ namespace FabricObserver.Observers
                 var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
-                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false, checkLvids = false;
+                bool checkCpu = false, checkMemMb = false, checkMemMbPrivate = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false, checkLvids = false;
                 var application = deployedTargetList?.First(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString.ToLower() ||
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
@@ -1322,6 +1295,7 @@ namespace FabricObserver.Observers
                         capacity = MonitorDuration.Seconds * 4;
                     }
 
+                    // CPU
                     if (application.CpuErrorLimitPercent > 0 || application.CpuWarningLimitPercent > 0)
                     {
                         _ = AllAppCpuData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, id, capacity, UseCircularBuffer));
@@ -1332,7 +1306,8 @@ namespace FabricObserver.Observers
                         checkCpu = true;
                     }
 
-                    if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0)
+                    // Memory Mb
+                    if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0 || application.MemoryErrorLimitMbPrivate > 0 || application.MemoryWarningLimitMbPrivate > 0)
                     {
                         _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
@@ -1340,8 +1315,14 @@ namespace FabricObserver.Observers
                     if (AllAppMemDataMb.ContainsKey(id))
                     {
                         checkMemMb = true;
+
+                        if (application.MemoryErrorLimitMbPrivate > 0 || application.MemoryWarningLimitMbPrivate > 0)
+                        {
+                            checkMemMbPrivate = true;
+                        }
                     }
 
+                    // Memory percent
                     if (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0)
                     {
                         _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
@@ -1352,6 +1333,7 @@ namespace FabricObserver.Observers
                         checkMemPct = true;
                     }
 
+                    // Active TCP Ports
                     if (application.NetworkErrorActivePorts > 0 || application.NetworkWarningActivePorts > 0)
                     {
                         _ = AllAppTotalActivePortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id, 1, false, EnableConcurrentMonitoring));
@@ -1362,6 +1344,7 @@ namespace FabricObserver.Observers
                         checkAllPorts = true;
                     }
 
+                    // Ephemeral TCP Ports
                     if (application.NetworkErrorEphemeralPorts > 0 || application.NetworkWarningEphemeralPorts > 0)
                     {
                         _ = AllAppEphemeralPortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1, false, EnableConcurrentMonitoring));
@@ -1372,6 +1355,7 @@ namespace FabricObserver.Observers
                         checkEphemeralPorts = true;
                     }
 
+                    // File Handles
                     if (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0)
                     {
                         _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, id, 1, false, EnableConcurrentMonitoring));
@@ -1382,6 +1366,7 @@ namespace FabricObserver.Observers
                         checkHandles = true;
                     }
 
+                    // Threads
                     if (application.ErrorThreadCount > 0 || application.WarningThreadCount > 0)
                     {
                         _ = AllAppThreadsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalThreadCount, id, 1, false, EnableConcurrentMonitoring));
@@ -1392,11 +1377,14 @@ namespace FabricObserver.Observers
                         checkThreads = true;
                     }
 
-                    // This feature (KVS LVIDs percentage in use monitoring) is only available on Windows. This is non-configurable and will be removed when SF ships with the latest version of ESE.
-                    if (EnableKvsLvidMonitoring && repOrInst.ServiceKind == ServiceKind.Stateful)
+                    // KVS LVIDs percent (Windows only)
+                    // Note: This is a non-configurable Windows monitor and will be removed when SF ships with the latest version of ESE.
+                    if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && repOrInst.ServiceKind == ServiceKind.Stateful)
                     {
-                        _ = AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring));
-                        checkLvids = true;
+                        if (AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring)))
+                        {
+                            checkLvids = true;
+                        }
                     }
 
                     /* In order to provide accurate resource usage of an SF service process we need to also account for
@@ -1428,6 +1416,7 @@ namespace FabricObserver.Observers
                             parentPid,
                             checkCpu,
                             checkMemMb,
+                            checkMemMbPrivate,
                             checkMemPct,
                             checkAllPorts,
                             checkEphemeralPorts,
@@ -1466,6 +1455,7 @@ namespace FabricObserver.Observers
                             int parentPid,
                             bool checkCpu,
                             bool checkMemMb,
+                            bool checkMemMbPrivate,
                             bool checkMemPct,
                             bool checkAllPorts,
                             bool checkEphemeralPorts,
@@ -1476,7 +1466,7 @@ namespace FabricObserver.Observers
                             string id,
                             CancellationToken token)
         {
-            _ = Parallel.For(0, procs.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, procs.Count, ParallelOptions, (i, state) =>
             {
                 string procName = procs.ElementAt(i).Key;
                 int procId = procs[procName];
@@ -1642,10 +1632,10 @@ namespace FabricObserver.Observers
 
                     // Memory \\
 
-                    // private working set.
+                    // Process working set (total or private, based on user configuration)
                     if (checkMemMb)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId);
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkMemMbPrivate ? procName : null, checkMemMbPrivate);
                        
                         if (procId == parentPid)
                         {
@@ -1658,10 +1648,10 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    // percent in use (of total).
+                    // Process memory, percent in use (of machine total).
                     if (checkMemPct)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId);
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkMemMbPrivate ? procName : null, checkMemMbPrivate);
                         var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetMemoryInfo();
 
                         if (TotalMemoryGb > 0)
@@ -1694,46 +1684,15 @@ namespace FabricObserver.Observers
 
             if (applicationNameFilter != null)
             {
-                var app = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, applicationNameFilter);
-                deployedApps.AddRange(app.ToList());
+                var apps = await client.GetAllLocalDeployedAppsAsync(Token, applicationNameFilter);
+                deployedApps.AddRange(apps.ToList());
+                apps.Clear();
+                apps = null;
             }
             else if (!string.IsNullOrWhiteSpace(applicationType))
             {
-                // There is no typename filter (unfortunately), so do a paged query for app data and then filter on supplied typename.
-                var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
-                {
-                    IncludeHealthState = false,
-                    MaxResults = 50
-                };
-
-                var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                               deployedAppQueryDesc,
-                                                                               ConfigurationSettings.AsyncTimeout,
-                                                                               Token),
-                                    Token);
-
-                deployedApps = appList.ToList();
-
-                while (appList.ContinuationToken != null)
-                {
-                    Token.ThrowIfCancellationRequested();
-
-                    deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
-
-                    appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                               deployedAppQueryDesc,
-                                                                               ConfigurationSettings.AsyncTimeout,
-                                                                               Token),
-                                    Token);
-
-                    deployedApps.AddRange(appList.ToList());
-                    await Task.Delay(250, Token);
-                }
-
-                deployedApps = deployedApps.Where(a => a.ApplicationTypeName == applicationType).ToList();
-
+                List<DeployedApplication> appList = await client.GetAllLocalDeployedAppsAsync(Token);
+                deployedApps = appList.Where(a => a.ApplicationTypeName == applicationType).ToList();
                 appList.Clear();
                 appList = null;
             }
@@ -1767,7 +1726,11 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(deployedApp.ApplicationName, filteredServiceList, filterType, applicationType);
+                List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
+                                                                                    deployedApp.ApplicationName, 
+                                                                                    filteredServiceList,
+                                                                                    filterType,
+                                                                                    applicationType);
 
                 if (!ReplicaOrInstanceList.Any(r => r.ApplicationName.OriginalString == deployedApp.ApplicationName.OriginalString))
                 {
@@ -1778,8 +1741,11 @@ namespace FabricObserver.Observers
                                                                     || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower()));
                     deployedTargetList.AddRange(targets);
                 }
-            }
 
+                replicasOrInstances.Clear();
+                replicasOrInstances = null;
+            }
+           
             deployedApps.Clear();
             deployedApps = null;
 
@@ -1803,12 +1769,12 @@ namespace FabricObserver.Observers
             var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>(deployedReplicaList.Count);
 
             SetInstanceOrReplicaMonitoringList(
-                    appName,
-                    serviceFilterList,
-                    filterType,
-                    appTypeName,
-                    deployedReplicaList,
-                    replicaMonitoringList);
+                           appName,
+                           serviceFilterList,
+                           filterType,
+                           appTypeName,
+                           deployedReplicaList,
+                           replicaMonitoringList);
 
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
@@ -1858,7 +1824,8 @@ namespace FabricObserver.Observers
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
                             ServiceName = statefulReplica.ServiceName,
-                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId
+                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            Status = statefulReplica.ReplicaStatus
                         };
 
                         /* In order to provide accurate resource usage of an SF service process we need to also account for
@@ -1868,7 +1835,7 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -1904,14 +1871,15 @@ namespace FabricObserver.Observers
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
                             ServiceName = statelessInstance.ServiceName,
-                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId
+                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            Status = statelessInstance.ReplicaStatus
                         };
 
                         if (EnableChildProcessMonitoring)
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            var childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -1934,7 +1902,6 @@ namespace FabricObserver.Observers
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
         }
-
 
         private void CleanUp()
         {
@@ -2095,31 +2062,5 @@ namespace FabricObserver.Observers
             DataTableFileLogger.Flush();
         }
 
-        public double GetMaximumLvidPercentInUseForProcess(string procName)
-        {
-            // KVS is not supported on Linux.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                return -1;
-            }
-
-            try
-            {
-                using var performanceCounter = new PerformanceCounter(
-                                                    categoryName: "Windows Fabric Database",
-                                                    counterName: "Long-Value Maximum LID",
-                                                    instanceName: procName,
-                                                    readOnly: true);
-
-                float result = performanceCounter.NextValue();
-                long maxLvids = (long)Math.Pow(2, 31);
-                double usedPct = (double)(result * 100) / maxLvids;
-                return usedPct;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
     }
 }
