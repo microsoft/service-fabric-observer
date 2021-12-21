@@ -70,15 +70,15 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid)
         {
-            if (processId < 1)
+            if (parentPid < 1)
             {
                 return null;
             }
 
             // Get child procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessInfo(processId);
+            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessInfo(parentPid);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {

@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
-using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
@@ -1155,13 +1154,18 @@ namespace FabricObserver.Observers
             AllAppEphemeralPortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
-            AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+            
+            if (isWindows)
+            {
+                AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+            }
+
             processInfo ??= new ConcurrentDictionary<int, string>();
 
             // DEBUG
             //var threadData = new ConcurrentQueue<int>();
 
-            _ = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
                 
@@ -1291,6 +1295,7 @@ namespace FabricObserver.Observers
                         capacity = MonitorDuration.Seconds * 4;
                     }
 
+                    // CPU
                     if (application.CpuErrorLimitPercent > 0 || application.CpuWarningLimitPercent > 0)
                     {
                         _ = AllAppCpuData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, id, capacity, UseCircularBuffer));
@@ -1301,6 +1306,7 @@ namespace FabricObserver.Observers
                         checkCpu = true;
                     }
 
+                    // Memory Mb
                     if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0 || application.MemoryErrorLimitMbPrivate > 0 || application.MemoryWarningLimitMbPrivate > 0)
                     {
                         _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
@@ -1316,6 +1322,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
+                    // Memory percent
                     if (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0)
                     {
                         _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
@@ -1326,6 +1333,7 @@ namespace FabricObserver.Observers
                         checkMemPct = true;
                     }
 
+                    // Active TCP Ports
                     if (application.NetworkErrorActivePorts > 0 || application.NetworkWarningActivePorts > 0)
                     {
                         _ = AllAppTotalActivePortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id, 1, false, EnableConcurrentMonitoring));
@@ -1336,6 +1344,7 @@ namespace FabricObserver.Observers
                         checkAllPorts = true;
                     }
 
+                    // Ephemeral TCP Ports
                     if (application.NetworkErrorEphemeralPorts > 0 || application.NetworkWarningEphemeralPorts > 0)
                     {
                         _ = AllAppEphemeralPortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1, false, EnableConcurrentMonitoring));
@@ -1346,6 +1355,7 @@ namespace FabricObserver.Observers
                         checkEphemeralPorts = true;
                     }
 
+                    // File Handles
                     if (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0)
                     {
                         _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, id, 1, false, EnableConcurrentMonitoring));
@@ -1356,6 +1366,7 @@ namespace FabricObserver.Observers
                         checkHandles = true;
                     }
 
+                    // Threads
                     if (application.ErrorThreadCount > 0 || application.WarningThreadCount > 0)
                     {
                         _ = AllAppThreadsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalThreadCount, id, 1, false, EnableConcurrentMonitoring));
@@ -1366,11 +1377,14 @@ namespace FabricObserver.Observers
                         checkThreads = true;
                     }
 
-                    // This feature (KVS LVIDs percentage in use monitoring) is only available on Windows. This is non-configurable and will be removed when SF ships with the latest version of ESE.
-                    if (EnableKvsLvidMonitoring && repOrInst.ServiceKind == ServiceKind.Stateful)
+                    // KVS LVIDs percent (Windows only)
+                    // Note: This is a non-configurable Windows monitor and will be removed when SF ships with the latest version of ESE.
+                    if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && repOrInst.ServiceKind == ServiceKind.Stateful)
                     {
-                        _ = AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring));
-                        checkLvids = true;
+                        if (AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring)))
+                        {
+                            checkLvids = true;
+                        }
                     }
 
                     /* In order to provide accurate resource usage of an SF service process we need to also account for
@@ -1452,7 +1466,7 @@ namespace FabricObserver.Observers
                             string id,
                             CancellationToken token)
         {
-            _ = Parallel.For(0, procs.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, procs.Count, ParallelOptions, (i, state) =>
             {
                 string procName = procs.ElementAt(i).Key;
                 int procId = procs[procName];
@@ -1618,7 +1632,7 @@ namespace FabricObserver.Observers
 
                     // Memory \\
 
-                    // private working set.
+                    // Process working set (total or private, based on user configuration)
                     if (checkMemMb)
                     {
                         float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkMemMbPrivate ? procName : null, checkMemMbPrivate);
@@ -1634,7 +1648,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    // percent in use (of total).
+                    // Process memory, percent in use (of machine total).
                     if (checkMemPct)
                     {
                         float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkMemMbPrivate ? procName : null, checkMemMbPrivate);
@@ -1888,7 +1902,6 @@ namespace FabricObserver.Observers
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
         }
-
 
         private void CleanUp()
         {
