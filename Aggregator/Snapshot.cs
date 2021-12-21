@@ -57,7 +57,7 @@ namespace Aggregator
             {
                 cpuSum += nodeMetric.hardware.Cpu;
                 ramSum += (float) nodeMetric.hardware.PercentInUse;
-                diskSum += nodeMetric.hardware.DiskPercentInUse;
+                diskSum += nodeMetric.hardware.DiskPercentageInUse();
 
             }
             AverageClusterCpuUsage = ((float)cpuSum) / cnt;

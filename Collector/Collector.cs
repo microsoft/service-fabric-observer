@@ -50,6 +50,13 @@ namespace Collector
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
+
+            //Remote Procedure Call to Aggregator
+            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                new Uri("fabric:/Internship/Aggregator"),
+                new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                );
+            string nodeName = this.Context.NodeContext.NodeName;
             // CT: if the runtime token is cancelled before the next iteration, we will escape the loop. And... not block the runtime from closing down the service.
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -61,54 +68,9 @@ namespace Collector
 
                     // CT: This will throw when the cancellation token is cancelled if it happens after the iteration started.
                     // This will take down the replica (which is what we want here).
-                    await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken); 
+                    await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken);
 
-                    // Collect Data
-                    float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
-                    var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
-                    DriveInfo[] allDrives = DriveInfo.GetDrives();
-                    string nodeName = this.Context.NodeContext.NodeName;
-
-                    //Remote Procedure Call to Aggregator
-                    var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
-                        new Uri("fabric:/Internship/Aggregator"),
-                        new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
-                        );
-                    var (totalMiliseconds, _) = SFUtilities.getTime();
-
-                    Dictionary<int, ProcessData> pids = await SFUtilities.Instance.GetDeployedProcesses(nodeName);
-                    List<ProcessData> processDataList = new List<ProcessData>();
-
-                    //for instead of Parallel.For because Parallel.For bursts the CPU before we load it and this is more lightweigh on the cpu even though timing isn't exact. This is more relevant.
-                    // CT: The problem with sequential here is that if there are a *lot* of service processes this could take a long time to complete. You can control the level
-                    // of parallelism (see what is done in AppObserver, for example). I do not see bursts of CPU in FO with Parallelism enabled (that is, at the default level of parallelism, which is 1/4 of available CPUs).
-                    // For now (MVP), this is fine.
-                    double totalSfCpu = 0, totalSfRamMB = 0, totalSfRamPercentage = 0;
-                    for (int i = 0; i < pids.Count; i++)
-                    {
-                        int pid = pids.ElementAt(i).Key;
-                        var processData = pids[pid];
-                        var (cpuPercentage, ramMb) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
-                        processData.cpuPercentage = cpuPercentage;
-                        processData.ramMb = ramMb;
-
-                        float ramPercentage = 100;
-                        if (TotalMemoryGb > 0) ramPercentage = (100 * ramMb) / (1024 * TotalMemoryGb);
-
-                        processData.ramPercentage = ramPercentage;
-                        processDataList.Add(processData);
-                        totalSfCpu += cpuPercentage;
-                        totalSfRamMB += ramMb;
-                        totalSfRamPercentage += ramPercentage;
-
-                    }
-
-                    var data = new NodeData(totalMiliseconds, nodeName)
-                    {
-                        hardware = new Hardware(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives),
-                        processList = processDataList,
-                        sfHardware = new Hardware((float)totalSfCpu, TotalMemoryGb, (long)totalSfRamMB, totalSfRamPercentage, null)
-                    };
+                    NodeData data= await CollectBatching(SFUtilities.intervalMiliseconds / 10, 7, cancellationToken);
 
                     // CT: Add the runtime cancellationToken to this async call to have it return immediately when the runtime token is cancelled.
                     // You should await this call.
@@ -148,6 +110,63 @@ namespace Collector
                     throw; // CT: Fix the bugs. This will take down the replica/service process. SF will then restart it, per usual.
                 }
             }
+        }
+
+        private async Task<NodeData> CollectBatching(double intervalMiliseconds,int batchCount, CancellationToken cancellationToken)
+        {
+            List<NodeData> nodeDataList = new List<NodeData>(); 
+
+            for(int j = 0; j < batchCount; j++)
+            {
+                // Collect Data
+                float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
+                var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+                DriveInfo[] allDrives = DriveInfo.GetDrives();
+                string nodeName = this.Context.NodeContext.NodeName;
+
+                
+                var (totalMiliseconds, _) = SFUtilities.getTime();
+
+                Dictionary<int, ProcessData> pids = await SFUtilities.Instance.GetDeployedProcesses(nodeName);
+                List<ProcessData> processDataList = new List<ProcessData>();
+
+                //for instead of Parallel.For because Parallel.For bursts the CPU before we load it and this is more lightweigh on the cpu even though timing isn't exact. This is more relevant.
+                // CT: The problem with sequential here is that if there are a *lot* of service processes this could take a long time to complete. You can control the level
+                // of parallelism (see what is done in AppObserver, for example). I do not see bursts of CPU in FO with Parallelism enabled (that is, at the default level of parallelism, which is 1/4 of available CPUs).
+                // For now (MVP), this is fine.
+                double totalSfCpu = 0, totalSfRamMB = 0, totalSfRamPercentage = 0;
+                for (int i = 0; i < pids.Count; i++)
+                {
+                    int pid = pids.ElementAt(i).Key;
+                    var processData = pids[pid];
+                    var (cpuPercentage, ramMb) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
+                    processData.cpuPercentage = cpuPercentage;
+                    processData.ramMb = ramMb;
+
+                    float ramPercentage = 100;
+                    if (TotalMemoryGb > 0) ramPercentage = (100 * ramMb) / (1024 * TotalMemoryGb);
+
+                    processData.ramPercentage = ramPercentage;
+                    processDataList.Add(processData);
+                    totalSfCpu += cpuPercentage;
+                    totalSfRamMB += ramMb;
+                    totalSfRamPercentage += ramPercentage;
+
+                }
+
+                var data = new NodeData(totalMiliseconds, nodeName)
+                {
+                    hardware = new Hardware(cpu, TotalMemoryGb, MemoryInUseMb, PercentInUse, allDrives),
+                    processList = processDataList,
+                    sfHardware = new Hardware((float)totalSfCpu, TotalMemoryGb, (long)totalSfRamMB, totalSfRamPercentage, null)
+                };
+
+                nodeDataList.Add(data);
+                await Task.Delay(TimeSpan.FromMilliseconds(intervalMiliseconds), cancellationToken);
+
+            }
+
+            return NodeData.AverageNodeData(nodeDataList);
         }
     }
 }

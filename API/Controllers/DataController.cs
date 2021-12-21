@@ -122,7 +122,7 @@ namespace API.Controllers
                 "\n Number of Snaphsot: " + targetList.Count +
                 "\n Average Node CPU: " + data.hardware.Cpu +
                 "\n Average Node RAM: " + data.hardware.PercentInUse +
-                "\n Average Node Disk: " + data.hardware.DiskPercentInUse;
+                "\n Average Node Disk: " + data.hardware.DiskPercentageInUse();
             foreach(var process in data.processList)
             {
                 response += process.ToString();
@@ -142,10 +142,10 @@ namespace API.Controllers
                     );
             var (milisecondsLow, _) = SFUtilities.getTime();
             milisecondsLow -= SFUtilities.intervalMiliseconds * 10;
-            double miliecondsHigh = milisecondsLow + SFUtilities.intervalMiliseconds * 5;
+            double milisecondsHigh = milisecondsLow + SFUtilities.intervalMiliseconds * 5;
             //List<byte[]> originList = await AggregatorProxy.GetDataRemote(Snapshot.queueName);
             //List<Snapshot> targetList = originList.ConvertAll<Snapshot>(data => (Snapshot)ByteSerialization.ByteArrayToObject(data));
-            List<Snapshot> targetList = await AggregatorProxy.GetSnapshotsRemote(milisecondsLow,miliecondsHigh);
+            List<Snapshot> targetList = await AggregatorProxy.GetSnapshotsRemote(double.MinValue,double.MaxValue);
 
             Snapshot data = Snapshot.AverageClusterData(targetList);
             NodeData nodeData = NodeData.AverageNodeData(data.nodeMetrics);
@@ -158,7 +158,7 @@ namespace API.Controllers
                 "\n Average count: " + data.customMetrics.Count +
                 "\n Average CPU: " + nodeData.hardware.Cpu +
                 "\n Average RAM: " + nodeData.hardware.PercentInUse +
-                "\n Average Disk: " + nodeData.hardware.DiskPercentInUse;
+                "\n Average Disk: " + nodeData.hardware.DiskPercentageInUse();
             foreach (var process in nodeData.processList)
             {
                 response += process.ToString();

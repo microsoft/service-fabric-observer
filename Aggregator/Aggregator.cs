@@ -51,8 +51,8 @@ namespace Aggregator
             Debug.WriteLine("--------GetSnapshots----------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
             System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
 
-            List<NodeData> HWList = new List<NodeData>();
-            ClusterData sf = null;
+            List<NodeData> nodeDataList = new List<NodeData>();
+            ClusterData clusterData = null;
             bool check=false;
             double minTime =await MinTimeStampInQueue(nodeList);
             bool success=true;
@@ -61,26 +61,26 @@ namespace Aggregator
             byte[] sfb = await PeekFirstAsync(ClusterData.queueName);
             if (sfb != null)
             {
-                sf = (ClusterData)ByteSerialization.ByteArrayToObject(sfb);
-                check = Snapshot.checkTime(minTime, sf.miliseconds);
+                clusterData = (ClusterData)ByteSerialization.ByteArrayToObject(sfb);
+                check = Snapshot.checkTime(minTime, clusterData.miliseconds);
                 if (!check) success = false; //Snapshot must contain SFData
                 else await DequeueAsync(ClusterData.queueName);
             }
             else  success=false; //QUEUE is empty
             foreach(var node in nodeList)
             {
-                byte[] hwb = await PeekFirstAsync(node.NodeName);
-                if (hwb == null) continue; // QUEUE in empty
-                NodeData hw = (NodeData)ByteSerialization.ByteArrayToObject(hwb);
-                check = Snapshot.checkTime(minTime, hw.miliseconds);
+                byte[] nodeDataBytes = await PeekFirstAsync(node.NodeName);
+                if (nodeDataBytes == null) continue; // QUEUE in empty
+                NodeData nodeData = (NodeData)ByteSerialization.ByteArrayToObject(nodeDataBytes);
+                check = Snapshot.checkTime(minTime, nodeData.miliseconds);
                 if (check)
                 {
-                    HWList.Add(hw);
+                    nodeDataList.Add(nodeData);
                     await DequeueAsync(node.NodeName);
                 }
             }
-            if (HWList.Count == 0) success=false; //Snapshot must have at least 1 HWData
-            if(success)return new Snapshot(minTime,sf, HWList);
+            if (nodeDataList.Count == 0) success=false; //Snapshot must have at least 1 HWData
+            if(success)return new Snapshot(minTime,clusterData, nodeDataList);
             return null; //Something failed
         }
        

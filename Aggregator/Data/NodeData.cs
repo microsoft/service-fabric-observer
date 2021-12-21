@@ -29,60 +29,45 @@ namespace Aggregator
         
         public static NodeData AverageNodeData(List<NodeData> list)
         {
+            string nodeName = "";
+            bool sameNodes = true;
             AverageDictionary avg = new AverageDictionary();
-            Dictionary<Uri, List<ProcessData>> dic = new Dictionary<Uri, List<ProcessData>>();
-            foreach(var data in list) 
+            DictionaryList<Uri, ProcessData> dicList = new DictionaryList<Uri, ProcessData>();
+            List<Hardware> hardwareList = new List<Hardware>();
+            List<Hardware> SfHardwareList = new List<Hardware>();
+            foreach (var data in list) 
             {
-                avg.addValue("cpu%", data.hardware.Cpu);
-                avg.addValue("ramTotalGB", data.hardware.TotalMemoryGb);
-                avg.addValue("ramInUseMB", data.hardware.MemoryInUseMb);
-                avg.addValue("ram%", data.hardware.PercentInUse);
-                avg.addValue("disk%", data.hardware.DiskPercentInUse);
-                avg.addValue("cpu%SF", data.sfHardware.Cpu);
-                avg.addValue("ramInUseMB-SF", data.sfHardware.MemoryInUseMb);
-                avg.addValue("ram%SF", data.sfHardware.PercentInUse);
-
+                if (nodeName == "") nodeName = data.nodeName;
+                if (nodeName != data.nodeName) sameNodes = false;
+                avg.addValue("miliseconds", data.miliseconds);
+                
+                hardwareList.Add(data.hardware);
+                SfHardwareList.Add(data.sfHardware);
 
                 foreach (var process in data.processList)
                 {
                     Uri key = process.GetProcessUri();
-                    if (dic.ContainsKey(key))
-                    {
-                        dic[key].Add(process);
-                    }
-                    else
-                    {
-                        List<ProcessData> pList = new List<ProcessData>();
-                        pList.Add(process);
-                        dic.Add(key, pList);
-                    }
+                    dicList.Add(key, process);
                 }
                 
             }
+            if (!sameNodes) nodeName = "Averaged Different Nodes";
             List<ProcessData> finalData = new List<ProcessData>();
-            foreach (var key in dic.Keys)
+            foreach (var key in dicList.GetKeys())
             {
-                finalData.Add(ProcessData.AverageProcessData(dic[key],key));
+                finalData.Add(ProcessData.AverageProcessData(dicList.GetList(key),key));
             }
-                
-            NodeData result = new NodeData(-1, "");
-            Hardware hw = new Hardware(
-                (float)avg.getAverage("cpu%"),
-                (long)avg.getAverage("ramTotalGB"),
-                (long)avg.getAverage("ramInUseMB"),
-                avg.getAverage("ram%"),
-                null);
-            Hardware SfHw = new Hardware(
-                (float)avg.getAverage("cpu%SF"),
-                (long)avg.getAverage("ramTotalGB"),
-                (long)avg.getAverage("ramInUseMB-SF"),
-                avg.getAverage("ram%SF"),
-                null);
-            hw.DiskPercentInUse =(float)avg.getAverage("disk%");
-            result.hardware = hw;
-            result.processList = finalData;
-            result.sfHardware = SfHw;
-            return result;
+
+            return new NodeData(
+                avg.getAverage("miliseconds"),
+                nodeName
+                )
+            {
+                hardware = Hardware.AverageData(hardwareList),
+                sfHardware = Hardware.AverageData(SfHardwareList),
+                processList = finalData
+            };
+           
 
 
         }
