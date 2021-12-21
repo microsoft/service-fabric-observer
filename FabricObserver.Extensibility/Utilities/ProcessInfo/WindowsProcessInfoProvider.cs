@@ -243,7 +243,6 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                // Get list of Process objects.
                 var childProcs = NativeMethods.GetChildProcesses(processId);
 
                 for (int i = 0; i < childProcs.Count; ++i)
