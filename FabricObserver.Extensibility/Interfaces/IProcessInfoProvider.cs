@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Fabric;
 
 namespace FabricObserver.Observers.Utilities
@@ -13,12 +12,12 @@ namespace FabricObserver.Observers.Utilities
     {
         /// <summary>
         /// Gets the amount, in megabytes, of Working Set memory for a specified process. By default, this is the full Working Set amount (private plus shared process memory). You can supply
-        /// a boolean value for optional parameter getPrivateWorkingSet to inform the function that you want Private Working Set only.
+        /// a boolean value for optional parameter getPrivateWorkingSet to inform the function that you want Active Private Working Set only.
         /// </summary>
         /// <param name="processId">The id of the process.</param>
         /// <param name="procName">Optional: The name of the process. This value is required if you supply true for getPrivateWorkingSet.</param>
         /// <param name="getPrivateWorkingSet">Optional: return data for Private working set only.</param>
-        /// <returns>The amount, in megabytes, of Working Set memory for a specified process (total or private, depending on how the function is called).</returns>
+        /// <returns>The amount, in megabytes, of Working Set memory for a specified process (total or active private, depending on how the function is called).</returns>
         float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
 
         /// <summary>

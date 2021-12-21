@@ -25,7 +25,7 @@ namespace FabricObserver.Observers.Utilities
                 return GetProcessPrivateWorkingSetMbFromPerfCounter(procName, processId);
             }
 
-            return NativeGetProcessWorkingSet(processId, getPrivateWorkingSet); 
+            return NativeGetProcessWorkingSet(processId); 
         }
 
         public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false)
@@ -393,7 +393,7 @@ namespace FabricObserver.Observers.Utilities
             return 0F;
         }
 
-        private float NativeGetProcessWorkingSet(int processId, bool getPrivateBytes)
+        private float NativeGetProcessWorkingSet(int processId)
         {
             try
             {
@@ -405,11 +405,6 @@ namespace FabricObserver.Observers.Utilities
                     if (!NativeMethods.GetProcessMemoryInfo(p.Handle, out memoryCounters, memoryCounters.cb))
                     {
                         throw new Win32Exception($"GetProcessMemoryInfo returned false. Error Code is {Marshal.GetLastWin32Error()}");
-                    }
-
-                    if (getPrivateBytes)
-                    {
-                        return memoryCounters.PrivateUsage.ToInt64() / 1024 / 1024;
                     }
 
                     return memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
