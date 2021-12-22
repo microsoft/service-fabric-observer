@@ -68,10 +68,11 @@ namespace Aggregator
 
         public string ToStringAllData()
         {
-            string res=customMetrics.ToString();
+            string res=customMetrics.ToStringMiliseconds();
+            res += "\n Nodes in this Snapshot: " + nodeMetrics.Count;
             foreach(var n in nodeMetrics)
             {
-                res += n.ToString();
+                res += n.ToStringMiliseconds();
             }
             res += "\n************************************************************************************************";
             return res;

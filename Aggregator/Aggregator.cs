@@ -18,7 +18,7 @@ namespace Aggregator
     {
         Task PutDataRemote(string queueName,byte[] data);
         Task<List<byte[]>> GetDataRemote(string queueName);
-        Task<Snapshot> GetSnapshotRemote();
+        //Task<Snapshot> GetSnapshotRemote();
         Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh);
 
     }
@@ -32,7 +32,47 @@ namespace Aggregator
         public Aggregator(StatefulServiceContext context)
             : base(context)
         { }
+/// <summary>
+        /// This is the main entry point for your service replica.
+        /// This method executes when this replica of your service becomes primary and has write status.
+        /// </summary>
+        /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service replica.</param>
+        protected override async Task RunAsync(CancellationToken cancellationToken)
+        {
+            // TODO: Replace the following sample code with your own logic 
+            //       or remove this RunAsync override if it's not needed in your service.
+            this.token = cancellationToken;
+            var myDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, long>>("myDictionary");
+            
 
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                //using (var tx = this.StateManager.CreateTransaction())
+                //{
+                //    var result = await myDictionary.TryGetValueAsync(tx, "Counter");
+
+                //    ServiceEventSource.Current.ServiceMessage(this.Context, "Current Counter Value: {0}",
+                //        result.HasValue ? result.Value.ToString() : "Value does not exist.");
+
+                //    await myDictionary.AddOrUpdateAsync(tx, "Counter", 0, (key, value) => ++value);
+                //    //myDictionary.
+
+                //    // If an exception is thrown before calling CommitAsync, the transaction aborts, all changes are 
+                //    // discarded, and nothing is saved to the secondary replicas.
+                //    await tx.CommitAsync();
+                //}
+
+                Debug.WriteLine("---------RUN---------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
+
+                await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.intervalMiliseconds), cancellationToken);
+                while(await GetMinQueueCount() > 1)
+                {
+                   await ProduceSnapshot(); 
+                }
+            }
+        }
         public async Task PutDataRemote(string queueName,byte[] data)
         {
             await AddDataAsync(queueName, data);
@@ -45,10 +85,47 @@ namespace Aggregator
             return await GetDataAsync(queueName);
         }
 
-        public async Task<Snapshot> GetSnapshotRemote()
+        
+        public async Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh)
         {
-            //Multiuple threads enter -> RunAsync -> this breaks -> it seems that the IRealiableQueue isn't thread safe 
-            Debug.WriteLine("--------GetSnapshots----------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
+            List<Snapshot> list = new List<Snapshot>();
+
+            var stateManager = this.StateManager;
+            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(Snapshot.queueName);
+            try
+            {
+                using (var tx = stateManager.CreateTransaction())
+                {
+                    var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
+                    //iterator.Reset(); // this is position -1 - before the first element in the collection
+
+                    byte[] data = null;
+                    while (await iterator.MoveNextAsync(token))
+                    {
+                        data = iterator.Current;
+
+                        if (data != null) {
+                            Snapshot s = (Snapshot)ByteSerialization.ByteArrayToObject(data);
+                            if (s.miliseconds >= milisecondsLow && s.miliseconds <= milisecondsHigh) list.Add(s);
+                            else 
+                            {//help garbage collector to free memory
+                                s = null;
+                                data = null;
+                            }
+                        } 
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                var x = e;
+            }
+
+            return list;
+        }
+        private async Task<Snapshot> CreateSnapshot()
+        {
+            
             System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
 
             List<NodeData> nodeDataList = new List<NodeData>();
@@ -58,10 +135,10 @@ namespace Aggregator
             bool success=true;
             if (minTime == -1) return null; //queues empty
 
-            byte[] sfb = await PeekFirstAsync(ClusterData.queueName);
-            if (sfb != null)
+            byte[] clusterDataBytes = await PeekFirstAsync(ClusterData.queueName);
+            if (clusterDataBytes != null)
             {
-                clusterData = (ClusterData)ByteSerialization.ByteArrayToObject(sfb);
+                clusterData = (ClusterData)ByteSerialization.ByteArrayToObject(clusterDataBytes);
                 check = Snapshot.checkTime(minTime, clusterData.miliseconds);
                 if (!check) success = false; //Snapshot must contain SFData
                 else await DequeueAsync(ClusterData.queueName);
@@ -83,13 +160,11 @@ namespace Aggregator
             if(success)return new Snapshot(minTime,clusterData, nodeDataList);
             return null; //Something failed
         }
-       
         private async Task ProduceSnapshot() 
         {
-            Debug.WriteLine("---------PRODUCE---------" + Thread.CurrentThread.ManagedThreadId + "----------------------");
             try
             {
-                Snapshot snap = await GetSnapshotRemote();
+                Snapshot snap = await CreateSnapshot();
                 if (snap != null) await AddDataAsync(Snapshot.queueName, ByteSerialization.ObjectToByteArray(snap));
             }
             catch (Exception x)
@@ -148,62 +223,13 @@ namespace Aggregator
             return timeStamp;
         }
 
-        /// <summary>
-        /// Optional override to create listeners (e.g., HTTP, Service Remoting, WCF, etc.) for this service replica to handle client or user requests.
-        /// </summary>
-        /// <remarks>
-        /// For more information on service communication, see https://aka.ms/servicefabricservicecommunication
-        /// </remarks>
-        /// <returns>A collection of listeners.</returns>
-        protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
-        {
-            return this.CreateServiceRemotingReplicaListeners();
-        }
+        
+        
 
-        /// <summary>
-        /// This is the main entry point for your service replica.
-        /// This method executes when this replica of your service becomes primary and has write status.
-        /// </summary>
-        /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service replica.</param>
-        protected override async Task RunAsync(CancellationToken cancellationToken)
-        {
-            // TODO: Replace the following sample code with your own logic 
-            //       or remove this RunAsync override if it's not needed in your service.
-            this.token = cancellationToken;
-            var myDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, long>>("myDictionary");
-            
-
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                //using (var tx = this.StateManager.CreateTransaction())
-                //{
-                //    var result = await myDictionary.TryGetValueAsync(tx, "Counter");
-
-                //    ServiceEventSource.Current.ServiceMessage(this.Context, "Current Counter Value: {0}",
-                //        result.HasValue ? result.Value.ToString() : "Value does not exist.");
-
-                //    await myDictionary.AddOrUpdateAsync(tx, "Counter", 0, (key, value) => ++value);
-                //    //myDictionary.
-
-                //    // If an exception is thrown before calling CommitAsync, the transaction aborts, all changes are 
-                //    // discarded, and nothing is saved to the secondary replicas.
-                //    await tx.CommitAsync();
-                //}
-
-                Debug.WriteLine("---------RUN---------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
-
-                await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.intervalMiliseconds), cancellationToken);
-                while(await GetMinQueueCount() > 1)
-                {
-                   await ProduceSnapshot(); 
-                }
-            }
-        }
+        
 
 
-        public async Task AddDataAsync(string queueName,byte[] data)
+        private async Task AddDataAsync(string queueName,byte[] data)
         {
             var stateManager = this.StateManager;
             IReliableQueue<byte[]> reliableQueue = null ;
@@ -224,7 +250,7 @@ namespace Aggregator
 
         }
 
-        public async Task<byte[]> PeekFirstAsync(string queueName)
+        private async Task<byte[]> PeekFirstAsync(string queueName)
         {
             var stateManager = this.StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
@@ -238,7 +264,7 @@ namespace Aggregator
             }
         }
 
-        public async Task<byte[]> DequeueAsync(string queueName)
+        private async Task<byte[]> DequeueAsync(string queueName)
         {
             var stateManager = this.StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
@@ -283,43 +309,17 @@ namespace Aggregator
 
             return list;
         }
-
-        public async Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh)
+        /// <summary>
+        /// Optional override to create listeners (e.g., HTTP, Service Remoting, WCF, etc.) for this service replica to handle client or user requests.
+        /// </summary>
+        /// <remarks>
+        /// For more information on service communication, see https://aka.ms/servicefabricservicecommunication
+        /// </remarks>
+        /// <returns>A collection of listeners.</returns>
+        protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
         {
-            List<Snapshot> list = new List<Snapshot>();
-
-            var stateManager = this.StateManager;
-            var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(Snapshot.queueName);
-            try
-            {
-                using (var tx = stateManager.CreateTransaction())
-                {
-                    var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
-                    //iterator.Reset(); // this is position -1 - before the first element in the collection
-
-                    byte[] data = null;
-                    while (await iterator.MoveNextAsync(token))
-                    {
-                        data = iterator.Current;
-
-                        if (data != null) {
-                            Snapshot s = (Snapshot)ByteSerialization.ByteArrayToObject(data);
-                            if (s.miliseconds >= milisecondsLow && s.miliseconds <= milisecondsHigh) list.Add(s);
-                            else 
-                            {//help garbage collector to free memory
-                                s = null;
-                                data = null;
-                            }
-                        } 
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                var x = e;
-            }
-
-            return list;
+            return this.CreateServiceRemotingReplicaListeners();
         }
+        
     }
 }

@@ -57,12 +57,19 @@ namespace Aggregator
         {
             String res;
             res =
-                "\n                 Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100) +
+                "\n Custom - Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100) +
                 "\n PrimaryCount: " + this.PrimaryCount +
                 "\n ReplicaCount: " + this.ReplicaCount +
                 "\n InstanceCount: " + this.InstanceCount +
-                "\n Count: " + this.Count+
+                "\n Count: " + this.Count +
                 "\n";
+            return res;
+        }
+        public string ToStringMiliseconds()
+        {
+            String res;
+            res =
+                "\n Custom - Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100);
             return res;
         }
 

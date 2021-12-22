@@ -97,6 +97,13 @@ namespace Aggregator
             return res;
         }
 
-        
+        public string ToStringMiliseconds()
+        {
+            String res;
+            res =
+                "\n " + nodeName + " - Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100);
+
+            return res;
+        }
     }
 }

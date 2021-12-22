@@ -173,25 +173,25 @@ namespace API.Controllers
             return response;
         }
 
-        [HttpGet]
-        [Route("Snapshot")]
-        public async Task<string> GetSnapshot()
-        {
-            string response = "";
+        //[HttpGet]
+        //[Route("Snapshot")]
+        //public async Task<string> GetSnapshot()
+        //{
+        //    string response = "";
 
-            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
-                    new Uri("fabric:/Internship/Aggregator"),
-                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
-                    );
+        //    var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+        //            new Uri("fabric:/Internship/Aggregator"),
+        //            new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+        //            );
 
-            Snapshot snap = await AggregatorProxy.GetSnapshotRemote();
-            //snap.GetNodeProcessesHardwareData("_Node_3");
-            if (snap == null) return "Empty queue";
-            response+=
-                "\n Average cluster capacity: "+snap.CalculateAverageCapacity()+
-                "\n Average resource usage: "+snap.AverageClusterResourseUsage();
-            return response;
-        }
+        //    Snapshot snap = await AggregatorProxy.GetSnapshotRemote();
+        //    //snap.GetNodeProcessesHardwareData("_Node_3");
+        //    if (snap == null) return "Empty queue";
+        //    response+=
+        //        "\n Average cluster capacity: "+snap.CalculateAverageCapacity()+
+        //        "\n Average resource usage: "+snap.AverageClusterResourseUsage();
+        //    return response;
+        //}
 
 
         [HttpGet]

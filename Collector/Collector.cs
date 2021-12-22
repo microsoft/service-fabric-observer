@@ -74,6 +74,7 @@ namespace Collector
 
                     // CT: Add the runtime cancellationToken to this async call to have it return immediately when the runtime token is cancelled.
                     // You should await this call.
+                    
                     await AggregatorProxy.PutDataRemote(nodeName, ByteSerialization.ObjectToByteArray(data));
                 }
                 // CT: Don't handle the exception thrown when an operation is cancelled. Here, cancellationToken here is the SF runtime cancellation token.
