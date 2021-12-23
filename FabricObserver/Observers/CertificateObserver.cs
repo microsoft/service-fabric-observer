@@ -29,6 +29,8 @@ namespace FabricObserver.Observers
         private const string HowToUpdateSelfSignedCertSfLinkHtml =
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
 
+        private readonly bool isWindows;
+
         private TimeSpan HealthReportTimeToLive
         {
             get;
@@ -52,6 +54,7 @@ namespace FabricObserver.Observers
         public CertificateObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base (fabricClient, context)
         {
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         public int DaysUntilClusterExpireWarningThreshold
@@ -251,7 +254,7 @@ namespace FabricObserver.Observers
                         Metric = ErrorWarningProperty.CertificateExpiration,
                         Description = healthMessage,
                         ObserverName = ObserverName,
-                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        OS = isWindows ? "Windows" : "Linux",
                         Source = ObserverConstants.FabricObserverName,
                     };
 
@@ -270,7 +273,7 @@ namespace FabricObserver.Observers
                                         Metric = ErrorWarningProperty.CertificateExpiration,
                                         HealthEventDescription = healthMessage,
                                         ObserverName,
-                                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                                        OS = isWindows ? "Windows" : "Linux",
                                         Source = ObserverConstants.FabricObserverName,
                                         Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration)
                                     });

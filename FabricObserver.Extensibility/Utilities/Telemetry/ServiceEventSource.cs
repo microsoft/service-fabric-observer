@@ -11,7 +11,7 @@ using FabricObserver.TelemetryLib;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
-    public sealed class ServiceEventSource : EventSource, ITelemetryEventSource
+    public sealed class ServiceEventSource : EventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
@@ -213,18 +213,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 WriteEvent(VerboseMessageEventId, message);
             }
-        }
-
-        [Event(42, Level = EventLevel.Verbose)]
-        public void InternalFODataEvent<T>(T data)
-        {
-            Write("FabricObserverOperationalEvent", data);
-        }
-
-        [Event(43, Level = EventLevel.Error)]
-        public void InternalFOCriticalErrorDataEvent<T>(T data)
-        {
-            Write("FabricObserverCriticalErrorEvent", data);
         }
 
 #if UNSAFE

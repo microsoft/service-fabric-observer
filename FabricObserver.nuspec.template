@@ -2,21 +2,21 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.20</version>
+    <version>3.1.23</version>
     <releaseNotes>
-- Bug fix: Internal diagnostic telemetry *ConcurrencyEnabled values are now set correctly.
-- Enhancement: Increased fractional digits for double values representing resource usage (memory, cpu, etc).
-- Enhancement: LocalLogPath setting is now overridable with support for versionless app parameter upgrades.
-- Enhancement: Concurrent monitoring support is now enabled by default.
-- Code improvements.
-    </releaseNotes>
+- Added new monitoring capability to AppObserver and FabricSystemObserver: KVS LVID usage (important for certain types of stateful services, like Actor-based services, for example).
+- Performance improvements and bug fixes.
+- Changes to operational telemetry to prevent sending data from restricted regions/clouds.
+- Added readme to nupkg.
+	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <title>Service Fabric FabricObserver Application</title>
     <icon>icon.png</icon>
+	<readme>fonuget.md</readme>
     <language>en-US</language>
-    <description>This package contains the Service Fabric FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Service Fabric Windows and Linux clusters. This package contains the entire application and is required to build .NET Standard 2.0 observer plugins.</description>
+    <description>This package contains the FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and is required to build .NET Standard 2.0 observer plugins.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
@@ -31,5 +31,6 @@
     <file src="**" target="contentFiles\any\any" />
     <file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
     <file src="%ROOT_PATH%\icon.png" target="" />
+	<file src="%ROOT_PATH%\fonuget.md" target="" />
   </files>
 </package>

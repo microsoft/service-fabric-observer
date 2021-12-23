@@ -28,7 +28,6 @@ namespace FabricObserver.Observers
     public abstract class ObserverBase : IObserver
     {
         private const int TtlAddMinutes = 1;
-        private const string FabricSystemAppName = "fabric:/System";
         private bool disposed;
         private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new object();
@@ -694,7 +693,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            string thresholdName = "Minimum";
+            string thresholdName = "Warning";
             bool warningOrError = false;
             string name = string.Empty, id, drive = string.Empty;
             int procId = 0;
@@ -716,7 +715,7 @@ namespace FabricObserver.Observers
                 }
                 else // System service report from FabricSystemObserver.
                 {
-                    appName = new Uri(FabricSystemAppName);
+                    appName = new Uri(ObserverConstants.SystemAppName);
                     name = data.Id;
 
                     try
@@ -740,17 +739,17 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     ObserverName = ObserverName,
                     Metric = data.Property,
-                    Value = Math.Round(data.AverageDataValue, 2),
+                    Value = data.AverageDataValue,
                     PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ProcessId = procId,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ServiceName = serviceName?.OriginalString ?? string.Empty,
-                    SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
+                    SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
                     Source = ObserverConstants.FabricObserverName
                 };
 
                 // If the source issue is from FSO, then set the SystemServiceProcessName on TD instance.
-                if (appName != null && appName.OriginalString == FabricSystemAppName)
+                if (appName != null && appName.OriginalString == ObserverConstants.SystemAppName)
                 {
                     telemetryData.SystemServiceProcessName = name;
                 }
@@ -783,13 +782,13 @@ namespace FabricObserver.Observers
                                         NodeName,
                                         ObserverName,
                                         Metric = data.Property,
-                                        Value = Math.Round(data.AverageDataValue, 2),
+                                        Value = data.AverageDataValue,
                                         PartitionId = replicaOrInstance?.PartitionId.ToString(),
                                         ProcessId = procId,
                                         ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
-                                        SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty
+                                        SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty
                                     });
                 }
             }
@@ -817,7 +816,7 @@ namespace FabricObserver.Observers
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
                     Source = ObserverConstants.FabricObserverName,
-                    Value = Math.Round(data.AverageDataValue, 2)
+                    Value = data.AverageDataValue
                 };
 
                 if (IsTelemetryEnabled)
@@ -835,7 +834,7 @@ namespace FabricObserver.Observers
                                         ObserverName,
                                         Metric = $"{drive}{data.Property}",
                                         Source = ObserverConstants.FabricObserverName,
-                                        Value = Math.Round(data.AverageDataValue, 2)
+                                        Value = data.AverageDataValue
                                     });
                 }
             }
@@ -843,11 +842,17 @@ namespace FabricObserver.Observers
             // Health Error
             if (data.IsUnhealthy(thresholdError))
             {
-                thresholdName = "Maximum";
+                thresholdName = "Error";
                 threshold = thresholdError;
                 warningOrError = true;
                 healthState = HealthState.Error;
-                CurrentErrorCount++;
+
+                // FO emits a health report each time it detects an Error threshold breach for some metric for some supported entity (target).
+                // Don't increment this internal counter if the target is already in error for the same metric.
+                if (!data.ActiveErrorOrWarning)
+                {
+                    CurrentErrorCount++;
+                }
 
                 // **Windows-only**. This is used by AppObserver, but makes sense to be
                 // part of the base class for future use, like for plugins that manage service processes.
@@ -887,7 +892,13 @@ namespace FabricObserver.Observers
             {
                 warningOrError = true;
                 healthState = HealthState.Warning;
-                CurrentWarningCount++;
+
+                // FO emits a health report each time it detects a Warning threshold breach for some metric for some supported entity (target).
+                // Don't increment this internal counter if the target is already in warning for the same metric.
+                if (!data.ActiveErrorOrWarning)
+                {
+                    CurrentWarningCount++;
+                }
             }
 
             if (warningOrError)
@@ -976,6 +987,11 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorTooManyThreads : FOErrorWarningCodes.AppWarningTooManyThreads;
                         break;
 
+                    // Internal monitor for Windows KVS LVID consumption. Only Warning state is supported. This is a non-configurable monitor.
+                    case ErrorWarningProperty.TotalKvsLvidsPercent when healthReportType == HealthReportType.Application:
+                        errorWarningCode = FOErrorWarningCodes.AppWarningKvsLvidsPercentUsed;
+                        break;
+
                     case ErrorWarningProperty.TotalFileHandles:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyOpenFileHandles : FOErrorWarningCodes.NodeWarningTooManyOpenFileHandles;
@@ -992,17 +1008,16 @@ namespace FabricObserver.Observers
 
                 if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
                 {
-                    childProcMsg = $"Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
+                    childProcMsg = $" Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
                                    $"Their cumulative impact on {name}'s resource usage has been applied.";
                 }
 
-                _ = healthMessage.Append($"{drive}{data.Property} is at or above the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.Append($" - {data.Property}: {Math.Round(data.AverageDataValue, 2)}{data.Units} ");
+                _ = healthMessage.Append($"{drive}{data.Property} has exceeded the specified {thresholdName} limit ({threshold}{data.Units})");
+                _ = healthMessage.Append($" - {data.Property}: {data.AverageDataValue}{data.Units}");
                 
                 if (childProcMsg != string.Empty)
                 {
-                    _ = healthMessage.AppendLine();
-                    _ = healthMessage.AppendLine(childProcMsg);
+                    _ = healthMessage.Append(childProcMsg);
                 }
 
                 // The health event description will be a serialized instance of telemetryData,
@@ -1042,8 +1057,8 @@ namespace FabricObserver.Observers
                                         ProcessId = procId,
                                         ServiceName = serviceName?.OriginalString ?? string.Empty,
                                         Source = ObserverConstants.FabricObserverName,
-                                        SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                                        Value = Math.Round(data.AverageDataValue, 2)
+                                        SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
+                                        Value = data.AverageDataValue
                                     });
                 }
 
@@ -1102,7 +1117,7 @@ namespace FabricObserver.Observers
                     telemetryData.Description = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
                     telemetryData.Source = ObserverConstants.FabricObserverName;
-                    telemetryData.Value = Math.Round(data.AverageDataValue, 2);
+                    telemetryData.Value = data.AverageDataValue;
 
                     // Telemetry
                     if (IsTelemetryEnabled)
@@ -1127,8 +1142,8 @@ namespace FabricObserver.Observers
                                             ProcessId = replicaOrInstance?.HostProcessId.ToString(),
                                             ServiceName = name ?? string.Empty,
                                             Source = ObserverConstants.FabricObserverName,
-                                            SystemServiceProcessName = appName?.OriginalString == FabricSystemAppName ? name : string.Empty,
-                                            Value = Math.Round(data.AverageDataValue, 2)
+                                            SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
+                                            Value = data.AverageDataValue
                                         });
                     }
 
@@ -1159,23 +1174,10 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // No need to keep data in memory.
-            if (data.Data is List<T> list)
+            // this lock probably isn't necessary.
+            lock (lockObj)
             {
-                // List<T> impl.
-                lock (lockObj)
-                {
-                    list.TrimExcess();
-                    list.Clear();
-                }
-            }
-            else
-            {
-                // CircularBufferCollection<T> impl.
-                lock (lockObj)
-                {
-                    data.Data.Clear();
-                }
+                data.ClearData();
             }
         }
 

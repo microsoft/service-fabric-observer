@@ -58,6 +58,11 @@ namespace ClusterObserver.Utilities
             get; set;
         }
 
+        public bool EnableOperationalTelemetry
+        {
+            get; set;
+        }
+
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
             Settings = settings;
@@ -89,6 +94,15 @@ namespace ClusterObserver.Utilities
                 out bool enableVerboseLogging))
             {
                 EnableVerboseLogging = enableVerboseLogging;
+            }
+
+            // Ops telemetry?
+            if (bool.TryParse(
+                GetConfigSettingValue(
+                ObserverConstants.OperationalTelemetryEnabledParameter),
+                out bool enableOpsTelem))
+            {
+                EnableOperationalTelemetry = enableOpsTelem;
             }
 
             // RunInterval?

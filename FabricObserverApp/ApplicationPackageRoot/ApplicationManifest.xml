@@ -1,7 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<!-- Note: You can use an XML diff/merge tool to make upgrading your base configuration to the latest version easier. 
-           Get the tool here: https://github.com/gittorre/XmlDiffPatchSF -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.20" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<!-- You can use an XML diff/merge tool to make upgrading your base configuration to the latest version easier. 
+     Get the tool here: https://github.com/gittorre/XmlDiffPatchSF -->
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.23" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <!-- Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
+       simple configuration updates for them. By design, any observer you make using our 
+       extensibility model will employ the same basic config parameters as all observers do.
+       (See ObserverBase.cs) -->
   <Parameters>
     <Parameter Name="Aggregator_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="Aggregator_PartitionCount" DefaultValue="1" />
@@ -15,15 +19,16 @@
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
-    <Parameter Name="ObserverLogPath" DefaultValue="observer_logs" />
-    <!-- Observer Configuration 
-         Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
-               simple configuration updates for them. By design, any observer you make using our 
-               extensibility model will employ the same basic config parameters as all observers do.
-               (See ObserverBase.cs) -->
+    <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
+    <!-- Observer Configuration
+         Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
+         simple configuration updates for them. By design, any observer you make using our
+         extensibility model will employ the same basic config parameters as all observers do.
+         (See ObserverBase.cs) -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
+    <!-- Note: You must run FO as System user on Windows in order to run ContainerObserver. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
@@ -69,36 +74,42 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers. 
-         NOTE: If you enable concurrent monitoring for AppObserver, then you should increase this value to be at least the number of cores on the target machine. 
-         You have more flexibility with monitor duration with multiple threads on capable hardware. Take advantage of it. -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:03" />
-    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:03" />
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers.
+         If you enable concurrent monitoring for AppObserver and you are running on capable CPU (>= 4 logical processors),
+		 then you should increase this value from 1 second to at most (1/2 the number of logical processors) seconds on the target machine.
+		 **However, if you monitor a *very* large number of services (>200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
+		 Do leave this set at 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4) -->
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:03" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
     <Parameter Name="ContainerObserverRunInterval" DefaultValue="" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="01:00:00" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:15:00" />
-    <Parameter Name="NetworkObserverRunInterval" DefaultValue="00:15:00" />
-    <Parameter Name="NodeObserverRunInterval" DefaultValue="00:15:00" />
-    <Parameter Name="OSObserverRunInterval" DefaultValue="01:00:00" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
+    <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
+    <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
+    <Parameter Name="OSObserverRunInterval" DefaultValue="00:15:00" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
+    <!-- Note: CircularBufferCollection is not thread-safe. -->
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
-    <!-- Required-If UseCircularBuffer = true -->
+    <!-- Optional-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    <!-- Process family tree monitoring. -->
+    <!-- Process family tree (descendants) monitoring.
+	     Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring.
+		 In that case, enabling this may eat a lot of cpu. Please test, as always. If you know your target services
+		 do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you already know.. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- Service process dumps (dumpProcessOnError feature).
-         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json
          if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
     <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
@@ -108,6 +119,13 @@
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <!-- The default value is 1/4 of detected logical processors. This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
+	     You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
+		 eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
+		 Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+    <!-- KVS LVID Monitoring -->
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -118,6 +136,7 @@
     <Parameter Name="ContainerObserverConfigurationFile" DefaultValue="ContainerObserver.config.json" />
     <!-- Concurrency/Parallelism Support -->
     <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="85" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
@@ -129,6 +148,9 @@
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Concurrency/Parallelism Support -->
     <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverMaxConcurrentTasks" DefaultValue="" />
+    <!-- KVS LVID Monitoring -->
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
@@ -172,9 +194,9 @@
     <!-- AzureStorageUploadObserver -->
     <Parameter Name="AzureStorageUploadObserverBlobContainerName" DefaultValue="fodumps" />
     <!-- This can be an encrypted string or not. The decision is yours.
-         For encrypting, please use the Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here. 
+         For encrypting, please use the Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here.
          Any encrypted string must NOT contain line breaks or spaces. This is very important. If you copy/paste the encrypted string incorrectly, then FO will not upload dumps.
-         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps  
+         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps
          for details. Follow the directions in the sample for creating an encryted secret. Note the use of thumbprint in the cmd. -->
     <Parameter Name="AzureStorageUploadObserverStorageConnectionString" DefaultValue="" />
     <!-- OR -->
@@ -188,21 +210,15 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="AggregatorPkg" ServiceManifestVersion="1.0.0" />
-    <ConfigOverrides />
-    <!-- Uncomment Policies node to run FO as System user. Also uncomment the Principals node further below.
-    <Policies>
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies> -->
-  </ServiceManifestImport>
-  <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.20" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.23" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
           <Section Name="AppObserverConfiguration">
             <Parameter Name="Enabled" Value="[AppObserverEnabled]" />
             <Parameter Name="EnableConcurrentMonitoring" Value="[AppObserverEnableConcurrentMonitoring]" />
+            <Parameter Name="EnableKvsLvidMonitoring" Value="[AppObserverEnableKvsLvidMonitoring]" />
+            <Parameter Name="MaxConcurrentTasks" Value="[AppObserverMaxConcurrentTasks]" />
             <Parameter Name="EnableCSVDataLogging" Value="[AppObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[AppObserverEnableEtw]" />
             <Parameter Name="EnableTelemetry" Value="[AppObserverEnableTelemetry]" />
@@ -247,6 +263,8 @@
           <Section Name="FabricSystemObserverConfiguration">
             <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
             <Parameter Name="EnableConcurrentMonitoring" Value="[FabricSystemObserverEnableConcurrentMonitoring]" />
+            <Parameter Name="EnableKvsLvidMonitoring" Value="[FabricSystemObserverEnableKvsLvidMonitoring]" />
+            <Parameter Name="MaxConcurrentTasks" Value="[FabricSystemObserverMaxConcurrentTasks]" />
             <Parameter Name="EnableCSVDataLogging" Value="[FabricSystemObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[FabricSystemObserverEnableEtw]" />
             <Parameter Name="EnableTelemetry" Value="[FabricSystemObserverEnableTelemetry]" />
@@ -344,6 +362,7 @@
           <Section Name="ContainerObserverConfiguration">
             <Parameter Name="Enabled" Value="[ContainerObserverEnabled]" />
             <Parameter Name="EnableConcurrentMonitoring" Value="[ContainerObserverEnableConcurrentMonitoring]" />
+            <Parameter Name="MaxConcurrentTasks" Value="[ContainerObserverMaxConcurrentTasks]" />
             <Parameter Name="EnableTelemetry" Value="[ContainerObserverEnableTelemetry]" />
             <Parameter Name="EnableEtw" Value="[ContainerObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[ContainerObserverEnableVerboseLogging]" />
@@ -364,6 +383,10 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
+    <!-- Uncomment Policies node to run FO as System user. Also uncomment the Principals node further below. -->
+    <Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
+    </Policies>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -384,12 +407,12 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!-- Uncomment Principals node to run FO as System user. Also uncomment the Policies node above.
+  <!-- Uncomment Principals node to run FO as System user. Also uncomment the Policies node above. -->
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals> -->
+  </Principals>
   <Certificates>
     <SecretsCertificate X509FindValue="" Name="" />
   </Certificates>

@@ -2,10 +2,16 @@
   {
     "targetAppType": "FabricObserverType",
     "cpuWarningLimitPercent": 30,
-    "memoryWarningLimitPercent": 20
+    "memoryWarningLimitPercent": 20,
+    "memoryWarningLimitMbPrivate": 1024
   },
   {
     "targetApp": "fabric:/CpuStress",
+    "cpuWarningLimitPercent": 90,
+    "memoryWarningLimitPercent": 60
+  },
+  {
+    "targetApp": "Health Metrics",
     "cpuWarningLimitPercent": 90,
     "memoryWarningLimitPercent": 60
   },
@@ -15,8 +21,9 @@
     "memoryWarningLimitPercent": 20
   },
   {
-    "targetApp": "fabric:/BadApp",
+    "targetApp": "BadApp",
     "cpuWarningLimitPercent": 60,
-    "memoryWarningLimitPercent": 30
+    "memoryWarningLimitPercent": 30,
+    "memoryWarningLimitMbPrivate": 1024
   }
 ]

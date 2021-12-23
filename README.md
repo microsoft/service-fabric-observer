@@ -1,6 +1,6 @@
-# FabricObserver 3.1.20
+# FabricObserver 3.1.23
 
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
 2. Runs on multiple versions of Windows Server and Ubuntu 16.04 and 18.04
 3. Provides [an easy-to-use extensibility model](/Documentation/Plugins.md) for creating [custom Observers](/SampleObserverPlugin) out of band (so, you don't need to clone the repo to build an Observer). See [ContainerObserver](https://github.com/GitTorre/ContainerObserver) for a complete plugin impl that extends FO with SF container app resource monitoring and alerting (note that this observer is built into FO as of version 3.1.17).
@@ -53,7 +53,7 @@ When FabricObserver gracefully exits or updates, it will clear all of the health
 ![alt text](/Documentation/Images/EventClearOnUpdateExit.png "All Health Event Clearing UI")  
 
 
-FabricObserver comes with a number of Observers that run out-of-the-box. Observers are specialized objects which wake up, monitor a specific set of resources, emit a health report, and sleep again. However, the thresholds and configurations of the included observers must be set to match the specific needs of your cluster. These settings can be set via [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml).
+FabricObserver comes with a number of Observers that run out-of-the-box. Observers are specialized objects that monitor, point in time, specific resources in use by user service processes, SF system service processes, containers, virtual/physical machines. They emit Service Fabric health reports, diagnostic telemetry and ETW events, then go away until the next round of monitoring. The resource metric thresholds supplied in the configurations of the built-in observers must be set to match your specific monitoring and alerting needs. These settings are housed in [Settings.xml](/FabricObserver/PackageRoot/Config/Settings.xml) and [ApplicationManifest.xml](/FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml). The default settings are useful without any modifications, but you should design your resource usage thresholds according to your specific needs.
 
 When a Warning threshold is reached or exceeded, an observer will send a Health Report to Service Fabric's Health management system (either as a Node or App Health Report, depending on the observer). This Warning state and related reports are viewable in SFX, the Service Fabric EventStore, and Azure's Application Insights/LogAnalytics/ETW, if enabled.
 
@@ -61,7 +61,7 @@ Most observers will remove the Warning state in cases where the issue is transie
 
 [Read more about Service Fabric Health Reports](https://docs.microsoft.com/azure/service-fabric/service-fabric-report-health)
 
-FO ships with both an Azure ApplicationInsights and Azure LogAnalytics telemetry implementation. Other providers can be used by implementing the [ITelemetryProvider interface](/FabricObserver/Observers/Interfaces/ITelemetryProvider.cs). 
+FO ships with both an Azure ApplicationInsights and Azure LogAnalytics telemetry implementation. Other providers can be used by implementing the [ITelemetryProvider interface](https://github.com/microsoft/service-fabric-observer/blob/main/FabricObserver.Extensibility/Interfaces/ITelemetryProvider.cs). 
 
 For more information about **the design of FabricObserver**, please see the [Design readme](./Documentation/Design.md). 
 
@@ -143,19 +143,19 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO3120 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO3122 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO3120
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO3122
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.20   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.23   
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.20 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.23 -Monitored -FailureAction rollback
 ```  
 
 ## Configuration Change Support
@@ -171,12 +171,12 @@ Here are the current observers and what they monitor:
 
 | Resource | Observer |
 | --- | --- |
-| Application (services) resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | AppObserver |
+| Application (services) resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP), Threads  | AppObserver |
 | Looks for dmp and zip files in AppObserver's MemoryDumps folder, compresses (if necessary) and uploads them to your specified Azure storage account (blob only, AppObserver only, and still Windows only in this version of FO) | AzureStorageUploadObserver |
 | Application (user) and cluster certificate health monitoring | CertificateObserver |
 | Container resource usage health monitoring across CPU and Memory | ContainerObserver |
 | Disk (local storage disk health/availability, space usage, IO) | DiskObserver |
-| SF System Services resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP) | FabricSystemObserver |
+| SF System Services resource usage health monitoring across CPU, File Handles, Memory, Ports (TCP), Threads | FabricSystemObserver |
 | Networking - general health and monitoring of availability of user-specified, per-app endpoints | NetworkObserver |
 | CPU/Memory/File Handles(Linux)/Firewalls(Windows)/TCP Ports usage at machine level | NodeObserver |
 | OS/Hardware - OS install date, OS health status, list of hot fixes, hardware configuration, AutoUpdate configuration, Ephemeral TCP port range, TCP ports in use, memory and disk space usage | OSObserver |

@@ -7,7 +7,7 @@ namespace ClusterObserver.Utilities
 {
     public static class ObserverConstants
     {
-        public const string ObserverManagerName = "ClusterObserverManager";
+        public const string ClusterObserverManagerName = "ClusterObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string ObserverLogPath = "ObserverLogPath";
@@ -59,5 +59,6 @@ namespace ClusterObserver.Utilities
         public const string ClusterTypePaasV1 = "PaasV1";
         public const string ClusterTypeStandalone = "Standalone";
         public const string EnableETWProvider = "EnableETWProvider";
+        public const string OperationalTelemetryEnabledParameter = "EnableOperationalTelemetry";
     }
 }

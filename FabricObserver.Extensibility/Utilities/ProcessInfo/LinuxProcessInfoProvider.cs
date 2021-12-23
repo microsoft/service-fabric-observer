@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
@@ -14,7 +15,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private const int MaxDescendants = 50;
 
-        public override float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false)
+        public override float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false)
         {
             if (LinuxProcFS.TryParseStatusFile(processId, out ParsedStatus status))
             {
@@ -25,9 +26,9 @@ namespace FabricObserver.Observers.Utilities
             return 0f;
         }
 
-        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context)
+        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false)
         {
-            if (processId < 0)
+            if (processId < 0 || context == null)
             {
                 return -1f;
             }
@@ -69,15 +70,15 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid)
         {
-            if (processId < 1)
+            if (parentPid < 1)
             {
                 return null;
             }
 
             // Get child procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessInfo(processId);
+            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessInfo(parentPid);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -151,6 +152,12 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return childProcesses;
+        }
+
+        public override double ProcessGetCurrentKvsLvidsUsedPercentage(string procName)
+        {
+            // Not supported on Linux.
+            return -1;
         }
 
         private List<(string ProcName, int Pid)> TupleGetChildProcessInfo(int processId)

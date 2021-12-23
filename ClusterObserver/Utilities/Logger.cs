@@ -181,16 +181,16 @@ namespace ClusterObserver.Utilities
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     string windrive = Environment.SystemDirectory[..3];
-                    logFolderBase = windrive + "observer_logs";
+                    logFolderBase = windrive + "cluster_observer_logs";
                 }
                 else
                 {
-                    logFolderBase = "/tmp/observer_logs";
+                    logFolderBase = "/tmp/cluster_observer_logs";
                 }
             }
 
             LogFolderBasePath = logFolderBase;
-            string file = Path.Combine(logFolderBase, "fabric_observer.log");
+            string file = Path.Combine(logFolderBase, "cluster_observer.log");
 
             if (!string.IsNullOrEmpty(FolderName) && !string.IsNullOrEmpty(Filename))
             {

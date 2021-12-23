@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -47,11 +48,13 @@ namespace FabricObserver.Observers.Utilities
             get; 
         } = new Logger("Utilities");
 
-        public abstract float GetProcessWorkingSetMb(int processId, bool getPrivateWorkingSet = false);
+        public abstract float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
 
-        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context);
+        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
 
-        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int processId);
+        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false);
+
+        public abstract double ProcessGetCurrentKvsLvidsUsedPercentage(string procName);
 
         public static int GetProcessThreadCount(int processId)
         {

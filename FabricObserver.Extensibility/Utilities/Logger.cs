@@ -248,11 +248,11 @@ namespace FabricObserver.Observers.Utilities
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     string windrive = Environment.SystemDirectory.Substring(0, 3);
-                    logFolderBase = windrive + "observer_logs";
+                    logFolderBase = windrive + "fabric_observer_logs";
                 }
                 else
                 {
-                    logFolderBase = "/tmp/observer_logs";
+                    logFolderBase = "/tmp/fabric_observer_logs";
                 }
             }
 

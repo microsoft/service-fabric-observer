@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace FabricObserver.TelemetryLib
 {
-    public class FabricObserverCriticalErrorEventData
+    public class CriticalErrorEventData
     {
         public string Version
         {

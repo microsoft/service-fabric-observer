@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -24,7 +25,8 @@ namespace FabricObserver.Observers.Utilities
                      string property,
                      string id,
                      int dataCapacity,
-                     bool useCircularBuffer = false)
+                     bool useCircularBuffer = false,
+                     bool isParallel = false)
         {
             if (string.IsNullOrEmpty(property))
             {
@@ -36,10 +38,16 @@ namespace FabricObserver.Observers.Utilities
                 throw new ArgumentException($"Must provide a non-empty {id}.");
             }
 
-            // This can be either a straight List<T> or a CircularBufferCollection<T>.
-            if (useCircularBuffer)
+            // Data can be a List<T>, a CircularBufferCollection<T>, or a ConcurrentQueue<T>. \\
+
+            // CircularBufferCollection is not thread safe for writes. 
+            if (useCircularBuffer && !isParallel)
             {
-                Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 5);
+                Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 3);
+            }
+            else if (isParallel)
+            {
+                Data = new ConcurrentQueue<T>();
             }
             else
             {
@@ -88,10 +96,10 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Gets IList type that holds the resource monitoring
-        /// numeric data.
+        /// Gets the IEnumerable type that holds the resource monitoring numeric data.
+        /// These can be one of generic List, CircularBufferCollection or ConcurrentQueue types.
         /// </summary>
-        public IList<T> Data
+        public IEnumerable<T> Data
         {
             get; set;
         }
@@ -109,7 +117,18 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the largest numeric value in the Data collection.
         /// </summary>
-        public T MaxDataValue => Data?.Count > 0 ? Data.Max() : default;
+        public T MaxDataValue
+        {
+            get
+            {
+                if (Data?.Count() > 0)
+                {
+                    return Data.Max();
+                }
+
+                return default;
+            }
+        }
 
         /// <summary>
         /// Gets the average value in the Data collection.
@@ -120,25 +139,46 @@ namespace FabricObserver.Observers.Utilities
             {
                 double average = 0.0;
 
+                if (Data == null || !Data.Any())
+                {
+                    return average;
+                }
+
                 switch (Data)
                 {
-                    case IList<long> v when v.Count > 0:
+                    case IList<long> v:
                         average = Math.Round(v.Average(), 2);
                         break;
 
-                    case IList<int> x when x.Count > 0:
+                    case IList<int> x:
                         average = Math.Round(x.Average(), 2);
                         break;
 
-                    case IList<float> y when y.Count > 0:
+                    case IList<float> y:
                         average = Math.Round(y.Average(), 2);
                         break;
 
-                    case IList<double> z when z.Count > 0:
+                    case IList<double> z:
+                        average = Math.Round(z.Average(), 2);
+                        break;
+
+                    case ConcurrentQueue<long> v:
+                        average = Math.Round(v.Average(), 2);
+                        break;
+
+                    case ConcurrentQueue<int> x:
+                        average = Math.Round(x.Average(), 2);
+                        break;
+
+                    case ConcurrentQueue<float> y:
+                        average = Math.Round(y.Average(), 2);
+                        break;
+
+                    case ConcurrentQueue<double> z:
                         average = Math.Round(z.Average(), 2);
                         break;
                 }
-
+                
                 return average;
             }
         }
@@ -178,7 +218,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Returns true or false depending upon computed health state based on supplied threshold value.</returns>
         public bool IsUnhealthy<TU>(TU threshold)
         {
-            if (Data.Count < 1 || Convert.ToDouble(threshold) <= 0)
+            if (Data == null || !Data.Any() || Convert.ToDouble(threshold) <= 0)
             {
                 return false;
             }
@@ -189,16 +229,58 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the standard deviation of the data held in the Data collection.
         /// </summary>
-        public T StandardDeviation => Data?.Count > 0 ? Statistics.StandardDeviation(Data) : default;
+        public T StandardDeviation => Data?.Count() > 0 ? Statistics.StandardDeviation(Data) : default;
 
         /// <summary>
         /// Gets SlidingWindow Max: A sorted list of sliding window maximums. This is only availabe when Data is CircularBufferCollection.
         /// </summary>
-        public IList<T> SlidingWindowMax =>  Data?.Count >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : null;
+        public IList<T> SlidingWindowMax => Data is CircularBufferCollection<T> && Data?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Max) : null;
 
         /// <summary>
         ///  Gets SlidingWindow Min: A sorted list of sliding window minimums. This is only availabe when Data is CircularBufferCollection.
         /// </summary>
-        public IList<T> SlidingWindowMin => Data?.Count >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : null;
+        public IList<T> SlidingWindowMin => Data is CircularBufferCollection<T> && Data ?.Count() >= 3 ? Statistics.SlidingWindow(Data, 3, WindowType.Min) : null;
+
+        /// <summary>
+        /// Adds numeric data to current instance's Data property. Use this method versus adding directly to Data.
+        /// </summary>
+        /// <param name="data"></param>
+        public void AddData(T data)
+        {
+            if (Data is List<T> d)
+            {
+                d.Add(data);
+            }
+            else if (Data is CircularBufferCollection<T> c)
+            {
+                c.Add(data);
+            }
+            else if (Data is ConcurrentQueue<T> e)
+            {
+                e.Enqueue(data);
+            }
+        }
+
+        /// <summary>
+        /// Clears numeric data of the current instance's Data property. Use this method versus adding calling Clear on Data as that
+        /// won't work for ConcurrentQueue.
+        /// </summary>
+        public void ClearData()
+        {
+            if (Data is List<T> d)
+            {
+                d.TrimExcess();
+                d.Clear();
+            }
+            else if (Data is CircularBufferCollection<T> c)
+            {
+                c.Clear();
+            }
+            else if (Data is ConcurrentQueue<T>)
+            {
+                // .NET Standard 2.0 does not have a Clear() (2.1 does).
+                Data = new ConcurrentQueue<T>();
+            }
+        }
     }
 }

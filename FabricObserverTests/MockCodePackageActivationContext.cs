@@ -28,16 +28,16 @@ namespace FabricObserverTests
         /// <param name="serviceManifestName">serviceManifestName.</param>
         /// <param name="serviceManifestVersion">serviceManifestVersion.</param>
         public MockCodePackageActivationContext(
-            string applicationName,
-            string applicationTypeName,
-            string codePackageName,
-            string codePackageVersion,
-            string context,
-            string logDirectory,
-            string tempDirectory,
-            string workDirectory,
-            string serviceManifestName,
-            string serviceManifestVersion)
+                        string applicationName,
+                        string applicationTypeName,
+                        string codePackageName,
+                        string codePackageVersion,
+                        string context,
+                        string logDirectory,
+                        string tempDirectory,
+                        string workDirectory,
+                        string serviceManifestName,
+                        string serviceManifestVersion)
         {
             ApplicationName = applicationName;
             ApplicationTypeName = applicationTypeName;

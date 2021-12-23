@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -22,60 +24,42 @@ namespace FabricObserver.TelemetryLib
     {
         private const string OperationalEventName = "OperationalEvent";
         private const string CriticalErrorEventName = "CriticalErrorEvent";
-        private const string TaskName = "FabricObserver";
+        private const string COTaskName = "ClusterObserver";
+        private const string FOTaskName = "FabricObserver";
         private readonly TelemetryClient telemetryClient;
         private readonly ServiceContext serviceContext;
-        private readonly ITelemetryEventSource serviceEventSource;
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
-        private readonly bool isEtwEnabled;
 
-        public TelemetryEvents(
-                    FabricClient fabricClient,
-                    ServiceContext context,
-                    ITelemetryEventSource eventSource,
-                    CancellationToken token,
-                    bool etwEnabled)
+        public TelemetryEvents(FabricClient fabricClient, ServiceContext context, CancellationToken token)
         {
-            serviceEventSource = eventSource;
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
-            appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
+            appInsightsTelemetryConf.ConnectionString = TelemetryConstants.ConnectionString;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
+
+            // Set instance fields.
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
             clusterId = ClusterId;
             tenantId = TenantId;
             clusterType = ClusterType;
-            isEtwEnabled = etwEnabled;
         }
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
         {
-            if (!telemetryClient.IsEnabled())
+            if (telemetryClient == null || !telemetryClient.IsEnabled())
             {
                 return false;
             }
 
             try
             {
-                // ETW
-                if (isEtwEnabled)
-                {
-                    serviceEventSource.InternalFODataEvent(new { FOInternalTelemetryData = JsonConvert.SerializeObject(foData) });
-                }
-
-                string nodeHashString = string.Empty;
-                int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
-
-                if (nodeNameHash != -1)
-                {
-                    nodeHashString = ((uint)nodeNameHash).ToString();
-                }
+                _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
                     { "EventName", OperationalEventName},
-                    { "TaskName", TaskName},
+                    { "TaskName", FOTaskName},
                     { "EventRunInterval", runInterval.ToString() },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
@@ -119,30 +103,81 @@ namespace FabricObserver.TelemetryLib
                     double data = 0;
                     string key;
 
-                    // These observers monitor app services/containers.
+                    // These observers monitor app services/containers and therefore the ServiceData property will not be null.
                     if (obData.Key == appobs || obData.Key == fsobs || obData.Key == netobs || obData.Key == contobs)
                     {
-                        // App count.
-                        data = (obData.Value as AppServiceObserverData).MonitoredAppCount;
-                        key = $"{obData.Key}{apps}";
-                        metrics.Add(key, data);
+                        var serviceData = obData.Value.ServiceData;
 
-                        // Process (service instance/primary replica/container) count.
-                        data = (obData.Value as AppServiceObserverData).MonitoredServiceProcessCount;
-                        key = $"{obData.Key}{procs}";
-
-                        if (obData.Key == contobs)
+                        if (serviceData == null)
                         {
-                            key = $"{obData.Key}{conts}";
+                            continue;
                         }
 
-                        metrics.Add(key, data);
+                        // App count.
+                        data = serviceData.MonitoredAppCount;
+
+                        // if this value is 0, then this data has already been transmitted. Don't send it again.
+                        if (data > 0)
+                        {
+                            bool addMetric = true;
+
+                            // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
+                            if (File.Exists(logFilePath) && TryDeserializeFOEventData(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
+                            {
+                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData.ContainsKey(obData.Key))
+                                {
+                                    if (foEventDataFromLogFile?.ObserverData != null && foEventDataFromLogFile?.ObserverData[obData.Key]?.ServiceData?.MonitoredAppCount == data)
+                                    {
+                                        addMetric = false;
+                                    }
+                                }
+                            }
+
+                            if (addMetric)
+                            {
+                                key = $"{obData.Key}{apps}";
+                                metrics.Add(key, data);
+                            }
+                        }
+
+                        // Process (service instance/primary replica/container) count.
+                        data = serviceData.MonitoredServiceProcessCount;
+
+                        // if this value is 0, then this data has already been transmitted. Don't send it again.
+                        if (data > 0)
+                        {
+                            bool addMetric = true;
+
+                            // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
+                            if (File.Exists(logFilePath) && TryDeserializeFOEventData(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
+                            {
+                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData.ContainsKey(obData.Key))
+                                {
+                                    if (foEventDataFromLogFile.ObserverData[obData.Key].ServiceData.MonitoredServiceProcessCount == data)
+                                    {
+                                        addMetric = false;
+                                    }
+                                }
+                            }
+
+                            if (addMetric)
+                            {
+                                key = $"{obData.Key}{procs}";
+
+                                if (obData.Key == contobs)
+                                {
+                                    key = $"{obData.Key}{conts}";
+                                }
+
+                                metrics.Add(key, data);
+                            }
+                        }
                     }
 
                     // Concurrency
                     if (obData.Key == appobs || obData.Key == fsobs || obData.Key == contobs)
                     {
-                        data = (obData.Value as AppServiceObserverData).ConcurrencyEnabled ? 1 : 0;
+                        data = obData.Value.ServiceData.ConcurrencyEnabled ? 1 : 0;
                         key = $"{obData.Key}{parallel}";
                         metrics.Add(key, data);
                     }
@@ -168,17 +203,14 @@ namespace FabricObserver.TelemetryLib
                     }
                 }
 
-                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties, metrics);
-                telemetryClient?.Flush();
+                telemetryClient.TrackEvent($"{FOTaskName}.{OperationalEventName}", eventProperties, metrics);
+                telemetryClient.Flush();
 
                 // allow time for flushing
                 Thread.Sleep(1000);
 
-                // write a local log file containing the exact information sent to MS \\
-                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray());
-                telemetryData += "," + string.Join(",", metrics.Select(kv => $"\"{kv.Key}\":" + kv.Value).ToArray()) + "}";
-                _ = TryWriteLogFile(logFilePath, telemetryData);
-
+                _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(foData));
+                
                 eventProperties.Clear();
                 eventProperties = null;
                 metrics.Clear();
@@ -195,54 +227,45 @@ namespace FabricObserver.TelemetryLib
             return false;
         }
 
-        public bool EmitFabricObserverCriticalErrorEvent(FabricObserverCriticalErrorEventData foErrorData, string logFilePath)
+        public bool EmitCriticalErrorEvent(CriticalErrorEventData errorData, string source, string logFilePath)
         {
-            if (!telemetryClient.IsEnabled())
+            if (telemetryClient == null || !telemetryClient.IsEnabled())
             {
                 return false;
             }
 
             try
             {
-                // ETW
-                if (isEtwEnabled)
-                {
-                    serviceEventSource.InternalFOCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(foErrorData) });
-                }
-
-                string nodeHashString = string.Empty;
-                int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
-
-                if (nodeNameHash != -1)
-                {
-                    nodeHashString = ((uint)nodeNameHash).ToString();
-                }
-
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
                     { "EventName", CriticalErrorEventName},
-                    { "TaskName", TaskName},
+                    { "TaskName", source},
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
-                    { "NodeNameHash",  nodeHashString },
-                    { "FOVersion", foErrorData.Version },
-                    { "CrashTime", foErrorData.CrashTime },
-                    { "ErrorMessage", foErrorData.ErrorMessage },
-                    { "CrashData", foErrorData.ErrorStack },
+                    { "FOVersion", errorData.Version },
+                    { "CrashTime", errorData.CrashTime },
+                    { "ErrorMessage", errorData.ErrorMessage },
+                    { "CrashData", errorData.ErrorStack },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
-                    { "OS", foErrorData.OS }
+                    { "OS", errorData.OS }
                 };
 
-                telemetryClient?.TrackEvent($"{TaskName}.{CriticalErrorEventName}", eventProperties);
-                telemetryClient?.Flush();
+                string nodeHashString = string.Empty;
+
+                if (source == FOTaskName)
+                {
+                    _ = TryGetHashStringSha256(serviceContext.NodeContext.NodeName, out nodeHashString);
+                    eventProperties.Add("NodeNameHash", nodeHashString);
+                }
+
+                telemetryClient.TrackEvent($"{FOTaskName}.{CriticalErrorEventName}", eventProperties);
+                telemetryClient.Flush();
 
                 // allow time for flushing
                 Thread.Sleep(1000);
 
-                // write a local log file containing the exact information sent to MS \\
-                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
-                _ = TryWriteLogFile(logFilePath, telemetryData);
+                _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(errorData));
 
                 return true;
             }
@@ -256,7 +279,7 @@ namespace FabricObserver.TelemetryLib
 
         public void Dispose()
         {
-            telemetryClient?.Flush();
+            telemetryClient.Flush();
 
             // allow time for flushing.
             Thread.Sleep(1000);
@@ -298,6 +321,110 @@ namespace FabricObserver.TelemetryLib
             }
 
             return false;
+        }
+
+        public bool EmitClusterObserverOperationalEvent(ClusterObserverOperationalEventData eventData, string logFilePath)
+        {
+            if (telemetryClient == null || !telemetryClient.IsEnabled())
+            {
+                return false;
+            }
+
+            try
+            {
+                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                {
+                    { "EventName", OperationalEventName},
+                    { "TaskName", COTaskName},
+                    { "ClusterId", clusterId },
+                    { "ClusterType", clusterType },
+                    { "COVersion", eventData.Version },
+                    { "Timestamp", DateTime.UtcNow.ToString("o") },
+                    { "OS", eventData.OS }
+                };
+
+                if (eventProperties.TryGetValue("ClusterType", out string clustType))
+                {
+                    if (clustType != TelemetryConstants.ClusterTypeSfrp)
+                    {
+                        eventProperties.Add("TenantId", tenantId);
+                    }
+                }
+
+                telemetryClient.TrackEvent($"{COTaskName}.{OperationalEventName}", eventProperties);
+                telemetryClient.Flush();
+
+                // allow time for flushing
+                Thread.Sleep(1000);
+
+                string telemetryData = "{" + string.Join(",", eventProperties.Select(kv => $"\"{kv.Key}\":" + $"\"{kv.Value}\"").ToArray()) + "}";
+                _ = TryWriteLogFile(logFilePath, telemetryData);
+
+                eventProperties.Clear();
+                eventProperties = null;
+                return true;
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                _ = TryWriteLogFile(logFilePath, $"{e}");
+            }
+
+            return false;
+        }
+
+
+        /// <summary>
+        /// Tries to compute sha256 hash of a supplied string and converts the hashed bytes to a string supplied in result.
+        /// </summary>
+        /// <param name="source">The string to be hashed.</param>
+        /// <param name="result">The resulting Sha256 hash string. This will be null if the function returns false.</param>
+        /// <returns>true if it can compute supplied string to a Sha256 hash and convert result to a string. false if it can't.</returns>
+        public static bool TryGetHashStringSha256(string source, out string result)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                result = null;
+                return false;
+            }
+
+            try
+            {
+                StringBuilder Sb = new StringBuilder();
+
+                using (var hash = SHA256.Create())
+                {
+                    Encoding enc = Encoding.UTF8;
+                    byte[] byteVal = hash.ComputeHash(enc.GetBytes(source));
+
+                    foreach (byte b in byteVal)
+                    {
+                        Sb.Append(b.ToString("x2"));
+                    }
+                }
+
+                result = Sb.ToString();
+                return true;
+            }
+            catch (Exception e) when (e is ArgumentException || e is EncoderFallbackException || e is FormatException || e is ObjectDisposedException)
+            {
+                result = null;
+                return false;
+            }
+        }
+
+        private bool TryDeserializeFOEventData(string json, out FabricObserverOperationalEventData obj)
+        {
+            try
+            {
+                obj = JsonConvert.DeserializeObject<FabricObserverOperationalEventData>(json);
+                return true;
+            }
+            catch
+            {
+                obj = null;
+                return false;
+            }
         }
     }
 }

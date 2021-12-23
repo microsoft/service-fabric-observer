@@ -1,16 +1,28 @@
 ## FabricObserver Operational Telemetry
 
-FabricObserver operational data is transmitted to Microsoft and contains information about FabricObserver.  This information helps us understand which observers matter in the real world, what type of environment they run in, and how many services are being monitored. This information will help us make sure we invest time in the right places. This data does not contain PII or any information about the services running in your cluster or the data handled by the applications. Nor do we capture the configurations set for FO. 
+FabricObserver operational data is transmitted to Microsoft and contains information about FabricObserver.  This information helps us understand which observers matter in the real world, what type of environment they run in, and how many services are being monitored. This information will help us make sure we invest time in the right places. This data does not contain PII or any information about the services running in your cluster or the data handled by the applications. Nor do we capture the user application-specific configurations set for FO (things like target app names and metric thresholds are not transmitted. Basically, we do not care about anything that is specific to your deployment. We only care about what FO is doing with respect to its health and defined behavior.). 
 
-**This information is only used by the Service Fabric team and will be stored (data retention) for no more than 90 days.** 
+**This information is only used by the Service Fabric team and will be retained for no more than 90 days.** 
 
 Disabling / Enabling transmission of Operational Data: 
 
-Transmission of operational data is controlled by a setting and can be easily turned off. ObserverManagerEnableOperationalTelemetry setting in ApplicationManifest.xml controls transmission of Operational data. 
+Transmission of operational data is controlled by a setting and can be easily turned off. ```ObserverManagerEnableOperationalTelemetry``` setting in ```ApplicationManifest.xml``` controls transmission of Operational data. **Note that if you are deploying FabricObserver to a cluster running in a restricted region (China) or cloud (Gov) you should disable this feature before deploying to remain compliant. Please do not send data outside of any restricted boundary.**
 
-Setting the value to false as below will immediately stop the transmission of operational data: 
+**NOTE: We recommend that this feature be disabled if you are deploying FabricObserver to an Azure cluster running in a restricted region or cloud.**
+
+Setting the value to false as below will prevent the transmission of operational data: 
 
 **\<Parameter Name="ObserverManagerEnableOperationalTelemetry" DefaultValue="false" />** 
+
+As with most of FabricObserver's application settings, you can also do this with a versionless parameter-only application upgrade: 
+
+```Powershell
+Connect-ServiceFabricCluster ...
+
+$appParams = @{ "ObserverManagerEnableOperationalFOTelemetry" = "false"; }
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationParameter $appParams -ApplicationTypeVersion 3.1.23 -UnMonitoredAuto
+ 
+```
 
 #### Questions we want to answer from data: 
 
@@ -19,34 +31,41 @@ Setting the value to false as below will immediately stop the transmission of op
 -	Enabled Observers 
     -	Helps us focus effort on the most useful observers.
 -	Are there any FO plugins running?
--	Is FO finding issues (generating health events)? This data is represented in the total number of Warnings/Errors an observer finds in an 8 hour window.
--	This telemetry is sent every 8 hours and internal error/warning counters are reset after each telemetry transmission.
+-	Is FO finding issues (generating health events)? This data is represented in the total number of Warnings/Errors an observer finds in a 24 hour window.
+-	This telemetry is sent once every 24 hours and internal error/warning counters are reset after each telemetry transmission.
 
 #### Operational data details: 
 
 Here is a full example of exactly what is sent in one of these telemetry events, in this case, from an SFRP cluster: 
 
 ```JSON
-{
+  {
     "EventName": "OperationalEvent",
     "TaskName": "FabricObserver",
     "EventRunInterval": "1.00:00:00",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "NodeNameHash": "3024260680",
-    "FOVersion": "3.1.20",
+    "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
+    "FOVersion": "3.1.23",
     "HasPlugins": "False",
     "ParallelCapable": "True",
-    "UpTime": "00:00:10.4892334",
-    "Timestamp": "2021-10-28T18:13:23.8523926Z",
+    "UpTime": "1.00:30:18.8058379",
+    "Timestamp": "2021-11-29T02:45:28.9827940Z",
     "OS": "Windows",
-    "TenantId": "undefined",
     "EnabledObserverCount": 5,
-    "AppObserverTotalMonitoredApps": 7,
-    "AppObserverTotalMonitoredServiceProcesses": 10,
+    "AppObserverTotalMonitoredApps": 5,
+    "AppObserverTotalMonitoredServiceProcesses": 6,
     "AppObserverConcurrencyEnabled": 1,
     "AppObserverErrorDetections": 0,
-    "AppObserverWarningDetections": 0
+    "AppObserverWarningDetections": 0,
+    "CertificateObserverErrorDetections": 0,
+    "CertificateObserverWarningDetections": 0,
+    "DiskObserverErrorDetections": 0,
+    "DiskObserverWarningDetections": 0,
+    "NodeObserverErrorDetections": 0,
+    "NodeObserverWarningDetections": 0,
+    "OSObserverErrorDetections": 0,
+    "OSObserverWarningDetections": 0
   }
 ```
 
@@ -56,7 +75,7 @@ Let's take a look at the data and why we think it is useful to share with us. We
 -	**EventRunInterval** - this is how often this telemetry is sent from a node in a cluster.
 -	**ClusterId** - this is used to both uniquely identify a telemetry event and to correlate data that comes from a cluster.
 -	**ClusterType** - this is the type of cluster: Standalone or SFRP.
--	**NodeNameHash** - this is a hashed expression of the name of the Fabric node from where the data originates. It is used to correlate data from specific nodes in a cluster (the hashed node name will be known to be part of the cluster with a specific cluster id).
+-	**NodeNameHash** - this is a sha256 hash of the name of the Fabric node from where the data originates. It is used to correlate data from specific nodes in a cluster (the hashed node name will be known to be part of the cluster with a specific cluster id).
 -	**FOVersion** - this is the internal version of FO (if you have your own version naming, we will only know what the FO code version is (not your specific FO app version name)).
 -	**HasPlugins** - this informs us about whether or not FO plugins are being used (we would love to know if folks are using the plugin model).
 -   **ParallelCapable** - this informs us about whether or not the underlying (virtual) machine's CPU configuration is parallel capable.
@@ -66,10 +85,10 @@ Let's take a look at the data and why we think it is useful to share with us. We
 -	**AppObserverTotalMonitoredApps** - this is the total number of deployed applications AppObserver is monitoring.
 -	**AppObserverTotalMonitoredServiceProcesses** - this is the total number of processes AppObserver is monitoring.
 -   **AppObserverConcurrencyEnabled** - this informs us if AppObserver is configured to monitor processes concurrently.
--	**AppObserverErrorDetections** - this is how many Error level health events AppObserver generated in an 8 hour window.
--	**AppObserverWarningDetections** - this is how many Warning level health events AppObserver generated in an 8 hour window.
--	**[Built-in]ObserverErrorDetections** - this is how many Error level health events [Built-in]Observer generated in an 8 hour window.
--	**[Built-in]ObserverWarningDetections** - this is how many Error level health events [Built-in]Observer generated in an 8 hour window. 
+-	**AppObserverErrorDetections** - this is how many Error level health events AppObserver generated in a 24 hour window.
+-	**AppObserverWarningDetections** - this is how many Warning level health events AppObserver generated in a 24 hour window.
+-	**[Built-in]ObserverErrorDetections** - this is how many Error level health events [Built-in]Observer generated in a 24 hour window.
+-	**[Built-in]ObserverWarningDetections** - this is how many Error level health events [Built-in]Observer generated in a 24 hour window. 
 
 
 Note that specific plugin data, besides whether or not plugins are in use, is not captured. Only agnostic data from built-in (ship with FO) observers is collected. 

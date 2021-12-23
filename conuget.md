@@ -1,14 +1,10 @@
 ### ClusterObserver
 
-ClusterObserver (CO) is a stateless singleton Service Fabric service that runs on one node in a cluster. CO observes cluster health (aggregated) 
-and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
-but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to 
-the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
+[ClusterObserver](https://github.com/microsoft/service-fabric-observer/tree/main/ClusterObserver) (CO) is a stateless singleton Service Fabric service that runs on one node in a cluster. CO observes cluster health (aggregated) and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
 
 By design, CO will send an Ok health state report when a cluster goes from Warning or Error state to Ok.
 
-CO only sends telemetry when something is wrong or when something that was previously wrong recovers. This limits the amount of data sent to your log analytics service. Like FabricObserver, you can implement whatever analytics backend 
-you want by implementing the IObserverTelemetryProvider interface. As stated, this is already implemented for both Azure ApplicationInsights and Azure LogAnalytics. 
+CO only sends telemetry when something is wrong or when something that was previously wrong recovers. This limits the amount of data sent to your log analytics service. Like FabricObserver, you can implement whatever analytics backend you want by implementing the IObserverTelemetryProvider interface. As stated, this is already implemented for both Azure ApplicationInsights and Azure LogAnalytics. 
 
 The core idea is that you use the aggregated cluster error/warning/Ok health state information from ClusterObserver to fire alerts and/or trigger some other action that gets your attention and/or some SF on-call's enagement via auto-creating a support incident (and an Ok signal would mean auto-mitigate the related incident/ticket).  
 
@@ -29,7 +25,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.1.13 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.1.12 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 Example Configuration:  
@@ -108,56 +104,3 @@ Example LogAnalytics Query
 ![alt text](https://raw.githubusercontent.com/microsoft/service-fabric-observer/main/Documentation/Images/COQueryFileHandles.png "Example LogAnalytics query") 
 
 You should configure FabricObserver to monitor ClusterObserver, of course. :)
-
-## Operational Telemetry
-
-ClusterObserver operational data is transmitted to Microsoft and contains information about ClusterObserver. 
-
-**This information is only used by the Service Fabric team and will be retained for no more than 90 days.** 
-
-Disabling / Enabling transmission of Operational Data: 
-
-Transmission of operational data is controlled by a setting and can be easily turned off. ```EnableOperationalTelemetry``` setting in ```ApplicationManifest.xml``` controls transmission of Operational data. 
-
-Setting the value to false as below will immediately stop the transmission of operational data: 
-
-**\<Parameter Name="EnableOperationalTelemetry" DefaultValue="false" />** 
-
-#### Questions we want to answer from data: 
-
-- CO started successfully.
--	Health of CO 
-       -   If CO crashes with an unhandled exception that can be caught, related error information will be sent to us (this will include the offending FO stack). This will help us improve quality. 
--	This telemetry is sent only once, after the deployed CO instance starts monitoring.
-
-#### Operational data details: 
-
-Here is a full example of exactly what is sent in one of these telemetry events, in this case, from an SFRP cluster: 
-
-```JSON
-{
-    "EventName": "OperationalEvent",
-    "TaskName": "ClusterObserver",
-    "ClusterId": "00000000-1111-1111-0000-00f00d000d",
-    "ClusterType": "SFRP",
-    "COVersion": "2.1.13",
-    "Timestamp": "2021-11-22T19:02:04.4287671Z",
-    "OS": "Windows"
-}
-```
-
-Let's take a look at the data and why we think it is useful to share with us. We'll go through each object property in the JSON above.
--	**EventName** - this is the name of the telemetry event.
--	**TaskName** - this specifies that the event is from ClusterObserver.
--	**ClusterId** - this is used to both uniquely identify a telemetry event and to correlate data that comes from a cluster.
--	**ClusterType** - this is the type of cluster: Standalone, SFRP or undefined.
--	**COVersion** - this is the internal version of CO (if you have your own version naming, we will only know what the CO code version is (not your specific CO app version name)).
--	**Timestamp** - this is the time, in UTC, when CO sent the telemetry.
--	**OS** - this is the operating system CO is running on (Windows or Linux).
-
-If the ClusterType is not SFRP then a TenantId (Guid) is sent for use in the same way we use ClusterId. 
-
-We would greatly appreciate you sharing this information with us!
-
-
-

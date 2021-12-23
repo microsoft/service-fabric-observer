@@ -138,7 +138,7 @@ namespace FabricObserverTests
                 }
 
                 // System reports
-                var sysAppHealth = await client.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System")).ConfigureAwait(false);
+                var sysAppHealth = await client.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName)).ConfigureAwait(false);
 
                 if (sysAppHealth != null)
                 {
@@ -147,7 +147,7 @@ namespace FabricObserverTests
                                                 && (s.HealthInformation.HealthState == HealthState.Error
                                                     || s.HealthInformation.HealthState == HealthState.Warning)))
                     {
-                        healthReport.AppName = new Uri("fabric:/System");
+                        healthReport.AppName = new Uri(ObserverConstants.SystemAppName);
                         healthReport.Property = evt.HealthInformation.Property;
                         healthReport.SourceId = evt.HealthInformation.SourceId;
 
@@ -511,7 +511,9 @@ namespace FabricObserverTests
             ClusterObserverManager.FabricClientInstance = client;
             ClusterObserverManager.EtwEnabled = true;
 
-            var obs = new ClusterObserver.ClusterObserver();
+            // On a one-node cluster like your dev machine, pass true for ignoreDefaultQueryTimeout otherwise each FabricClient query will take 2 minutes 
+            // to timeout in ClusterObserver.
+            var obs = new ClusterObserver.ClusterObserver(null, true);
             await obs.ObserveAsync(token);
 
             // observer ran to completion with no errors.
