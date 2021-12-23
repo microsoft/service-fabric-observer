@@ -128,7 +128,7 @@ namespace Collector
                 
                 var (totalMiliseconds, _) = SFUtilities.getTime();
 
-                Dictionary<int, ProcessData> pids = await SFUtilities.Instance.GetDeployedProcesses(nodeName);
+                Dictionary<int, ProcessData> pids = await SFUtilities.Instance.GetDeployedProcesses(nodeName,this.Context,cancellationToken);
                 List<ProcessData> processDataList = new List<ProcessData>();
 
                 //for instead of Parallel.For because Parallel.For bursts the CPU before we load it and this is more lightweigh on the cpu even though timing isn't exact. This is more relevant.

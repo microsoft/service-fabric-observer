@@ -138,7 +138,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                             PartitionId = statefulReplica.Partitionid,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                            Status = statefulReplica.ReplicaStatus
+                            Status = statefulReplica.ReplicaStatus,
+                            ReplicaRole=statefulReplica.ReplicaRole
                         };
 
                         /* In order to provide accurate resource usage of an SF service process we need to also account for

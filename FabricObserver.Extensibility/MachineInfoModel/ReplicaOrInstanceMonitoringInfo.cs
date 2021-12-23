@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Fabric;
 using System.Fabric.Query;
 
 namespace FabricObserver.Observers.MachineInfoModel
@@ -62,6 +63,10 @@ namespace FabricObserver.Observers.MachineInfoModel
         }
 
         public List<(string procName, int Pid)> ChildProcesses
+        {
+            get; set;
+        }
+        public ReplicaRole ReplicaRole
         {
             get; set;
         }

@@ -1,9 +1,12 @@
-﻿using FabricObserver.Observers.Utilities;
+﻿using FabricObserver.Observers.MachineInfoModel;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Utilities.ServiceFabric;
 using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Query;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using static System.Fabric.FabricClient;
 
@@ -96,49 +99,48 @@ namespace Aggregator
         /// </summary>
         /// <param name="NodeName"></param>
         /// <returns></returns>
-        public async Task<Dictionary<int,ProcessData>> GetDeployedProcesses(string NodeName)
+        public async Task<Dictionary<int,ProcessData>> GetDeployedProcesses(string NodeName,ServiceContext serviceContext,CancellationToken token)
         {
-            var appList =await queryManager.GetDeployedApplicationListAsync(NodeName);
+            
             Dictionary<int, ProcessData> pid=new Dictionary<int, ProcessData>();
-            foreach(var app in appList)
+            Client client = new Client(fabricClient, serviceContext);
+            List<ReplicaOrInstanceMonitoringInfo> replicaList = await client.GetAllLocalReplicasOrInstances(token);
+            foreach(var replica in replicaList)
             {
-                var replicaList =await queryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
-                foreach(var replica in replicaList)
+                int instanceCount = 0;
+                int replicaCount = 0;
+                int primaryCount = 0;
+
+                if (replica.ServiceKind == ServiceKind.Stateful)
                 {
-                    int instanceCount = 0;
-                    int replicaCount = 0;
-                    int primaryCount = 0;
-
-                    if (replica.ServiceKind == ServiceKind.Stateful)
+                    replicaCount++;
+                    if (replica.ReplicaRole == ReplicaRole.Primary)
                     {
-                        replicaCount++;
-                        if (((DeployedStatefulServiceReplica)replica).ReplicaRole == ReplicaRole.Primary)
-                        {
-                            primaryCount++;
-                        }
+                        primaryCount++;
                     }
-                    else instanceCount++;
-
-                    int id=(int)replica.HostProcessId;
-
-                    ProcessData processData = null;
-                    //replica.ServiceName
-                    if (pid.ContainsKey(id))
-                    {
-                        processData = pid[id];    
-                    }
-                    else
-                    {
-                        processData = new ProcessData(id);
-                        pid.Add(id, processData);            
-                    }
-                    processData.serviceUris.Add(replica.ServiceName);
-                    processData.primaryCount += primaryCount;
-                    processData.replicaCount += replicaCount;
-                    processData.instanceCount += instanceCount;
-                    processData.count++;
                 }
+                else instanceCount++;
+
+                int id=(int)replica.HostProcessId;
+
+                ProcessData processData = null;
+                //replica.ServiceName
+                if (pid.ContainsKey(id))
+                {
+                    processData = pid[id];    
+                }
+                else
+                {
+                    processData = new ProcessData(id);
+                    pid.Add(id, processData);            
+                }
+                processData.serviceUris.Add(replica.ServiceName);
+                processData.primaryCount += primaryCount;
+                processData.replicaCount += replicaCount;
+                processData.instanceCount += instanceCount;
+                processData.count++;
             }
+            
             return pid;
         }
         public async Task<(double cpuPercentage, float ramMB)> TupleGetResourceUsageForProcess(int pid)
@@ -146,7 +148,7 @@ namespace Aggregator
             var cpuUsage = new CpuUsage();
             double cpu=cpuUsage.GetCpuUsagePercentageProcess((int) pid);
 
-            float ramMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb((int)pid, true);
+            float ramMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb((int)pid);
 
             return (cpu, ramMb);
         }
