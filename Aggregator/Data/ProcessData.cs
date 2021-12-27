@@ -17,6 +17,9 @@ namespace Aggregator
         public int count { get; set; }
         public List<Uri> serviceUris { get; }
 
+
+        public List<(string procName, int Pid)> ChildProcesses { get; set; }
+
         public static ProcessData AverageProcessData(List<ProcessData> list,Uri processUri)
         {
             AverageDictionary avg = new AverageDictionary();
@@ -58,6 +61,7 @@ namespace Aggregator
         {
             this.processId = processId;
             this.serviceUris = new List<Uri>();
+            this.ChildProcesses = new List<(string procName, int Pid)>();
             primaryCount = 0;
             replicaCount = 0;
             instanceCount = 0;

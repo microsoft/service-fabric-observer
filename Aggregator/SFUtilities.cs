@@ -132,13 +132,21 @@ namespace Aggregator
                 else
                 {
                     processData = new ProcessData(id);
-                    pid.Add(id, processData);            
+                    pid.Add(id, processData);
+                    //Extend ChildProcess list only once
+                    if(replica.ChildProcesses!=null)processData.ChildProcesses.AddRange(replica.ChildProcesses);
+
                 }
                 processData.serviceUris.Add(replica.ServiceName);
                 processData.primaryCount += primaryCount;
                 processData.replicaCount += replicaCount;
                 processData.instanceCount += instanceCount;
                 processData.count++;
+
+                //for a shared process this may not be correct -> each service has the same processID so child processes are the same so we should overide not extend? 
+                //processData.ChildProcesses.AddRange(replica.ChildProcesses);
+
+                
             }
             
             return pid;

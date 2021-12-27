@@ -143,7 +143,6 @@ namespace Collector
                     var (cpuPercentage, ramMb) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(pid);
                     processData.cpuPercentage = cpuPercentage;
                     processData.ramMb = ramMb;
-
                     float ramPercentage = 100;
                     if (TotalMemoryGb > 0) ramPercentage = (100 * ramMb) / (1024 * TotalMemoryGb);
 
@@ -152,6 +151,14 @@ namespace Collector
                     totalSfCpu += cpuPercentage;
                     totalSfRamMB += ramMb;
                     totalSfRamPercentage += ramPercentage;
+
+                    foreach (var childProcess in processData.ChildProcesses)
+                    {
+                        (cpuPercentage, ramMb) = await SFUtilities.Instance.TupleGetResourceUsageForProcess(childProcess.Pid);
+                        totalSfCpu += cpuPercentage;
+                        totalSfRamMB += ramMb;
+                    }
+                    if (TotalMemoryGb > 0) totalSfRamPercentage = (100 * totalSfRamMB) / (1024 * TotalMemoryGb);
 
                 }
 
