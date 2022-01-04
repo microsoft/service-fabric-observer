@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Aggregator.Data;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,7 +7,7 @@ namespace Aggregator
 {
     //This is a wrapper class for DriveInfo to serialize useful data
     [Serializable]
-    public class Drive
+    public class Drive : DataBase<Drive>
     {
         public string Name { get; }
         public long TotalDiskSpaceGB { get; }
@@ -18,13 +19,35 @@ namespace Aggregator
             this.AvailableDiskSpaceGB = AvailableDiskSpaceGB;
         }
 
-        public static Drive AverageData(List<Drive> list)
+        //public static Drive AverageData(List<Drive> list)
+        //{
+        //    AverageDictionary avg = new AverageDictionary();
+        //    string name = "";
+        //    bool sameName = true;
+
+        //    foreach(var data in list)
+        //    {
+        //        if (name == "") name = data.Name;
+        //        if (name != data.Name) sameName = false;
+        //        avg.addValue("totalSpace", data.TotalDiskSpaceGB);
+        //        avg.addValue("availableSpace", data.AvailableDiskSpaceGB);
+
+        //    }
+        //    if (!sameName) name = "Averaged Differnet Disks";
+        //    return new Drive(
+        //        name,
+        //        (long) avg.getAverage("totalSpace"),
+        //        (long) avg.getAverage("availableSpace")
+        //        );
+
+        //}
+        public Drive AverageData(List<Drive> list)
         {
             AverageDictionary avg = new AverageDictionary();
             string name = "";
             bool sameName = true;
 
-            foreach(var data in list)
+            foreach (var data in list)
             {
                 if (name == "") name = data.Name;
                 if (name != data.Name) sameName = false;
@@ -35,12 +58,11 @@ namespace Aggregator
             if (!sameName) name = "Averaged Differnet Disks";
             return new Drive(
                 name,
-                (long) avg.getAverage("totalSpace"),
-                (long) avg.getAverage("availableSpace")
+                (long)avg.getAverage("totalSpace"),
+                (long)avg.getAverage("availableSpace")
                 );
 
         }
-        
 
         public override string ToString()
         {
@@ -50,5 +72,7 @@ namespace Aggregator
             
             return res;
         }
+
+       
     }
 }

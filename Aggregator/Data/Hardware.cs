@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Aggregator.Data;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Text;
 namespace Aggregator
 {
     [Serializable]
-    public class Hardware
+    public class Hardware : DataBase<Hardware>
     {
         public float Cpu { get; }
         public long TotalMemoryGb { get; }
@@ -43,10 +44,11 @@ namespace Aggregator
             }
             //this.DiskPercentInUse = DiskPercentageInUse();
         }
-        public static Hardware AverageData(List<Hardware> list)
+        public Hardware AverageData(List<Hardware> list)
         {
             AverageDictionary avg = new AverageDictionary();
             DictionaryList<string, Drive> dicList = new DictionaryList<string, Drive>();
+            Drive dummyObject = new Drive("",0,0);
             foreach (var data in list)
             {
                 avg.addValue("cpu%", data.Cpu);
@@ -63,7 +65,7 @@ namespace Aggregator
             List<Drive> finalDriveList = new List<Drive>();
             foreach (var key in dicList.GetKeys())
             {
-                finalDriveList.Add(Drive.AverageData(dicList.GetList(key)));
+                finalDriveList.Add(dummyObject.AverageData(dicList.GetList(key)));
             }
             return new Hardware(
                 (float)avg.getAverage("cpu%"),
@@ -90,5 +92,7 @@ namespace Aggregator
             if (cnt == 0) return -1;
             return percentageSum / cnt;
         }
+
+       
     }
 }

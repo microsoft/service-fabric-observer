@@ -1,14 +1,15 @@
-﻿using System;
+﻿using Aggregator.Data;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Aggregator
 {
     [Serializable]
-    public class ClusterData
+    public class ClusterData: DataBase<ClusterData>
     {
 
-
+        
         /// <summary>
         /// Used for the IRealiableQueue in the Aggregator
         /// </summary>
@@ -71,6 +72,26 @@ namespace Aggregator
             res =
                 "\n Custom - Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100);
             return res;
+        }
+
+        public ClusterData AverageData(List<ClusterData> list)
+        {
+            AverageDictionary avg = new AverageDictionary();
+            foreach (var data in list)
+            {
+                avg.addValue("miliseconds", data.miliseconds);
+                avg.addValue("primary", data.PrimaryCount);
+                avg.addValue("replica", data.ReplicaCount);
+                avg.addValue("instance", data.InstanceCount);
+                avg.addValue("count", data.Count);
+            }
+            return new ClusterData(
+               avg.getAverage("miliseconds"),
+               (int)avg.getAverage("primary"),
+               (int)avg.getAverage("replica"),
+               (int)avg.getAverage("instance"),
+               (int)avg.getAverage("count")
+                );
         }
 
     }

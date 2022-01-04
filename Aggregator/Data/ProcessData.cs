@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Aggregator.Data;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Aggregator
 {
     [Serializable]
-    public class ProcessData
+    public class ProcessData:DataBase<ProcessData>
     {
         public int processId { get; }
         public double cpuPercentage { get; set; }
@@ -44,6 +45,8 @@ namespace Aggregator
             p.instanceCount =(int) avg.getAverage("instance");
             p.count = (int)avg.getAverage("count");
             p.serviceUris.Add(processUri);
+            //still have to add ChildProcess List
+
             return p;
 
         }
@@ -83,6 +86,38 @@ namespace Aggregator
                 "\n RAM used MB: " + ramMb +
                 "\n RAM %: " + ramPercentage;
             return res;
+        }
+
+        public ProcessData AverageData(List<ProcessData> list)
+        {
+            {
+                AverageDictionary avg = new AverageDictionary();
+                foreach (var data in list)
+                {
+                    avg.addValue("cpu%", data.cpuPercentage);
+                    avg.addValue("ramMB", data.ramMb);
+                    avg.addValue("ram%", data.ramPercentage);
+                    avg.addValue("primary", data.primaryCount);
+                    avg.addValue("replica", data.replicaCount);
+                    avg.addValue("instance", data.instanceCount);
+                    avg.addValue("count", data.count);
+
+
+                }
+                ProcessData p = new ProcessData(-1);
+                p.cpuPercentage = avg.getAverage("cpu%");
+                p.ramMb = (float)avg.getAverage("ramMB");
+                p.ramPercentage = (float)avg.getAverage("ram%");
+                p.primaryCount = (int)avg.getAverage("primary");
+                p.replicaCount = (int)avg.getAverage("replica");
+                p.instanceCount = (int)avg.getAverage("instance");
+                p.count = (int)avg.getAverage("count");
+                p.serviceUris.Add(new Uri("fabric:/Internship/AggregatorNeedToImplementThis"));
+                //still have to add ChildProcess List
+
+                return p;
+
+            }
         }
     }
 }

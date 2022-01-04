@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Aggregator.Data;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -9,7 +10,7 @@ namespace Aggregator
     /// This class is a wrapper for Node specific data that will be passed to the Aggregator. Everything needs to be serializable.
     /// </summary>
     [Serializable]
-    public class NodeData
+    public class NodeData:DataBase<NodeData>
     {   
         //You extend this class by adding new properties bellow. They must be serializable. 
         public string nodeName { get; }
@@ -27,7 +28,7 @@ namespace Aggregator
             this.nodeName = nodeName;
         }
         
-        public static NodeData AverageNodeData(List<NodeData> list)
+        public NodeData AverageData(List<NodeData> list)
         {
             string nodeName = "";
             bool sameNodes = true;
@@ -55,7 +56,8 @@ namespace Aggregator
             List<ProcessData> finalData = new List<ProcessData>();
             foreach (var key in dicList.GetKeys())
             {
-                finalData.Add(ProcessData.AverageProcessData(dicList.GetList(key),key));
+                var processList = dicList.GetList(key);
+                finalData.Add(processList[0].AverageData(processList));
             }
 
             return new NodeData(
@@ -63,8 +65,8 @@ namespace Aggregator
                 nodeName
                 )
             {
-                hardware = Hardware.AverageData(hardwareList),
-                sfHardware = Hardware.AverageData(SfHardwareList),
+                hardware = hardwareList[0].AverageData(hardwareList),
+                sfHardware = SfHardwareList[0].AverageData(SfHardwareList),
                 processList = finalData
             };
            

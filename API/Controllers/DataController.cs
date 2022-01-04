@@ -148,7 +148,7 @@ namespace API.Controllers
             List<Snapshot> targetList = await AggregatorProxy.GetSnapshotsRemote(double.MinValue,double.MaxValue);
 
             Snapshot data = Snapshot.AverageClusterData(targetList);
-            NodeData nodeData = NodeData.AverageNodeData(data.nodeMetrics);
+            NodeData nodeData = data.nodeMetrics[0].AverageData(data.nodeMetrics);
             response +=
                 
                 "\n Number of Snaphsot: " + targetList.Count +

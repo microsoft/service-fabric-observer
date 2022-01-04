@@ -148,7 +148,7 @@ namespace Aggregator
                     }
                 }
             }
-            return NodeData.AverageNodeData(list);
+            return list[0].AverageData(list);
         }
 
         public static Snapshot AverageClusterData(List<Snapshot> snapshots)
@@ -180,7 +180,7 @@ namespace Aggregator
             List<NodeData> averageFromAllNodes = new List<NodeData>();
             foreach(var list in nodeDic.Values)
             {
-                averageFromAllNodes.Add(NodeData.AverageNodeData(list));
+                averageFromAllNodes.Add(list[0].AverageData(list));
             }
             ClusterData finalClusterData = ClusterData.AverageClusterData(clusterList);
             //NodeData finalNodeData = NodeData.AverageNodeData(averageFromAllNodes);
