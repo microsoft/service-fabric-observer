@@ -40,7 +40,7 @@
     
     <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded) or AppObserver can't monitor a service that runs at higher privilege, 
          then put FO into Warning or Error state or just create a an Ok (info) health message.
-         Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)).-->
+         Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)). -->
     <Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
     
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
@@ -133,7 +133,7 @@
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
 	  
 	<!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful service that employs KVS (like SF Actor services). 
-	     Enabling this will put the containing Application into Warning when a related service has consumed 75% of the Maximum number of LVIDs (which is int.MaxValue per process). -->
+	     Enabling this will put the containing Application into Warning when a related service has consumed 75% of the Maximum number of LVIDs (which today is int.MaxValue per process). -->
 	<Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
 	  
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
@@ -190,6 +190,9 @@
     <!-- The maximum number of dumps per day per service process per metric. Default is 3. -->
     <Parameter Name="MaxDumps" Value="" MustOverride="true" />
     <Parameter Name="MaxDumpsTimeWindow" Value="" MustOverride="true" />
+
+	<!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
+    <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
@@ -239,6 +242,9 @@
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+	
+    <!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
+	<Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
     
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about

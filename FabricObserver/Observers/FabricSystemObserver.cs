@@ -31,6 +31,7 @@ namespace FabricObserver.Observers
         private readonly List<string> processWatchList;
         private readonly bool isWindows;
         private Stopwatch stopwatch;
+        private bool checkPrivateWorkingSet;
 
         // Health Report data container - For use in analysis to determine health state.
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> allCpuData;
@@ -46,14 +47,13 @@ namespace FabricObserver.Observers
         private bool monitorWinEventLog;
         private readonly object lockObj = new object();
 
-
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
         /// </summary>
         public FabricSystemObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            this.isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
             // Linux
             if (!isWindows)
@@ -754,7 +754,7 @@ namespace FabricObserver.Observers
             // CPU Time
             var cpuError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverCpuErrorLimitPct);
 
-            if (!string.IsNullOrEmpty(cpuError))
+            if (!string.IsNullOrWhiteSpace(cpuError))
             {
                 _ = int.TryParse(cpuError, out int threshold);
 
@@ -766,10 +766,19 @@ namespace FabricObserver.Observers
                 CpuErrorUsageThresholdPct = threshold;
             }
 
-            // Memory - MB
+            /* Memory - Private or Full Working Set */
+            var privateWS = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet);
+            
+            if (!string.IsNullOrWhiteSpace(privateWS))
+            {
+                _ = bool.TryParse(privateWS, out bool privWs);
+               checkPrivateWorkingSet = privWs;
+            }
+
+            // Memory - Working Set MB
             var memError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMemoryErrorLimitMb);
 
-            if (!string.IsNullOrEmpty(memError))
+            if (!string.IsNullOrWhiteSpace(memError))
             {
                 _ = int.TryParse(memError, out int threshold);
 
@@ -784,7 +793,7 @@ namespace FabricObserver.Observers
             // All TCP Ports
             var activeTcpPortsError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkErrorActivePorts);
 
-            if (!string.IsNullOrEmpty(activeTcpPortsError))
+            if (!string.IsNullOrWhiteSpace(activeTcpPortsError))
             {
                 _ = int.TryParse(activeTcpPortsError, out int threshold);
                 ActiveTcpPortCountError = threshold;
@@ -793,7 +802,7 @@ namespace FabricObserver.Observers
             // Ephemeral TCP Ports
             var activeEphemeralPortsError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkErrorEphemeralPorts);
 
-            if (!string.IsNullOrEmpty(activeEphemeralPortsError))
+            if (!string.IsNullOrWhiteSpace(activeEphemeralPortsError))
             {
                 _ = int.TryParse(activeEphemeralPortsError, out int threshold);
                 ActiveEphemeralPortCountError = threshold;
@@ -802,7 +811,7 @@ namespace FabricObserver.Observers
             // File Handles
             var handlesError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverErrorHandles);
 
-            if (!string.IsNullOrEmpty(handlesError))
+            if (!string.IsNullOrWhiteSpace(handlesError))
             {
                 _ = int.TryParse(handlesError, out int threshold);
                 AllocatedHandlesError = threshold;
@@ -811,7 +820,7 @@ namespace FabricObserver.Observers
             // Threads
             var threadCountError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverErrorThreadCount);
 
-            if (!string.IsNullOrEmpty(threadCountError))
+            if (!string.IsNullOrWhiteSpace(threadCountError))
             {
                 _ = int.TryParse(threadCountError, out int threshold);
                 ThreadCountError = threshold;
@@ -823,7 +832,7 @@ namespace FabricObserver.Observers
 
             var cpuWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverCpuWarningLimitPct);
 
-            if (!string.IsNullOrEmpty(cpuWarn))
+            if (!string.IsNullOrWhiteSpace(cpuWarn))
             {
                 _ = int.TryParse(cpuWarn, out int threshold);
 
@@ -837,7 +846,7 @@ namespace FabricObserver.Observers
 
             var memWarn = GetSettingParameterValue( ConfigurationSectionName, ObserverConstants.FabricSystemObserverMemoryWarningLimitMb);
 
-            if (!string.IsNullOrEmpty(memWarn))
+            if (!string.IsNullOrWhiteSpace(memWarn))
             {
                 _ = int.TryParse(memWarn, out int threshold);
 
@@ -852,7 +861,7 @@ namespace FabricObserver.Observers
             // Ports
             var activeTcpPortsWarning = GetSettingParameterValue( ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkWarningActivePorts);
 
-            if (!string.IsNullOrEmpty(activeTcpPortsWarning))
+            if (!string.IsNullOrWhiteSpace(activeTcpPortsWarning))
             {
                 _ = int.TryParse(activeTcpPortsWarning, out int threshold);
                 ActiveTcpPortCountWarning = threshold;
@@ -860,7 +869,7 @@ namespace FabricObserver.Observers
 
             var activeEphemeralPortsWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkWarningEphemeralPorts);
 
-            if (!string.IsNullOrEmpty(activeEphemeralPortsWarning))
+            if (!string.IsNullOrWhiteSpace(activeEphemeralPortsWarning))
             {
                 _ = int.TryParse(activeEphemeralPortsWarning, out int threshold);
                 ActiveEphemeralPortCountWarning = threshold;
@@ -869,7 +878,7 @@ namespace FabricObserver.Observers
             // File Handles
             var handlesWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverWarningHandles);
 
-            if (!string.IsNullOrEmpty(handlesWarning))
+            if (!string.IsNullOrWhiteSpace(handlesWarning))
             {
                 _ = int.TryParse(handlesWarning, out int threshold);
                 AllocatedHandlesWarning = threshold;
@@ -878,7 +887,7 @@ namespace FabricObserver.Observers
             // Threads
             var threadCountWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverWarningThreadCount);
             
-            if (!string.IsNullOrEmpty(threadCountWarning))
+            if (!string.IsNullOrWhiteSpace(threadCountWarning))
             {
                 _ = int.TryParse(threadCountWarning, out int threshold);
                 ThreadCountWarning = threshold;
@@ -921,7 +930,7 @@ namespace FabricObserver.Observers
             }
 
             var watchEvtLog = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
-            if (!string.IsNullOrEmpty(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
+            if (!string.IsNullOrWhiteSpace(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
             {
                 monitorWinEventLog = watchEl;
             }
@@ -1070,7 +1079,7 @@ namespace FabricObserver.Observers
                             // Memory MB
                             if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                             {
-                                float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id);
+                                float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, checkPrivateWorkingSet ? dotnetArg : null, checkPrivateWorkingSet);
                                 allMemData[dotnetArg].AddData(processMem);
                             }
 

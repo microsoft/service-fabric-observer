@@ -590,10 +590,10 @@ namespace FabricObserver.Observers
 
                         containerId = stats[0];
                         repOrInst.ContainerId = containerId;
-
+#if DEBUG
                         ObserverLogger.LogInfo($"cpu: {stats[2]}");
                         ObserverLogger.LogInfo($"mem: {stats[3]}");
-
+#endif
                         // CPU (%)
                         double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
                         allCpuDataPercentage[cpuId].AddData(cpu_percent);
@@ -664,11 +664,12 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
+                            ServiceKind = statefulReplica.ServiceKind,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
-                            ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            Status = statefulReplica.ReplicaStatus
                         };
 
                         if (serviceFilterList != null && filterType != ServiceFilterType.None)
@@ -691,11 +692,12 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
+                            ServiceKind = statelessInstance.ServiceKind,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
-                            ServiceKind= statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            Status = statelessInstance.ReplicaStatus
                         };
 
                         if (serviceFilterList != null && filterType != ServiceFilterType.None)

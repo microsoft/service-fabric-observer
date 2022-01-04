@@ -56,6 +56,7 @@ namespace FabricObserver.Observers.Utilities
         public const string EnableConcurrentMonitoring = "EnableConcurrentMonitoring";
         public const string MaxConcurrentTasks = "MaxConcurrentTasks";
         public const string EnableKvsLvidMonitoringParameter = "EnableKvsLvidMonitoring";
+        public const string MonitorPrivateWorkingSet = "MonitorPrivateWorkingSet";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";
