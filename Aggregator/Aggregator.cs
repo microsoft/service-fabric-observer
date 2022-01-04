@@ -20,6 +20,7 @@ namespace Aggregator
         Task<List<byte[]>> GetDataRemote(string queueName);
         //Task<Snapshot> GetSnapshotRemote();
         Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh);
+        Task DeleteAllSnapshotsRemote();
 
     }
     /// <summary>
@@ -67,9 +68,10 @@ namespace Aggregator
                 Debug.WriteLine("---------RUN---------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
 
                 await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.intervalMiliseconds), cancellationToken);
-                while(await GetMinQueueCount() > 1)
+                while(await GetMinQueueCountAsync() > 1)
                 {
-                   await ProduceSnapshot(); 
+                    await ProduceSnapshotAsync();
+                    await TryPruneAsync(); 
                 }
             }
         }
@@ -123,6 +125,21 @@ namespace Aggregator
 
             return list;
         }
+        public async Task DeleteAllSnapshotsRemote()
+        {
+            using (var tx = this.StateManager.CreateTransaction())
+            {
+                try
+                {
+                    await (await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(Snapshot.queueName)).ClearAsync();
+                    await tx.CommitAsync();
+                }
+                catch(Exception e)
+                {
+                    String s = "ClearAsync is part of the ReliableCollection, but the method is not implemented for the reliable queue ?!";
+                }
+            }
+        }
         private async Task<Snapshot> CreateSnapshot()
         {
             
@@ -131,7 +148,7 @@ namespace Aggregator
             List<NodeData> nodeDataList = new List<NodeData>();
             ClusterData clusterData = null;
             bool check=false;
-            double minTime =await MinTimeStampInQueue(nodeList);
+            double minTime =await MinTimeStampInQueueAsync(nodeList);
             bool success=true;
             if (minTime == -1) return null; //queues empty
 
@@ -160,7 +177,7 @@ namespace Aggregator
             if(success)return new Snapshot(minTime,clusterData, nodeDataList);
             return null; //Something failed
         }
-        private async Task ProduceSnapshot() 
+        private async Task ProduceSnapshotAsync() 
         {
             try
             {
@@ -172,7 +189,7 @@ namespace Aggregator
                 Debug.WriteLine(x.ToString());
             }
         }
-        private async Task<int> GetMinQueueCount()
+        private async Task<int> GetMinQueueCountAsync()
         {
             int min_count = int.MaxValue;
             System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
@@ -199,7 +216,7 @@ namespace Aggregator
         /// </summary>
         /// <param name="nodeList"></param>
         /// <returns></returns>
-        private async Task<double> MinTimeStampInQueue(System.Fabric.Query.NodeList nodeList)
+        private async Task<double> MinTimeStampInQueueAsync(System.Fabric.Query.NodeList nodeList)
         {
             double timeStamp = -1;
             foreach(var node in nodeList)
@@ -224,9 +241,24 @@ namespace Aggregator
         }
 
         
-        
+        private async Task<int> GetQueueCountAsync(string queueName)
+        {   int count=0;
+            using (var tx = this.StateManager.CreateTransaction())
+            {
+                count = (int)(await (await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName)).GetCountAsync(tx));
+            }
+            return count;
+        }
 
-        
+        private async Task TryPruneAsync()
+        {
+            int count = await GetQueueCountAsync(Snapshot.queueName);
+            if (count > Snapshot.queueCapacity)
+            {
+                await DequeueAsync(Snapshot.queueName);
+            }
+
+        }
 
 
         private async Task AddDataAsync(string queueName,byte[] data)
@@ -320,6 +352,7 @@ namespace Aggregator
         {
             return this.CreateServiceRemotingReplicaListeners();
         }
+
         
     }
 }

@@ -172,7 +172,20 @@ namespace API.Controllers
 
             return response;
         }
+        [HttpGet]
+        [Route("DeleteAllSnapshots")]
+        public async Task<string> DeleteSnapshots()
+        {
+            
 
+            var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
+                    new Uri("fabric:/Internship/Aggregator"),
+                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
+                    );
+
+            await AggregatorProxy.DeleteAllSnapshotsRemote();
+            return "ClearAsync() is part of the ReliableCollection, but the method is not implemented for the reliable queue ?!";
+        }
         //[HttpGet]
         //[Route("Snapshot")]
         //public async Task<string> GetSnapshot()
