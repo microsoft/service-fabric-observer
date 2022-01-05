@@ -1,5 +1,5 @@
-PushD\&Call Set "RootDir=%%CD%%"&PopD
-set szDir=%RootDir%Program Files\Microsoft Service Fabric\bin\Fabric\Fabric.Code
+
+set szDir=%ProgramFiles%\Microsoft Service Fabric\bin\Fabric\Fabric.Code
 set szPerfService=ESE
 set szPerfDLL=eseperf
 unlodctr %szPerfService%
