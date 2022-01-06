@@ -493,15 +493,15 @@ namespace FabricObserver.Observers
                         msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                 "in order for ContainerObserver to function correctly on Windows.";
                     }
-                    else
+                    else // TODO: Figure out how to make this more resilient to when SF touches the cap binary (probably as part of a cluster upgrade), removing the cap set.. 
                     {
-                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the caps set. In order to fix this, please redeploy FO. " +
-                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux. " +
-                               "You will need to modify the Policy node in ApplicationManifest.xml to contain <RunAsPolicy CodePackageRef=\"Code\" UserRef=\"SystemUser\" EntryPointType=\"All\" />";
+                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the Capabilities set. " +
+                               "In order to fix this, you can do a versionless parameter-only app upgrade (setting ContainerObserverEnableConcurrentMonitoring to false, for example), " +
+                               "which will restart FabricObserver on each node. This will reset the Capabilities on the elevated_docker_stats binary. " +
+                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux, as a last resort.";
                     }
 
                     ObserverLogger.LogWarning(msg);
-                    CurrentWarningCount++;
 
                     var healthReport = new Utilities.HealthReport
                     {
