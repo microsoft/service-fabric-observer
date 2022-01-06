@@ -117,7 +117,7 @@
 		 eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
 		 Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
-    <!-- KVS LVID Usage Monitoring - Windows-only.
+    <!-- KVS LVID Usage Monitoring - Windows-only. NOTE: If you do not monitor stateful Actor services, then this should be set to false.
 	     This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- Working set type -->
