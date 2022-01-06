@@ -44,12 +44,13 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<int, string> processInfo;
 
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration. List<T> is thread-safe for reads.
-        // There are no concurrent writes for this List.
+        // There are no concurrent writes to this List, so no need it for ConcurrentQueue here, for example.
         private List<ApplicationInfo> userTargetList;
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
-        // List<T> is thread-safe for reads. There are no concurrent writes for this List.
+        // List<T> is thread-safe for reads. There are no concurrent writes to this List.
         private List<ApplicationInfo> deployedTargetList;
+        
         private readonly ConfigSettings configSettings;
         private readonly Stopwatch stopwatch;
         private readonly object lockObj = new object();
@@ -69,7 +70,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        // List<T> is thread-safe for reads. There are no concurrent writes for this List.
+        // List<T> is thread-safe for reads. There are no concurrent writes to this IList.
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
             get; set;
@@ -158,11 +159,10 @@ namespace FabricObserver.Observers
             }
 
             var stopwatch = Stopwatch.StartNew();
-
             TimeSpan TTL = GetHealthReportTimeToLive();
 
             // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
-            _ = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
 
@@ -417,12 +417,12 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessChildProcs<T>(
-                            ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
-                            ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList, 
-                            ReplicaOrInstanceMonitoringInfo repOrInst, 
-                            ApplicationInfo app, 
-                            FabricResourceUsageData<T> parentFrud, 
-                            CancellationToken token) where T : struct
+                        ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
+                        ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList, 
+                        ReplicaOrInstanceMonitoringInfo repOrInst, 
+                        ApplicationInfo app, 
+                        FabricResourceUsageData<T> parentFrud, 
+                        CancellationToken token) where T : struct
         {
             token.ThrowIfCancellationRequested();
 
@@ -455,10 +455,10 @@ namespace FabricObserver.Observers
         }
 
         private (ChildProcessTelemetryData childProcInfo, double Sum) ProcessChildFrudsGetDataSum<T>(
-                                                                        ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
-                                                                        ReplicaOrInstanceMonitoringInfo repOrInst,
-                                                                        ApplicationInfo app,
-                                                                        CancellationToken token) where T : struct
+                                                                         ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
+                                                                         ReplicaOrInstanceMonitoringInfo repOrInst,
+                                                                         ApplicationInfo app,
+                                                                         CancellationToken token) where T : struct
         {
             var childProcs = repOrInst.ChildProcesses;
 
@@ -1158,7 +1158,8 @@ namespace FabricObserver.Observers
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             
-            if (isWindows)
+            // Windows-only LVID usage monitoring for Stateful KVS-based services (e.g., Actors).
+            if (EnableKvsLvidMonitoring)
             {
                 AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             }
@@ -1375,7 +1376,7 @@ namespace FabricObserver.Observers
                         checkThreads = true;
                     }
 
-                    // KVS LVIDs percent (Windows only)
+                    // KVS LVIDs percent (Windows-only)
                     // Note: This is a non-configurable Windows monitor and will be removed when SF ships with the latest version of ESE.
                     if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && repOrInst.ServiceKind == ServiceKind.Stateful)
                     {
@@ -1674,23 +1675,17 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            var deployedApps = new List<DeployedApplication>();
+            List<DeployedApplication> deployedApps = await client.GetAllLocalDeployedAppsAsync(Token);
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
 
             if (applicationNameFilter != null)
             {
-                var apps = await client.GetAllLocalDeployedAppsAsync(Token, applicationNameFilter);
-                deployedApps.AddRange(apps.ToList());
-                apps.Clear();
-                apps = null;
+                deployedApps = deployedApps.FindAll(a => a.ApplicationName == applicationNameFilter);
             }
             else if (!string.IsNullOrWhiteSpace(applicationType))
             {
-                List<DeployedApplication> appList = await client.GetAllLocalDeployedAppsAsync(Token);
-                deployedApps = appList.Where(a => a.ApplicationTypeName == applicationType).ToList();
-                appList.Clear();
-                appList = null;
+                deployedApps = deployedApps.FindAll(a => a.ApplicationTypeName == applicationType);
             }
 
             for (int i = 0; i < deployedApps.Count; ++i)
@@ -1723,10 +1718,10 @@ namespace FabricObserver.Observers
                 }
 
                 List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
-                                                                                    deployedApp.ApplicationName, 
-                                                                                    filteredServiceList,
-                                                                                    filterType,
-                                                                                    applicationType);
+                                                                                     deployedApp.ApplicationName, 
+                                                                                     filteredServiceList,
+                                                                                     filterType,
+                                                                                     applicationType);
 
                 if (!ReplicaOrInstanceList.Any(r => r.ApplicationName.OriginalString == deployedApp.ApplicationName.OriginalString))
                 {
@@ -1758,36 +1753,34 @@ namespace FabricObserver.Observers
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName),
+                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName, null, null, ConfigurationSettings.AsyncTimeout, Token),
                                                 Token);
             //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
-
-            var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>(deployedReplicaList.Count);
+            var replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
 
             SetInstanceOrReplicaMonitoringList(
-                           appName,
-                           serviceFilterList,
-                           filterType,
-                           appTypeName,
-                           deployedReplicaList,
-                           replicaMonitoringList);
+               appName,
+               serviceFilterList,
+               filterType,
+               appTypeName,
+               deployedReplicaList,
+               replicaMonitoringList);
 
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
-            return replicaMonitoringList;
+            return replicaMonitoringList.ToList();
         }
 
         private void SetInstanceOrReplicaMonitoringList(
-                                    Uri appName,
-                                    string[] filterList,
-                                    ServiceFilterType filterType,
-                                    string appTypeName,
-                                    DeployedServiceReplicaList deployedReplicaList,
-                                    List<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
+                        Uri appName,
+                        string[] filterList,
+                        ServiceFilterType filterType,
+                        string appTypeName,
+                        DeployedServiceReplicaList deployedReplicaList,
+                        ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
-
             _ = Parallel.For (0, deployedReplicaList.Count, ParallelOptions, (i, state) =>
             {
                 Token.ThrowIfCancellationRequested();
@@ -1892,7 +1885,7 @@ namespace FabricObserver.Observers
 
                 if (replicaInfo != null)
                 {
-                    replicaMonitoringList.Add(replicaInfo);
+                    replicaMonitoringList.Enqueue(replicaInfo);
                 }
             });
             //stopwatch.Stop();

@@ -274,8 +274,9 @@ namespace FabricObserver.Observers
                     {
                         await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
                     }
-                    else if (observers.Count() == 1) // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
+                    else if (observers.Count == 1)
                     {
+                        // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
                         await Task.Delay(TimeSpan.FromSeconds(15), token);
                     }
                 }
