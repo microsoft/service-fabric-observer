@@ -24,6 +24,7 @@ namespace Aggregator
         protected SFUtilities() {
             fabricClient = new FabricClient();
             queryManager = fabricClient.QueryManager;
+          
         }
 
         public static (double totalMiliseconds, double delta)getTime(){

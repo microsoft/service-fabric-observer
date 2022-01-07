@@ -9,7 +9,7 @@ namespace Aggregator
     {
 
         public static readonly string queueName = "snapshot";
-        public static readonly int queueCapacity = 10;
+        public static readonly int queueCapacity = 100;
         public double miliseconds { get; }
         public ClusterData customMetrics { get; }
         public List<NodeData> nodeMetrics { get; }
