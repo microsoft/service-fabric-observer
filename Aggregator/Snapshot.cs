@@ -33,7 +33,7 @@ namespace Aggregator
             AverageClusterResourseUsage();
             float bottleneck = 0;
             bottleneck = Math.Max(AverageClusterCpuUsage, Math.Max(AverageClusterRamUsage, AverageClusterDiskUsage));
-            return (float)Math.Floor((100 * customMetrics.Count) / bottleneck);
+            return (float)Math.Floor((100 * customMetrics.allCounts.Count) / bottleneck);
             
         }
 
@@ -183,7 +183,7 @@ namespace Aggregator
             {
                 averageFromAllNodes.Add(list[0].AverageData(list));
             }
-            ClusterData finalClusterData = ClusterData.AverageClusterData(clusterList);
+            ClusterData finalClusterData = clusterList[0].AverageData(clusterList);
             //NodeData finalNodeData = NodeData.AverageNodeData(averageFromAllNodes);
             return new Snapshot(avg.getAverage("miliseconds"),finalClusterData, averageFromAllNodes);
             

@@ -19,28 +19,6 @@ namespace Aggregator
             this.AvailableDiskSpaceGB = AvailableDiskSpaceGB;
         }
 
-        //public static Drive AverageData(List<Drive> list)
-        //{
-        //    AverageDictionary avg = new AverageDictionary();
-        //    string name = "";
-        //    bool sameName = true;
-
-        //    foreach(var data in list)
-        //    {
-        //        if (name == "") name = data.Name;
-        //        if (name != data.Name) sameName = false;
-        //        avg.addValue("totalSpace", data.TotalDiskSpaceGB);
-        //        avg.addValue("availableSpace", data.AvailableDiskSpaceGB);
-
-        //    }
-        //    if (!sameName) name = "Averaged Differnet Disks";
-        //    return new Drive(
-        //        name,
-        //        (long) avg.getAverage("totalSpace"),
-        //        (long) avg.getAverage("availableSpace")
-        //        );
-
-        //}
         public Drive AverageData(List<Drive> list)
         {
             AverageDictionary avg = new AverageDictionary();

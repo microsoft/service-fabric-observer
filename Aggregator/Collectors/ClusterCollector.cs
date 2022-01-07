@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Aggregator.Data;
+using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Text;
@@ -13,13 +14,13 @@ namespace Aggregator.Collectors
 
         protected override async Task<ClusterData> CollectData()
         {
-            var (primaryCount, replicaCount, instanceCount, count) = await SFUtilities.Instance.TupleGetDeployedCountsAsync();
+            Counts counts = await SFUtilities.Instance.GetDeployedCountsAsync();
 
             string nodeName = this.Context.NodeContext.NodeName;
 
 
             var (totalMiliseconds, _) = SFUtilities.getTime();
-            var data = new ClusterData(totalMiliseconds, primaryCount, replicaCount, instanceCount, count);
+            var data = new ClusterData(totalMiliseconds, counts);
             return data;
         }
     }

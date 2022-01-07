@@ -1,4 +1,5 @@
-﻿using FabricObserver.Observers.MachineInfoModel;
+﻿using Aggregator.Data;
+using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Utilities.ServiceFabric;
 using System;
@@ -58,7 +59,7 @@ namespace Aggregator
         /// <summary>
         /// Return total primaryCount, replicaCount, instanceCount, count.
         /// </summary>
-        public async Task<(int primaryCount, int replicaCount, int instanceCount, int count)> TupleGetDeployedCountsAsync()
+        public async Task<Counts> GetDeployedCountsAsync()
         {
             ApplicationList appList = await queryManager.GetApplicationListAsync();
             Uri appUri;
@@ -87,7 +88,7 @@ namespace Aggregator
                 
             }
             count = instanceCount + replicaCount;
-            return (primaryCount, replicaCount, instanceCount, count);
+            return new Counts(primaryCount, replicaCount, instanceCount, count);
         }
         
         public async Task<NodeList> GetNodeListAsync()
@@ -139,10 +140,10 @@ namespace Aggregator
 
                 }
                 processData.serviceUris.Add(replica.ServiceName);
-                processData.primaryCount += primaryCount;
-                processData.replicaCount += replicaCount;
-                processData.instanceCount += instanceCount;
-                processData.count++;
+                processData.allCounts.PrimaryCount += primaryCount;
+                processData.allCounts.ReplicaCount += replicaCount;
+                processData.allCounts.InstanceCount += instanceCount;
+                processData.allCounts.Count++;
 
                 //for a shared process this may not be correct -> each service has the same processID so child processes are the same so we should overide not extend? 
                 //processData.ChildProcesses.AddRange(replica.ChildProcesses);

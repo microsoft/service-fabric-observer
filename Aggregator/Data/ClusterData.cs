@@ -16,42 +16,28 @@ namespace Aggregator
         public static readonly string queueName = "CustomMetrics";
 
         public double miliseconds { get; }
-        public int PrimaryCount { get; }
-        public int ReplicaCount { get; }
-        public int Count { get; }
-        public int InstanceCount { get; }
+        public Counts allCounts { get; set; }
 
-
-        public ClusterData(double miliseconds,int primaryCount,int replicaCount, int instanceCount, int count)
+        public ClusterData(double miliseconds, Counts counts)
         {
 
             this.miliseconds = miliseconds;
-            PrimaryCount = primaryCount;
-            ReplicaCount = replicaCount;
-            Count = count;
-            InstanceCount = instanceCount;
+            allCounts = counts;
         }
 
-
-        public static ClusterData AverageClusterData(List<ClusterData> list)
+        public ClusterData AverageData(List<ClusterData> list)
         {
             AverageDictionary avg = new AverageDictionary();
+            List<Counts> countsList = new List<Counts>();
             foreach (var data in list)
             {
                 avg.addValue("miliseconds", data.miliseconds);
-                avg.addValue("primary", data.PrimaryCount);
-                avg.addValue("replica", data.ReplicaCount);
-                avg.addValue("instance", data.InstanceCount);
-                avg.addValue("count", data.Count);
+                countsList.Add(data.allCounts);
             }
             return new ClusterData(
-               avg.getAverage("miliseconds"),
-               (int)avg.getAverage("primary"),
-               (int)avg.getAverage("replica"),
-               (int)avg.getAverage("instance"),
-               (int)avg.getAverage("count")
+                avg.getAverage("miliseconds"),
+                countsList[0].AverageData(countsList)
                 );
-
         }
 
         public override string ToString()
@@ -59,10 +45,10 @@ namespace Aggregator
             String res;
             res =
                 "\n Custom - Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100) +
-                "\n PrimaryCount: " + this.PrimaryCount +
-                "\n ReplicaCount: " + this.ReplicaCount +
-                "\n InstanceCount: " + this.InstanceCount +
-                "\n Count: " + this.Count +
+                "\n PrimaryCount: " + this.allCounts.PrimaryCount +
+                "\n ReplicaCount: " + this.allCounts.ReplicaCount +
+                "\n InstanceCount: " + this.allCounts.InstanceCount +
+                "\n Count: " + this.allCounts.Count +
                 "\n";
             return res;
         }
@@ -74,25 +60,7 @@ namespace Aggregator
             return res;
         }
 
-        public ClusterData AverageData(List<ClusterData> list)
-        {
-            AverageDictionary avg = new AverageDictionary();
-            foreach (var data in list)
-            {
-                avg.addValue("miliseconds", data.miliseconds);
-                avg.addValue("primary", data.PrimaryCount);
-                avg.addValue("replica", data.ReplicaCount);
-                avg.addValue("instance", data.InstanceCount);
-                avg.addValue("count", data.Count);
-            }
-            return new ClusterData(
-               avg.getAverage("miliseconds"),
-               (int)avg.getAverage("primary"),
-               (int)avg.getAverage("replica"),
-               (int)avg.getAverage("instance"),
-               (int)avg.getAverage("count")
-                );
-        }
+        
 
     }
 }

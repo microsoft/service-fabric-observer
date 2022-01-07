@@ -152,10 +152,10 @@ namespace API.Controllers
             response +=
                 
                 "\n Number of Snaphsot: " + targetList.Count +
-                "\n Average primary: "+data.customMetrics.PrimaryCount+
-                "\n Average replica: " + data.customMetrics.ReplicaCount +
-                "\n Average instance: " + data.customMetrics.InstanceCount +
-                "\n Average count: " + data.customMetrics.Count +
+                "\n Average primary: "+data.customMetrics.allCounts.PrimaryCount+
+                "\n Average replica: " + data.customMetrics.allCounts.ReplicaCount +
+                "\n Average instance: " + data.customMetrics.allCounts.InstanceCount +
+                "\n Average count: " + data.customMetrics.allCounts.Count +
                 "\n Average CPU: " + nodeData.hardware.Cpu +
                 "\n Average RAM: " + nodeData.hardware.PercentInUse +
                 "\n Average Disk: " + nodeData.hardware.DiskPercentageInUse();
