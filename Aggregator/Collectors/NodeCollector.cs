@@ -21,7 +21,7 @@ namespace Aggregator.Collectors
             string nodeName = Context.NodeContext.NodeName;
 
 
-            var (totalMiliseconds, _) = SFUtilities.getTime();
+            var (totalMiliseconds, _) = SFUtilities.TupleGetTime();
 
             Dictionary<int, ProcessData> pids = await SFUtilities.Instance.GetDeployedProcesses(nodeName, this.Context, cancellationToken);
             List<ProcessData> processDataList = new List<ProcessData>();

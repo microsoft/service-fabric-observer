@@ -140,7 +140,7 @@ namespace API.Controllers
                     new Uri("fabric:/Internship/Aggregator"),
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
-            var (milisecondsLow, _) = SFUtilities.getTime();
+            var (milisecondsLow, _) = SFUtilities.TupleGetTime();
             milisecondsLow -= SFUtilities.intervalMiliseconds * 10;
             double milisecondsHigh = milisecondsLow + SFUtilities.intervalMiliseconds * 5;
             //List<byte[]> originList = await AggregatorProxy.GetDataRemote(Snapshot.queueName);

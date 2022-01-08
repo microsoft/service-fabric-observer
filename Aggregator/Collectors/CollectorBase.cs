@@ -58,7 +58,7 @@ namespace Aggregator.Collectors
                 try
                 {
 
-                    var (_, delta) = SFUtilities.getTime();
+                    var (_, delta) = SFUtilities.TupleGetTime();
                     await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken);
                     T averageData = default(T);
                     lock (lockObj)

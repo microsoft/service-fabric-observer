@@ -89,52 +89,6 @@ namespace Aggregator
             return res;
         }
 
-        //public (int totalPrimaryCount,int totalReplicaCount,int totalInstanceCount, int totalCount) TupleGetNodeTotalCounts(string NodeName)
-        //{
-        //    int totalPrimaryCount = 0, totalReplicaCount = 0, totalInstanceCount = 0, totalCount = 0;
-        //    foreach (var node in nodeMetrics)
-        //    {
-        //        if (node.nodeName != NodeName) continue;
-        //        foreach(var process in node.processList)
-        //        {
-        //            totalPrimaryCount += process.primaryCount;
-        //            totalReplicaCount += process.replicaCount;
-        //            totalInstanceCount += process.instaceCount;
-        //            totalCount += process.count;
-        //        }
-        //    }
-        //    return (totalPrimaryCount, totalReplicaCount, totalInstanceCount, totalCount);
-        //}
-        //public Hardware GetNodeHardwareData(string NodeName)
-        //{
-        //    foreach (var node in nodeMetrics)
-        //    {
-        //        if (node.nodeName != NodeName) continue;
-        //        return node.hardware;
-        //    }
-        //    return null;
-        //}
-        ///// <summary>
-        ///// Returns a dctionary <Uri,ProcessData>
-        ///// </summary>
-        ///// <param name="NodeName"></param>
-        ///// <returns></returns>
-        //public Dictionary<Uri,ProcessData> GetNodeProcessesHardwareData(string NodeName)
-        //{   
-        //    foreach (var node in nodeMetrics)
-        //    {
-        //        if (node.nodeName != NodeName) continue;
-        //        Dictionary<Uri, ProcessData> dic=new Dictionary<Uri, ProcessData>();
-        //        foreach(var process in node.processList)
-        //        {
-        //            Uri uri = process.serviceUris[0];
-        //            dic.Add(uri, process);
-        //        }
-        //        return dic;
-        //    }
-        //    return null;
-        //}
-
         public static NodeData AverageNodeData(string NodeName,List<Snapshot> snapshots)
         {
             List<NodeData> list = new List<NodeData>();

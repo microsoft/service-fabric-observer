@@ -18,7 +18,6 @@ namespace Aggregator
     {
         Task PutDataRemote(string queueName,byte[] data);
         Task<List<byte[]>> GetDataRemote(string queueName);
-        //Task<Snapshot> GetSnapshotRemote();
         Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh);
         Task DeleteAllSnapshotsRemote();
 
@@ -40,33 +39,11 @@ namespace Aggregator
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service replica.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            // TODO: Replace the following sample code with your own logic 
-            //       or remove this RunAsync override if it's not needed in your service.
+   
             this.token = cancellationToken;
-            var myDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, long>>("myDictionary");
-            
-
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                //using (var tx = this.StateManager.CreateTransaction())
-                //{
-                //    var result = await myDictionary.TryGetValueAsync(tx, "Counter");
-
-                //    ServiceEventSource.Current.ServiceMessage(this.Context, "Current Counter Value: {0}",
-                //        result.HasValue ? result.Value.ToString() : "Value does not exist.");
-
-                //    await myDictionary.AddOrUpdateAsync(tx, "Counter", 0, (key, value) => ++value);
-                //    //myDictionary.
-
-                //    // If an exception is thrown before calling CommitAsync, the transaction aborts, all changes are 
-                //    // discarded, and nothing is saved to the secondary replicas.
-                //    await tx.CommitAsync();
-                //}
-
-                Debug.WriteLine("---------RUN---------"+Thread.CurrentThread.ManagedThreadId+"----------------------");
-
+                
                 await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.intervalMiliseconds), cancellationToken);
                 while(await GetMinQueueCountAsync() > 1)
                 {
@@ -78,8 +55,6 @@ namespace Aggregator
         public async Task PutDataRemote(string queueName,byte[] data)
         {
             await AddDataAsync(queueName, data);
-            var x = await GetDataAsync(queueName);
-            byte[] dd= await PeekFirstAsync(queueName);
         }
 
         public async Task<List<byte[]>> GetDataRemote(string queueName)
@@ -96,10 +71,10 @@ namespace Aggregator
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(Snapshot.queueName);
             try
             {
+
                 using (var tx = stateManager.CreateTransaction())
                 {
                     var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
-                    //iterator.Reset(); // this is position -1 - before the first element in the collection
 
                     byte[] data = null;
                     while (await iterator.MoveNextAsync(token))
@@ -125,6 +100,11 @@ namespace Aggregator
 
             return list;
         }
+        /// <summary>
+        /// ClearAsync in not implemented for the RealiableQueue?!
+        /// Workaround would be to dequeue each element as implemented for pruning
+        /// </summary>
+        /// <returns></returns>
         public async Task DeleteAllSnapshotsRemote()
         {
             using (var tx = this.StateManager.CreateTransaction())
@@ -147,7 +127,7 @@ namespace Aggregator
 
             List<NodeData> nodeDataList = new List<NodeData>();
             ClusterData clusterData = null;
-            bool check=false;
+            bool checkTime=false;
             double minTime =await MinTimeStampInQueueAsync(nodeList);
             bool success=true;
             if (minTime == -1) return null; //queues empty
@@ -156,8 +136,8 @@ namespace Aggregator
             if (clusterDataBytes != null)
             {
                 clusterData = (ClusterData)ByteSerialization.ByteArrayToObject(clusterDataBytes);
-                check = Snapshot.checkTime(minTime, clusterData.miliseconds);
-                if (!check) success = false; //Snapshot must contain SFData
+                checkTime = Snapshot.checkTime(minTime, clusterData.miliseconds);
+                if (!checkTime) success = false; //Snapshot must contain SFData
                 else await DequeueAsync(ClusterData.queueName);
             }
             else  success=false; //QUEUE is empty
@@ -166,14 +146,14 @@ namespace Aggregator
                 byte[] nodeDataBytes = await PeekFirstAsync(node.NodeName);
                 if (nodeDataBytes == null) continue; // QUEUE in empty
                 NodeData nodeData = (NodeData)ByteSerialization.ByteArrayToObject(nodeDataBytes);
-                check = Snapshot.checkTime(minTime, nodeData.miliseconds);
-                if (check)
+                checkTime = Snapshot.checkTime(minTime, nodeData.miliseconds);
+                if (checkTime)
                 {
                     nodeDataList.Add(nodeData);
                     await DequeueAsync(node.NodeName);
                 }
             }
-            if (nodeDataList.Count == 0) success=false; //Snapshot must have at least 1 HWData
+            if (nodeDataList.Count == 0) success=false; //Snapshot must have at least 1 NodeData
             if(success)return new Snapshot(minTime,clusterData, nodeDataList);
             return null; //Something failed
         }
@@ -314,7 +294,7 @@ namespace Aggregator
         public async Task<List<byte[]>> GetDataAsync(string queueName)
         {
             if (queueName == null) return null;
-            List < byte[] > list= new List<byte[]>();
+            List<byte[]> list= new List<byte[]>();
 
             var stateManager = this.StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
@@ -323,8 +303,6 @@ namespace Aggregator
                 using (var tx = stateManager.CreateTransaction())
                 {
                     var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
-                    //iterator.Reset(); // this is position -1 - before the first element in the collection
-                
                     byte[] data=null;
                     while (await iterator.MoveNextAsync(token))
                     {

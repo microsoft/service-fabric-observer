@@ -57,6 +57,8 @@ namespace Aggregator
             
             AverageDictionary avg = new AverageDictionary();
             List<Counts> countsList = new List<Counts>();
+            DictionaryList<Uri, bool> UriSet = new DictionaryList<Uri, bool>();
+            DictionaryList<string, bool> ChildProcessSet = new DictionaryList<string, bool>();
 
             foreach (var data in list)
             {
@@ -64,13 +66,18 @@ namespace Aggregator
                 avg.addValue("ramMB", data.ramMb);
                 avg.addValue("ram%", data.ramPercentage);
                 countsList.Add(data.allCounts);
+                foreach (Uri uri in data.serviceUris) UriSet.Add(uri, true);
+                foreach (var proc in data.ChildProcesses) ChildProcessSet.Add(proc.procName, true);
+
             }
             ProcessData p = new ProcessData(-1);
             p.cpuPercentage = avg.getAverage("cpu%");
             p.ramMb = (float)avg.getAverage("ramMB");
+            p.ramPercentage =(float) avg.getAverage("ram%");
             p.allCounts = countsList[0].AverageData(countsList);
-            p.serviceUris.Add(new Uri("fabric:/Internship/AggregatorNeedToImplementThis"));
-            //still have to add ChildProcess List
+            foreach (Uri uri in UriSet.GetKeys()) p.serviceUris.Add(uri);
+            foreach (string proc in ChildProcessSet.GetKeys()) p.ChildProcesses.Add((proc, -1));
+            
 
             return p;
 

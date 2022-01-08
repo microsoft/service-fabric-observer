@@ -27,8 +27,10 @@ namespace Aggregator
             queryManager = fabricClient.QueryManager;
           
         }
-
-        public static (double totalMiliseconds, double delta)getTime(){
+        /// <summary>
+        /// </summary>
+        /// <returns>(totalMiliseconds, delta - time left to sleep to wakeup for Aggregating interval)</returns>
+        public static (double totalMiliseconds, double delta)TupleGetTime(){
             var localTime = DateTime.Now;
             var timeSpan = TimeSpan.FromTicks(localTime.Ticks);
             double totalMiliseconds = timeSpan.TotalMilliseconds;
@@ -56,9 +58,6 @@ namespace Aggregator
             }
         }
 
-        /// <summary>
-        /// Return total primaryCount, replicaCount, instanceCount, count.
-        /// </summary>
         public async Task<Counts> GetDeployedCountsAsync()
         {
             ApplicationList appList = await queryManager.GetApplicationListAsync();
@@ -97,7 +96,7 @@ namespace Aggregator
             
         }
         /// <summary>
-        /// Return a Dictionary where keys are PIDs and values are service URIs for a given node
+        /// Return a Dictionary where keys are PIDs
         /// </summary>
         /// <param name="NodeName"></param>
         /// <returns></returns>
@@ -165,5 +164,3 @@ namespace Aggregator
 
     }
 }
-
-//public Task<PartitionLoadInformation> GetPartitionLoadInformationAsync(Guid partitionId);

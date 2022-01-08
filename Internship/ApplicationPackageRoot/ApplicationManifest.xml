@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="InternshipType" ApplicationTypeVersion="13.7.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="InternshipType" ApplicationTypeVersion="13.8.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="CO_InstanceCount" DefaultValue="1" />
     <Parameter Name="API_InstanceCount" DefaultValue="1" />
@@ -16,7 +16,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="COPkg" ServiceManifestVersion="13.7.0" />
+    <ServiceManifestRef ServiceManifestName="COPkg" ServiceManifestVersion="13.8.0" />
     <!--
 	  <Policies>
 		  <ServicePackageResourceGovernancePolicy CpuCores="2"/>
@@ -25,18 +25,18 @@
     <ConfigOverrides />
   </ServiceManifestImport>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="APIPkg" ServiceManifestVersion="13.7.0" />
+    <ServiceManifestRef ServiceManifestName="APIPkg" ServiceManifestVersion="13.8.0" />
     <ConfigOverrides />
     <EnvironmentOverrides CodePackageRef="code">
       <EnvironmentVariable Name="ASPNETCORE_ENVIRONMENT" Value="[API_ASPNETCORE_ENVIRONMENT]" />
     </EnvironmentOverrides>
   </ServiceManifestImport>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="AggregatorPkg" ServiceManifestVersion="13.7.0" />
+    <ServiceManifestRef ServiceManifestName="AggregatorPkg" ServiceManifestVersion="13.8.0" />
     <ConfigOverrides />
   </ServiceManifestImport>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="CollectorPkg" ServiceManifestVersion="13.7.0" />
+    <ServiceManifestRef ServiceManifestName="CollectorPkg" ServiceManifestVersion="13.8.0" />
     <!--
 	  <Policies>
 		  <ServicePackageResourceGovernancePolicy CpuCores="2"/>

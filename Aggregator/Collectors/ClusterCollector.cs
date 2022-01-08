@@ -19,7 +19,7 @@ namespace Aggregator.Collectors
             string nodeName = this.Context.NodeContext.NodeName;
 
 
-            var (totalMiliseconds, _) = SFUtilities.getTime();
+            var (totalMiliseconds, _) = SFUtilities.TupleGetTime();
             var data = new ClusterData(totalMiliseconds, counts);
             return data;
         }
