@@ -1809,12 +1809,13 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
-                            ServiceKind = statefulReplica.ServiceKind,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
+                            ReplicaRole = statefulReplica.ReplicaRole,
+                            ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                            Status = statefulReplica.ReplicaStatus
+                            ReplicaStatus = statefulReplica.ReplicaStatus
                         };
 
                         /* In order to provide accurate resource usage of an SF service process we need to also account for
@@ -1856,12 +1857,13 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
-                            ServiceKind = statelessInstance.ServiceKind,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
+                            ReplicaRole = ReplicaRole.None,
+                            ServiceKind = statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                            Status = statelessInstance.ReplicaStatus
+                            ReplicaStatus = statelessInstance.ReplicaStatus
                         };
 
                         if (EnableChildProcessMonitoring)

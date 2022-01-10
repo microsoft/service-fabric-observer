@@ -5,8 +5,9 @@
     <version>3.1.23</version>
     <releaseNotes>
 - Added new monitoring capability to AppObserver and FabricSystemObserver: KVS LVID usage (important for certain types of stateful services, like Actor-based services, for example).
-- Performance improvements and bug fixes.
-- Changes to operational telemetry to prevent sending data from restricted regions/clouds.
+- Added configuration for AppObserver and FabricSystemObserver to enable either Private Working Set or Full Working Set monitoring for target service processes.
+- Added new setup script (Windows-only) that will enable a Service Fabric performance counter used for Windows KVS LVID usage monitoring.
+- Performance improvements, refactorings, and bug fixes.
 - Added readme to nupkg.
 	</releaseNotes>
     <authors>Microsoft</authors>

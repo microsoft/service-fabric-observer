@@ -664,12 +664,13 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
-                            ServiceKind = statefulReplica.ServiceKind,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
+                            ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                            Status = statefulReplica.ReplicaStatus
+                            ReplicaRole = statefulReplica.ReplicaRole,
+                            ReplicaStatus = statefulReplica.ReplicaStatus
                         };
 
                         if (serviceFilterList != null && filterType != ServiceFilterType.None)
@@ -692,12 +693,13 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
-                            ServiceKind = statelessInstance.ServiceKind,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
+                            ServiceKind = statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                            Status = statelessInstance.ReplicaStatus
+                            ReplicaRole = ReplicaRole.None,
+                            ReplicaStatus = statelessInstance.ReplicaStatus
                         };
 
                         if (serviceFilterList != null && filterType != ServiceFilterType.None)

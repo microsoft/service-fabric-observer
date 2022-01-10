@@ -5,10 +5,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Fabric;
 using System.Fabric.Query;
 
 namespace FabricObserver.Observers.MachineInfoModel
 {
+    /// <summary>
+    /// Replica information data-only class with properties are public get and set because it is expected that consumers may set them (like AppObserver, for example).
+    /// </summary>
     public class ReplicaOrInstanceMonitoringInfo
     {
         public Uri ApplicationName
@@ -56,7 +60,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public ServiceReplicaStatus Status
+        public ServiceReplicaStatus ReplicaStatus
         {
             get; set;
         }
@@ -64,6 +68,11 @@ namespace FabricObserver.Observers.MachineInfoModel
         public List<(string procName, int Pid)> ChildProcesses
         {
             get; set;
+        }
+
+        public ReplicaRole ReplicaRole 
+        { 
+            get; set; 
         }
     }
 
