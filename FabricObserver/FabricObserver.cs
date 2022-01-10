@@ -21,15 +21,11 @@ using Microsoft.ServiceFabric.Services.Remoting.Runtime;
 
 namespace FabricObserver
 {
-    public interface IMyService : IService
-    {
-        Task<string> HelloWorldAsync();
-    }
-
+    
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class FabricObserver : StatelessService, IMyService
+    internal sealed class FabricObserver : StatelessService
     {
         private readonly FabricClient fabricClient;
 
@@ -43,15 +39,6 @@ namespace FabricObserver
             fabricClient = new FabricClient();
         }
 
-        public Task<string> HelloWorldAsync()
-        {
-            return Task.FromResult("Hello World!");
-        }
-
-        protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
-        {
-            return this.CreateServiceRemotingInstanceListeners();
-        }
 
         /// <summary>
         /// This is the main entry point for your service instance.
@@ -83,9 +70,6 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(ObserverBase), s => new NetworkObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new NodeObserver(fabricClient, Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new OSObserver(fabricClient, Context));
-
-            _ = services.AddScoped(typeof(ObserverBase), s => new MyObserver(fabricClient, Context));
-
             _ = services.AddScoped(typeof(ObserverBase), s => new SFConfigurationObserver(fabricClient, Context));
 
             _ = services.AddSingleton(typeof(StatelessServiceContext), Context);
