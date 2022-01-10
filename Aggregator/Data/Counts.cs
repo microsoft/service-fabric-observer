@@ -34,11 +34,20 @@ namespace Aggregator.Data
                 avg.addValue("count", data.Count);
             }
             return new Counts(
-               (int)avg.getAverage("primary"),
-               (int)avg.getAverage("replica"),
-               (int)avg.getAverage("instance"),
-               (int)avg.getAverage("count")
+               (int)Math.Round(avg.getAverage("primary")),
+               (int)Math.Round(avg.getAverage("replica")),
+               (int)Math.Round(avg.getAverage("instance")),
+               (int)Math.Round(avg.getAverage("count"))
                 );
+        }
+        public override string ToString()
+        {
+            string res = "";
+            if (PrimaryCount != 0) res += "\n Primary Count:" + PrimaryCount;
+            if (ReplicaCount != 0) res += "\n Replica Count:" + ReplicaCount;
+            if (InstanceCount != 0) res += "\n Instance Count:" + InstanceCount;
+            if (Count != 0) res += "\n Count:" + Count;
+            return res;
         }
     }
 }

@@ -64,8 +64,7 @@ namespace Aggregator.Collectors
                     lock (lockObj)
                     {
                         if (dataList.Count == 0) continue;
-                        var dummyObject = dataList[0];
-                        averageData = dummyObject.AverageData(dataList);
+                        averageData = dataList[0].AverageData(dataList);
                         dataList.Clear();
                     }
 

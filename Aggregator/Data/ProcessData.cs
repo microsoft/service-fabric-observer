@@ -38,17 +38,24 @@ namespace Aggregator
         public override string ToString()
         {
             string res =
-                "\n        PID:" + processId +
+                "\n --------------------------------------------------"+
                 "\n Services in this process: ";
             foreach(var s in serviceUris)
             {
                 res +=
-                    "\n" + s.ToString();
+                    "\n " + s.ToString();
             }
             res +=
-                "\n CPU %: " + cpuPercentage +
+                "\n\n CPU %: " + cpuPercentage +
                 "\n RAM used MB: " + ramMb +
                 "\n RAM %: " + ramPercentage;
+            res +="\n"+ allCounts.ToString();
+            if(ChildProcesses.Count!=0)res += "\n Child processes created by this process: ";
+            foreach(var childProcess in ChildProcesses)
+            {
+                res += "\n    " + childProcess.procName;
+            }
+
             return res;
         }
 

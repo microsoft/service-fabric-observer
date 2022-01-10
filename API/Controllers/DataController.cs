@@ -151,14 +151,19 @@ namespace API.Controllers
             NodeData nodeData = data.nodeMetrics[0].AverageData(data.nodeMetrics);
             response +=
                 
-                "\n Number of Snaphsot: " + targetList.Count +
-                "\n Average primary: "+data.customMetrics.allCounts.PrimaryCount+
-                "\n Average replica: " + data.customMetrics.allCounts.ReplicaCount +
-                "\n Average instance: " + data.customMetrics.allCounts.InstanceCount +
-                "\n Average count: " + data.customMetrics.allCounts.Count +
-                "\n Average CPU: " + nodeData.hardware.Cpu +
-                "\n Average RAM: " + nodeData.hardware.PercentInUse +
-                "\n Average Disk: " + nodeData.hardware.DiskPercentageInUse();
+                "\n Number of Snaphsots: " + targetList.Count +
+                "\n Average Total Disk %: " + nodeData.hardware.DiskPercentageInUse()+
+                "\n Average Total CPU %: " + nodeData.hardware.Cpu +
+                "\n Average Total RAM %: " + nodeData.hardware.PercentInUse +
+                "\n Average ServiceFabric CPU %: " + nodeData.sfHardware.Cpu +
+                "\n Average ServiceFabric RAM %: " + nodeData.sfHardware.PercentInUse +
+                "\n     Custom metrics:"+
+                "\n     Average primary: " + data.customMetrics.allCounts.PrimaryCount +
+                "\n     Average replica: " + data.customMetrics.allCounts.ReplicaCount +
+                "\n     Average instance: " + data.customMetrics.allCounts.InstanceCount +
+                "\n     Average count: " + data.customMetrics.allCounts.Count+
+                "\n All Processes:";
+                
             foreach (var process in nodeData.processList)
             {
                 response += process.ToString();
@@ -168,7 +173,7 @@ namespace API.Controllers
             float scalingFactorRam = (float)((100 - nodeData.hardware.PercentInUse) / nodeData.sfHardware.PercentInUse);
             float scalingFactor = Math.Min(scalingFactorRam, scalingFactorCpu);
 
-            response += "\n \n \n \n You can scale out your cluster porportionally " + scalingFactor + " times";
+            response += "\n \n \n \n You can scale out your workload porportionally " + scalingFactor + " times";
 
             return response;
         }
