@@ -493,15 +493,15 @@ namespace FabricObserver.Observers
                         msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                 "in order for ContainerObserver to function correctly on Windows.";
                     }
-                    else
+                    else // TODO: Figure out how to make this more resilient to when SF touches the cap binary (probably as part of a cluster upgrade), removing the cap set.. 
                     {
-                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the caps set. In order to fix this, please redeploy FO. " +
-                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux. " +
-                               "You will need to modify the Policy node in ApplicationManifest.xml to contain <RunAsPolicy CodePackageRef=\"Code\" UserRef=\"SystemUser\" EntryPointType=\"All\" />";
+                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the Capabilities set. " +
+                               "In order to fix this, you can do a versionless parameter-only app upgrade (setting ContainerObserverEnableConcurrentMonitoring to false, for example), " +
+                               "which will restart FabricObserver on each node. This will reset the Capabilities on the elevated_docker_stats binary. " +
+                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux, as a last resort.";
                     }
 
                     ObserverLogger.LogWarning(msg);
-                    CurrentWarningCount++;
 
                     var healthReport = new Utilities.HealthReport
                     {
@@ -590,10 +590,10 @@ namespace FabricObserver.Observers
 
                         containerId = stats[0];
                         repOrInst.ContainerId = containerId;
-
+#if DEBUG
                         ObserverLogger.LogInfo($"cpu: {stats[2]}");
                         ObserverLogger.LogInfo($"mem: {stats[3]}");
-
+#endif
                         // CPU (%)
                         double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
                         allCpuDataPercentage[cpuId].AddData(cpu_percent);
@@ -664,11 +664,12 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
+                            ServiceKind = statefulReplica.ServiceKind,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
-                            ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            Status = statefulReplica.ReplicaStatus
                         };
 
                         if (serviceFilterList != null && filterType != ServiceFilterType.None)
@@ -691,11 +692,12 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
+                            ServiceKind = statelessInstance.ServiceKind,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
-                            ServiceKind= statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            Status = statelessInstance.ReplicaStatus
                         };
 
                         if (serviceFilterList != null && filterType != ServiceFilterType.None)

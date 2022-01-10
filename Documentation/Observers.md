@@ -142,8 +142,6 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
 | **memoryErrorLimitMb** | Maximum service process total working set in Megabytes that should generate an Error |  
 | **memoryWarningLimitMb**| Minimum service process total working set in Megabytes that should generate a Warning | 
-| **memoryErrorLimitMbPrivate** | Maximum service process private working set in Megabytes that should generate an Error |  
-| **memoryWarningLimitMbPrivate**| Minimum service process private working set in Megabytes that should generate a Warning |  
 | **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate an Error |  
 | **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Warning | 
 | **cpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |
@@ -158,8 +156,6 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **errorThreadCount** | Maximum number of threads in use by an app process that will generate an Error. |  
 | **warningThreadCount** | Minimum number of threads in use by app process that will generate a Warning.|  
 
-**Note**: for memoryWarningLimit\* configuration, you can choose either Private or not (which is total). You can't supply both. If you do, then Private will override total. Please also consider that the on Windows (where Perf counter is used), if you have a lot of service processes being monitored, you will see a little bit more CPU and Memory use by FO for Private Working Set detection. This is especially true (for CPU) when you are monitoring several same-named processes.
-
 **Output** Log text(Error/Warning), Application Level Service Fabric Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
 
 AppObserver also supports non-JSON parameters for configuration unrelated to thresholds. Like all observers these settings are located in ApplicationManifest.xml to support versionless configuration updates via application upgrade. 
@@ -171,32 +167,93 @@ If your compute configuration includes multiple CPUs (logical processors >= 4) a
 If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
 
 ```XML
-     <!-- AppObserver -->
-    <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
-    <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
-    <!-- Required-If UseCircularBuffer = true -->
-    <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- Configuration file name. -->
-    <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    <!-- Process family tree monitoring. -->
-    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
-    <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
-    <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError feature).
-         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
-         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
-    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
-    <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
-    <!-- Max number of dumps to generate per service, per observed metric, within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
-    <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
-    <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
-    <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
-    <!-- Concurrency/Parallelism Support -->
-    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+<Section Name="AppObserverConfiguration">
+    <!-- Required Parameter for all Observers: To enable or not enable, that is the question. -->
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+
+    <!-- Optional: Whether or not AppObserver should try to monitor service processes concurrently.
+         This can significantly decrease the amount of time it takes AppObserver to monitor and report on several application services. 
+         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
+    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+	
+    <!-- Optional: The maximum number of concurrent tasks to use when monitoring service processes in parallel. By default, AppObserver will set this to be the number of logical processors
+         present in the underlying (virtual) machine. Experiment with various values (including -1 which means unlimited) before you ship into production. 
+         This is especially important if you monitor lots of services (>= 100) and enable concurrent monitoring - 
+         and have capable hardware: >= 4 logical processors (none of this matters if this is not true.) -->
+    <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
+	  
+    <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    
+    <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
+    
+    <!-- Optional: Enabling this will generate CSV files that contain resource metric data across runs. 
+         These files will be written to the DataLogPath supplied in ObserverManagerConfiguration section above. -->
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
+	  
     <!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful service that employs KVS (like SF Actor services). 
          Enabling this will put the containing Application into Warning when a related service has consumed 75% of the Maximum number of LVIDs (which is int.MaxValue per process). -->
     <Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
+	  
+    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    
+    <!-- Optional: The amount of time this observer conducts resource usage probing. 
+         Each observer has a default value set, but you should override by setting this
+         parameter to what makes sense for your service(s). Note that this value represents
+         the time spent monitoring for each service you specify in configuration. -->
+    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+
+    <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
+         in ApplicationManifest.xml, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter. -->
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    
+    <!-- Required: The thresholds are held in a json file. Note that these thresholds apply to any service that is part 
+         of the Target Application, which is the logical container for service processes in Service Fabric parlance.-->
+    <Parameter Name="AppObserverDataFileName" Value="" MustOverride="true" />
+    
+    <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="" MustOverride="true" />
+    
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
+    
+    <!-- Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for
+         the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
+         like 0 or a negative number (or omit the parameter altogether). -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true" />
+    
+    <!-- AppObserver will automatically monitor a service process's descendants (max depth = 5, max procs = 50). You should only disable this if you know the services 
+         that you want AppObserver to monitor do not launch child processes. -->
+    <Parameter Name="EnableChildProcessMonitoring" Value="" MustOverride="true" />
+    
+    <!-- Max number of a service process's spawned (child) processes to report via telemetry (ordered by descending value - so, top n consumers).
+         The recommended value range for this setting is 5 to 10. See Observers.md for more details on AppObserver's child process monitoring. -->
+    <Parameter Name="MaxChildProcTelemetryDataCount" Value="" MustOverride="true" />
+    
+    <!-- dumpProcessOnError related configuration. -->
+    <!-- This setting will override dumpProcessOnError in AppObserver.config.json. This is a big red button to disable/enable the feature 
+         without having to deploy a new json config file for AppObserver as part of a configuration update or App redeployment. This feature will only work
+         if you have "dumpProcessOnError"=true setting for your app target(s) in AppObserver.config.json. 
+         AppObserver's dumpProcessOnError feature is currently only supported for Windows. -->
+    <Parameter Name="EnableProcessDumps" Value="" MustOverride="true" />
+    
+    <!-- Supported values are: Mini, MiniPlus, Full. Default is MiniPlus. Full can create giant files - be careful there.. -->
+    <Parameter Name="DumpType" Value="" MustOverride="true" />
+    
+    <!-- The maximum number of dumps per day per service process per metric. Default is 3. -->
+    <Parameter Name="MaxDumps" Value="" MustOverride="true" />
+    <Parameter Name="MaxDumpsTimeWindow" Value="" MustOverride="true" />
+	
+    <!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
+    <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
+  </Section>   
 ```
 
 Example AppObserver Output (Warning - Ephemeral Ports Usage):  
@@ -506,6 +563,9 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+
+    <!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true.  -->
+    <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
     
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about

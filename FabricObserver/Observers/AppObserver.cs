@@ -44,12 +44,13 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<int, string> processInfo;
 
         // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration. List<T> is thread-safe for reads.
-        // There are no concurrent writes for this List.
+        // There are no concurrent writes to this List, so no need it for ConcurrentQueue here, for example.
         private List<ApplicationInfo> userTargetList;
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
-        // List<T> is thread-safe for reads. There are no concurrent writes for this List.
+        // List<T> is thread-safe for reads. There are no concurrent writes to this List.
         private List<ApplicationInfo> deployedTargetList;
+        
         private readonly ConfigSettings configSettings;
         private readonly Stopwatch stopwatch;
         private readonly object lockObj = new object();
@@ -57,6 +58,7 @@ namespace FabricObserver.Observers
         private string fileName;
         private int appCount;
         private int serviceCount;
+        private bool checkPrivateWorkingSet;
 
         public int MaxChildProcTelemetryDataCount
         {
@@ -66,9 +68,9 @@ namespace FabricObserver.Observers
         public bool EnableChildProcessMonitoring
         {
             get; set;
-        } = false;
+        }
 
-        // List<T> is thread-safe for reads. There are no concurrent writes for this List.
+        // List<T> is thread-safe for reads. There are no concurrent writes to this IList.
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
             get; set;
@@ -82,7 +84,7 @@ namespace FabricObserver.Observers
         public bool EnableConcurrentMonitoring
         {
             get; set;
-        } = false;
+        }
 
         ParallelOptions ParallelOptions
         {
@@ -92,12 +94,12 @@ namespace FabricObserver.Observers
         public bool EnableProcessDumps
         {
             get; set;
-        } = false;
+        }
 
         public bool EnableKvsLvidMonitoring
         {
             get; set;
-        } = false;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
@@ -157,11 +159,10 @@ namespace FabricObserver.Observers
             }
 
             var stopwatch = Stopwatch.StartNew();
-
             TimeSpan TTL = GetHealthReportTimeToLive();
 
             // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
-            _ = Parallel.For(0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
 
@@ -416,12 +417,12 @@ namespace FabricObserver.Observers
         }
 
         private void ProcessChildProcs<T>(
-                            ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
-                            ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList, 
-                            ReplicaOrInstanceMonitoringInfo repOrInst, 
-                            ApplicationInfo app, 
-                            FabricResourceUsageData<T> parentFrud, 
-                            CancellationToken token) where T : struct
+                        ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
+                        ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList, 
+                        ReplicaOrInstanceMonitoringInfo repOrInst, 
+                        ApplicationInfo app, 
+                        FabricResourceUsageData<T> parentFrud, 
+                        CancellationToken token) where T : struct
         {
             token.ThrowIfCancellationRequested();
 
@@ -454,10 +455,10 @@ namespace FabricObserver.Observers
         }
 
         private (ChildProcessTelemetryData childProcInfo, double Sum) ProcessChildFrudsGetDataSum<T>(
-                                                                        ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
-                                                                        ReplicaOrInstanceMonitoringInfo repOrInst,
-                                                                        ApplicationInfo app,
-                                                                        CancellationToken token) where T : struct
+                                                                         ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
+                                                                         ReplicaOrInstanceMonitoringInfo repOrInst,
+                                                                         ApplicationInfo app,
+                                                                         CancellationToken token) where T : struct
         {
             var childProcs = repOrInst.ChildProcesses;
 
@@ -624,6 +625,12 @@ namespace FabricObserver.Observers
 
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
+
+            // Private working set monitoring.
+            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet), out bool monitorWsPriv))
+            {
+                checkPrivateWorkingSet = monitorWsPriv;
+            }
 
             /* Child/Descendant proc monitoring config */
             if (bool.TryParse( GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableChildProcessMonitoringParameter), out bool enableDescendantMonitoring))
@@ -892,8 +899,6 @@ namespace FabricObserver.Observers
                         existingAppConfig.ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig.ServiceIncludeList;
                         existingAppConfig.MemoryWarningLimitMb = existingAppConfig.MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig.MemoryWarningLimitMb;
                         existingAppConfig.MemoryErrorLimitMb = existingAppConfig.MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig.MemoryErrorLimitMb;
-                        existingAppConfig.MemoryWarningLimitMbPrivate = existingAppConfig.MemoryWarningLimitMbPrivate == 0 && application.MemoryWarningLimitMbPrivate > 0 ? application.MemoryWarningLimitMbPrivate : existingAppConfig.MemoryWarningLimitMbPrivate;
-                        existingAppConfig.MemoryErrorLimitMbPrivate = existingAppConfig.MemoryErrorLimitMbPrivate == 0 && application.MemoryErrorLimitMbPrivate > 0 ? application.MemoryErrorLimitMbPrivate : existingAppConfig.MemoryErrorLimitMbPrivate;
                         existingAppConfig.MemoryWarningLimitPercent = existingAppConfig.MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig.MemoryWarningLimitPercent;
                         existingAppConfig.MemoryErrorLimitPercent = existingAppConfig.MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig.MemoryErrorLimitPercent;
                         existingAppConfig.CpuErrorLimitPercent = existingAppConfig.CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig.CpuErrorLimitPercent;
@@ -920,8 +925,6 @@ namespace FabricObserver.Observers
                             ServiceIncludeList = application.ServiceIncludeList,
                             MemoryWarningLimitMb = application.MemoryWarningLimitMb,
                             MemoryErrorLimitMb = application.MemoryErrorLimitMb,
-                            MemoryWarningLimitMbPrivate = application.MemoryWarningLimitMbPrivate,
-                            MemoryErrorLimitMbPrivate = application.MemoryErrorLimitMbPrivate,
                             MemoryWarningLimitPercent = application.MemoryWarningLimitPercent,
                             MemoryErrorLimitPercent = application.MemoryErrorLimitPercent,
                             CpuErrorLimitPercent = application.CpuErrorLimitPercent,
@@ -1155,7 +1158,8 @@ namespace FabricObserver.Observers
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             
-            if (isWindows)
+            // Windows-only LVID usage monitoring for Stateful KVS-based services (e.g., Actors).
+            if (EnableKvsLvidMonitoring)
             {
                 AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             }
@@ -1175,7 +1179,7 @@ namespace FabricObserver.Observers
                 var repOrInst = ReplicaOrInstanceList.ElementAt(i);
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
-                bool checkCpu = false, checkMemMb = false, checkMemMbPrivate = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false, checkLvids = false;
+                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false, checkLvids = false;
                 var application = deployedTargetList?.First(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString.ToLower() ||
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
@@ -1211,15 +1215,15 @@ namespace FabricObserver.Observers
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
+                        if (!isWindows || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
                         {
                             return;
                         }
 
                         if (e is Win32Exception exception && exception.NativeErrorCode == 5 || e.Message.ToLower().Contains("access is denied"))
                         {
-                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored.{Environment.NewLine}" +
-                                             $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem.";
+                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
+                                             $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or, determine if {repOrInst?.ServiceName?.OriginalString} really needs to run as Admin or System user on Windows.";
 
                             var healthReport = new Utilities.HealthReport
                             {
@@ -1307,7 +1311,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Memory Mb
-                    if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0 || application.MemoryErrorLimitMbPrivate > 0 || application.MemoryWarningLimitMbPrivate > 0)
+                    if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0)
                     {
                         _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
@@ -1315,11 +1319,6 @@ namespace FabricObserver.Observers
                     if (AllAppMemDataMb.ContainsKey(id))
                     {
                         checkMemMb = true;
-
-                        if (application.MemoryErrorLimitMbPrivate > 0 || application.MemoryWarningLimitMbPrivate > 0)
-                        {
-                            checkMemMbPrivate = true;
-                        }
                     }
 
                     // Memory percent
@@ -1377,7 +1376,7 @@ namespace FabricObserver.Observers
                         checkThreads = true;
                     }
 
-                    // KVS LVIDs percent (Windows only)
+                    // KVS LVIDs percent (Windows-only)
                     // Note: This is a non-configurable Windows monitor and will be removed when SF ships with the latest version of ESE.
                     if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && repOrInst.ServiceKind == ServiceKind.Stateful)
                     {
@@ -1416,7 +1415,6 @@ namespace FabricObserver.Observers
                             parentPid,
                             checkCpu,
                             checkMemMb,
-                            checkMemMbPrivate,
                             checkMemPct,
                             checkAllPorts,
                             checkEphemeralPorts,
@@ -1455,7 +1453,6 @@ namespace FabricObserver.Observers
                             int parentPid,
                             bool checkCpu,
                             bool checkMemMb,
-                            bool checkMemMbPrivate,
                             bool checkMemPct,
                             bool checkAllPorts,
                             bool checkEphemeralPorts,
@@ -1635,7 +1632,7 @@ namespace FabricObserver.Observers
                     // Process working set (total or private, based on user configuration)
                     if (checkMemMb)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkMemMbPrivate ? procName : null, checkMemMbPrivate);
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);
                        
                         if (procId == parentPid)
                         {
@@ -1651,7 +1648,7 @@ namespace FabricObserver.Observers
                     // Process memory, percent in use (of machine total).
                     if (checkMemPct)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkMemMbPrivate ? procName : null, checkMemMbPrivate);
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);
                         var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetMemoryInfo();
 
                         if (TotalMemoryGb > 0)
@@ -1678,23 +1675,17 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            var deployedApps = new List<DeployedApplication>();
+            List<DeployedApplication> deployedApps = await client.GetAllLocalDeployedAppsAsync(Token);
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
 
             if (applicationNameFilter != null)
             {
-                var apps = await client.GetAllLocalDeployedAppsAsync(Token, applicationNameFilter);
-                deployedApps.AddRange(apps.ToList());
-                apps.Clear();
-                apps = null;
+                deployedApps = deployedApps.FindAll(a => a.ApplicationName == applicationNameFilter);
             }
             else if (!string.IsNullOrWhiteSpace(applicationType))
             {
-                List<DeployedApplication> appList = await client.GetAllLocalDeployedAppsAsync(Token);
-                deployedApps = appList.Where(a => a.ApplicationTypeName == applicationType).ToList();
-                appList.Clear();
-                appList = null;
+                deployedApps = deployedApps.FindAll(a => a.ApplicationTypeName == applicationType);
             }
 
             for (int i = 0; i < deployedApps.Count; ++i)
@@ -1727,10 +1718,10 @@ namespace FabricObserver.Observers
                 }
 
                 List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
-                                                                                    deployedApp.ApplicationName, 
-                                                                                    filteredServiceList,
-                                                                                    filterType,
-                                                                                    applicationType);
+                                                                                     deployedApp.ApplicationName, 
+                                                                                     filteredServiceList,
+                                                                                     filterType,
+                                                                                     applicationType);
 
                 if (!ReplicaOrInstanceList.Any(r => r.ApplicationName.OriginalString == deployedApp.ApplicationName.OriginalString))
                 {
@@ -1763,37 +1754,35 @@ namespace FabricObserver.Observers
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName),
+                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName, null, null, ConfigurationSettings.AsyncTimeout, Token),
                                                 Token);
             //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
-
-            var replicaMonitoringList = new List<ReplicaOrInstanceMonitoringInfo>(deployedReplicaList.Count);
+            var replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
 
             SetInstanceOrReplicaMonitoringList(
-                           appName,
-                           serviceFilterList,
-                           filterType,
-                           appTypeName,
-                           deployedReplicaList,
-                           replicaMonitoringList);
+               appName,
+               serviceFilterList,
+               filterType,
+               appTypeName,
+               deployedReplicaList,
+               replicaMonitoringList);
 
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
-            return replicaMonitoringList;
+            return replicaMonitoringList.ToList();
         }
 
         private void SetInstanceOrReplicaMonitoringList(
-                                    Uri appName,
-                                    string[] filterList,
-                                    ServiceFilterType filterType,
-                                    string appTypeName,
-                                    DeployedServiceReplicaList deployedReplicaList,
-                                    List<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
+                        Uri appName,
+                        string[] filterList,
+                        ServiceFilterType filterType,
+                        string appTypeName,
+                        DeployedServiceReplicaList deployedReplicaList,
+                        ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
-
-            _ = Parallel.For(0, deployedReplicaList.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, deployedReplicaList.Count, ParallelOptions, (i, state) =>
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -1897,7 +1886,7 @@ namespace FabricObserver.Observers
 
                 if (replicaInfo != null)
                 {
-                    replicaMonitoringList.Add(replicaInfo);
+                    replicaMonitoringList.Enqueue(replicaInfo);
                 }
             });
             //stopwatch.Stop();

@@ -49,16 +49,6 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public long MemoryWarningLimitMbPrivate
-        {
-            get; set;
-        }
-
-        public long MemoryErrorLimitMbPrivate
-        {
-            get; set;
-        }
-
         public double MemoryWarningLimitPercent
         {
             get; set;
@@ -132,8 +122,6 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"ServiceIncludeList: {ServiceIncludeList ?? string.Empty}{Environment.NewLine}" +
                                              $"MemoryWarningLimitMB: {MemoryWarningLimitMb}{Environment.NewLine}" +
                                              $"MemoryErrorLimitMB: {MemoryErrorLimitMb}{Environment.NewLine}" +
-                                             $"MemoryWarningLimitMBPrivate: {MemoryWarningLimitMbPrivate}{Environment.NewLine}" +
-                                             $"MemoryErrorLimitMBPrivate: {MemoryErrorLimitMbPrivate}{Environment.NewLine}" +
                                              $"MemoryWarningLimitPercent: {MemoryWarningLimitPercent}{Environment.NewLine}" +
                                              $"MemoryErrorLimitPercent: {MemoryErrorLimitPercent}{Environment.NewLine}" +
                                              $"CpuWarningLimitPercent: {CpuWarningLimitPercent}{Environment.NewLine}" +

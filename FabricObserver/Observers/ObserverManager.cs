@@ -274,8 +274,9 @@ namespace FabricObserver.Observers
                     {
                         await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
                     }
-                    else if (observers.Count() == 1) // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
+                    else if (observers.Count == 1)
                     {
+                        // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
                         await Task.Delay(TimeSpan.FromSeconds(15), token);
                     }
                 }
@@ -1247,15 +1248,38 @@ namespace FabricObserver.Observers
 
                 if (exitCode != 0)
                 {
-                    string message = "Failed to enable Long-Value Maximum LID Windows performance counter.";
+                    string message = "Failed to install/enable \"Long-Value Maximum LID\" Service Fabric performance counter. " +
+                                     "This is a required Windows performance counter used in KVS LVID usage monitoring, which you have enabled.";
 
                     // Access Denied.
                     if (exitCode == 5)
                     {
-                        message += $" NOTE: FO must run as System or Admin on Windows to complete this task.";
+                        message += $" FabricObserver must run as System or Admin user on Windows to complete this task given the location of the reg hive.";
+                    }
+                    else
+                    {
+                        message += $" Error info: {error}";
                     }
 
                     Logger.LogWarning($"{message}{Environment.NewLine}Command Output: {output}{Environment.NewLine}Failure Message(s): {error}");
+
+                    if (ObserverFailureHealthStateLevel != HealthState.Unknown)
+                    {
+                        HealthReport report = new HealthReport
+                        {
+                            AppName = new Uri("fabric:/" + ObserverConstants.FabricObserverName),
+                            ReportType = HealthReportType.Application,
+                            HealthReportTimeToLive = TimeSpan.MaxValue,
+                            EmitLogEvent = false,
+                            HealthMessage = message,
+                            NodeName = nodeName,
+                            Observer = ObserverConstants.ObserverManagerName,
+                            Property = $"TryEnableLvidPerfCounter({nodeName})",
+                            State = ObserverFailureHealthStateLevel,
+                        };
+
+                        HealthReporter.ReportHealthToServiceFabric(report);
+                    }
                 }
 
                 return exitCode == 0;

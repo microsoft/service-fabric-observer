@@ -2,10 +2,6 @@
 <!-- You can use an XML diff/merge tool to make upgrading your base configuration to the latest version easier. 
      Get the tool here: https://github.com/gittorre/XmlDiffPatchSF -->
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.23" xmlns="http://schemas.microsoft.com/2011/01/fabric">
-  <!-- Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
-       simple configuration updates for them. By design, any observer you make using our 
-       extensibility model will employ the same basic config parameters as all observers do.
-       (See ObserverBase.cs) -->
   <Parameters>
     <Parameter Name="Aggregator_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="Aggregator_PartitionCount" DefaultValue="1" />
@@ -28,7 +24,7 @@
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
-    <!-- Note: You must run FO as System user on Windows in order to run ContainerObserver. -->
+    <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
@@ -124,8 +120,11 @@
 		 eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
 		 Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
-    <!-- KVS LVID Monitoring -->
+    <!-- KVS LVID Usage Monitoring - Windows-only. NOTE: If you do not monitor stateful Actor services, then this should be set to false.
+	     This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
+    <!-- Working set type -->
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -149,8 +148,10 @@
     <!-- Concurrency/Parallelism Support -->
     <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverMaxConcurrentTasks" DefaultValue="" />
-    <!-- KVS LVID Monitoring -->
+    <!-- KVS LVID Usage Monitoring - Windows-only.
+	     This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
+    <Parameter Name="FabricSystemMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
@@ -226,6 +227,7 @@
             <Parameter Name="MonitorDuration" Value="[AppObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[AppObserverRunInterval]" />
             <Parameter Name="AppObserverDataFileName" Value="[AppObserverConfigurationFile]" />
+            <Parameter Name="MonitorPrivateWorkingSet" Value="[AppObserverMonitorPrivateWorkingSet]" />
             <Parameter Name="ClusterOperationTimeoutSeconds" Value="[AppObserverClusterOperationTimeoutSeconds]" />
             <Parameter Name="UseCircularBuffer" Value="[AppObserverUseCircularBuffer]" />
             <!-- Required-If UseCircularBuffer = True -->
@@ -271,6 +273,7 @@
             <Parameter Name="EnableVerboseLogging" Value="[FabricSystemObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[FabricSystemObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[FabricSystemObserverRunInterval]" />
+            <Parameter Name="MonitorPrivateWorkingSet" Value="[FabricSystemMonitorPrivateWorkingSet]" />
             <Parameter Name="UseCircularBuffer" Value="[FabricSystemObserverUseCircularBuffer]" />
             <!-- Required-If UseCircularBuffer = True -->
             <Parameter Name="ResourceUsageDataCapacity" Value="[FabricSystemObserverResourceUsageDataCapacity]" />
@@ -383,10 +386,10 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!-- Uncomment Policies node to run FO as System user. Also uncomment the Principals node further below. -->
+    <!-- Note that the FO build script will add a Policies node for System user setup (run setup script as LocalSystem). This is here for your use if you deploy FO from sources and need to run FO as System/root user.
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies>
+    </Policies> -->
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -407,12 +410,12 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!-- Uncomment Principals node to run FO as System user. Also uncomment the Policies node above. -->
+  <!-- Note that the FO build script will add a Principals node for System user (LocalSystem). This is here for your use if you deploy FO from sources and need to run FO as System/root user.
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals>
+  </Principals> -->
   <Certificates>
     <SecretsCertificate X509FindValue="" Name="" />
   </Certificates>
