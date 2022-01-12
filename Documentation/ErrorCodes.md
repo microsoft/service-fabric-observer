@@ -43,4 +43,4 @@
 | FO038 | Number of allocated File Handles is at or exceeding configured ***Warning*** threshold on a Linux VM instance. | 
 | FO039 | Number of threads at or exceeding configured ***Error*** threshold for an app service process. | 
 | FO040 | Number of threads at or exceeding configured ***Warning*** threshold for an app service process. |  
-| FO041 | Percentage of Maximum number of KVS LVIDs in use is at or exceeding internal ***Warning*** threshold for an app service process. This is non-configurable and Windows-only. | 
+| FO041 | Percentage of Maximum number of KVS LVIDs in use is at or exceeding internal ***Warning*** threshold (75%) for an app service process. This is non-configurable and Windows-only. | 
