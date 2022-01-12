@@ -50,9 +50,11 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
 
-        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int processId);
+        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
 
         public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false);
+
+        public abstract double ProcessGetCurrentKvsLvidsUsedPercentage(string procName);
 
         public static int GetProcessThreadCount(int processId)
         {

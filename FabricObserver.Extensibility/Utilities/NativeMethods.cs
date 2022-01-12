@@ -4,13 +4,11 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security;
-using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {

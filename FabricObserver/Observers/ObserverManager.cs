@@ -20,6 +20,7 @@ using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
 using Octokit;
+using System.Diagnostics;
 
 namespace FabricObserver.Observers
 {
@@ -32,40 +33,26 @@ namespace FabricObserver.Observers
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
         private readonly List<ObserverBase> observers;
-        private readonly DateTime StartDateTime;
+        private readonly bool isWindows;
         private volatile bool shutdownSignaled;
+        private DateTime StartDateTime;
         private bool disposed;
         private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.22";
+        private const string InternalVersionNumber = "3.1.23";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
-
-        public static FabricClient FabricClientInstance
-        {
-            get; set;
-        }
 
         private static int ObserverExecutionLoopSleepSeconds
         {
             get; set;
         } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
-        public static StatelessServiceContext FabricServiceContext
-        {
-            get; set;
-        }
-
         private static ITelemetryProvider TelemetryClient
-        {
-            get; set;
-        }
-
-        public static bool TelemetryEnabled
         {
             get; set;
         }
@@ -74,26 +61,6 @@ namespace FabricObserver.Observers
         {
             get; set;
         }
-
-        public static bool ObserverWebAppDeployed
-        {
-            get; set;
-        }
-
-        public static bool EtwEnabled
-        {
-            get; set;
-        }
-
-        public string ApplicationName
-        {
-            get; set;
-        }
-
-        public static HealthState ObserverFailureHealthStateLevel
-        {
-            get; set;
-        } = HealthState.Unknown;
 
         private ObserverHealthReporter HealthReporter
         {
@@ -130,6 +97,46 @@ namespace FabricObserver.Observers
             get; set; 
         }
 
+        public static StatelessServiceContext FabricServiceContext
+        {
+            get; set;
+        }
+
+        public static FabricClient FabricClientInstance
+        {
+            get; set;
+        }
+
+        public static bool TelemetryEnabled
+        {
+            get; set;
+        }
+
+        public static bool IsLvidCounterEnabled
+        {
+            get; set;
+        }
+
+        public static bool ObserverWebAppDeployed
+        {
+            get; set;
+        }
+
+        public static bool EtwEnabled
+        {
+            get; set;
+        }
+
+        public static HealthState ObserverFailureHealthStateLevel
+        {
+            get; set;
+        } = HealthState.Unknown;
+
+        public string ApplicationName
+        {
+            get; set;
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// This is only used by unit tests.
@@ -143,6 +150,7 @@ namespace FabricObserver.Observers
             Logger = new Logger("ObserverManagerSingleObserverRun");
             FabricClientInstance ??= fabricClient;
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
             // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
@@ -150,8 +158,6 @@ namespace FabricObserver.Observers
             {
                 observer
             });
-
-            StartDateTime = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -169,6 +175,7 @@ namespace FabricObserver.Observers
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -193,11 +200,19 @@ namespace FabricObserver.Observers
             SetPropertiesFromConfigurationParameters();
             observers = serviceProvider.GetServices<ObserverBase>().ToList();
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
-            StartDateTime = DateTime.UtcNow;
         }
 
         public async Task StartObserversAsync()
         {
+            StartDateTime = DateTime.UtcNow;
+
+            if (isWindows)
+            {
+                // TryEnableLvidPerfCounter will fail (handled) if FO is not running as System or Admin user on Windows.
+                // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
+                IsLvidCounterEnabled = TryEnableLvidPerfCounter();
+            }
+
             try
             {
                 // Nothing to do here.
@@ -227,11 +242,7 @@ namespace FabricObserver.Observers
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(
-                                                                FabricClientInstance,
-                                                                FabricServiceContext,
-                                                                token);
-
+                            using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
                             var foData = GetFabricObserverInternalTelemetryData();
 
                             if (foData != null)
@@ -263,8 +274,9 @@ namespace FabricObserver.Observers
                     {
                         await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
                     }
-                    else if (observers.Count() == 1) // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
+                    else if (observers.Count == 1)
                     {
+                        // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
                         await Task.Delay(TimeSpan.FromSeconds(15), token);
                     }
                 }
@@ -322,11 +334,7 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(
-                                                            FabricClientInstance,
-                                                            FabricServiceContext,
-                                                            token);
-
+                        using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
                         var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,
@@ -335,7 +343,6 @@ namespace FabricObserver.Observers
                             CrashTime = DateTime.UtcNow.ToString("o"),
                             Version = InternalVersionNumber
                         };
-
                         string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_critical_error_telemetry.log");
                         _ = telemetryEvents.EmitCriticalErrorEvent(data, ObserverConstants.FabricObserverName, filepath);
                     }
@@ -634,40 +641,43 @@ namespace FabricObserver.Observers
                 {
                     if (!observerData.ContainsKey(obs.ObserverName))
                     {
-                        _=  observerData.TryAdd(
+                        _ = observerData.TryAdd(
                                 obs.ObserverName,
-                                new AppServiceObserverData
+                                new ObserverData
                                 {
-                                    MonitoredAppCount = obs.MonitoredAppCount,
-                                    MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount,
                                     ErrorCount = obs.CurrentErrorCount,
-                                    WarningCount = obs.CurrentWarningCount
+                                    WarningCount = obs.CurrentWarningCount,
+                                    ServiceData = new ServiceData()
+                                    {
+                                        MonitoredAppCount = obs.MonitoredAppCount,
+                                        MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount
+                                    }
                                 });
                     }
                     else
                     {
-                        observerData[obs.ObserverName] =
-                                new AppServiceObserverData
+                        observerData[obs.ObserverName].ErrorCount = obs.CurrentErrorCount;
+                        observerData[obs.ObserverName].WarningCount = obs.CurrentWarningCount;
+                        observerData[obs.ObserverName].ServiceData =
+                                new ServiceData
                                 {
                                     MonitoredAppCount = obs.MonitoredAppCount,
-                                    MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount,
-                                    ErrorCount = obs.CurrentErrorCount,
-                                    WarningCount = obs.CurrentWarningCount
+                                    MonitoredServiceProcessCount = obs.MonitoredServiceProcessCount
                                 };
                     }
 
                     // Concurrency
                     if (obs.ObserverName == ObserverConstants.AppObserverName)
                     {
-                        (observerData[ObserverConstants.AppObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as AppObserver).EnableConcurrentMonitoring;
+                        observerData[ObserverConstants.AppObserverName].ServiceData.ConcurrencyEnabled = (obs as AppObserver).EnableConcurrentMonitoring;
                     }
                     else if (obs.ObserverName == ObserverConstants.ContainerObserverName)
                     {
-                        (observerData[ObserverConstants.ContainerObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as ContainerObserver).EnableConcurrentMonitoring;
+                        observerData[ObserverConstants.ContainerObserverName].ServiceData.ConcurrencyEnabled = (obs as ContainerObserver).EnableConcurrentMonitoring;
                     }
                     else if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
                     {
-                        (observerData[ObserverConstants.FabricSystemObserverName] as AppServiceObserverData).ConcurrencyEnabled = (obs as FabricSystemObserver).EnableConcurrentMonitoring;
+                        observerData[ObserverConstants.FabricSystemObserverName].ServiceData.ConcurrencyEnabled = (obs as FabricSystemObserver).EnableConcurrentMonitoring;
                     }
                 }
                 else
@@ -1164,6 +1174,121 @@ namespace FabricObserver.Observers
             catch
             {
                 // Don't take down FO due to error in version check...
+            }
+        }
+
+        private bool TryEnableLvidPerfCounter()
+        {
+            if (!isWindows)
+            {
+                return false;
+            }
+
+            /* This counter will be enabled by default in a future version of SF (probably an 8.2 CU release).
+
+                SF Version scheme: 
+                
+                8.2.1363.9590
+
+                Major = 8
+                Minor = 2
+                Revision = 1363 (this is what is interesting for CUs)
+                Build = 9590 (a Windows release build)
+            */
+
+            //var currentSFRuntimeVersion = ServiceFabricConfiguration.Instance.FabricVersion;
+            //Version version = new Version(currentSFRuntimeVersion);
+            // Windows 8.2 CUx with the fix.
+            //if (version.Major == 8 && version.Minor == 2 && version.Revision >= 1365 /* This is not the right revision number. This is just placeholder code. */)
+            //{
+            //  return true;
+            //}
+
+            // First see if the Long-Value Maximum LID counter is enabled.
+            // Query the Long-Value Maximum LID counter for local Fabric process (the result for Fabric will *always* be greater than 0 if the performance counter is enabled).
+            double x = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage("Fabric");
+
+            // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
+            if (x > -1)
+            {
+                // Counter is already enabled.
+                return true;
+            }
+
+            // This will fail (gracefully) if FO is not running as Admin/System given the location of the reg hive.
+            try
+            {
+                string error = null, output = null;
+                string batch = Path.Combine(FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path, "install_lvid_perfcounter.bat");
+
+                var ps = new ProcessStartInfo
+                {
+                    Arguments = $"/c {batch}",
+                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                };
+
+                using var p = new Process();
+
+                // Capture any error information.
+                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                p.OutputDataReceived += (sender, e) => { output += e.Data; };
+                p.StartInfo = ps;
+                _ = p.Start();
+
+                // Start asynchronous read operations on error/output streams.  
+                p.BeginErrorReadLine();
+                p.BeginOutputReadLine();
+                p.WaitForExit();
+                int exitCode = p.ExitCode;
+
+                if (exitCode != 0)
+                {
+                    string message = "Failed to install/enable \"Long-Value Maximum LID\" Service Fabric performance counter. " +
+                                     "This is a required Windows performance counter used in KVS LVID usage monitoring. ";
+
+                    // Access Denied.
+                    if (exitCode == 5)
+                    {
+                        message += $"FabricObserver (FO) must run as System or Admin user on Windows to complete this task given the location of the reg hive. " +
+                                   $"Alternatively, you can build FO using the Build-FabricObserver.ps1 script, then deploy FO from the output folder. " +
+                                   $"This will run the LVID counter setup script as System during app deployment, but FO itself can be deployed as NetworkUser.";
+                    }
+                    else
+                    {
+                        message += $" Error info: {error}";
+                    }
+
+                    Logger.LogWarning($"{message}{Environment.NewLine}Command Output: {output}{Environment.NewLine}Failure Message(s): {error}");
+
+                    /*if (ObserverFailureHealthStateLevel != HealthState.Unknown)
+                    {
+                        HealthReport report = new HealthReport
+                        {
+                            AppName = new Uri("fabric:/" + ObserverConstants.FabricObserverName),
+                            ReportType = HealthReportType.Application,
+                            HealthReportTimeToLive = TimeSpan.MaxValue,
+                            EmitLogEvent = false,
+                            HealthMessage = message,
+                            NodeName = nodeName,
+                            Observer = ObserverConstants.ObserverManagerName,
+                            Property = $"TryEnableLvidPerfCounter({nodeName})",
+                            State = ObserverFailureHealthStateLevel,
+                        };
+
+                        HealthReporter.ReportHealthToServiceFabric(report);
+                    }*/
+                }
+
+                return exitCode == 0;
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning($"TryEnableKVSPerfCounter failed:{Environment.NewLine}{e}");
+                return false;
             }
         }
     }

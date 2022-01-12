@@ -25,6 +25,7 @@ namespace FabricObserver.Observers
     public class ContainerObserver : ObserverBase
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
+        private readonly bool isWindows;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allMemDataMB;
 
@@ -42,7 +43,7 @@ namespace FabricObserver.Observers
         public bool EnableConcurrentMonitoring
         {
             get; set;
-        }
+        } = false;
 
         public ParallelOptions ParallelOptions 
         { 
@@ -54,6 +55,7 @@ namespace FabricObserver.Observers
         {
             var configSettings = new MachineInfoModel.ConfigSettings(context);
             ConfigPackagePath = configSettings.ConfigPackagePath;
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         // OsbserverManager passes in a special token to ObserveAsync and ReportAsync that enables it to stop this observer outside of
@@ -188,9 +190,9 @@ namespace FabricObserver.Observers
             }
 
             // Concurrency/Parallelism support.
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
-                EnableConcurrentMonitoring = Environment.ProcessorCount >= 4 && enableConcurrency;
+                EnableConcurrentMonitoring = enableConcurrency;
             }
 
             // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
@@ -273,7 +275,7 @@ namespace FabricObserver.Observers
                 {
                     token.ThrowIfCancellationRequested();
 
-                    if (app.ApplicationName.OriginalString == "fabric:/System")
+                    if (app.ApplicationName.OriginalString == ObserverConstants.SystemAppName)
                     {
                         continue;
                     }
@@ -486,20 +488,20 @@ namespace FabricObserver.Observers
                 {
                     string msg = $"docker stats exited with {exitStatus}: {error}";
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                 "in order for ContainerObserver to function correctly on Windows.";
                     }
-                    else
+                    else // TODO: Figure out how to make this more resilient to when SF touches the cap binary (probably as part of a cluster upgrade), removing the cap set.. 
                     {
-                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the caps set. In order to fix this, please redeploy FO. " +
-                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux. " +
-                               "You will need to modify the Policy node in ApplicationManifest.xml to contain <RunAsPolicy CodePackageRef=\"Code\" UserRef=\"SystemUser\" EntryPointType=\"All\" />";
+                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the Capabilities set. " +
+                               "In order to fix this, you can do a versionless parameter-only app upgrade (setting ContainerObserverEnableConcurrentMonitoring to false, for example), " +
+                               "which will restart FabricObserver on each node. This will reset the Capabilities on the elevated_docker_stats binary. " +
+                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux, as a last resort.";
                     }
 
                     ObserverLogger.LogWarning(msg);
-                    CurrentWarningCount++;
 
                     var healthReport = new Utilities.HealthReport
                     {
@@ -588,10 +590,10 @@ namespace FabricObserver.Observers
 
                         containerId = stats[0];
                         repOrInst.ContainerId = containerId;
-
+#if DEBUG
                         ObserverLogger.LogInfo($"cpu: {stats[2]}");
                         ObserverLogger.LogInfo($"mem: {stats[3]}");
-
+#endif
                         // CPU (%)
                         double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
                         allCpuDataPercentage[cpuId].AddData(cpu_percent);
@@ -655,7 +657,7 @@ namespace FabricObserver.Observers
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
 
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                         {
@@ -664,8 +666,11 @@ namespace FabricObserver.Observers
                             HostProcessId = statefulReplica.HostProcessId,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
+                            ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            ReplicaRole = statefulReplica.ReplicaRole,
+                            ReplicaStatus = statefulReplica.ReplicaStatus
                         };
 
                         if (serviceFilterList != null && filterType != ServiceFilterType.None)
@@ -690,8 +695,11 @@ namespace FabricObserver.Observers
                             HostProcessId = statelessInstance.HostProcessId,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
+                            ServiceKind = statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            ReplicaRole = ReplicaRole.None,
+                            ReplicaStatus = statelessInstance.ReplicaStatus
                         };
 
                         if (serviceFilterList != null && filterType != ServiceFilterType.None)

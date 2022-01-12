@@ -27,8 +27,11 @@ namespace FabricObserver.Observers
     // CPU Time, Private Workingset, Ephemeral and Total Active TCP ports, File Handles, Threads.
     public class FabricSystemObserver : ObserverBase
     {
-        private List<string> processWatchList;
+        private const double KvsLvidsWarningPercentage = 75.0;
+        private readonly List<string> processWatchList;
+        private readonly bool isWindows;
         private Stopwatch stopwatch;
+        private bool checkPrivateWorkingSet;
 
         // Health Report data container - For use in analysis to determine health state.
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> allCpuData;
@@ -37,6 +40,7 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> allEphemeralTcpPortData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> allHandlesData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> allThreadsData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> allAppKvsLvidsData;
 
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList = null;
@@ -49,8 +53,10 @@ namespace FabricObserver.Observers
         public FabricSystemObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
             // Linux
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (!isWindows)
             {
                 processWatchList = new List<string>
                 {
@@ -152,7 +158,12 @@ namespace FabricObserver.Observers
         public bool EnableConcurrentMonitoring
         {
             get; set;
-        }
+        } = false;
+
+        public bool EnableKvsLvidMonitoring
+        {
+            get; set;
+        } = false;
 
         public ParallelOptions ParallelOptions
         {
@@ -201,7 +212,7 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsObserverWebApiAppDeployed && monitorWinEventLog)
+            if (isWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
             {
                 ReadServiceFabricWindowsEventLog();
             }
@@ -349,6 +360,12 @@ namespace FabricObserver.Observers
                     ProcessResourceDataList(allThreadsData, ThreadCountError, ThreadCountWarning);
                 }
 
+                // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
+                if (EnableKvsLvidMonitoring && allAppKvsLvidsData.Count > 0)
+                {
+                    ProcessResourceDataList(allAppKvsLvidsData, 0, KvsLvidsWarningPercentage);
+                }
+
                 // No need to progress on Linux.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
@@ -446,7 +463,7 @@ namespace FabricObserver.Observers
         /// </summary>
         private void ReadServiceFabricWindowsEventLog()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!isWindows)
             {
                 return;
             }
@@ -605,7 +622,8 @@ namespace FabricObserver.Observers
                                             ErrorWarningProperty.TotalCpuTime,
                                             proc,
                                             frudCapacity,
-                                            UseCircularBuffer));
+                                            UseCircularBuffer,
+                                            EnableConcurrentMonitoring));
                 }
             }
 
@@ -622,7 +640,8 @@ namespace FabricObserver.Observers
                                             ErrorWarningProperty.TotalMemoryConsumptionMb,
                                             proc,
                                             frudCapacity,
-                                            UseCircularBuffer));
+                                            UseCircularBuffer,
+                                            EnableConcurrentMonitoring));
                 }
             }
 
@@ -639,7 +658,8 @@ namespace FabricObserver.Observers
                                                     ErrorWarningProperty.TotalActivePorts,
                                                     proc,
                                                     frudCapacity,
-                                                    UseCircularBuffer));
+                                                    UseCircularBuffer,
+                                                    EnableConcurrentMonitoring));
                 }
             }
 
@@ -655,7 +675,8 @@ namespace FabricObserver.Observers
                                                         ErrorWarningProperty.TotalEphemeralPorts,
                                                         proc,
                                                         frudCapacity,
-                                                        UseCircularBuffer));
+                                                        UseCircularBuffer,
+                                                        EnableConcurrentMonitoring));
                 }
             }
 
@@ -672,7 +693,8 @@ namespace FabricObserver.Observers
                                                 ErrorWarningProperty.TotalFileHandles,
                                                 proc,
                                                 frudCapacity,
-                                                UseCircularBuffer));
+                                                UseCircularBuffer,
+                                                EnableConcurrentMonitoring));
                 }
             }
 
@@ -689,11 +711,35 @@ namespace FabricObserver.Observers
                                                 ErrorWarningProperty.TotalThreadCount,
                                                 proc,
                                                 frudCapacity,
-                                                UseCircularBuffer));
+                                                UseCircularBuffer,
+                                                EnableConcurrentMonitoring));
                 }
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && monitorWinEventLog && evtRecordList == null)
+            // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
+            if (EnableKvsLvidMonitoring && allAppKvsLvidsData == null)
+            {
+                allAppKvsLvidsData = new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+
+                foreach (var proc in processWatchList)
+                {
+                    if (proc != "Fabric" && proc != "FabricRM")
+                    {
+                        continue;
+                    }
+
+                    _ = allAppKvsLvidsData.TryAdd(
+                                        proc,
+                                        new FabricResourceUsageData<double>(
+                                                ErrorWarningProperty.TotalKvsLvidsPercent,
+                                                proc,
+                                                frudCapacity,
+                                                UseCircularBuffer,
+                                                EnableConcurrentMonitoring));
+                }
+            }
+
+            if (isWindows && monitorWinEventLog && evtRecordList == null)
             {
                 evtRecordList = new List<EventRecord>();
             }
@@ -705,9 +751,10 @@ namespace FabricObserver.Observers
             
             Token.ThrowIfCancellationRequested();
 
+            // CPU Time
             var cpuError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverCpuErrorLimitPct);
 
-            if (!string.IsNullOrEmpty(cpuError))
+            if (!string.IsNullOrWhiteSpace(cpuError))
             {
                 _ = int.TryParse(cpuError, out int threshold);
 
@@ -719,9 +766,19 @@ namespace FabricObserver.Observers
                 CpuErrorUsageThresholdPct = threshold;
             }
 
+            /* Memory - Private or Full Working Set */
+            var privateWS = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet);
+            
+            if (!string.IsNullOrWhiteSpace(privateWS))
+            {
+                _ = bool.TryParse(privateWS, out bool privWs);
+               checkPrivateWorkingSet = privWs;
+            }
+
+            // Memory - Working Set MB
             var memError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMemoryErrorLimitMb);
 
-            if (!string.IsNullOrEmpty(memError))
+            if (!string.IsNullOrWhiteSpace(memError))
             {
                 _ = int.TryParse(memError, out int threshold);
 
@@ -733,35 +790,37 @@ namespace FabricObserver.Observers
                 MemErrorUsageThresholdMb = threshold;
             }
 
-            // Ports
+            // All TCP Ports
             var activeTcpPortsError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkErrorActivePorts);
 
-            if (!string.IsNullOrEmpty(activeTcpPortsError))
+            if (!string.IsNullOrWhiteSpace(activeTcpPortsError))
             {
                 _ = int.TryParse(activeTcpPortsError, out int threshold);
                 ActiveTcpPortCountError = threshold;
             }
 
+            // Ephemeral TCP Ports
             var activeEphemeralPortsError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkErrorEphemeralPorts);
 
-            if (!string.IsNullOrEmpty(activeEphemeralPortsError))
+            if (!string.IsNullOrWhiteSpace(activeEphemeralPortsError))
             {
                 _ = int.TryParse(activeEphemeralPortsError, out int threshold);
                 ActiveEphemeralPortCountError = threshold;
             }
 
-            // Handles
+            // File Handles
             var handlesError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverErrorHandles);
 
-            if (!string.IsNullOrEmpty(handlesError))
+            if (!string.IsNullOrWhiteSpace(handlesError))
             {
                 _ = int.TryParse(handlesError, out int threshold);
                 AllocatedHandlesError = threshold;
             }
 
+            // Threads
             var threadCountError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverErrorThreadCount);
 
-            if (!string.IsNullOrEmpty(threadCountError))
+            if (!string.IsNullOrWhiteSpace(threadCountError))
             {
                 _ = int.TryParse(threadCountError, out int threshold);
                 ThreadCountError = threshold;
@@ -773,7 +832,7 @@ namespace FabricObserver.Observers
 
             var cpuWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverCpuWarningLimitPct);
 
-            if (!string.IsNullOrEmpty(cpuWarn))
+            if (!string.IsNullOrWhiteSpace(cpuWarn))
             {
                 _ = int.TryParse(cpuWarn, out int threshold);
 
@@ -787,7 +846,7 @@ namespace FabricObserver.Observers
 
             var memWarn = GetSettingParameterValue( ConfigurationSectionName, ObserverConstants.FabricSystemObserverMemoryWarningLimitMb);
 
-            if (!string.IsNullOrEmpty(memWarn))
+            if (!string.IsNullOrWhiteSpace(memWarn))
             {
                 _ = int.TryParse(memWarn, out int threshold);
 
@@ -802,7 +861,7 @@ namespace FabricObserver.Observers
             // Ports
             var activeTcpPortsWarning = GetSettingParameterValue( ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkWarningActivePorts);
 
-            if (!string.IsNullOrEmpty(activeTcpPortsWarning))
+            if (!string.IsNullOrWhiteSpace(activeTcpPortsWarning))
             {
                 _ = int.TryParse(activeTcpPortsWarning, out int threshold);
                 ActiveTcpPortCountWarning = threshold;
@@ -810,16 +869,16 @@ namespace FabricObserver.Observers
 
             var activeEphemeralPortsWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkWarningEphemeralPorts);
 
-            if (!string.IsNullOrEmpty(activeEphemeralPortsWarning))
+            if (!string.IsNullOrWhiteSpace(activeEphemeralPortsWarning))
             {
                 _ = int.TryParse(activeEphemeralPortsWarning, out int threshold);
                 ActiveEphemeralPortCountWarning = threshold;
             }
 
-            // Handles
+            // File Handles
             var handlesWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverWarningHandles);
 
-            if (!string.IsNullOrEmpty(handlesWarning))
+            if (!string.IsNullOrWhiteSpace(handlesWarning))
             {
                 _ = int.TryParse(handlesWarning, out int threshold);
                 AllocatedHandlesWarning = threshold;
@@ -828,16 +887,16 @@ namespace FabricObserver.Observers
             // Threads
             var threadCountWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverWarningThreadCount);
             
-            if (!string.IsNullOrEmpty(threadCountWarning))
+            if (!string.IsNullOrWhiteSpace(threadCountWarning))
             {
                 _ = int.TryParse(threadCountWarning, out int threshold);
                 ThreadCountWarning = threshold;
             }
 
             // Concurrency/Parallelism support.
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
-                EnableConcurrentMonitoring = Environment.ProcessorCount >= 4 && enableConcurrency;
+                EnableConcurrentMonitoring = enableConcurrency;
             }
 
             // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
@@ -857,16 +916,21 @@ namespace FabricObserver.Observers
                 TaskScheduler = TaskScheduler.Default
             };
 
+            // KVS LVID Monitoring - Windows-only.
+            if (isWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
+            {
+                EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
+            }
+
             // Monitor Windows event log for SF and System Error/Critical events?
             // This can be noisy. Use wisely. Return if running on Linux.
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!isWindows)
             {
                 return;
             }
 
             var watchEvtLog = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
-
-            if (!string.IsNullOrEmpty(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
+            if (!string.IsNullOrWhiteSpace(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
             {
                 monitorWinEventLog = watchEl;
             }
@@ -879,7 +943,7 @@ namespace FabricObserver.Observers
             string dotnetArg = procName;
             Process[] processes;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.Contains("dotnet"))
+            if (!isWindows && procName.Contains("dotnet"))
             {
                 dotnetArg = $"{procName.Replace("dotnet ", string.Empty)}";
                 processes = GetDotnetLinuxProcessesByFirstArgument(dotnetArg);
@@ -925,7 +989,7 @@ namespace FabricObserver.Observers
                     // Allocated Handles
                     float handles;
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id);
                     }
@@ -939,7 +1003,7 @@ namespace FabricObserver.Observers
                     // Threads
                     int threads = 0;
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (isWindows)
                     {
                         try
                         {
@@ -960,7 +1024,7 @@ namespace FabricObserver.Observers
                     // No need to proceed further if there are no configuration settings for CPU, Memory, Handles thresholds.
                     // Returning here is correct as supplied thresholds apply to all system services.
                     if (CpuErrorUsageThresholdPct <= 0 && CpuWarnUsageThresholdPct <= 0 && MemErrorUsageThresholdMb <= 0 && MemWarnUsageThresholdMb <= 0
-                        && AllocatedHandlesError <= 0 && AllocatedHandlesWarning <= 0 && ThreadCountError <= 0 && ThreadCountWarning <= 0)
+                        && AllocatedHandlesError <= 0 && AllocatedHandlesWarning <= 0 && ThreadCountError <= 0 && ThreadCountWarning <= 0 && !EnableKvsLvidMonitoring)
                     {
                         return;
                     }
@@ -975,6 +1039,18 @@ namespace FabricObserver.Observers
                     if (ThreadCountError > 0 || ThreadCountWarning > 0)
                     {
                         allThreadsData[dotnetArg].AddData(threads);
+                    }
+
+                    // KVS LVIDs
+                    if (EnableKvsLvidMonitoring && (dotnetArg == "Fabric" || dotnetArg == "FabricRM"))
+                    {
+                        double lvidPct = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage(dotnetArg);
+
+                        // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
+                        if (lvidPct > -1)
+                        {
+                            allAppKvsLvidsData[dotnetArg].AddData(lvidPct);
+                        }
                     }
 
                     CpuUsage cpuUsage = new CpuUsage();
@@ -1003,7 +1079,7 @@ namespace FabricObserver.Observers
                             // Memory MB
                             if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                             {
-                                float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id);
+                                float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, checkPrivateWorkingSet ? dotnetArg : null, checkPrivateWorkingSet);
                                 allMemData[dotnetArg].AddData(processMem);
                             }
 
@@ -1162,6 +1238,18 @@ namespace FabricObserver.Observers
             {
                 allActiveTcpPortData?.Clear();
                 allActiveTcpPortData = null;
+            }
+
+            if (allThreadsData != null && !allThreadsData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allThreadsData?.Clear();
+                allThreadsData = null;
+            }
+
+            if (allAppKvsLvidsData != null && !allAppKvsLvidsData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allAppKvsLvidsData?.Clear();
+                allAppKvsLvidsData = null;
             }
         }
     }

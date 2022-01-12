@@ -25,7 +25,7 @@ namespace FabricObserver.Observers.Utilities
                 return GetProcessPrivateWorkingSetMbFromPerfCounter(procName, processId);
             }
 
-            return NativeGetProcessWorkingSet(processId, getPrivateWorkingSet); 
+            return NativeGetProcessWorkingSet(processId); 
         }
 
         public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false)
@@ -40,15 +40,15 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int processId)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid)
         {
-            if (processId < 1)
+            if (parentPid < 1)
             {
                 return null;
             }
 
             // Get descendant procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(processId);
+            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -130,6 +130,35 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return childProcesses;
+        }
+
+        public override double ProcessGetCurrentKvsLvidsUsedPercentage(string procName)
+        {
+            try
+            {
+                using (var performanceCounter = new PerformanceCounter(
+                                                    categoryName: "Windows Fabric Database",
+                                                    counterName: "Long-Value Maximum LID",
+                                                    instanceName: procName,
+                                                    readOnly: true))
+                {
+                    float result = performanceCounter.NextValue();
+                    double usedPct = (double)(result * 100) / int.MaxValue;
+                    return usedPct;
+                }
+            }
+            catch (Exception e) when (e is InvalidOperationException)
+            {
+                // We land here when the target service process is not using KVS (which we can't determine by querying SF (yet))
+                // OR the performance counter is not found/enabled.
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning($"Exception querying Long-Value Maximum LID counter:{Environment.NewLine}{e}");
+            }
+
+            // This means failure. Consumer should handle the case when the result is less than 0..
+            return -1;
         }
 
         private float ProcessGetProcessAllocatedHandles(int processId)
@@ -216,8 +245,10 @@ namespace FabricObserver.Observers.Utilities
             {
                 var childProcs = NativeMethods.GetChildProcesses(processId);
 
-                foreach (var proc in childProcs)
+                for (int i = 0; i < childProcs.Count; ++i)
                 {
+                    var proc = childProcs[i];   
+
                     if (!ignoreProcessList.Contains(proc.ProcessName))
                     {
                         if (childProcesses == null)
@@ -227,6 +258,9 @@ namespace FabricObserver.Observers.Utilities
 
                         childProcesses.Add((proc.ProcessName, proc.Id));
                     }
+
+                    // Clean up Process objects.
+                    proc.Dispose();
                 }
             }
             catch (Win32Exception we)
@@ -308,6 +342,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
+        // This function is CPU intensive for large service deployments (large number of observed processes).
         private float WmiGetProcessPrivateWorkingSetMb(int processId)
         {
             if (processId < 0)
@@ -358,7 +393,7 @@ namespace FabricObserver.Observers.Utilities
             return 0F;
         }
 
-        private float NativeGetProcessWorkingSet(int processId, bool getPrivateBytes)
+        private float NativeGetProcessWorkingSet(int processId)
         {
             try
             {
@@ -372,11 +407,6 @@ namespace FabricObserver.Observers.Utilities
                         throw new Win32Exception($"GetProcessMemoryInfo returned false. Error Code is {Marshal.GetLastWin32Error()}");
                     }
 
-                    if (getPrivateBytes)
-                    {
-                        return memoryCounters.PrivateUsage.ToInt64() / 1024 / 1024;
-                    }
-
                     return memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
                 }
             }
@@ -387,38 +417,69 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        private readonly static PerformanceCounter memoryCounter = new PerformanceCounter("Process", "Working Set - Private", true);
-
         private float GetProcessPrivateWorkingSetMbFromPerfCounter(string procName, int procId)
         {
-            string internalProcName;
-            internalProcName = GetInternalProcessNameFromPerfCounter(procName, procId);
-            memoryCounter.InstanceName = internalProcName;
-            return memoryCounter.NextValue() / 1024 / 1024;
+            string internalProcName = GetInternalProcessNameFromPerfCounter(procName, procId);
+            
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(internalProcName))
+                {
+                    using (PerformanceCounter memoryCounter = new PerformanceCounter("Process", "Working Set - Private", internalProcName, true))
+                    {
+                        return memoryCounter.NextValue() / 1024 / 1024;
+                    }
+                }
+
+                Logger.LogWarning($"Unable to get private working set for process {procName} with id {procId}. Returning 0.");
+                return 0F;
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            {
+                Logger.LogWarning($"Handled: Unable to get private working set for process {procName} with id {procId}. Returning 0.{Environment.NewLine}{e}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Unhandled (no-throw): Unable to get private working set for process {procName} with id {procId}. Returning 0.{Environment.NewLine}{ex}");
+            }
+
+            return 0F;
         }
 
         private string GetInternalProcessNameFromPerfCounter(string procName, int procId)
         {
-            var internalProcName = string.Empty;
-            var category = new PerformanceCounterCategory("Process");
-            var instanceNames = category.GetInstanceNames().Where(x => x.Contains(procName)).ToArray();
-            using (PerformanceCounter nameCounter = new PerformanceCounter("Process", "ID Process", true))
+            string internalProcName = string.Empty;
+
+            try
             {
-                for (int i = 0; i < instanceNames.Length; ++i)
+                var category = new PerformanceCounterCategory("Process");
+                string[] instanceNames = category.GetInstanceNames().Where(x => x.Contains(procName)).ToArray();
+
+                using (var nameCounter = new PerformanceCounter("Process", "ID Process", true))
                 {
-                    nameCounter.InstanceName = instanceNames[i];
-
-                    if (nameCounter.NextValue() != procId)
+                    for (int i = 0; i < instanceNames.Length; ++i)
                     {
-                        continue;
-                    }
+                        nameCounter.InstanceName = instanceNames[i];
 
-                    internalProcName = instanceNames[i];
-                    break;
+                        if (nameCounter.NextValue() != procId)
+                        {
+                            continue;
+                        }
+
+                        return instanceNames[i];
+                    }
                 }
             }
+            catch(Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is Win32Exception || ex is UnauthorizedAccessException)
+            {
+                Logger.LogInfo($"Handled: Unable to determine internal process name for {procName} with id {procId}{Environment.NewLine}{ex}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"Unhandled (no-throw): Unable to determine internal process name for {procName} with id {procId}{Environment.NewLine}{ex}");
+            }
 
-            return internalProcName;
+            return null;
         }
     }
 }

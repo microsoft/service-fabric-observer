@@ -3,7 +3,7 @@
     "targetApp": "*",
     "cpuWarningLimitPercent": 85,
     "memoryWarningLimitMb": 1024,
-    "networkWarningEphemeralPorts": 7500,
+    "networkWarningEphemeralPorts": 5000,
     "warningThreadCount": 500,
     "warningOpenFileHandles": 5000
   }

@@ -55,6 +55,8 @@ namespace FabricObserver.Observers.Utilities
         public const string CsvFileWriteFormat = "CsvFileWriteFormat";
         public const string EnableConcurrentMonitoring = "EnableConcurrentMonitoring";
         public const string MaxConcurrentTasks = "MaxConcurrentTasks";
+        public const string EnableKvsLvidMonitoringParameter = "EnableKvsLvidMonitoring";
+        public const string MonitorPrivateWorkingSet = "MonitorPrivateWorkingSet";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";
@@ -65,6 +67,7 @@ namespace FabricObserver.Observers.Utilities
         public const string DumpTypeParameter = "DumpType";
         public const string MaxDumpsParameter = "MaxDumps";
         public const string MaxDumpsTimeWindowParameter = "MaxDumpsTimeWindow";
+        public const string SystemAppName = "fabric:/System";
 
         // AzureStorageUploadObserver
         public const string AzureStorageUploadObserverName = "AzureStorageUploadObserver";

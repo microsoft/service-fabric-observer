@@ -3,15 +3,13 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using Newtonsoft.Json;
+
 namespace FabricObserver.TelemetryLib
 {
+    [JsonObject]
     public class ObserverData
     {
-        public string ObserverName
-        {
-            get; set;
-        }
-
         public int ErrorCount
         {
             get; set;
@@ -21,9 +19,14 @@ namespace FabricObserver.TelemetryLib
         {
             get; set;
         }
+
+        public ServiceData ServiceData 
+        { 
+            get; set; 
+        } 
     }
 
-    public class AppServiceObserverData : ObserverData
+    public class ServiceData
     {
         public int MonitoredAppCount
         {

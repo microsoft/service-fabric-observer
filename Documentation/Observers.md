@@ -8,27 +8,27 @@ Observers are low-impact, long-lived objects that perform specialied monitoring 
 
 ### Logging
 
-Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide ApplicationInsights/LogAnalytics settings, then you will also see the output in your Azure analytics queries. Each observer has configuration settings in PackageRoot/Config/Settings.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds) in json files located in PackageRoot/Observers.Data folder.  
+Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide ApplicationInsights/LogAnalytics settings, then you will also see the output in your Azure analytics queries. Each observer has configuration settings in FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds) in json files located in FabricObserver\PackageRoot\Config folder.  
 
 ### Emiting Errors
 
 Service Fabric Error Health Events can block upgrades and other important Fabric runtime operations. Error thresholds should be set such that putting the cluster in an emergency state incurs less cost than allowing the state to continue. For this reason, Fabric Observer by default ***treats Errors as Warnings***.  However if your cluster health policy is to [ConsiderWarningAsError](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-health-introduction#cluster-health-policy), FabricObserver has a ***high risk of putting your cluster in an error state***. Proceed with caution.
 
-## [How to implement a new Observer](#writing-a-new-observer)
+## [How to implement a new Observer](#writing-a-custom-observer)
 ## Currently Implemented Observers  
 
 | Observer | Description |
 | :--- | :--- |
-| [AppObserver](#appobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric Application services (processes) and their spawn (child processes). Alerts when user-supplied thresholds are breached. |
+| [AppObserver](#appobserver) | Monitors CPU usage (Total CPU Time; percentage), Memory usage (Working Set; total or private, MB or percentage of total), and logical Disk space consumption for Service Fabric service processes and their descendants (aka child processes). Alerts when user-supplied thresholds are breached. |
 | [AzureStorageUploadObserver](#azurestorageuploadobserver) | Runs periodically (do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true. It will clean up files after successful upload. |
 | [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
 | [ContainerObserver](#containerobserver) | Monitors container CPU and Memory use. Alerts when user-supplied thresholds are breached. |
-| [DiskObserver](#diskobserver) | Monitors, storage disk information like capacity and IO rates. Alerts when user-supplied thresholds are breached. |
-| [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use, and Disk space availability for Service Fabric System services (compare to AppObserver) |
-| [NetworkObserver](#networkobserver) | Monitors outbound connection state for user-supplied endpoints (hostname/port pairs), i.e. it checks that the node can reach specific endpoints. |
-| [NodeObserver](#nodeobserver) | This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports), File Handles (Linux). |
-| [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. |
-| [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. |
+| [DiskObserver](#diskobserver) | Monitors logical disk space conusumption and IO queue wait time. Alerts when user-supplied thresholds are breached. |
+| [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use (Working Set, Mb only), and Disk space consumption for Service Fabric System service processes. Alerts when user-supplied thresholds are breached. |
+| [NetworkObserver](#networkobserver) | Monitors outbound connection state for user-supplied endpoints (hostname/port pairs). This observer checks that the node can reach specific endpoints (over both http (e.g., REST) and direct tcp socket). |
+| [NodeObserver](#nodeobserver) | Monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports), File Handles (Linux). |
+| [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules (Windows), list of recent patches/hotfixes (with hyper-links to related KB articles). |
+| [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. This observer is currently only useful if the FO Web Api service is deployed. |
 
 # Observers - What they do and how to configure them  
 
@@ -140,8 +140,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
-| **memoryErrorLimitMb** | Maximum service process private working set in Megabytes that should generate an Error |  
-| **memoryWarningLimitMb**| Minimum service process private working set in Megabytes that should generate a Warning |  
+| **memoryErrorLimitMb** | Maximum service process total working set in Megabytes that should generate an Error |  
+| **memoryWarningLimitMb**| Minimum service process total working set in Megabytes that should generate a Warning | 
 | **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate an Error |  
 | **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Warning | 
 | **cpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |
@@ -156,7 +156,7 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **errorThreadCount** | Maximum number of threads in use by an app process that will generate an Error. |  
 | **warningThreadCount** | Minimum number of threads in use by app process that will generate a Warning.|  
 
-**Output** Log text(Error/Warning), Service Fabric Application Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
+**Output** Log text(Error/Warning), Application Level Service Fabric Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
 
 AppObserver also supports non-JSON parameters for configuration unrelated to thresholds. Like all observers these settings are located in ApplicationManifest.xml to support versionless configuration updates via application upgrade. 
 
@@ -167,29 +167,93 @@ If your compute configuration includes multiple CPUs (logical processors >= 4) a
 If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
 
 ```XML
-     <!-- AppObserver -->
-    <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
-    <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
-    <!-- Required-If UseCircularBuffer = true -->
-    <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- Configuration file name. -->
-    <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    <!-- Process family tree monitoring. -->
-    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
-    <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
-    <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError feature).
-         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json 
-         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
-    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
-    <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
-    <!-- Max number of dumps to generate per service, per observed metric, within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
-    <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
-    <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
-    <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
-    <!-- Concurrency/Parallelism Support -->
-    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+<Section Name="AppObserverConfiguration">
+    <!-- Required Parameter for all Observers: To enable or not enable, that is the question. -->
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+
+    <!-- Optional: Whether or not AppObserver should try to monitor service processes concurrently.
+         This can significantly decrease the amount of time it takes AppObserver to monitor and report on several application services. 
+         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
+    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+	
+    <!-- Optional: The maximum number of concurrent tasks to use when monitoring service processes in parallel. By default, AppObserver will set this to be the number of logical processors
+         present in the underlying (virtual) machine. Experiment with various values (including -1 which means unlimited) before you ship into production. 
+         This is especially important if you monitor lots of services (>= 100) and enable concurrent monitoring - 
+         and have capable hardware: >= 4 logical processors (none of this matters if this is not true.) -->
+    <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
+	  
+    <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    
+    <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
+    
+    <!-- Optional: Enabling this will generate CSV files that contain resource metric data across runs. 
+         These files will be written to the DataLogPath supplied in ObserverManagerConfiguration section above. -->
+    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
+	  
+    <!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful service that employs KVS (like SF Actor services). 
+         Enabling this will put the containing Application into Warning when a related service has consumed 75% of the Maximum number of LVIDs (which is int.MaxValue per process). -->
+    <Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
+	  
+    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+    
+    <!-- Optional: The amount of time this observer conducts resource usage probing. 
+         Each observer has a default value set, but you should override by setting this
+         parameter to what makes sense for your service(s). Note that this value represents
+         the time spent monitoring for each service you specify in configuration. -->
+    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+
+    <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
+         in ApplicationManifest.xml, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter. -->
+    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    
+    <!-- Required: The thresholds are held in a json file. Note that these thresholds apply to any service that is part 
+         of the Target Application, which is the logical container for service processes in Service Fabric parlance.-->
+    <Parameter Name="AppObserverDataFileName" Value="" MustOverride="true" />
+    
+    <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="" MustOverride="true" />
+    
+    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
+         It just depends upon how much data you are collecting per observer run and if you only care about
+         the most recent data (where number of most recent items in collection 
+         type equals the ResourceUsageDataCapacity you specify). -->
+    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
+    
+    <!-- Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for
+         the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
+         like 0 or a negative number (or omit the parameter altogether). -->
+    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true" />
+    
+    <!-- AppObserver will automatically monitor a service process's descendants (max depth = 5, max procs = 50). You should only disable this if you know the services 
+         that you want AppObserver to monitor do not launch child processes. -->
+    <Parameter Name="EnableChildProcessMonitoring" Value="" MustOverride="true" />
+    
+    <!-- Max number of a service process's spawned (child) processes to report via telemetry (ordered by descending value - so, top n consumers).
+         The recommended value range for this setting is 5 to 10. See Observers.md for more details on AppObserver's child process monitoring. -->
+    <Parameter Name="MaxChildProcTelemetryDataCount" Value="" MustOverride="true" />
+    
+    <!-- dumpProcessOnError related configuration. -->
+    <!-- This setting will override dumpProcessOnError in AppObserver.config.json. This is a big red button to disable/enable the feature 
+         without having to deploy a new json config file for AppObserver as part of a configuration update or App redeployment. This feature will only work
+         if you have "dumpProcessOnError"=true setting for your app target(s) in AppObserver.config.json. 
+         AppObserver's dumpProcessOnError feature is currently only supported for Windows. -->
+    <Parameter Name="EnableProcessDumps" Value="" MustOverride="true" />
+    
+    <!-- Supported values are: Mini, MiniPlus, Full. Default is MiniPlus. Full can create giant files - be careful there.. -->
+    <Parameter Name="DumpType" Value="" MustOverride="true" />
+    
+    <!-- The maximum number of dumps per day per service process per metric. Default is 3. -->
+    <Parameter Name="MaxDumps" Value="" MustOverride="true" />
+    <Parameter Name="MaxDumpsTimeWindow" Value="" MustOverride="true" />
+	
+    <!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
+    <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
+  </Section>   
 ```
 
 Example AppObserver Output (Warning - Ephemeral Ports Usage):  
@@ -323,6 +387,9 @@ Monitors the expiration date of the cluster certificate and any other certificat
     <Parameter Name="AppCertThumbprintsToObserve" Value="" MustOverride="true" />
 ```
 
+**Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service. 
+
+
 ## ContainerObserver 
 Monitors CPU and Memory use of Service Fabric containerized (docker) services.  
 
@@ -386,6 +453,8 @@ All settings are optional, ***except targetApp***, and can be omitted if you don
 | **cpuErrorLimitPercent** | Maximum CPU percentage that should generate a Fabric Error. |
 | **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Fabric Warning. |
 
+**Output**: Log text(Error/Warning), Application Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service. 
+
 ### Notes
 
 **In order for ContainerObserver to function properly on Windows, FabricObserver must be configured to run as Admin or System user.** This is not the case for Linux deployments.
@@ -411,9 +480,8 @@ After DiskObserver logs basic disk information, it performs measurements on all 
   </Section>
 ```
 
-**Output**: 
+**Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service. 
 
-Node Health Report (Error/Warning/Ok), structured telemetry.
   
 example: 
 
@@ -474,7 +542,7 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
   </Section>
 ```
 
-**Input - ApplicationManifest.xml**: Threshold settings are defined (overriden) in ApplicationManifest.xml.
+**Input - ApplicationManifest.xml**: Threshold settings are defined (overridden) in ApplicationManifest.xml.
 
 ```xml
 <!-- FabricSystemObserver -->
@@ -484,6 +552,10 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
          This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
          Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+
+    <!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful System services that employs KVS (Fabric, FabricRM).
+         Enabling this will put fabric:/System into Warning when either Fabric or FabricRM have consumed 75% of Maximum number of LVIDs (which is int.MaxValue per process). -->
+    <Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
     <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
@@ -491,6 +563,9 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+
+    <!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true.  -->
+    <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
     
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about
@@ -521,7 +596,7 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
   </Section>
 ```
 
-**Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning/Ok), ETW, Telemetry
+**Output**: Log text(Error/Warning), System (App) Level Service Fabric Health Report (Error/Warning/Ok), ETW, Telemetry
 
 Example SFX output (Informational):  
 
@@ -596,7 +671,7 @@ Example NetworkObserver.config.json configuration:
 ]
 ```
 
-**Output**: Log text(Error/Warning), Service Fabric Health Report (Error/Warning/Ok), structured telemetry.  
+**Output**: Log text(Error/Warning), Application Level Service Fabric Health Report (Error/Warning/Ok), structured telemetry.  
 
 This observer runs 4 checks per supplied hostname with a 3 second delay between tests. This is done to help ensure we don't report transient
 network failures which will result in Fabric Health warnings that live until the observer runs again.  
@@ -655,10 +730,8 @@ network failures which will result in Fabric Health warnings that live until the
 | **LinuxFileHandlesErrorLimitTotal** | Total number of allocated file handles in use on Linux virtual machine that will generate an Error. | 
 | **LinuxFileHandlesWarningLimitTotal** | Total number of allocated file handles in use on Linux virtual machine that will generate a Warning. |
 
-**Output**:
-SFX Warnings when min/max thresholds are reached. CSV file,
-CpuMemDiskPorts\_\[nodeName\].csv, containing long-running data (across
-all run iterations of the observer) if csv output is enabled, structured telemetry.  
+**Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service. 
+
 
 Example SFX Output (Warning - Memory Consumption):  
 
@@ -669,11 +742,9 @@ Example SFX Output (Warning - Memory Consumption):
 This observer records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules, list of recent patches/hotfixes. It creates an OK Health State SF Health Report that is visible in SFX at the node level (Details tab) and by calling http://localhost:5000/api/ObserverManager if you have deployed the FabricObserver Web Api App. It's best to enable this observer in all deployments of FO. OSObserver will check the VM's Windows Update AutoUpdate settings and Warn if Windows AutoUpdate Downloads setting is enabled. It is critical to not install Windows Updates in an unregulated (non-rolling) manner is this can take down multiple VMs concurrently, which can lead to seed node quorum loss in your cluster. Please do not enable Automatic Windows Update downloads. **It is highly recommended that you enable [Azure virtual machine scale set automatic OS image upgrades](https://docs.microsoft.com/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade).**
 
 **Input**: For Windows, you can set OSObserverEnableWindowsAutoUpdateCheck setting to true of false. This will let you know if your OS is misconfigured with respect to how Windows Update manages update downloads and installation. In general, you should not configure Windows to automatically download Windows Update binaries. Instead, use VMSS Automatic Image Upgrade service.  
-**Output**: Log text(Error/Warning), Service Fabric Health Report (Ok/Error), structured telemetry, HTML output for API service and SFX (node level Details tab). 
+**Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service. 
 
-The output of OSObserver is stored in its local log file when the FabricObserverWebApi service is deployed/enabled. The only Fabric health reports generated by this observer 
-is an Error when OS Status is not "OK" (which means something is wrong at the OS level and
-this means trouble), a Warning if Windows Update Automatic Update service is configured to automatically download updates, and long-lived Ok Health Report that contains the information it collected about the VM it's running on.  
+The output of OSObserver is stored in its local log file when the FabricObserverWebApi service is deployed/enabled. The only Fabric health reports generated by this observer is an Error when OS Status is not "OK" (which means something is wrong at the OS level and this means trouble), a Warning if Windows Update Automatic Update service is configured to automatically download updates, and long-lived Ok Health Report that contains the information it collected about the VM it's running on.  
 
 Example SFX output (Informational): 
 
@@ -684,8 +755,40 @@ Example SFX output (Informational):
 
 This observer doesn't monitor or report health status. 
 It provides information about the currently installed Service Fabric runtime environment.
-The output (a local file) is used by the FabricObserver API service, rendered as HTML (e.g., http://localhost:5000/api/ObserverManager). You can learn more about API service [here](/FabricObserverWeb/ReadMe.md).
+The output (a local file) is used by the FabricObserver API service, rendered as HTML (e.g., http://localhost:5000/api/ObserverManager). You can learn more about API service [here](/FabricObserverWeb/ReadMe.md).  
 
-## Writing a New Observer Outside of the FabricObserver project sources (Recommended) - Observer Plugin
+## ObserverManager Configuration
+
+ObserverManager is the entrypoint for all observers. That is, it runs the loop that calls ObserveAsync on all enabled observers, processes error information (when an observer fails for some reason), and more. You can configure ObserverManager with settings housed in both Settings.xml and ApplicationManifest.xml. The latter enables versionless, parameter-only application updgrades of key settings for ObserverManager. 
+See [Settings.xml](https://github.com/microsoft/service-fabric-observer/blob/main/FabricObserver/PackageRoot/Config/Settings.xml) for the definitions (with detailed comments) of the following Application Parameters housed in ApplicationManifest.xml:  
+
+```XML
+    <!-- ObserverManager Configuration -->
+    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
+    <Parameter Name="ObserverManagerObserverExecutionTimeout" DefaultValue="3600" />
+    <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
+    <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
+    <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
+    <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
+    <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
+
+    ...
+
+    <Section Name="ObserverManagerConfiguration">
+        <Parameter Name="ObserverLoopSleepTimeSeconds" Value="[ObserverManagerObserverLoopSleepTimeSeconds]" />
+        <Parameter Name="ObserverExecutionTimeout" Value="[ObserverManagerObserverExecutionTimeout]" />
+        <Parameter Name="EnableVerboseLogging" Value="[ObserverManagerEnableVerboseLogging]" />
+        <Parameter Name="EnableETWProvider" Value="[ObserverManagerEnableETWProvider]" />
+        <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
+        <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
+        <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
+        <Parameter Name="ObserverLogPath" Value="[ObserverLogPath]" />
+    </Section>
+```
+
+The top section above is the list of Application Parameters that you can modify while FabricObserver is deployed and running. This pattern is supported by all observers, minus the threshold settings for AppObserver, ContainerObserver, and NetworkObserver as these settings are held in JSON files, not XML.
+
+## Writing a Custom Observer
 Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme.
 Also, see [How to implement an observer plugin using our extensibility model](/Documentation/Plugins.md)

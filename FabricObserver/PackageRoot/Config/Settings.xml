@@ -40,7 +40,7 @@
     
     <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded) or AppObserver can't monitor a service that runs at higher privilege, 
          then put FO into Warning or Error state or just create a an Ok (info) health message.
-         Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)).-->
+         Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)). -->
     <Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
     
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
@@ -115,7 +115,8 @@
          This can significantly decrease the amount of time it takes AppObserver to monitor and report on several application services. 
          Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
-	<!-- Optional: The maximum number of concurrent tasks to use when monitoring service processes in parallel. By default, AppObserver will set this to be the number of logical processors
+	
+	  <!-- Optional: The maximum number of concurrent tasks to use when monitoring service processes in parallel. By default, AppObserver will set this to be the number of logical processors
 	     present in the underlying (virtual) machine. Experiment with various values (including -1 which means unlimited) before you ship into production. 
 		 This is especially important if you monitor lots of services (>= 100) and enable concurrent monitoring - 
 		 and have capable hardware: >= 4 logical processors (none of this matters if this is not true.) -->
@@ -130,7 +131,11 @@
     <!-- Optional: Enabling this will generate CSV files that contain resource metric data across runs. 
          These files will be written to the DataLogPath supplied in ObserverManagerConfiguration section above. -->
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
-    
+	  
+	<!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful service that employs KVS (like SF Actor services). 
+	     Enabling this will put the containing Application into Warning when a related service has consumed 75% of the Maximum number of LVIDs (which today is int.MaxValue per process). -->
+	<Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
+	  
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -185,6 +190,9 @@
     <!-- The maximum number of dumps per day per service process per metric. Default is 3. -->
     <Parameter Name="MaxDumps" Value="" MustOverride="true" />
     <Parameter Name="MaxDumpsTimeWindow" Value="" MustOverride="true" />
+
+	<!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
+    <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
@@ -223,6 +231,10 @@
          This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
          Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
     <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
+	  
+	<!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful System services that employs KVS (Fabric, FabricRM).
+	     Enabling this will put fabric:/System into Warning when either Fabric or FabricRM have consumed 75% of Maximum number of LVIDs (which is int.MaxValue per process). -->
+	<Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
 	<Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
@@ -230,6 +242,9 @@
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
+	
+    <!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
+	<Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
     
     <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
          It just depends upon how much data you are collecting per observer run and if you only care about
