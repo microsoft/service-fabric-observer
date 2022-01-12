@@ -6,9 +6,7 @@ FabricObserver operational data is transmitted to Microsoft and contains informa
 
 Disabling / Enabling transmission of Operational Data: 
 
-Transmission of operational data is controlled by a setting and can be easily turned off. ```ObserverManagerEnableOperationalTelemetry``` setting in ```ApplicationManifest.xml``` controls transmission of Operational data. **Note that if you are deploying FabricObserver to a cluster running in a restricted region (China) or cloud (Gov) you should disable this feature before deploying to remain compliant. Please do not send data outside of any restricted boundary.**
-
-**NOTE: We recommend that this feature be disabled if you are deploying FabricObserver to an Azure cluster running in a restricted region or cloud.**
+Transmission of operational data is controlled by a setting and can be easily turned off. ```ObserverManagerEnableOperationalTelemetry``` setting in ```ApplicationManifest.xml``` controls transmission of Operational data. **Note that if you are deploying FabricObserver to a cluster running in a restricted region (China) or cloud (Gov) you should disable this feature before deploying to remain compliant. Please do not send data outside of any restricted boundary.**  
 
 Setting the value to false as below will prevent the transmission of operational data: 
 
@@ -96,5 +94,4 @@ Note that specific plugin data, besides whether or not plugins are in use, is no
 If the ClusterType is not SFRP then a TenantId (Guid) is sent for use in the same way we use ClusterId. 
 
 This information will **really** help us understand how FO is doing out there and we would greatly appreciate you sharing it with us!
-
 
