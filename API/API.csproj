@@ -7,7 +7,7 @@
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <Platforms>AnyCPU;x64</Platforms>
-    <Version>13.8.0</Version>
+    <Version>13.11.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

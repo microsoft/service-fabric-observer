@@ -23,7 +23,9 @@ namespace Aggregator
 
     }
     /// <summary>
-    /// An instance of this class is created for each service replica by the Service Fabric runtime.
+    /// This service implements the aggregation logic. It forms Snapshots periodically.
+    /// It exposes an API (RPC) to fetch and put data.
+    /// 
     /// </summary>
     internal sealed class Aggregator : StatefulService,IMyCommunication
     {

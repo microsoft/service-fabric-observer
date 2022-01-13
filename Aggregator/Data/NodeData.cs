@@ -7,7 +7,8 @@ using System.Text;
 namespace Aggregator
 {
     /// <summary>
-    /// This class is a wrapper for Node specific data that will be passed to the Aggregator. Everything needs to be serializable.
+    /// NodeData is the wrapper class for everything that's collected with the logic of FabricObserver.
+    /// Each Snapshot has List<NodeData> where every element of the list comes from a different node.
     /// </summary>
     [Serializable]
     public class NodeData:DataBase<NodeData>

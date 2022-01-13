@@ -5,6 +5,11 @@ using System.Text;
 
 namespace Aggregator
 {
+    /// <summary>
+    /// ClusterData is the wrapper class for everything that's collected with the logic of ClusterObserver.
+    /// Each Snapshot has a single instance of ClusterData.
+    /// Custom Metrics should be collected here.
+    /// </summary>
     [Serializable]
     public class ClusterData: DataBase<ClusterData>
     {

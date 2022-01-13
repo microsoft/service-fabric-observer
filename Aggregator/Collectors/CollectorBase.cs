@@ -13,9 +13,21 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 namespace Aggregator.Collectors
 {
     /// <summary>
-    /// 
+    /// This is the base class that implements all the generic logic for collecting data. 
+    /// Data is collected locally on each node in a seperate thread that runs Batching.
+    /// Batching - appends to the shared list 'dataList' on a fixed interval by collecting data. This is the producer.
+    /// The main thread is the consumer. It consumes the list and produces a single data point that represents the average for that interval
+    /// After producing the average data point it sends it to the Aggreagtor.
+    /// There are 2 frequencies (periods):
+    /// 1) batching
+    /// 2) aggregating
+    /// batching interval must be less than aggregating interval
+    /// TODO: add a config file that allows the customer to set these 2 intervals
+    /// While type T can be any concrete implementation of DataBase it shoud be NodeData or ClusterData
+    /// NodeData - if you want to run this collector on every node - FabricObserver logic
+    /// ClusterData - if you want to run this collector on a single node - ClusterObserver logic
     /// </summary>
-    /// <typeparam name="T"> T is the type that's being collected by this class</typeparam>
+    /// <typeparam name="T">T should be either NodeData or ClusterData</typeparam>
      public abstract class CollectorBase<T> where T : DataBase<T>
     {
         private readonly FabricClient fabricClient;
