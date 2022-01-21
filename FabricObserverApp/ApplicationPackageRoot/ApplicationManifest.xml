@@ -134,7 +134,7 @@
     <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- Disk Observer Warning/Error Thresholds -->
-    <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="85" />
+    <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="90" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthErrorThreshold" DefaultValue="" />
     <Parameter Name="AverageQueueLengthWarningThreshold" DefaultValue="15" />
@@ -399,12 +399,11 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!-- Note that the FO build script will add a Principals node for System user (LocalSystem). This is here for your use if you deploy FO from sources and need to run FO as System/root user.
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals> -->
+  </Principals>
   <Certificates>
     <SecretsCertificate X509FindValue="" Name="" />
   </Certificates>

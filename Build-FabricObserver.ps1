@@ -14,21 +14,10 @@ function Update-ApplicationManifest {
     </Policies>
 "@
 
-[string] $newNode2 = @"
-  <Principals>
-    <Users>
-      <User Name="SystemUser" AccountType="LocalSystem" />
-    </Users>
-  </Principals>
-"@
     for ($i = 0; $i -lt $FileContent.Length; $i++) {
         if ($FileContent[$i] -like "*</ServiceManifestImport>*") {
          
             $NewFileContent += $newNode
-        }
-        elseif ($FileContent[$i] -like "*<Certificates>*") {
-       
-            $NewFileContent += $newNode2
         }
 
         $NewFileContent += $FileContent[$i]
