@@ -12,7 +12,41 @@ Each Observer instance logs to a directory of the same name. You can configure t
 
 ### Emiting Errors
 
-Service Fabric Error Health Events can block upgrades and other important Fabric runtime operations. Error thresholds should be set such that putting the cluster in an emergency state incurs less cost than allowing the state to continue. For this reason, Fabric Observer by default ***treats Errors as Warnings***.  However if your cluster health policy is to [ConsiderWarningAsError](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-health-introduction#cluster-health-policy), FabricObserver has a ***high risk of putting your cluster in an error state***. Proceed with caution.
+Service Fabric Error Health Events can block upgrades and other important Fabric runtime operations. Error thresholds should be set such that putting the cluster in an emergency state incurs less cost than allowing the state to continue. For this reason, Fabric Observer by default ***treats Errors as Warnings***.  However if your cluster health policy is to [ConsiderWarningAsError](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-health-introduction#cluster-health-policy), FabricObserver has a ***high risk of putting your cluster in an error state***. Proceed with caution.  
+
+## ObserverManager Configuration
+
+ObserverManager is the monitoring entry point for FabricObserver. That is, it manages all enabled observers, processes error information (when an observer fails for some reason), and much more. You can configure ObserverManager with settings housed in both Settings.xml and ApplicationManifest.xml. The latter enables versionless, parameter-only application updgrades of key settings for ObserverManager. 
+See [Settings.xml](https://github.com/microsoft/service-fabric-observer/blob/main/FabricObserver/PackageRoot/Config/Settings.xml) for the definitions (with detailed comments) of the following Application Parameters housed in ApplicationManifest.xml:  
+
+```XML
+    <!-- ObserverManager Configuration -->
+    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
+    <Parameter Name="ObserverManagerObserverExecutionTimeout" DefaultValue="3600" />
+    <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
+    <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
+    <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
+    <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
+    <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
+
+    ...
+
+    <Section Name="ObserverManagerConfiguration">
+        <Parameter Name="ObserverLoopSleepTimeSeconds" Value="[ObserverManagerObserverLoopSleepTimeSeconds]" />
+        <Parameter Name="ObserverExecutionTimeout" Value="[ObserverManagerObserverExecutionTimeout]" />
+        <Parameter Name="EnableVerboseLogging" Value="[ObserverManagerEnableVerboseLogging]" />
+        <Parameter Name="EnableETWProvider" Value="[ObserverManagerEnableETWProvider]" />
+        <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
+        <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
+        <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
+        <Parameter Name="ObserverLogPath" Value="[ObserverLogPath]" />
+    </Section>
+```
+
+The top section above is the list of Application Parameters that you can modify while FabricObserver is deployed and running. This pattern is supported by all observers, minus the threshold settings for AppObserver, ContainerObserver, and NetworkObserver as these settings are held in JSON files, not XML. 
+
+**Note:** By default, if an observer fails for some reason like AppObserver not being able to access process information for some service target because the service is running at a higher user level than FabricObserver itself, FabricObserver will be put into Warning by default. You can change this behavior by setting ```ObserverManagerObserverFailureHealthStateLevel``` to your preference (Error, Warning, Ok, None). This can be very useful if, for example, you have configured AppObserver to monitor all deployed application services on Windows and one or more of these services are running as Admin or System user. You will immediately see that you forgot to account for this and then mitigate the problem by re-deploying FabricObserver to run as LocalSystem (System user) on Windows. That is one simple example. There are plenty more scenarios where this feature can be helpful.
 
 ## [How to implement a new Observer](#writing-a-custom-observer)
 ## Currently Implemented Observers  
@@ -757,37 +791,6 @@ This observer doesn't monitor or report health status.
 It provides information about the currently installed Service Fabric runtime environment.
 The output (a local file) is used by the FabricObserver API service, rendered as HTML (e.g., http://localhost:5000/api/ObserverManager). You can learn more about API service [here](/FabricObserverWeb/ReadMe.md).  
 
-## ObserverManager Configuration
-
-ObserverManager is the entrypoint for all observers. That is, it runs the loop that calls ObserveAsync on all enabled observers, processes error information (when an observer fails for some reason), and more. You can configure ObserverManager with settings housed in both Settings.xml and ApplicationManifest.xml. The latter enables versionless, parameter-only application updgrades of key settings for ObserverManager. 
-See [Settings.xml](https://github.com/microsoft/service-fabric-observer/blob/main/FabricObserver/PackageRoot/Config/Settings.xml) for the definitions (with detailed comments) of the following Application Parameters housed in ApplicationManifest.xml:  
-
-```XML
-    <!-- ObserverManager Configuration -->
-    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
-    <Parameter Name="ObserverManagerObserverExecutionTimeout" DefaultValue="3600" />
-    <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
-    <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
-    <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
-    <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
-    <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
-
-    ...
-
-    <Section Name="ObserverManagerConfiguration">
-        <Parameter Name="ObserverLoopSleepTimeSeconds" Value="[ObserverManagerObserverLoopSleepTimeSeconds]" />
-        <Parameter Name="ObserverExecutionTimeout" Value="[ObserverManagerObserverExecutionTimeout]" />
-        <Parameter Name="EnableVerboseLogging" Value="[ObserverManagerEnableVerboseLogging]" />
-        <Parameter Name="EnableETWProvider" Value="[ObserverManagerEnableETWProvider]" />
-        <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
-        <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
-        <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
-        <Parameter Name="ObserverLogPath" Value="[ObserverLogPath]" />
-    </Section>
-```
-
-The top section above is the list of Application Parameters that you can modify while FabricObserver is deployed and running. This pattern is supported by all observers, minus the threshold settings for AppObserver, ContainerObserver, and NetworkObserver as these settings are held in JSON files, not XML.
 
 ## Writing a Custom Observer
 Please see the [SampleObserver project](/SampleObserverPlugin) for a complete sample observer plugin implementation with code comments and readme.
