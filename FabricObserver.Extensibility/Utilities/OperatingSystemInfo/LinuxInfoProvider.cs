@@ -15,7 +15,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxInfoProvider : OSInfoProvider
     {
-        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo()
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
 

@@ -1632,28 +1632,28 @@ namespace FabricObserver.Observers
                     // Process working set (total or private, based on user configuration)
                     if (checkMemMb)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);
+                        float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);
                        
                         if (procId == parentPid)
                         {
-                            AllAppMemDataMb[id].AddData(processMem);
+                            AllAppMemDataMb[id].AddData(processMemMb);
                         }
                         else
                         {
                             _ = AllAppMemDataMb.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                            AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(processMem);
+                            AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(processMemMb);
                         }
                     }
 
                     // Process memory, percent in use (of machine total).
                     if (checkMemPct)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);
-                        var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+                        float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);
+                        var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
 
                         if (TotalMemoryGb > 0)
                         {
-                            double usedPct = (double)(processMem * 100) / (TotalMemoryGb * 1024);
+                            double usedPct = (double)(processMemMb * 100) / (TotalMemoryGb * 1024);
 
                             if (procId == parentPid)
                             {

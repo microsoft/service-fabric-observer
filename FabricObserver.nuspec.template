@@ -2,13 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.23</version>
+    <version>3.1.24</version>
     <releaseNotes>
-- Added new monitoring capability to AppObserver and FabricSystemObserver: KVS LVID usage (important for certain types of stateful services, like Actor-based services, for example).
-- Added configuration for AppObserver and FabricSystemObserver to enable either Private Working Set or Full Working Set monitoring for target service processes.
-- Added new setup script (Windows-only) that will enable a Service Fabric performance counter used for Windows KVS LVID usage monitoring.
-- Performance improvements, refactorings, and bug fixes.
-- Added readme to nupkg.
+- Rewrote WindowsInfoProvider.TupleGetSystemMemoryInfo to be more performant (across memory and CPU).
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
