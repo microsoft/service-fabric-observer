@@ -1206,7 +1206,7 @@ namespace FabricObserver.Observers
 
             // First see if the Long-Value Maximum LID counter is enabled.
             // Query the Long-Value Maximum LID counter for local Fabric process (the result for Fabric will *always* be greater than 0 if the performance counter is enabled).
-            double x = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage("Fabric");
+            double x = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage("Fabric");
 
             // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
             if (x > -1)

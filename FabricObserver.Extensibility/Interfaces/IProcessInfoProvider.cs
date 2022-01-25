@@ -39,7 +39,9 @@ namespace FabricObserver.Observers.Utilities
         /// Gets the current percentage of KVS LVIDs in use for the supplied process name (Windows-only. Returns -1 if called on Linux).
         /// </summary>
         /// <param name="procName">Name of target process.</param>
+        /// <param name="procId">Optional. The target process ID. This is used to determine the Windows internal process name to pass to the counter. 
+        /// This is very important when there are multiple processes with the same name.</param>
         /// <returns>Percentage (double) of total LVIDs the process is currently consuming. A result of -1 means failure. Consumer should handle the case when the result is less than 0.</returns>
-        double ProcessGetCurrentKvsLvidsUsedPercentage(string procName);
+        double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
     }
 }

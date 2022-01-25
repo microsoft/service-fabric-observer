@@ -132,14 +132,21 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        public override double ProcessGetCurrentKvsLvidsUsedPercentage(string procName)
+        public override double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1)
         {
             try
             {
+                string internalProcName = procName;
+
+                if (procId > 0)
+                {
+                    internalProcName = GetInternalProcessNameFromPerfCounter(procName, procId);
+                }
+
                 using (var performanceCounter = new PerformanceCounter(
                                                     categoryName: "Windows Fabric Database",
                                                     counterName: "Long-Value Maximum LID",
-                                                    instanceName: procName,
+                                                    instanceName: internalProcName,
                                                     readOnly: true))
                 {
                     float result = performanceCounter.NextValue();

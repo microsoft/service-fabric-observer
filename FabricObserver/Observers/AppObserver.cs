@@ -1573,7 +1573,7 @@ namespace FabricObserver.Observers
                 // KVS LVIDs
                 if (isWindows && checkLvids && ReplicaOrInstanceList.Any(r => r.HostProcessId == procId && r.ServiceKind == ServiceKind.Stateful))
                 {
-                    var lvidPct = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage(procName);
+                    var lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(procName, procId);
                     
                     // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                     if (lvidPct > -1)

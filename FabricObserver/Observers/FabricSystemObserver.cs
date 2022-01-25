@@ -1044,7 +1044,7 @@ namespace FabricObserver.Observers
                     // KVS LVIDs
                     if (EnableKvsLvidMonitoring && (dotnetArg == "Fabric" || dotnetArg == "FabricRM"))
                     {
-                        double lvidPct = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage(dotnetArg);
+                        double lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(dotnetArg);
 
                         // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                         if (lvidPct > -1)
