@@ -95,9 +95,9 @@
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree (descendants) monitoring.
-	 Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring.
+         Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring.
          In that case, enabling this may eat a lot of cpu. Please test, as always. If you know your target services
-	 do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you already know.. -->
+         do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you already know.. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
@@ -113,9 +113,9 @@
     <!-- Concurrency/Parallelism Support -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- The default value is 1/4 of detected logical processors. This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
-	 You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
-	 eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
-	 Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
+         You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
+         eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
+         Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only. NOTE: If you do not monitor stateful Actor services, then this should be set to false.
 	 This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
@@ -146,7 +146,7 @@
     <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
-	 This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <Parameter Name="FabricSystemMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
@@ -384,8 +384,8 @@
       </ConfigOverride>
     </ConfigOverrides>
     <!-- Note that the FO build script (Build-FabricObserver.ps1) will add a Policies node for SystemUser here to run setup scripts as LocalSystem. 
-	 This is here for you to uncomment if you deploy FO from sources and need to run FO as LocalSystem/root user (which, on Windows, you must do in order to monitor services
-         that are running as LocalSystem or Admin user on Windows; or to use ContainerObserver on Windows).
+         This is here for you to uncomment if you deploy FO from sources and need to run FO as LocalSystem/root user (which, on Windows, you must do
+         in order to monitor services that are running as LocalSystem or Admin user on Windows; or to use ContainerObserver on Windows).
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
     </Policies> -->
