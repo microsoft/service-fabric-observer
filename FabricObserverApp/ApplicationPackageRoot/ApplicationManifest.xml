@@ -384,8 +384,8 @@
       </ConfigOverride>
     </ConfigOverrides>
     <!-- Note that the FO build script (Build-FabricObserver.ps1) will add a Policies node for SystemUser here to run setup scripts as LocalSystem. 
-	     This is here for you to uncomment if you deploy FO from sources and need to run FO as LocalSystem/root user (which, on Windows, you must do in order to monitor services
-		 that are running as LocalSystem or Admin user on Windows; or to use ContainerObserver on Windows).
+	 This is here for you to uncomment if you deploy FO from sources and need to run FO as LocalSystem/root user (which, on Windows, you must do in order to monitor services
+         that are running as LocalSystem or Admin user on Windows; or to use ContainerObserver on Windows).
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
     </Policies> -->
