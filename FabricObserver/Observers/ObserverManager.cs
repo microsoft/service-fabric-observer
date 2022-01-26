@@ -42,7 +42,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.23";
+        private const string InternalVersionNumber = "3.1.24";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -1206,7 +1206,7 @@ namespace FabricObserver.Observers
 
             // First see if the Long-Value Maximum LID counter is enabled.
             // Query the Long-Value Maximum LID counter for local Fabric process (the result for Fabric will *always* be greater than 0 if the performance counter is enabled).
-            double x = ProcessInfoProvider.Instance.ProcessGetCurrentKvsLvidsUsedPercentage("Fabric");
+            double x = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage("Fabric");
 
             // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
             if (x > -1)
@@ -1228,8 +1228,7 @@ namespace FabricObserver.Observers
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                    WorkingDirectory = $"{Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)}\\Microsoft Service Fabric\\bin\\Fabric\\Fabric.Code"
+                    RedirectStandardOutput = true
                 };
 
                 using var p = new Process();
@@ -1249,12 +1248,14 @@ namespace FabricObserver.Observers
                 if (exitCode != 0)
                 {
                     string message = "Failed to install/enable \"Long-Value Maximum LID\" Service Fabric performance counter. " +
-                                     "This is a required Windows performance counter used in KVS LVID usage monitoring, which you have enabled.";
+                                     "This is a required Windows performance counter used in KVS LVID usage monitoring. ";
 
                     // Access Denied.
                     if (exitCode == 5)
                     {
-                        message += $" FabricObserver must run as System or Admin user on Windows to complete this task given the location of the reg hive.";
+                        message += $"FabricObserver (FO) must run as System or Admin user on Windows to complete this task given the location of the reg hive. " +
+                                   $"Alternatively, you can build FO using the Build-FabricObserver.ps1 script, then deploy FO from the output folder. " +
+                                   $"This will run the LVID counter setup script as System during app deployment, but FO itself can be deployed as NetworkUser.";
                     }
                     else
                     {
@@ -1263,7 +1264,7 @@ namespace FabricObserver.Observers
 
                     Logger.LogWarning($"{message}{Environment.NewLine}Command Output: {output}{Environment.NewLine}Failure Message(s): {error}");
 
-                    if (ObserverFailureHealthStateLevel != HealthState.Unknown)
+                    /*if (ObserverFailureHealthStateLevel != HealthState.Unknown)
                     {
                         HealthReport report = new HealthReport
                         {
@@ -1279,7 +1280,7 @@ namespace FabricObserver.Observers
                         };
 
                         HealthReporter.ReportHealthToServiceFabric(report);
-                    }
+                    }*/
                 }
 
                 return exitCode == 0;

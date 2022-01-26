@@ -695,7 +695,7 @@ namespace FabricObserver.Observers
                     // Memory
                     if (MemDataInUse != null || MemDataPercent != null)
                     {
-                        var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+                        var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
 
                         if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                         {

@@ -374,58 +374,22 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo()
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo()
         {
-            ManagementObjectSearcher win32OsInfo = null;
-            ManagementObjectCollection results = null;
-
             try
             {
-                win32OsInfo = new ManagementObjectSearcher("SELECT TotalVisibleMemorySize, FreePhysicalMemory FROM Win32_OperatingSystem");
-                results = win32OsInfo.Get();
+                NativeMethods.MEMORYSTATUSEX memoryInfo = NativeMethods.GetSystemMemoryInfo();
+                ulong totalMemoryBytes = memoryInfo.ullTotalPhys;
+                ulong availableMemoryBytes = memoryInfo.ullAvailPhys;
+                ulong inUse = totalMemoryBytes - availableMemoryBytes;
+                float used = (float)inUse / totalMemoryBytes;
+                float usedPct = used * 100;
 
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
-                {
-                    while (enumerator.MoveNext())
-                    {
-                        try
-                        {
-                            using (ManagementObject mObj = (ManagementObject)enumerator.Current)
-                            {
-                                object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
-                                object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
-                                ulong freePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
-                                ulong totalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
-
-                                if (totalVisibleMemorySizeKB == 0)
-                                {
-                                    return (0, 0, 0);
-                                }
-
-                                ulong inUse = totalVisibleMemorySizeKB - freePhysicalMemoryKB;
-                                double used = ((double)(totalVisibleMemorySizeKB - freePhysicalMemoryKB)) / totalVisibleMemorySizeKB;
-                                double usedPct = used * 100;
-
-                                return ((long)totalVisibleMemorySizeKB / 1024 / 1024, (long)inUse / 1024, usedPct);
-                            }
-                        }
-                        catch (ManagementException me)
-                        {
-                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me}");
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.LogInfo($"Bug? => Exception in GetOSInfoAsync:{Environment.NewLine}{e}");
-                        }
-                    }
-                }
+                return ((long)totalMemoryBytes / 1024 / 1024 / 1024, (long)inUse / 1024 / 1024, usedPct);
             }
-            finally
+            catch (Win32Exception we)
             {
-                results?.Dispose();
-                results = null;
-                win32OsInfo?.Dispose();
-                win32OsInfo = null;
+                Logger.LogWarning($"TupleGetMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we}");
             }
 
             return (0, 0, 0);

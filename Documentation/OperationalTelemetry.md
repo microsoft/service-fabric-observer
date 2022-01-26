@@ -6,9 +6,7 @@ FabricObserver operational data is transmitted to Microsoft and contains informa
 
 Disabling / Enabling transmission of Operational Data: 
 
-Transmission of operational data is controlled by a setting and can be easily turned off. ```ObserverManagerEnableOperationalTelemetry``` setting in ```ApplicationManifest.xml``` controls transmission of Operational data. **Note that if you are deploying FabricObserver to a cluster running in a restricted region (China) or cloud (Gov) you should disable this feature before deploying to remain compliant. Please do not send data outside of any restricted boundary.**
-
-**NOTE: We recommend that this feature be disabled if you are deploying FabricObserver to an Azure cluster running in a restricted region or cloud.**
+Transmission of operational data is controlled by a setting and can be easily turned off. ```ObserverManagerEnableOperationalTelemetry``` setting in ```ApplicationManifest.xml``` controls transmission of Operational data. **Note that if you are deploying FabricObserver to a cluster running in a restricted region (China) or cloud (Gov) you should disable this feature before deploying to remain compliant. Please do not send data outside of any restricted boundary.**  
 
 Setting the value to false as below will prevent the transmission of operational data: 
 
@@ -20,7 +18,7 @@ As with most of FabricObserver's application settings, you can also do this with
 Connect-ServiceFabricCluster ...
 
 $appParams = @{ "ObserverManagerEnableOperationalFOTelemetry" = "false"; }
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationParameter $appParams -ApplicationTypeVersion 3.1.23 -UnMonitoredAuto
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationParameter $appParams -ApplicationTypeVersion 3.1.24 -UnMonitoredAuto
  
 ```
 
@@ -46,7 +44,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
     "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
-    "FOVersion": "3.1.23",
+    "FOVersion": "3.1.24",
     "HasPlugins": "False",
     "ParallelCapable": "True",
     "UpTime": "1.00:30:18.8058379",
@@ -96,5 +94,4 @@ Note that specific plugin data, besides whether or not plugins are in use, is no
 If the ClusterType is not SFRP then a TenantId (Guid) is sent for use in the same way we use ClusterId. 
 
 This information will **really** help us understand how FO is doing out there and we would greatly appreciate you sharing it with us!
-
 

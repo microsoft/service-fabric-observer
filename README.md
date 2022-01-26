@@ -1,4 +1,4 @@
-# FabricObserver 3.1.23
+# FabricObserver 3.1.24
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
@@ -151,11 +151,11 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO3122
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.23   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.24   
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.23 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.24 -Monitored -FailureAction rollback
 ```  
 
 ## Configuration Change Support
@@ -191,7 +191,7 @@ Just observe it.
 
 # Operational Telemetry 
 Please see [FabricObserver Operational Telemetry](/Documentation/OperationalTelemetry.md) for detailed information on the user agnostic (Non-PII) data FabricObserver sends to Microsoft (opt out with a simple configuration parameter change).
-Please consider leaving this enabled so your friendly neighborhood FabricObserver devs can understand how FO is doing in the real world. We would really appreciate it!
+Please consider leaving this enabled so your friendly neighborhood Service Fabric devs can understand how FabricObserver is doing in the real world. We would really appreciate it!
 
 # Contributing
 
