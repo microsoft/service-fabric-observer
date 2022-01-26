@@ -19,7 +19,7 @@ namespace Aggregator.Collectors
         protected async override Task<NodeData> CollectData()
         {
             float cpu = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
-            var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetMemoryInfo();
+            var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
             DriveInfo[] allDrives = DriveInfo.GetDrives();
             string nodeName = Context.NodeContext.NodeName;
             var (totalMiliseconds, _) = SFUtilities.TupleGetTime();

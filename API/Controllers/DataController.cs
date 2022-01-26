@@ -216,7 +216,6 @@ namespace API.Controllers
         [Route("info")]
         public async Task<string> Info([FromQuery] string NodeName)
         {
-            string res;
             var fabricClient = new FabricClient();
             var queryManager = fabricClient.QueryManager;
             var appList =await queryManager.GetDeployedApplicationListAsync(NodeName);
@@ -233,6 +232,7 @@ namespace API.Controllers
             return pid.ToString();
             //return "A";
         }
+
         [HttpGet]
         [Route("infoo")]
         public async Task<string> Infoo([FromQuery] string NodeName)
