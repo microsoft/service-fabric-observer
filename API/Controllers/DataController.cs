@@ -15,9 +15,6 @@ namespace API.Controllers
     [Route("[controller]")]
     public class DataController : ControllerBase
     {
-
-        
-
         public DataController()
         {
             
@@ -130,6 +127,7 @@ namespace API.Controllers
 
                 return response;
         }
+
         [HttpGet]
         [Route("ClusterAdvice")]
         public async Task<string> ClusterAdvice()
