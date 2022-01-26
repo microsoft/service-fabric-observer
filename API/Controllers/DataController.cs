@@ -53,7 +53,7 @@ namespace API.Controllers
                     new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
                     );
 
-            List<byte[]> originList = await AggregatorProxy.GetDataRemote(ClusterData.queueName);
+            List<byte[]> originList = await AggregatorProxy.GetDataRemote(ClusterData.QueueName);
             List<ClusterData> targetList = originList.ConvertAll<ClusterData>(data => (ClusterData)ByteSerialization.ByteArrayToObject(data));
             foreach (var data in targetList)
             {
@@ -120,10 +120,10 @@ namespace API.Controllers
             response +=
                 "\n Node: " + NodeName +
                 "\n Number of Snaphsot: " + targetList.Count +
-                "\n Average Node CPU: " + data.hardware.Cpu +
-                "\n Average Node RAM: " + data.hardware.PercentInUse +
-                "\n Average Node Disk: " + data.hardware.DiskPercentageInUse();
-            foreach(var process in data.processList)
+                "\n Average Node CPU: " + data.Hardware.Cpu +
+                "\n Average Node RAM: " + data.Hardware.PercentInUse +
+                "\n Average Node Disk: " + data.Hardware.DiskPercentageInUse();
+            foreach(var process in data.ProcessList)
             {
                 response += process.ToString();
             }
@@ -148,29 +148,29 @@ namespace API.Controllers
             List<Snapshot> targetList = await AggregatorProxy.GetSnapshotsRemote(double.MinValue,double.MaxValue);
 
             Snapshot data = Snapshot.AverageClusterData(targetList);
-            NodeData nodeData = data.nodeMetrics[0].AverageData(data.nodeMetrics);
+            NodeData nodeData = data.NodeMetrics[0].AverageData(data.NodeMetrics);
             response +=
                 
                 "\n Number of Snaphsots: " + targetList.Count +
-                "\n Average Total Disk %: " + nodeData.hardware.DiskPercentageInUse()+
-                "\n Average Total CPU %: " + nodeData.hardware.Cpu +
-                "\n Average Total RAM %: " + nodeData.hardware.PercentInUse +
-                "\n Average ServiceFabric CPU %: " + nodeData.sfHardware.Cpu +
-                "\n Average ServiceFabric RAM %: " + nodeData.sfHardware.PercentInUse +
+                "\n Average Total Disk %: " + nodeData.Hardware.DiskPercentageInUse()+
+                "\n Average Total CPU %: " + nodeData.Hardware.Cpu +
+                "\n Average Total RAM %: " + nodeData.Hardware.PercentInUse +
+                "\n Average ServiceFabric CPU %: " + nodeData.SfHardware.Cpu +
+                "\n Average ServiceFabric RAM %: " + nodeData.SfHardware.PercentInUse +
                 "\n     Custom metrics:"+
-                "\n     Average primary: " + data.customMetrics.allCounts.PrimaryCount +
-                "\n     Average replica: " + data.customMetrics.allCounts.ReplicaCount +
-                "\n     Average instance: " + data.customMetrics.allCounts.InstanceCount +
-                "\n     Average count: " + data.customMetrics.allCounts.Count+
+                "\n     Average primary: " + data.CustomMetrics.AllCounts.PrimaryCount +
+                "\n     Average replica: " + data.CustomMetrics.AllCounts.ReplicaCount +
+                "\n     Average instance: " + data.CustomMetrics.AllCounts.InstanceCount +
+                "\n     Average count: " + data.CustomMetrics.AllCounts.Count+
                 "\n All Processes:";
                 
-            foreach (var process in nodeData.processList)
+            foreach (var process in nodeData.ProcessList)
             {
                 response += process.ToString();
             }
 
-            float scalingFactorCpu = (100 - nodeData.hardware.Cpu) / nodeData.sfHardware.Cpu;
-            float scalingFactorRam = (float)((100 - nodeData.hardware.PercentInUse) / nodeData.sfHardware.PercentInUse);
+            float scalingFactorCpu = (100 - nodeData.Hardware.Cpu) / nodeData.SfHardware.Cpu;
+            float scalingFactorRam = (float)((100 - nodeData.Hardware.PercentInUse) / nodeData.SfHardware.PercentInUse);
             float scalingFactor = Math.Min(scalingFactorRam, scalingFactorCpu);
 
             response += "\n \n \n \n You can scale out your workload porportionally " + scalingFactor + " times";

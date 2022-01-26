@@ -15,22 +15,22 @@ namespace Aggregator
 {
     public class SFUtilities
     {
-        public static readonly double intervalMiliseconds = 10000.00;
-
         private static SFUtilities instance;
         private static readonly object lockObj = new object();
         private FabricClient fabricClient;
         private QueryClient queryManager;
+        public static readonly double intervalMiliseconds = 10000.00;
 
-        protected SFUtilities() {
+        protected SFUtilities() 
+        {
             fabricClient = new FabricClient();
             queryManager = fabricClient.QueryManager;
-          
         }
         /// <summary>
         /// </summary>
         /// <returns>(totalMiliseconds, delta - time left to sleep to wakeup for Aggregating interval)</returns>
-        public static (double totalMiliseconds, double delta)TupleGetTime(){
+        public static (double totalMiliseconds, double delta)TupleGetTime()
+        {
             var localTime = DateTime.Now;
             var timeSpan = TimeSpan.FromTicks(localTime.Ticks);
             double totalMiliseconds = timeSpan.TotalMilliseconds;
@@ -66,6 +66,7 @@ namespace Aggregator
             int replicaCount = 0; //Primary + secondary for statefull services
             int instanceCount = 0; //Replica count for stateless services
             int count = 0; //replicaCount + instanceCount
+
             foreach (Application app in appList)
             {
                 //appUri= app.ApplicationName.AbsoluteUri;
@@ -77,15 +78,24 @@ namespace Aggregator
                     var partitionList = await queryManager.GetPartitionListAsync(serviceUri);
                     bool isStatefull = typeof(StatefulService).IsInstanceOfType(service);
                     primaryCount += isStatefull ? partitionList.Count : 0;
+
                     foreach (var partition in partitionList)
                     {
                         int cnt = (await fabricClient.QueryManager.GetReplicaListAsync(partition.PartitionInformation.Id)).Where(r => r.ReplicaStatus == ServiceReplicaStatus.Ready).Count();
-                        if (isStatefull) replicaCount += cnt;
-                        else instanceCount += cnt;
+                        
+                        if (isStatefull)
+                        {
+                            replicaCount += cnt;
+                        }
+                        else
+                        {
+                            instanceCount += cnt;
+                        }
                     }
                 }
                 
             }
+
             count = instanceCount + replicaCount;
             return new Counts(primaryCount, replicaCount, instanceCount, count);
         }
@@ -106,6 +116,7 @@ namespace Aggregator
             Dictionary<int, ProcessData> pid=new Dictionary<int, ProcessData>();
             Client client = new Client(fabricClient, serviceContext);
             List<ReplicaOrInstanceMonitoringInfo> replicaList = await client.GetAllLocalReplicasOrInstances(token);
+
             foreach(var replica in replicaList)
             {
                 int instanceCount = 0;
@@ -115,17 +126,20 @@ namespace Aggregator
                 if (replica.ServiceKind == ServiceKind.Stateful)
                 {
                     replicaCount++;
+
                     if (replica.ReplicaRole == ReplicaRole.Primary)
                     {
                         primaryCount++;
                     }
                 }
-                else instanceCount++;
+                else
+                {
+                    instanceCount++;
+                }
 
-                int id=(int)replica.HostProcessId;
+                int id = (int)replica.HostProcessId;
+                ProcessData processData;
 
-                ProcessData processData = null;
-                //replica.ServiceName
                 if (pid.ContainsKey(id))
                 {
                     processData = pid[id];    
@@ -134,15 +148,18 @@ namespace Aggregator
                 {
                     processData = new ProcessData(id);
                     pid.Add(id, processData);
-                    //Extend ChildProcess list only once
-                    if(replica.ChildProcesses!=null)processData.ChildProcesses.AddRange(replica.ChildProcesses);
 
+                    //Extend ChildProcess list only once
+                    if (replica.ChildProcesses != null)
+                    {
+                        processData.ChildProcesses.AddRange(replica.ChildProcesses);
+                    }
                 }
-                processData.serviceUris.Add(replica.ServiceName);
-                processData.allCounts.PrimaryCount += primaryCount;
-                processData.allCounts.ReplicaCount += replicaCount;
-                processData.allCounts.InstanceCount += instanceCount;
-                processData.allCounts.Count++;
+                processData.ServiceUris.Add(replica.ServiceName);
+                processData.AllCounts.PrimaryCount += primaryCount;
+                processData.AllCounts.ReplicaCount += replicaCount;
+                processData.AllCounts.InstanceCount += instanceCount;
+                processData.AllCounts.Count++;
 
                 //for a shared process this may not be correct -> each service has the same processID so child processes are the same so we should overide not extend? 
                 //processData.ChildProcesses.AddRange(replica.ChildProcesses);
@@ -152,15 +169,14 @@ namespace Aggregator
             
             return pid;
         }
-        public async Task<(double cpuPercentage, float ramMB)> TupleGetResourceUsageForProcess(int pid)
+
+        public (double cpuPercentage, float ramMB) TupleGetResourceUsageForProcess(int pid)
         {
             var cpuUsage = new CpuUsage();
             double cpu=cpuUsage.GetCpuUsagePercentageProcess((int) pid);
-
             float ramMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb((int)pid);
 
             return (cpu, ramMb);
         }
-
     }
 }

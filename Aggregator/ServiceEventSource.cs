@@ -1,11 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Fabric;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace Aggregator
 {
@@ -40,7 +35,7 @@ namespace Aggregator
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 string finalMessage = string.Format(message, args);
                 Message(finalMessage);
@@ -51,7 +46,7 @@ namespace Aggregator
         [Event(MessageEventId, Level = EventLevel.Informational, Message="{0}")]
         public void Message(string message)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 WriteEvent(MessageEventId, message);
             }
@@ -60,7 +55,7 @@ namespace Aggregator
         [NonEvent]
         public void ServiceMessage(StatefulServiceContext serviceContext, string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 string finalMessage = string.Format(message, args);
                 ServiceMessage(

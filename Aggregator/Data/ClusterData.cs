@@ -1,7 +1,6 @@
 ﻿using Aggregator.Data;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Aggregator
 {
@@ -13,59 +12,53 @@ namespace Aggregator
     [Serializable]
     public class ClusterData: DataBase<ClusterData>
     {
-
-        
         /// <summary>
         /// Used for the IRealiableQueue in the Aggregator
         /// </summary>
-        public static readonly string queueName = "CustomMetrics";
+        public static readonly string QueueName = "CustomMetrics";
 
-        public double miliseconds { get; }
-        public Counts allCounts { get; set; }
+        public double Milliseconds { get; }
+
+        public Counts AllCounts { get; set; }
 
         public ClusterData(double miliseconds, Counts counts)
         {
-
-            this.miliseconds = miliseconds;
-            allCounts = counts;
+            Milliseconds = miliseconds;
+            AllCounts = counts;
         }
 
         public ClusterData AverageData(List<ClusterData> list)
         {
             AverageDictionary avg = new AverageDictionary();
             List<Counts> countsList = new List<Counts>();
+
             foreach (var data in list)
             {
-                avg.addValue("miliseconds", data.miliseconds);
-                countsList.Add(data.allCounts);
+                avg.AddValue("miliseconds", data.Milliseconds);
+                countsList.Add(data.AllCounts);
             }
-            return new ClusterData(
-                avg.getAverage("miliseconds"),
-                countsList[0].AverageData(countsList)
-                );
+
+            return new ClusterData(avg.GetAverage("miliseconds"), countsList[0].AverageData(countsList));
         }
 
         public override string ToString()
         {
-            String res;
-            res =
-                "\n Custom - Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100) +
-                "\n PrimaryCount: " + this.allCounts.PrimaryCount +
-                "\n ReplicaCount: " + this.allCounts.ReplicaCount +
-                "\n InstanceCount: " + this.allCounts.InstanceCount +
-                "\n Count: " + this.allCounts.Count +
-                "\n";
+            string res;
+            res = "\n Custom - Miliseconds: " + Milliseconds % (SFUtilities.intervalMiliseconds * 100) +
+                  "\n PrimaryCount: " + AllCounts.PrimaryCount +
+                  "\n ReplicaCount: " + AllCounts.ReplicaCount +
+                  "\n InstanceCount: " + AllCounts.InstanceCount +
+                  "\n Count: " + AllCounts.Count +
+                  "\n";
+
             return res;
         }
+
         public string ToStringMiliseconds()
         {
-            String res;
-            res =
-                "\n Custom - Miliseconds: " + this.miliseconds % (SFUtilities.intervalMiliseconds * 100);
+            string res;
+            res = "\n Custom - Miliseconds: " + Milliseconds % (SFUtilities.intervalMiliseconds * 100);
             return res;
         }
-
-        
-
     }
 }

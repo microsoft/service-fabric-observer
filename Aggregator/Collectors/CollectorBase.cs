@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
@@ -28,17 +27,19 @@ namespace Aggregator.Collectors
     /// ClusterData - if you want to run this collector on a single node - ClusterObserver logic
     /// </summary>
     /// <typeparam name="T">T should be either NodeData or ClusterData</typeparam>
-     public abstract class CollectorBase<T> where T : DataBase<T>
+    public abstract class CollectorBase<T> where T : DataBase<T>
     {
         private readonly FabricClient fabricClient;
         private readonly ObserverHealthReporter healthReporter;
         private readonly Logger logger;
         protected ServiceContext Context;
         protected CancellationToken cancellationToken;
+        
         /// <summary>
         /// batching appends to this list
         /// </summary>
         protected List<T> dataList = new List<T>();
+        
         /// <summary>
         /// mutex for dataList
         /// </summary>
@@ -49,7 +50,6 @@ namespace Aggregator.Collectors
             Context = context;
             this.cancellationToken = cancellationToken;
             fabricClient = new FabricClient();
-            // CT: you can use FO Logger to stuff to Collector folder.
             logger = new Logger("Collector");
             healthReporter = new ObserverHealthReporter(logger, fabricClient);
         }
@@ -57,11 +57,10 @@ namespace Aggregator.Collectors
         public async Task RunAsync(string ReliableQueueName) 
         {
             var AggregatorProxy = ServiceProxy.Create<IMyCommunication>(
-                new Uri("fabric:/Internship/Aggregator"),
-                new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0)
-                );
-            string nodeName = Context.NodeContext.NodeName;
+                                    new Uri("fabric:/Internship/Aggregator"),
+                                    new Microsoft.ServiceFabric.Services.Client.ServicePartitionKey(0));
 
+            string nodeName = Context.NodeContext.NodeName;
             Thread batchingThread = new Thread(async ()=>await Batching(SFUtilities.intervalMiliseconds / 10));
             batchingThread.Start();
 
@@ -73,6 +72,7 @@ namespace Aggregator.Collectors
                     var (_, delta) = SFUtilities.TupleGetTime();
                     await Task.Delay(TimeSpan.FromMilliseconds(delta), cancellationToken);
                     T averageData = default(T);
+
                     lock (lockObj)
                     {
                         if (dataList.Count == 0) continue;
@@ -82,10 +82,8 @@ namespace Aggregator.Collectors
 
                     await AggregatorProxy.PutDataRemote(ReliableQueueName, ByteSerialization.ObjectToByteArray(averageData));
                 }
-                
-                catch (Exception e) when (!(e is OperationCanceledException))
+                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
-                    
                     var appHealthReport = new HealthReport
                     {
                         AppName = new Uri("fabric:/Internship"),
@@ -104,9 +102,8 @@ namespace Aggregator.Collectors
                     };
 
                     healthReporter.ReportHealthToServiceFabric(appHealthReport);
-                    //fabricClient.HealthManager.ReportHealth(appHealthReport);
 
-                    throw; // CT: Fix the bugs. This will take down the replica/service process. SF will then restart it, per usual.
+                    throw; // Fix the bugs.
                 }
             }
         }
@@ -115,20 +112,17 @@ namespace Aggregator.Collectors
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                T data =await CollectData();
+                T data = await CollectData();
+
                 lock (lockObj)
                 {
                     dataList.Add(data);
                 }
+
                 await Task.Delay(TimeSpan.FromMilliseconds(intervalMiliseconds), cancellationToken);
-
             }
-
-
-
         }
+
         protected abstract Task<T> CollectData();
     }
-
-    
 }

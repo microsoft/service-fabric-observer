@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace Aggregator
 {
     public class DictionaryList<TKey,TValue>
     {
-        private Dictionary<TKey,List<TValue>> dic = new Dictionary<TKey,List<TValue>>();
-
+        private readonly Dictionary<TKey,List<TValue>> dic = new Dictionary<TKey,List<TValue>>();
 
         public void Add(TKey key, TValue value)
         {
@@ -17,8 +14,11 @@ namespace Aggregator
             }
             else
             {
-                List<TValue> list = new List<TValue>();
-                list.Add(value);
+                List<TValue> list = new List<TValue>
+                {
+                    value
+                };
+
                 dic.Add(key, list);
             }
         }
@@ -30,9 +30,12 @@ namespace Aggregator
 
         public List<TValue> GetList(TKey key)
         {
-            if (dic.ContainsKey(key)) return dic[key];
+            if (dic.ContainsKey(key))
+            {
+                return dic[key];
+            }
+
             return null;
         }
-
     }
 }

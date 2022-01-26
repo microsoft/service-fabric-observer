@@ -1,22 +1,26 @@
 ﻿using Aggregator.Data;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Aggregator
 {
     [Serializable]
-    public class ProcessData:DataBase<ProcessData>
+    public class ProcessData : DataBase<ProcessData>
     {
-        public int processId { get; }
-        public double cpuPercentage { get; set; }
-        public float ramMb { get; set; }
-        public float ramPercentage { get; set; }
-        public List<Uri> serviceUris { get; }
-        public Counts allCounts { get; set; }
+        public int ProcessId { get; }
+
+        public double CpuPercentage { get; set; }
+
+        public float RamMb { get; set; }
+
+        public float RamPercentage { get; set; }
+
+        public List<Uri> ServiceUris { get; }
+
+        public Counts AllCounts { get; set; }
+
         public List<(string procName, int Pid)> ChildProcesses { get; set; }
 
-        
         /// <summary>
         /// this should return replica Uri for exlusive processes and APP Uri for shared
         /// For now it returns the first URI
@@ -24,15 +28,15 @@ namespace Aggregator
         /// <returns></returns>
         public Uri GetProcessUri()
         {
-            return serviceUris[0];
+            return ServiceUris[0];
         }
 
         public ProcessData(int processId)
         {
-            this.processId = processId;
-            this.serviceUris = new List<Uri>();
-            this.ChildProcesses = new List<(string procName, int Pid)>();
-            allCounts = new Counts(0, 0, 0, 0);
+            ProcessId = processId;
+            ServiceUris = new List<Uri>();
+            ChildProcesses = new List<(string procName, int Pid)>();
+            AllCounts = new Counts(0, 0, 0, 0);
         }
 
         public override string ToString()
@@ -40,20 +44,26 @@ namespace Aggregator
             string res =
                 "\n --------------------------------------------------"+
                 "\n Services in this process: ";
-            foreach(var s in serviceUris)
+
+            foreach(var s in ServiceUris)
             {
-                res +=
-                    "\n " + s.ToString();
+                res +=  "\n " + s.ToString();
             }
+
             res +=
-                "\n\n CPU %: " + cpuPercentage +
-                "\n RAM used MB: " + ramMb +
-                "\n RAM %: " + ramPercentage;
-            res +="\n"+ allCounts.ToString();
-            if(ChildProcesses.Count!=0)res += "\n Child processes created by this process: ";
-            foreach(var childProcess in ChildProcesses)
+                "\n\n CPU %: " + CpuPercentage +
+                "\n RAM used MB: " + RamMb +
+                "\n RAM %: " + RamPercentage +
+                "\n" + AllCounts.ToString();
+
+            if (ChildProcesses.Count != 0)
             {
-                res += "\n    " + childProcess.procName;
+                res += "\n Child processes created by this process: ";
+            }
+
+            foreach(var (procName, Pid) in ChildProcesses)
+            {
+                res += "\n    " + procName;
             }
 
             return res;
@@ -61,7 +71,6 @@ namespace Aggregator
 
         public ProcessData AverageData(List<ProcessData> list)
         {
-            
             AverageDictionary avg = new AverageDictionary();
             List<Counts> countsList = new List<Counts>();
             DictionaryList<Uri, bool> UriSet = new DictionaryList<Uri, bool>();
@@ -69,26 +78,41 @@ namespace Aggregator
 
             foreach (var data in list)
             {
-                avg.addValue("cpu%", data.cpuPercentage);
-                avg.addValue("ramMB", data.ramMb);
-                avg.addValue("ram%", data.ramPercentage);
-                countsList.Add(data.allCounts);
-                foreach (Uri uri in data.serviceUris) UriSet.Add(uri, true);
-                foreach (var proc in data.ChildProcesses) ChildProcessSet.Add(proc.procName, true);
+                avg.AddValue("cpu%", data.CpuPercentage);
+                avg.AddValue("ramMB", data.RamMb);
+                avg.AddValue("ram%", data.RamPercentage);
+                countsList.Add(data.AllCounts);
 
+                foreach (Uri uri in data.ServiceUris)
+                {
+                    UriSet.Add(uri, true);
+                }
+
+                foreach (var (procName, _) in data.ChildProcesses)
+                {
+                    ChildProcessSet.Add(procName, true);
+                }
             }
-            ProcessData p = new ProcessData(-1);
-            p.cpuPercentage = avg.getAverage("cpu%");
-            p.ramMb = (float)avg.getAverage("ramMB");
-            p.ramPercentage =(float) avg.getAverage("ram%");
-            p.allCounts = countsList[0].AverageData(countsList);
-            foreach (Uri uri in UriSet.GetKeys()) p.serviceUris.Add(uri);
-            foreach (string proc in ChildProcessSet.GetKeys()) p.ChildProcesses.Add((proc, -1));
-            
 
-            return p;
+            ProcessData p = new ProcessData(-1)
+            {
+                CpuPercentage = avg.GetAverage("cpu%"),
+                RamMb = (float)avg.GetAverage("ramMB"),
+                RamPercentage = (float)avg.GetAverage("ram%"),
+                AllCounts = countsList[0].AverageData(countsList)
+            };
 
+            foreach (Uri uri in UriSet.GetKeys())
+            {
+                p.ServiceUris.Add(uri);
+            }
+
+            foreach (string proc in ChildProcessSet.GetKeys())
+            {
+                p.ChildProcesses.Add((proc, -1));
+            }
             
+            return p; 
         }
     }
 }

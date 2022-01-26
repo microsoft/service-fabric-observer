@@ -2,58 +2,52 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
-//using System.Fabric.Query;
+using System.Fabric.Query;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Data.Collections;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Remoting;
 using Microsoft.ServiceFabric.Services.Remoting.Runtime;
-using Microsoft.ServiceFabric.Services.Runtime;
+using StatefulService = Microsoft.ServiceFabric.Services.Runtime.StatefulService;
 
 namespace Aggregator
 {
-
-    public interface IMyCommunication : IService
-    {
-        Task PutDataRemote(string queueName,byte[] data);
-        Task<List<byte[]>> GetDataRemote(string queueName);
-        Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh);
-        Task DeleteAllSnapshotsRemote();
-
-    }
     /// <summary>
     /// This service implements the aggregation logic. It forms Snapshots periodically.
     /// It exposes an API (RPC) to fetch and put data.
-    /// 
     /// </summary>
-    internal sealed class Aggregator : StatefulService,IMyCommunication
+    internal class Aggregator : StatefulService, IMyCommunication
     {
-        protected CancellationToken token { get; set; }
+        private CancellationToken Token 
+        { 
+            get; set; 
+        }
 
         public Aggregator(StatefulServiceContext context)
             : base(context)
         { }
-/// <summary>
+
+        /// <summary>
         /// This is the main entry point for your service replica.
         /// This method executes when this replica of your service becomes primary and has write status.
         /// </summary>
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service replica.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-   
-            this.token = cancellationToken;
+            Token = cancellationToken;
+
             while (!cancellationToken.IsCancellationRequested)
             {
-                
                 await Task.Delay(TimeSpan.FromMilliseconds(SFUtilities.intervalMiliseconds), cancellationToken);
-                while(await GetMinQueueCountAsync() > 1)
+
+                while (await GetMinQueueCountAsync() > 1)
                 {
                     await ProduceSnapshotAsync();
-                    await TryPruneAsync(); 
+                    await TryPruneAsync();
                 }
             }
         }
+
         public async Task PutDataRemote(string queueName,byte[] data)
         {
             await AddDataAsync(queueName, data);
@@ -64,44 +58,44 @@ namespace Aggregator
             return await GetDataAsync(queueName);
         }
 
-        
         public async Task<List<Snapshot>> GetSnapshotsRemote(double milisecondsLow, double milisecondsHigh)
         {
             List<Snapshot> list = new List<Snapshot>();
-
-            var stateManager = this.StateManager;
+            var stateManager = StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(Snapshot.queueName);
             try
             {
+                using var tx = stateManager.CreateTransaction();
+                var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
 
-                using (var tx = stateManager.CreateTransaction())
+                byte[] data = null;
+                while (await iterator.MoveNextAsync(Token))
                 {
-                    var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
+                    data = iterator.Current;
 
-                    byte[] data = null;
-                    while (await iterator.MoveNextAsync(token))
+                    if (data != null)
                     {
-                        data = iterator.Current;
-
-                        if (data != null) {
-                            Snapshot s = (Snapshot)ByteSerialization.ByteArrayToObject(data);
-                            if (s.miliseconds >= milisecondsLow && s.miliseconds <= milisecondsHigh) list.Add(s);
-                            else 
-                            {//help garbage collector to free memory
-                                s = null;
-                                data = null;
-                            }
-                        } 
+                        Snapshot s = (Snapshot)ByteSerialization.ByteArrayToObject(data);
+                        if (s.Miliseconds >= milisecondsLow && s.Miliseconds <= milisecondsHigh)
+                        { 
+                            list.Add(s); 
+                        }
+                        else
+                        {
+                            s = null;
+                            data = null;
+                        }
                     }
                 }
             }
-            catch (Exception e)
+            catch
             {
-                var x = e;
+               
             }
 
             return list;
         }
+
         /// <summary>
         /// ClearAsync in not implemented for the RealiableQueue?!
         /// Workaround would be to dequeue each element as implemented for pruning
@@ -109,54 +103,83 @@ namespace Aggregator
         /// <returns></returns>
         public async Task DeleteAllSnapshotsRemote()
         {
-            using (var tx = this.StateManager.CreateTransaction())
+            using var tx = StateManager.CreateTransaction();
+            try
             {
-                try
-                {
-                    await (await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(Snapshot.queueName)).ClearAsync();
-                    await tx.CommitAsync();
-                }
-                catch(Exception e)
-                {
-                    String s = "ClearAsync is part of the ReliableCollection, but the method is not implemented for the reliable queue ?!";
-                }
+                await (await StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(Snapshot.queueName)).ClearAsync();
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                
             }
         }
+
         private async Task<Snapshot> CreateSnapshot()
         {
-            
-            System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
-
+            NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
             List<NodeData> nodeDataList = new List<NodeData>();
             ClusterData clusterData = null;
-            bool checkTime=false;
-            double minTime =await MinTimeStampInQueueAsync(nodeList);
-            bool success=true;
-            if (minTime == -1) return null; //queues empty
+            bool checkTime;
+            double minTime = await MinTimeStampInQueueAsync(nodeList);
+            bool success = true;
 
-            byte[] clusterDataBytes = await PeekFirstAsync(ClusterData.queueName);
+            if (minTime == -1)
+            {
+                // queues empty
+                return null;
+            }
+
+            byte[] clusterDataBytes = await PeekFirstAsync(ClusterData.QueueName);
+
             if (clusterDataBytes != null)
             {
                 clusterData = (ClusterData)ByteSerialization.ByteArrayToObject(clusterDataBytes);
-                checkTime = Snapshot.checkTime(minTime, clusterData.miliseconds);
-                if (!checkTime) success = false; //Snapshot must contain SFData
-                else await DequeueAsync(ClusterData.queueName);
+                checkTime = Snapshot.CheckTime(minTime, clusterData.Milliseconds);
+
+                if (!checkTime)
+                {
+                    success = false; //Snapshot must contain SFData
+                }
+                else
+                {
+                    await DequeueAsync(ClusterData.QueueName);
+                }
             }
-            else  success=false; //QUEUE is empty
+            else
+            {
+                success = false; //QUEUE is empty
+            }
+
             foreach(var node in nodeList)
             {
                 byte[] nodeDataBytes = await PeekFirstAsync(node.NodeName);
-                if (nodeDataBytes == null) continue; // QUEUE in empty
+
+                if (nodeDataBytes == null)
+                {
+                    continue; // QUEUE in empty
+                }
+
                 NodeData nodeData = (NodeData)ByteSerialization.ByteArrayToObject(nodeDataBytes);
-                checkTime = Snapshot.checkTime(minTime, nodeData.miliseconds);
+                checkTime = Snapshot.CheckTime(minTime, nodeData.Milliseconds);
+
                 if (checkTime)
                 {
                     nodeDataList.Add(nodeData);
                     await DequeueAsync(node.NodeName);
                 }
             }
-            if (nodeDataList.Count == 0) success=false; //Snapshot must have at least 1 NodeData
-            if(success)return new Snapshot(minTime,clusterData, nodeDataList);
+
+            if (nodeDataList.Count == 0)
+            {
+                success = false; //Snapshot must have at least 1 NodeData
+            }
+
+            if (success)
+            {
+                return new Snapshot(minTime, clusterData, nodeDataList);
+            }
+
             return null; //Something failed
         }
         private async Task ProduceSnapshotAsync() 
@@ -164,32 +187,47 @@ namespace Aggregator
             try
             {
                 Snapshot snap = await CreateSnapshot();
-                if (snap != null) await AddDataAsync(Snapshot.queueName, ByteSerialization.ObjectToByteArray(snap));
+
+                if (snap != null)
+                {
+                    await AddDataAsync(Snapshot.queueName, ByteSerialization.ObjectToByteArray(snap));
+                }
             }
-            catch (Exception x)
+            catch (Exception e)
             {
-                Debug.WriteLine(x.ToString());
+                Debug.WriteLine(e.ToString());
             }
         }
-        private async Task<int> GetMinQueueCountAsync()
-        {
-            int min_count = int.MaxValue;
-            System.Fabric.Query.NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
 
-            
-            using (var tx = this.StateManager.CreateTransaction())
+        private async Task<long> GetMinQueueCountAsync()
+        {
+            long min_count = long.MaxValue;
+            NodeList nodeList = await SFUtilities.Instance.GetNodeListAsync();
+
+            using (var tx = StateManager.CreateTransaction())
             {
-                int count;
-                foreach(var node in nodeList)
+                long count;
+
+                foreach (Node node in nodeList)
                 {
-                    count =(int)(await(await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(node.NodeName)).GetCountAsync(tx));
-                    if (count < min_count) min_count = count;
+                    var x = await StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(node.NodeName);
+                    count = await x.GetCountAsync(tx);
+
+                    if (count < min_count)
+                    {
+                        min_count = count;
+                    }
                 }
 
-                count = (int)(await (await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(ClusterData.queueName)).GetCountAsync(tx));
-                if (count < min_count) min_count = count;
+                var y = await StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(ClusterData.QueueName);
+                count = await y.GetCountAsync(tx);
 
+                if (count < min_count)
+                {
+                    min_count = count;
+                }
             }
+
             return min_count;
         }
         /// <summary>
@@ -201,96 +239,115 @@ namespace Aggregator
         private async Task<double> MinTimeStampInQueueAsync(System.Fabric.Query.NodeList nodeList)
         {
             double timeStamp = -1;
-            foreach(var node in nodeList)
+
+            foreach (var node in nodeList)
             {
                 var hw = await PeekFirstAsync(node.NodeName);
+
                 if (hw != null)
                 {
-                    var data=(NodeData)ByteSerialization.ByteArrayToObject(hw);
-                    if (data.miliseconds < timeStamp || timeStamp == -1) timeStamp = data.miliseconds;
+                    var data = (NodeData)ByteSerialization.ByteArrayToObject(hw);
+
+                    if (data.Milliseconds < timeStamp || timeStamp == -1)
+                    {
+                        timeStamp = data.Milliseconds;
+                    }
                 }
             }
-            
-            var sf = await PeekFirstAsync(ClusterData.queueName);
+
+            var sf = await PeekFirstAsync(ClusterData.QueueName);
+
             if (sf != null)
             {
                 var data = (ClusterData)ByteSerialization.ByteArrayToObject(sf);
-                if (data.miliseconds < timeStamp || timeStamp == -1) timeStamp = data.miliseconds;
+
+                if (data.Milliseconds < timeStamp || timeStamp == -1)
+                {
+                    timeStamp = data.Milliseconds;
+                }
             }
-                
-            
+
             return timeStamp;
         }
 
         
-        private async Task<int> GetQueueCountAsync(string queueName)
-        {   int count=0;
-            using (var tx = this.StateManager.CreateTransaction())
+        private async Task<long> GetQueueCountAsync(string queueName)
+        {
+            long count = 0;
+
+            using (var tx = StateManager.CreateTransaction())
             {
-                count = (int)(await (await this.StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName)).GetCountAsync(tx));
+                var x = await StateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
+                count = await x.GetCountAsync(tx);
             }
+
             return count;
         }
 
         private async Task TryPruneAsync()
         {
-            int count = await GetQueueCountAsync(Snapshot.queueName);
+            long count = await GetQueueCountAsync(Snapshot.queueName);
+
             if (count > Snapshot.queueCapacity)
             {
                 await DequeueAsync(Snapshot.queueName);
             }
-
         }
 
 
         private async Task AddDataAsync(string queueName,byte[] data)
         {
-            var stateManager = this.StateManager;
-            IReliableQueue<byte[]> reliableQueue = null ;
-            while (reliableQueue == null) {
+            var stateManager = StateManager;
+            IReliableQueue<byte[]> reliableQueue = null;
+
+            while (reliableQueue == null) 
+            {
                 try
                 {
                     reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
                 }
-                catch (Exception e) { }
-            }
-            using(var tx = stateManager.CreateTransaction())
-            {
-                await reliableQueue.EnqueueAsync(tx, data);
-                await tx.CommitAsync();
+                catch
+                { 
                 
+                }
             }
-            
 
+            using var tx = stateManager.CreateTransaction();
+            await reliableQueue.EnqueueAsync(tx, data);
+            await tx.CommitAsync();
         }
 
         private async Task<byte[]> PeekFirstAsync(string queueName)
         {
-            var stateManager = this.StateManager;
+            var stateManager = StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
-           
-            using (var tx = stateManager.CreateTransaction())
+
+            using var tx = stateManager.CreateTransaction();
+            var conditional = await reliableQueue.TryPeekAsync(tx);
+
+            if (conditional.HasValue)
             {
-                var conditional = await reliableQueue.TryPeekAsync(tx);
-                if (conditional.HasValue)
-                    return conditional.Value; //why do I have to do this in a transaction ?!
-                else return null;
+                return conditional.Value;
             }
+            
+            return null;
         }
 
         private async Task<byte[]> DequeueAsync(string queueName)
         {
-            var stateManager = this.StateManager;
+            var stateManager = StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
 
-            using (var tx = stateManager.CreateTransaction())
+            using var tx = stateManager.CreateTransaction();
+            var conditional = await reliableQueue.TryDequeueAsync(tx);
+            await tx.CommitAsync();
+
+            if (conditional.HasValue)
             {
-                var conditional = await reliableQueue.TryDequeueAsync(tx);
-                await tx.CommitAsync();
-                if (conditional.HasValue)
-                    return conditional.Value; //why do I have to do this in a transaction ?!
-                else return null;
+                return conditional.Value;
             }
+
+           return null;
         }
 
         public async Task<List<byte[]>> GetDataAsync(string queueName)
@@ -298,25 +355,28 @@ namespace Aggregator
             if (queueName == null) return null;
             List<byte[]> list= new List<byte[]>();
 
-            var stateManager = this.StateManager;
+            var stateManager = StateManager;
             var reliableQueue = await stateManager.GetOrAddAsync<IReliableQueue<byte[]>>(queueName);
-            try 
-            { 
-                using (var tx = stateManager.CreateTransaction())
-                {
-                    var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
-                    byte[] data=null;
-                    while (await iterator.MoveNextAsync(token))
-                    {
-                        data = iterator.Current;
 
-                        if (data != null) list.Add(data);
+            try 
+            {
+                using var tx = stateManager.CreateTransaction();
+                var iterator = (await reliableQueue.CreateEnumerableAsync(tx)).GetAsyncEnumerator();
+                byte[] data = null;
+
+                while (await iterator.MoveNextAsync(Token))
+                {
+                    data = iterator.Current;
+
+                    if (data != null)
+                    {
+                        list.Add(data);
                     }
                 }
             }
-            catch(Exception e)
+            catch
             {
-                var x = e;
+                
             }
 
             return list;
@@ -332,7 +392,5 @@ namespace Aggregator
         {
             return this.CreateServiceRemotingReplicaListeners();
         }
-
-        
     }
 }
