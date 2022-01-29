@@ -9,13 +9,17 @@
          This name must match the string used in RegisterServiceType call in Program.cs. -->
     <StatelessServiceType ServiceTypeName="FabricObserverType" />
   </ServiceTypes>
-
-  <!-- Code package is your service executable. -->
   <CodePackage Name="Code" Version="3.1.24">
+	<SetupEntryPoint>
+	    <ExeHost>
+	        <Program>install_lvid_perfcounter.bat</Program>
+	        <WorkingFolder>CodePackage</WorkingFolder>
+	    </ExeHost>
+	</SetupEntryPoint>
     <EntryPoint>
-      <ExeHost>
-        <Program>FabricObserver</Program>
-      </ExeHost>
+        <ExeHost>
+            <Program>FabricObserver</Program>
+        </ExeHost>
     </EntryPoint>
   </CodePackage>
 

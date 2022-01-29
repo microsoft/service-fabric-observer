@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
-using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -296,40 +295,36 @@ namespace FabricObserver.Observers
 
             try
             {
-                if (int.TryParse(
-                            GetSettingParameterValue(
-                            ConfigurationSectionName,
-                            ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
+                if (int.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
                     DiskSpacePercentErrorThreshold = diskUsedError;
                 }
 
                 Token.ThrowIfCancellationRequested();
 
-                if (int.TryParse(
-                            GetSettingParameterValue(
-                            ConfigurationSectionName,
-                            ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
+                if (int.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
                     DiskSpacePercentWarningThreshold = diskUsedWarning;
                 }
 
                 Token.ThrowIfCancellationRequested();
 
-                if (int.TryParse(
-                            GetSettingParameterValue(
-                            ConfigurationSectionName,
-                            ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
+                if (int.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
                 {
                     AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
                 }
 
                 Token.ThrowIfCancellationRequested();
 
-                if (int.TryParse(
-                            GetSettingParameterValue(
-                                ConfigurationSectionName,
-                                ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
+                if (int.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
                     AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
                 }
@@ -347,6 +342,7 @@ namespace FabricObserver.Observers
                 }
 
                 ObserverLogger.LogWarning($"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
+                
                 // Fix the bug...
                 throw;
             }
