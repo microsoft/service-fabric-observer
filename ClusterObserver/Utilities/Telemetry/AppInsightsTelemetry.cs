@@ -341,7 +341,7 @@ namespace ClusterObserver.Utilities.Telemetry
 
         public Task<bool> ReportClusterUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
         {
-            if (!IsEnabled || eventData?.ApplicationUpgradeProgress == null || token.IsCancellationRequested)
+            if (!IsEnabled || eventData?.FabricUpgradeProgress == null || token.IsCancellationRequested)
             {
                 return Task.FromResult(false);
             }
@@ -359,7 +359,7 @@ namespace ClusterObserver.Utilities.Telemetry
                     { "UpgradeTargetConfigVersion", eventData.FabricUpgradeProgress.UpgradeDescription ?.TargetConfigVersion },
                     { "UpgradeState", Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState) },
                     { "UpgradeDomain", eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
-                    { "UpgradeDuration", eventData.ApplicationUpgradeProgress?.CurrentUpgradeDomainDuration.ToString() },
+                    { "UpgradeDuration", eventData.FabricUpgradeProgress?.CurrentUpgradeDomainDuration.ToString() },
                     { "FailureReason", eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null }
                 };
 
