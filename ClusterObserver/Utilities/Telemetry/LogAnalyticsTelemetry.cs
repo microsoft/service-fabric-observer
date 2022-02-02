@@ -277,7 +277,7 @@ namespace ClusterObserver.Utilities.Telemetry
 
         public async Task<bool> ReportClusterUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
         {
-            if (eventData?.ApplicationUpgradeProgress == null || token.IsCancellationRequested)
+            if (eventData?.FabricUpgradeProgress == null || token.IsCancellationRequested)
             {
                 return false;
             }
