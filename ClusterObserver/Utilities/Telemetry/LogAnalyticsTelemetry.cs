@@ -285,18 +285,18 @@ namespace ClusterObserver.Utilities.Telemetry
             try
             {
                 string jsonPayload = JsonConvert.SerializeObject(
-                                        new
-                                        {
-                                            eventData.ClusterId,
-                                            Timestamp = DateTime.UtcNow,
-                                            eventData.OS,
-                                            UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion,
-                                            UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion,
-                                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
-                                            eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
-                                            UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration,
-                                            FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
-                                        });
+                        new
+                        {
+                            eventData.ClusterId,
+                            Timestamp = DateTime.UtcNow,
+                            eventData.OS,
+                            UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion,
+                            UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion,
+                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
+                            eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
+                            UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration,
+                            FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
+                        });
 
                 await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
                 return true;
@@ -320,18 +320,18 @@ namespace ClusterObserver.Utilities.Telemetry
             try
             {
                 string jsonPayload = JsonConvert.SerializeObject(
-                                        new
-                                        {
-                                            eventData.ClusterId,
-                                            Timestamp = DateTime.UtcNow,
-                                            eventData.OS,
-                                            ApplicationName = eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString,
-                                            UpgradeTargetAppTypeVersion = eventData.ApplicationUpgradeProgress.UpgradeDescription?.TargetApplicationTypeVersion,
-                                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.ApplicationUpgradeProgress.UpgradeState),
-                                            eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
-                                            UpgradeDuration = eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
-                                            FailureReason = eventData.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.ApplicationUpgradeProgress.FailureReason.Value) : null,
-                                        });
+                        new
+                        {
+                            eventData.ClusterId,
+                            Timestamp = DateTime.UtcNow,
+                            eventData.OS,
+                            ApplicationName = eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString,
+                            UpgradeTargetAppTypeVersion = eventData.ApplicationUpgradeProgress.UpgradeDescription?.TargetApplicationTypeVersion,
+                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.ApplicationUpgradeProgress.UpgradeState),
+                            eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
+                            UpgradeDuration = eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
+                            FailureReason = eventData.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.ApplicationUpgradeProgress.FailureReason.Value) : null,
+                        });
 
                 await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
                 return true;

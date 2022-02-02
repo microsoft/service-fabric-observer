@@ -393,7 +393,8 @@ namespace ClusterObserver
                                     UpgradeTargetAppTypeVersion = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.TargetApplicationTypeVersion,
                                     UpgradeState = Enum.GetName(typeof(FabricUpgradeState), appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState),
                                     UpgradeDomain = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
-                                    UpgradeDuration = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration
+                                    UpgradeDuration = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
+                                    FailureReason = appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.Value) : null,
                                 });
             }
         }
@@ -449,7 +450,8 @@ namespace ClusterObserver
                                     UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetConfigVersion,
                                     UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
                                     UpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
-                                    UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration.ToString()
+                                    UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration.ToString(),
+                                    FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
                                 });
             }
         }

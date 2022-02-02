@@ -39,9 +39,9 @@ namespace ClusterObserver.Utilities.Telemetry
             }
 
             logger = new Logger("TelemetryLog");
-
-            TelemetryConfiguration configuration = new TelemetryConfiguration { InstrumentationKey = key };
-            telemetryClient = new TelemetryClient(new TelemetryConfiguration { InstrumentationKey = key });
+            TelemetryConfiguration configuration = TelemetryConfiguration.CreateDefault();
+            configuration.InstrumentationKey = key;
+            telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
             configuration.TelemetryChannel.DeveloperMode = true;
@@ -355,8 +355,8 @@ namespace ClusterObserver.Utilities.Telemetry
                     { "ClusterId", eventData.ClusterId },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", eventData.OS },
-                    { "UpgradeTargetCodeVersion", eventData.FabricUpgradeProgress.UpgradeDescription ?.TargetCodeVersion },
-                    { "UpgradeTargetConfigVersion", eventData.FabricUpgradeProgress.UpgradeDescription ?.TargetConfigVersion },
+                    { "UpgradeTargetCodeVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion },
+                    { "UpgradeTargetConfigVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion },
                     { "UpgradeState", Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState) },
                     { "UpgradeDomain", eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
                     { "UpgradeDuration", eventData.FabricUpgradeProgress?.CurrentUpgradeDomainDuration.ToString() },
