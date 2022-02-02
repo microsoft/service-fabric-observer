@@ -274,5 +274,75 @@ namespace ClusterObserver.Utilities.Telemetry
         {
             return Task.CompletedTask;
         }
+
+        public async Task<bool> ReportClusterUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
+        {
+            if (eventData?.ApplicationUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            try
+            {
+                string jsonPayload = JsonConvert.SerializeObject(
+                                        new
+                                        {
+                                            eventData.ClusterId,
+                                            Timestamp = DateTime.UtcNow,
+                                            eventData.OS,
+                                            UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion,
+                                            UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion,
+                                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
+                                            eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
+                                            UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration,
+                                            FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
+                                        });
+
+                await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
+                return true;
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e}");
+            }
+
+            return false;
+        }
+
+        public async Task<bool> ReportApplicationUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
+        {
+            if (eventData?.ApplicationUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            try
+            {
+                string jsonPayload = JsonConvert.SerializeObject(
+                                        new
+                                        {
+                                            eventData.ClusterId,
+                                            Timestamp = DateTime.UtcNow,
+                                            eventData.OS,
+                                            ApplicationName = eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString,
+                                            UpgradeTargetAppTypeVersion = eventData.ApplicationUpgradeProgress.UpgradeDescription?.TargetApplicationTypeVersion,
+                                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.ApplicationUpgradeProgress.UpgradeState),
+                                            eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
+                                            UpgradeDuration = eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
+                                            FailureReason = eventData.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.ApplicationUpgradeProgress.FailureReason.Value) : null,
+                                        });
+
+                await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
+                return true;
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e}");
+            }
+
+            return false;
+        }
     }
 }

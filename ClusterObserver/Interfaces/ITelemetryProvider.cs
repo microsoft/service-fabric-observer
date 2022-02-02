@@ -162,5 +162,9 @@ namespace ClusterObserver.Interfaces
             double deviation,
             IDictionary<string, string> properties,
             CancellationToken cancellationToken);
+
+        Task<bool> ReportApplicationUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token);
+
+        Task<bool> ReportClusterUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token);
     }
 }

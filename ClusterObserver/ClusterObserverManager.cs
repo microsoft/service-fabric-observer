@@ -287,7 +287,7 @@ namespace ClusterObserver
                     }
 
                     await RunObserverAync().ConfigureAwait(false);
-                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 10), token);
+                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 15), token);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
@@ -444,7 +444,7 @@ namespace ClusterObserver
                 IsObserverRunning = true;
 
                 // Synchronous call.
-                var isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource != null ? linkedSFRuntimeObserverTokenSource.Token : token).Wait(observerExecTimeout);
+                bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource != null ? linkedSFRuntimeObserverTokenSource.Token : token).Wait(observerExecTimeout);
 
                 // The observer is taking too long (hung?)
                 if (!isCompleted)
@@ -529,9 +529,7 @@ namespace ClusterObserver
         {
             appParamsUpdating = true;
             Logger.LogInfo("Application Parameter upgrade started...");
-
             await SignalAbortToRunningObserverAsync();
-
             observer = new ClusterObserver(e.NewPackage.Settings);
             cts = new CancellationTokenSource();
             Logger.LogInfo("Application Parameter upgrade complete...");

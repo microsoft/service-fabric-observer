@@ -3,11 +3,9 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using ClusterObserver.Utilities.Telemetry;
 using System;
-using System.Collections.Generic;
 using System.Fabric;
-using System.Fabric.Query;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,152 +16,95 @@ namespace ClusterObserver.Utilities
         private static readonly Logger Logger = new Logger("UpgradeLogger");
 
         /// <summary>
-        /// Gather list of UD's from all upgrades
-        /// </summary>
-        /// <param name="fabricClient">FabricClient</param>
-        /// <param name="token"></param>
-        /// <returns>List of uds</returns>
-        public static async Task<IList<int>>
-            GetUDsWhereUpgradeInProgressAsync(FabricClient fabricClient, CancellationToken token)
-        {
-            var domainsWhereUpgradeInProgress = new List<int>();
-
-            domainsWhereUpgradeInProgress.AddRange(
-                await GetUdsWhereApplicationUpgradeInProgressAsync(fabricClient, token).ConfigureAwait(true));
-
-            domainsWhereUpgradeInProgress.Add(
-                await GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, token).ConfigureAwait(true));
-
-            return domainsWhereUpgradeInProgress;
-        }
-
-        /// <summary>
         /// Gets Application Upgrade Domains (integers) for application or applications
         /// currently upgrading (or rolling back).
         /// </summary>
         /// <param name="fabricClient">FabricClient instance</param>
         /// <param name="token">CancellationToken</param>
-        /// <param name="appName" type="optional">Application Name (Uri)</param>
+        /// <param name="app">ApplicationName (Uri)</param>
         /// <returns>List of integers representing UDs</returns>
-        internal static async Task<List<int>>
-            GetUdsWhereApplicationUpgradeInProgressAsync(
-            FabricClient fabricClient,
-            CancellationToken token,
-            Uri appName = null)
+        internal static async Task<ServiceFabricUpgradeEventData> GetApplicationUpgradeDetailsAsync(FabricClient fabricClient, CancellationToken token, Uri app)
         {
             try
             {
-                ApplicationList appList;
-                int currentUpgradeDomainInProgress = -1;
-                var upgradeDomainsInProgress = new List<int>();
-
-                if (appName == null)
+                if (app == null)
                 {
-                    appList = await fabricClient.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
-                }
-                else
-                {
-                    appList = await fabricClient.QueryManager.GetApplicationListAsync(
-                        appName,
-                        TimeSpan.FromMinutes(1),
-                        token).ConfigureAwait(true);
+                    return null;
                 }
 
-                foreach (var application in appList)
+                var appUpgradeProgress =
+                    await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(
+                            app,
+                            TimeSpan.FromSeconds(ClusterObserverManager.AsyncOperationTimeoutSeconds),
+                            token);
+
+                if (appUpgradeProgress == null)
                 {
-                    var upgradeProgress =
-                        await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(
-                            application.ApplicationName,
-                            TimeSpan.FromMinutes(1),
-                            token).ConfigureAwait(true);
-
-                    if (upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress)
-                        || upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardInProgress)
-                        || upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardPending))
-                    {
-                        if (int.TryParse(upgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
-                        {
-                            Logger.LogInfo($"Application Upgrade for {application.ApplicationName} is in progress in {currentUpgradeDomainInProgress} upgrade domain.");
-
-                            if (!upgradeDomainsInProgress.Contains(currentUpgradeDomainInProgress))
-                            {
-                                upgradeDomainsInProgress.Add(currentUpgradeDomainInProgress);
-                            }
-                        }
-                        else
-                        {
-                            // TryParse fails out value currentUpgradeDomainInProgress will be set to 0, 
-                            // 0 is valid UD name, so setting it to -1 to return right value
-                            currentUpgradeDomainInProgress = -1;
-                        }
-                    }
+                   return null;
                 }
 
-                // If no UD's are being upgraded then currentUpgradeDomainInProgress
-                // remains -1, otherwise it will be added only once
-                if (!upgradeDomainsInProgress.Any())
+                // Nothing is going on (yet).
+                if (appUpgradeProgress.UpgradeState == ApplicationUpgradeState.Invalid
+                    || appUpgradeProgress.StartTimestampUtc == null
+                    || appUpgradeProgress.StartTimestampUtc == DateTime.MinValue)
                 {
-                    Logger.LogInfo(
-                        $"No Application Upgrade is in progress in domain {currentUpgradeDomainInProgress}");
-
-                    upgradeDomainsInProgress.Add(currentUpgradeDomainInProgress);
+                    return null;
                 }
 
-                return upgradeDomainsInProgress;
+                var appUgradeEventData = new ServiceFabricUpgradeEventData(fabricClient, token)
+                {
+                    ApplicationUpgradeProgress = appUpgradeProgress
+                };
+
+                return appUgradeEventData;
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                Logger.LogError(e.ToString());
-
-                return new List<int> { int.MaxValue };
+                Logger.LogWarning($"Error determining application upgrade state:{Environment.NewLine}{e}");
+                return null;
             }
         }
 
         /// <summary>
-        /// Get the UD where service fabric upgrade is in progress
+        /// Get cluster upgrade information.
         /// </summary>
         /// <param name="fabricClient">FabricClient</param>
         /// <param name="token"></param>
-        /// <returns>UD in progress</returns>
-        public static async Task<int> GetUdsWhereFabricUpgradeInProgressAsync(
-            FabricClient fabricClient,
-            CancellationToken token)
+        /// <returns>A tuple containing FabricUpgradeState and current UD. When State is Invalid and UD is -1 it means there is no cluster upgrade in progress.
+        /// When State is Invalid and UD is int.MaxValue it means an exception took place and the function can't make a determination of cluster upgrade state/UD.</returns>
+        internal static async Task<ServiceFabricUpgradeEventData> GetClusterUpgradeDetailsAsync(FabricClient fabricClient, CancellationToken token)
         {
             try
             {
-                var fabricUpgradeProgress =
+                var clusterUpgradeProgress =
                     await fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                        TimeSpan.FromSeconds(ClusterObserverManager.AsyncOperationTimeoutSeconds),
-                        token).ConfigureAwait(true);
+                            TimeSpan.FromSeconds(ClusterObserverManager.AsyncOperationTimeoutSeconds),
+                            token);
 
-                int currentUpgradeDomainInProgress = -1;
-
-                if (fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingBackInProgress)
-                    || fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardInProgress)
-                    || fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardPending))
+                if (clusterUpgradeProgress == null)
                 {
-                    if (int.TryParse(fabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
-                    {
-                        Logger.LogInfo("ServiceFabric Upgrade is in progress in {0} domain", currentUpgradeDomainInProgress);
-
-                        return currentUpgradeDomainInProgress;
-                    }
-
-                    // TryParse fails out value currentUpgradeDomainInProgress will be set to 0, 
-                    // 0 is valid UD name, so setting it to -1 to return right value.
-                    currentUpgradeDomainInProgress = -1;
+                    return null;
                 }
 
-                // Will return -1 if there are no upgrades are in progress for service fabric.
-                Logger.LogInfo($"No Service Fabric Upgrade is in progress in domain {currentUpgradeDomainInProgress}.");
+                // Nothing is going on (yet).
+                if (clusterUpgradeProgress.UpgradeState == FabricUpgradeState.Invalid
+                    || clusterUpgradeProgress.StartTimestampUtc == null
+                    || clusterUpgradeProgress.StartTimestampUtc == DateTime.MinValue)
+                {
+                   return null;
+                }
 
-                return currentUpgradeDomainInProgress;
+                ServiceFabricUpgradeEventData serviceFabricUpgradeEventData = new ServiceFabricUpgradeEventData(fabricClient, token)
+                {
+                    FabricUpgradeProgress = clusterUpgradeProgress
+                };
+
+                return serviceFabricUpgradeEventData;
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                Logger.LogError(e.ToString());
-
-                return int.MaxValue;
+                Logger.LogWarning($"Error determining cluster upgrade state:{Environment.NewLine}{e}");
+                return null;
             }
         }
     }

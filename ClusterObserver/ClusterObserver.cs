@@ -77,6 +77,9 @@ namespace ClusterObserver
 
         public bool IsEnabled => ConfigSettings == null || ConfigSettings.IsEnabled;
 
+        public bool HasClusterUpgradeCompleted { get; private set; }
+        public bool HasApplicationUpgradeCompleted { get; private set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
         /// This observer is a singleton (one partition) stateless service that runs on one node in an SF cluster.
@@ -165,9 +168,8 @@ namespace ClusterObserver
                                             ObserverConstants.ClusterObserverETWEventName,
                                             new
                                             {
-                                                HealthScope = "Cluster",
                                                 HealthState = "Ok",
-                                                HealthEventDescription = repairState,
+                                                Description = repairState,
                                                 Metric = "AggregatedClusterHealth",
                                                 Source = ObserverName
                                             });
@@ -177,10 +179,14 @@ namespace ClusterObserver
 
                 /* Cluster Health State Monitoring - App/Node */
 
-                ClusterHealth clusterHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                          () => 
-                                                               FabricClientInstance.HealthManager.GetClusterHealthAsync(ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout, token), 
-                                                          token);
+                ClusterHealth clusterHealth =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                            () => 
+                                FabricClientInstance.HealthManager.GetClusterHealthAsync(ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout, token), 
+                            token);
+
+                // Check cluster upgrade status. This is to support tracking SF runtime upgrades until completion (success or failure outcome).
+                await ReportClusterUpgradeStatusAsync(token);
 
                 // Previous run generated unhealthy evaluation report. It's now Ok.
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok && (LastKnownClusterHealthState == HealthState.Error
@@ -209,9 +215,8 @@ namespace ClusterObserver
                                         ObserverConstants.ClusterObserverETWEventName,
                                         new
                                         {
-                                            HealthScope = "Cluster",
                                             HealthState = "Ok",
-                                            HealthEventDescription = "Cluster has recovered from previous Error/Warning state.",
+                                            Description = "Cluster has recovered from previous Error/Warning state.",
                                             Metric = "AggregatedClusterHealth",
                                             Source = ObserverName
                                         });
@@ -323,12 +328,129 @@ namespace ClusterObserver
                                     new
                                     {
                                         HealthState = "Warning",
-                                        HealthEventDescription = msg
+                                        Description = msg
                                     });
                 }
 
                 // Fix the bug.
                 throw;
+            }
+        }
+
+        private async Task ReportApplicationUpgradeStatus(Uri appName, CancellationToken token)
+        {
+            ServiceFabricUpgradeEventData appUpgradeInfo =
+                            await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                    () => UpgradeChecker.GetApplicationUpgradeDetailsAsync(
+                                                            FabricClientInstance,
+                                                            token,
+                                                            appName),
+                                    token);
+
+            if (appUpgradeInfo?.ApplicationUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState == ApplicationUpgradeState.Invalid
+                || appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName == "-1")
+            {
+                return;
+            }
+
+            if (appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingForwardCompleted
+                || appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingBackCompleted)
+            {
+                if (HasApplicationUpgradeCompleted)
+                {
+                    return;
+                }
+
+                HasApplicationUpgradeCompleted = true;
+            }
+            else
+            {
+                HasApplicationUpgradeCompleted = false;
+            }
+
+            // Telemetry.
+            if (TelemetryEnabled)
+            {
+                _ = await ObserverTelemetryClient?.ReportApplicationUpgradeStatusAsync(appUpgradeInfo, token);
+            }
+
+            // ETW.
+            if (EtwEnabled)
+            {
+                ObserverLogger.LogEtw(
+                                ObserverConstants.ClusterObserverETWEventName,
+                                new
+                                {
+                                    appUpgradeInfo.ClusterId,
+                                    Timestamp = DateTime.UtcNow.ToString("o"),
+                                    appUpgradeInfo.OS,
+                                    ApplicationName = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.ApplicationName?.OriginalString,
+                                    UpgradeTargetAppTypeVersion = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.TargetApplicationTypeVersion,
+                                    UpgradeState = Enum.GetName(typeof(FabricUpgradeState), appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState),
+                                    UpgradeDomain = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
+                                    UpgradeDuration = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration
+                                });
+            }
+        }
+
+        private async Task ReportClusterUpgradeStatusAsync(CancellationToken token)
+        {
+            var eventData =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                             () => UpgradeChecker.GetClusterUpgradeDetailsAsync(FabricClientInstance, token), token);
+
+            if (eventData?.FabricUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (eventData.FabricUpgradeProgress.UpgradeState == FabricUpgradeState.Invalid || eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName == "-1")
+            {
+                return;
+            }
+
+            if (eventData.FabricUpgradeProgress.UpgradeState == FabricUpgradeState.RollingForwardCompleted
+                || eventData.FabricUpgradeProgress.UpgradeState == FabricUpgradeState.RollingBackCompleted)
+            {
+                if (HasClusterUpgradeCompleted)
+                {
+                    return;
+                }
+
+                HasClusterUpgradeCompleted = true;
+            }
+            else
+            {
+                HasClusterUpgradeCompleted = false;
+            }
+
+            // Telemetry.
+            if (TelemetryEnabled)
+            {
+                _ = await ObserverTelemetryClient?.ReportClusterUpgradeStatusAsync(eventData, token);
+            }
+
+            // ETW.
+            if (EtwEnabled)
+            {
+                ObserverLogger.LogEtw(
+                                ObserverConstants.ClusterObserverETWEventName,
+                                new
+                                {
+                                    eventData.ClusterId,
+                                    Timestamp = DateTime.UtcNow.ToString("o"),
+                                    eventData.OS,
+                                    UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetCodeVersion,
+                                    UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetConfigVersion,
+                                    UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
+                                    UpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
+                                    UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration.ToString()
+                                });
             }
         }
 
@@ -349,9 +471,9 @@ namespace ClusterObserver
                
                 var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () => FabricClientInstance.HealthManager.GetApplicationHealthAsync(
-                                                                            healthState.ApplicationName,
-                                                                            ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
-                                                                            token),
+                                                            healthState.ApplicationName,
+                                                            ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
+                                                            token),
                                                token);
                 if (appHealth == null)
                 {
@@ -363,33 +485,7 @@ namespace ClusterObserver
                 // Check upgrade status of unhealthy application. Note, this doesn't apply to System applications as they update as part of a platform update.
                 if (appName.OriginalString != "fabric:/System")
                 {
-                    var appUpgradeStatus = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                       () => 
-                                                            FabricClientInstance.ApplicationManager.GetApplicationUpgradeProgressAsync(appName),
-                                                       token);
-
-                    if (appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
-                        || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress
-                        || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardPending)
-                    {
-                        List<int> udsInAppUpgrade = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                                () => UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(
-                                                                                        FabricClientInstance,
-                                                                                        token,
-                                                                                        appName),
-                                                                token);
-                        string udText = string.Empty;
-
-                        // -1 means no upgrade in progress for application
-                        // int.MaxValue means an exception was thrown during upgrade check and you should
-                        // check the logs for what went wrong, then fix the bug (if it's a bug you can fix).
-                        if (udsInAppUpgrade.Any(ud => ud > -1 && ud < int.MaxValue))
-                        {
-                            udText = $"in UD {udsInAppUpgrade.First(ud => ud > -1 && ud < int.MaxValue)}";
-                        }
-
-                        telemetryDescription += $" Note: {appName} is upgrading {udText}.{Environment.NewLine}";
-                    }
+                    await ReportApplicationUpgradeStatus(appName, token);
                 }
 
                 var appHealthEvents = appHealth.HealthEvents.Where(e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning).ToList();
@@ -474,7 +570,7 @@ namespace ClusterObserver
                                             {
                                                 ApplicationName = appName.OriginalString,
                                                 HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
-                                                HealthEventDescription = telemetryDescription,
+                                                Description = telemetryDescription,
                                                 Source = ObserverName
                                             });
                         }
@@ -488,11 +584,12 @@ namespace ClusterObserver
 
         private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates, CancellationToken token)
         {
-            // Check cluster upgrade status.
-            int udInClusterUpgrade = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                 () => 
-                                                      UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(FabricClientInstance, token),
-                                                 token);
+            // Check cluster upgrade status. This will be used to help determine if a node in Error is in that state because of a Fabric runtime upgrade.
+            var clusterUpgradeInfo =
+                await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                         () => 
+                            UpgradeChecker.GetClusterUpgradeDetailsAsync(FabricClientInstance, token),
+                         token);
 
             var supportedNodeHealthStates = nodeHealthStates.Where( a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
@@ -507,18 +604,22 @@ namespace ClusterObserver
 
                 string telemetryDescription = $"Node in Error or Warning: {node.NodeName}{Environment.NewLine}";
 
-                if (udInClusterUpgrade > -1)
+                if (node.AggregatedHealthState == HealthState.Error
+                    && clusterUpgradeInfo != null
+                    && clusterUpgradeInfo.FabricUpgradeProgress.CurrentUpgradeDomainProgress.NodeProgressList.Any(n => n.NodeName == node.NodeName))
                 {
                     telemetryDescription +=
-                        $"Note: Cluster is currently upgrading in UD {udInClusterUpgrade}. " +
-                        $"Node {node.NodeName} Error State could be due to this upgrade process, which will temporarily take down a node as a " +
+                        $"Note: Cluster is currently upgrading in UD {clusterUpgradeInfo.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName}. " +
+                        $"Node {node.NodeName} Error State could be due to this upgrade, which will temporarily take down a node as a " +
                         $"normal part of the upgrade process.{Environment.NewLine}";
                 }
 
-                var nodeHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => 
-                                                    FabricClientInstance.HealthManager.GetNodeHealthAsync(node.NodeName, ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout, token),
-                                               token);
+                var nodeHealth =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                            () => 
+                                FabricClientInstance.HealthManager.GetNodeHealthAsync(
+                                    node.NodeName, ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout, token),
+                            token);
 
                 foreach (var nodeHealthEvent in nodeHealth.HealthEvents.Where(ev => ev.HealthInformation.HealthState != HealthState.Ok))
                 {
@@ -548,9 +649,9 @@ namespace ClusterObserver
                         await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => 
                                         FabricClientInstance.QueryManager.GetNodeListAsync(
-                                                        node.NodeName,
-                                                        ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
-                                                        token), 
+                                            node.NodeName,
+                                            ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
+                                            token), 
                                     token);
 
                     Node targetNode = null;
@@ -586,9 +687,8 @@ namespace ClusterObserver
                             {
                                 node.NodeName,
                                 NodeStatus = targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty,
-                                HealthScope = "Node",
                                 HealthState = Enum.GetName(typeof(HealthState), node.AggregatedHealthState),
-                                HealthEventDescription = telemetryDescription,
+                                Description = telemetryDescription,
                                 Metric = metric ?? "AggregatedClusterHealth",
                                 ObserverName = sourceObserver ?? string.Empty,
                                 Source = foStats != null ? foStats.Source : ObserverName,
@@ -629,7 +729,7 @@ namespace ClusterObserver
                                 ObserverConstants.ClusterObserverETWEventName,
                                 new
                                 {
-                                    HealthEventDescription = telemetryDescription,
+                                    Description = telemetryDescription,
                                     HealthState = healthState,
                                     Source = ObserverName
                                 });
@@ -688,7 +788,7 @@ namespace ClusterObserver
                                             NodeName = nodeDictItem.Key,
                                             Source = ObserverName,
                                             Value = 0
-                                            });
+                                        });
                     }
 
                     // Clear dictionary entry.
@@ -858,9 +958,13 @@ namespace ClusterObserver
 
                 return repairTasks;
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
 
+            }
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            {
+                ObserverLogger.LogWarning(e.ToString());
             }
 
             return null;

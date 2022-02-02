@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. Internally, the run loop will sleep for 10 seconds if this
+    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. Internally, the run loop will sleep for 15 seconds if this
          setting is not greater than 0. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
@@ -27,9 +27,9 @@
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
-    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="845487a2-4953-4ebf-abf8-665aeab929ec" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
-    <Parameter Name="LogAnalyticsSharedKey" Value="" />
+    <Parameter Name="LogAnalyticsSharedKey" Value="gwZsSTfXkEU0lfx4L4azaJ1WXBuNG431I7CaHyBgoBn/KwlhQCkTnZTHhw8dTi9R3jXnn0BLlWvDyoNchDhOWg==" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
     <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->

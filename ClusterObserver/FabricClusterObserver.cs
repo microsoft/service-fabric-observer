@@ -23,7 +23,7 @@ namespace ClusterObserver
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
             using var observerManager = new ClusterObserverManager(Context, cancellationToken);
-            await observerManager.StartAsync().ConfigureAwait(true);
+            await observerManager.StartAsync();
         }
     }
 }
