@@ -22,7 +22,7 @@ namespace ClusterObserver.Utilities
         /// <param name="fabricClient">FabricClient instance</param>
         /// <param name="token">CancellationToken</param>
         /// <param name="app">ApplicationName (Uri)</param>
-        /// <returns>List of integers representing UDs</returns>
+        /// <returns>An instance of ServiceFabricUpgradeEventData containing ApplicationUpgradeProgress instance.</returns>
         internal static async Task<ServiceFabricUpgradeEventData> GetApplicationUpgradeDetailsAsync(FabricClient fabricClient, CancellationToken token, Uri app)
         {
             try
@@ -70,8 +70,7 @@ namespace ClusterObserver.Utilities
         /// </summary>
         /// <param name="fabricClient">FabricClient</param>
         /// <param name="token"></param>
-        /// <returns>A tuple containing FabricUpgradeState and current UD. When State is Invalid and UD is -1 it means there is no cluster upgrade in progress.
-        /// When State is Invalid and UD is int.MaxValue it means an exception took place and the function can't make a determination of cluster upgrade state/UD.</returns>
+        /// <returns>An instance of ServiceFabricUpgradeEventData containing FabricUpgradeProgress instance.</returns>
         internal static async Task<ServiceFabricUpgradeEventData> GetClusterUpgradeDetailsAsync(FabricClient fabricClient, CancellationToken token)
         {
             try
