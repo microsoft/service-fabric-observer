@@ -828,7 +828,8 @@ namespace FabricObserverTests
             {
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
-                MonitorDuration = TimeSpan.FromSeconds(1)
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                FolderSizeConfigData = new List<(string FolderName, double Threshold, bool IsWarningTheshold)> { (@"C:\SFDevCluster\Log\Traces", 50000, true) }
             };
 
 
@@ -879,6 +880,9 @@ namespace FabricObserverTests
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
 
+                // Folder size monitoring. This will generate a warning.
+                FolderSizeConfigData = new List<(string FolderName, double Threshold, bool IsWarningTheshold)> { (@"C:\SFDevCluster\Log\Traces", 50, true) },
+                
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
                 MonitorDuration = TimeSpan.FromSeconds(5)
@@ -894,8 +898,11 @@ namespace FabricObserverTests
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected error or warning disk health conditions.
+            // observer detected issues with disk/folder size.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // Both disk consumption and folder size warnings were generated.
+            Assert.IsTrue(obs.CurrentWarningCount == 2);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);

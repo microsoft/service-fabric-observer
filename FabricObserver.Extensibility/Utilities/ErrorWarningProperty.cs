@@ -21,6 +21,7 @@ namespace FabricObserver.Observers.Utilities
         public const string DiskSpaceUsageMb = "Disk Space Consumption MB";
         public const string DiskSpaceAvailableMb = "Disk Space Available MB";
         public const string DiskSpaceTotalMb = "Disk Space Total MB";
+        public const string FolderSizeMB = "Folder Size MB";
 
         // Network
         public const string InternetConnectionFailure = "Outbound Internet Connection Failure";

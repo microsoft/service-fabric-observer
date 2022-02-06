@@ -494,58 +494,34 @@ All settings are optional, ***except targetApp***, and can be omitted if you don
 **In order for ContainerObserver to function properly on Windows, FabricObserver must be configured to run as Admin or System user.** This is not the case for Linux deployments.
 
 ## DiskObserver
-This observer monitors, records and analyzes storage disk information.
-Depending upon configuration settings, it signals disk health status
-warnings (or OK state) for all logical disks it detects.
+This observer monitors, records and analyzes storage disk information, including folders.
+Depending upon configuration settings, it signals disk health status warnings (or OK state) for all logical disks it detects.
 
-After DiskObserver logs basic disk information, it performs measurements on all logical disks across space usage (Consumption) and IO (Average Queue Length). The data collected are used in ReportAsync to determine if a Warning shot should be fired based on user-supplied threshold settings housed in Settings.xml. Note that you do not need to specify a threshold parameter that you don't plan you using. You can either omit the XML node or leave the value blank (or set to 0).
+After DiskObserver logs basic disk information, it performs measurements on all logical disks across space usage (Consumption) and IO (Average Queue Length) and, optionally, any specified folder paths you supply in configuration. The data collected are used in ReportAsync to determine if a Warning shot should be fired based on user-supplied threshold settings housed in ApplicationManifest.xml. Note that you do not need to specify a threshold parameter that you don't plan you using. You can either omit the XML node or leave the value blank (or set to 0).
 
 ```xml
-  <Section Name="DiskObserverConfiguration">
+<Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="" MustOverride="true" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" MustOverride="true" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value="" MustOverride="true" />
     <Parameter Name="AverageQueueLengthWarningThreshold" Value="" MustOverride="true" />
-  </Section>
+    <Parameter Name="FolderSizePathsErrorThresholdsMb" Value="" MustOverride="true" />
+    <Parameter Name="FolderSizePathsWarningThresholdsMb" Value="" MustOverride="true" />
+</Section>
 ```
 
-**Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service. 
+For folder size monitoring (available in FO versions 3.1.24 and above), you supply full path/threshold size (in MB) in the following format: 
 
-  
-example: 
+```"[fullpath, threshold] [fullpath1 threshold1] ..."``` e.g., in ApplicationManifest.xml:  
 
-Disk Info:
+```<Parameter Name="FolderSizePathsWarningThresholdsMb" DefaultValue="[C:\SvcFab\Log\Traces, 15000] [C:\somefolder\foo, 500]" />```
 
-Drive Name: C:\  
-Drive Type: Fixed \
-  Volume Label   : Windows \
-  Filesystem     : NTFS \
-  Total Disk Size: 126 GB \
-  Root Directory : C:\\  
-  Free User : 98 GB \
-  Free Total: 98 GB \
-  % Used    : 22% \
-  Avg. Disk Queue Length: 0.017 
-
-Drive Name: D:\  
-Drive Type: Fixed  
-  Volume Label   : Temporary Storage  
-  Filesystem     : NTFS  
-  Total Disk Size: 99 GB  
-  Root Directory : D:\  
-  Free User : 52 GB  
-  Free Total: 52 GB  
-  % Used    : 47%  
-  Avg. Disk Queue Length: 0   
-
-**This observer also optionally outputs a CSV file containing all resource usage
-data across iterations for use in analysis. Included are Average and
-Peak measurements. Set in Settings.xml's EnableLongRunningCSVLogging boolean setting.**  
+**Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service.  
 
 Example SFX Output (Warning - Disk Space Consumption):  
 

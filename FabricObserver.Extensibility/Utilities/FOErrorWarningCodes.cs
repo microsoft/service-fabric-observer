@@ -31,6 +31,8 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeWarningDiskSpaceMB = "FO010";
         public const string NodeErrorDiskAverageQueueLength = "FO011";
         public const string NodeWarningDiskAverageQueueLength = "FO012";
+        public const string NodeErrorFolderSizeMB = "FO042";
+        public const string NodeWarningFolderSizeMB = "FO043";
 
         // Memory
         public const string AppErrorMemoryPercent = "FO013";

@@ -10,6 +10,7 @@ using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,10 +18,8 @@ using FabricObserver.Observers.Utilities;
 
 namespace FabricObserver.Observers
 {
-    // This observer monitors logical disk behavior and signals Service Fabric Warning or Error events based on user-supplied thresholds
-    // in Settings.xml.
-    // The output (a local file) is used by the API service and the HTML frontend (http://localhost:5000/api/ObserverManager).
-    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
+    // DiskObserver monitors logical disk states (space consumption, queue length and folder sizes) and creates Service Fabric
+    // Warning or Error Node-level health reports based on settings in ApplicationManifest.xml.
     public class DiskObserver : ObserverBase
     {
         // Data storage containers for post run analysis.
@@ -28,6 +27,7 @@ namespace FabricObserver.Observers
         private List<FabricResourceUsageData<double>> DiskSpaceUsagePercentageData;
         private List<FabricResourceUsageData<double>> DiskSpaceAvailableMbData;
         private List<FabricResourceUsageData<double>> DiskSpaceTotalMbData;
+        private List<FabricResourceUsageData<double>> FolderSizeDataMb;
         private readonly Stopwatch stopWatch;
         private readonly bool isWindows;
         private StringBuilder diskInfo = new StringBuilder();
@@ -48,6 +48,13 @@ namespace FabricObserver.Observers
         }
 
         public int AverageQueueLengthErrorThreshold
+        {
+            get; set;
+        }
+
+        /* For folder size monitoring */
+
+        public List<(string FolderName, double Threshold, bool IsWarningTheshold)> FolderSizeConfigData
         {
             get; set;
         }
@@ -85,6 +92,7 @@ namespace FabricObserver.Observers
             DiskSpaceUsagePercentageData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceAvailableMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceTotalMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
+            FolderSizeDataMb ??= new List<FabricResourceUsageData<double>>();
 
             if (isWindows)
             {
@@ -118,7 +126,6 @@ namespace FabricObserver.Observers
                         _ = diskInfo.AppendFormat("  % Used    : {0}%\n", DiskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
                     }
 
-                    // Setup monitoring data structures.
                     string id = d.Name;
 
                     // Since these live across iterations, do not duplicate them in the containing list.
@@ -147,6 +154,7 @@ namespace FabricObserver.Observers
                     }
 
                     // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
+                    // Also, this feature is not supported for Linux yet.
                     if (isWindows)
                     {
                         if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
@@ -180,8 +188,11 @@ namespace FabricObserver.Observers
                                                             x => d.Name.Length > 0 && x.Id == d.Name[..1])?.Data,
                                                                  "Avg. Disk Queue Length"));
                 }
+                
+                // Process Folder size data.
+                CheckFolderSizeUsage();
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}"); 
                 
@@ -189,7 +200,7 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            await ReportAsync(token).ConfigureAwait(true);
+            await ReportAsync(token).ConfigureAwait(false);
 
             // The time it took to run this observer.
             stopWatch.Stop();
@@ -202,6 +213,101 @@ namespace FabricObserver.Observers
 
             stopWatch.Reset();
             LastRunDateTime = DateTime.Now;
+        }
+
+        private void ProcessFolderSizeConfig()
+        {
+            string folderPathErrorThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FolderSizePathsErrorThresholdsMb);
+            string folderPathWarningThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FolderSizePathsWarningThresholdsMb);
+            AddFolderSizeConfigData(folderPathErrorThresholdPairs, isWarningThreshold: false);
+            AddFolderSizeConfigData(folderPathWarningThresholdPairs, isWarningThreshold: true);
+        }
+
+        private void AddFolderSizeConfigData(string folderSizeConfig, bool isWarningThreshold)
+        {
+            if (!string.IsNullOrWhiteSpace(folderSizeConfig))
+            {
+                // "[path, threshold] [path1, threshold1] ..."
+                string[] configData = folderSizeConfig.Split("]", StringSplitOptions.RemoveEmptyEntries);
+                foreach (string data in configData)
+                {
+                    if (!string.IsNullOrWhiteSpace(data))
+                    {
+                        string[] pairs = data.Split(",");
+
+                        try
+                        {
+                            string path = pairs[0].Remove(0, 1);
+
+                            if (!double.TryParse(pairs[1], out double threshold))
+                            {
+                                continue;
+                            }
+
+                            FolderSizeConfigData.Add((path, threshold, isWarningThreshold));
+                        }
+                        catch (ArgumentException)
+                        {
+
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CheckFolderSizeUsage()
+        {
+            foreach (var (FolderPath, Threshold, _) in FolderSizeConfigData)
+            {
+                if (string.IsNullOrWhiteSpace(FolderPath) || !Directory.Exists(FolderPath) || Threshold < 1.0)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    string id = FolderPath.Replace(Path.DirectorySeparatorChar.ToString(), string.Empty);
+
+                    if (!FolderSizeDataMb.Any(x => x.Id == id))
+                    {
+                        FolderSizeDataMb.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.FolderSizeMB, id, 1));
+                    }
+
+                    double size = GetFolderSize(FolderPath, SizeUnit.Megabytes);
+                    FolderSizeDataMb.Find(x => x.Id == id)?.AddData(size);
+                }
+                catch (ArgumentException)
+                {
+
+                }
+            }
+        }
+
+        private double GetFolderSize(string path, SizeUnit unit)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                ObserverLogger.LogWarning($"GetFolderSize: Invalid value supplied for {nameof(path)} parameter. Supplied value = {path}");
+                return 0.0;
+            }
+
+            try
+            {
+                var dir = new DirectoryInfo(path);
+                double folderSizeInBytes = Convert.ToDouble(dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length));
+
+                if (unit == SizeUnit.Gigabytes)
+                {
+                    return folderSizeInBytes / 1024 / 1024 / 1024;
+                }
+
+                return folderSizeInBytes / 1024 / 1024;
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
+            {
+                ObserverLogger.LogWarning($"Failure computing folder size for {path}:{Environment.NewLine}{e}");
+                return 0.0;
+            }
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -221,6 +327,20 @@ namespace FabricObserver.Observers
                                         DiskSpacePercentErrorThreshold,
                                         DiskSpacePercentWarningThreshold,
                                         timeToLiveWarning);
+                }
+
+                // Folder size.
+                for (int i = 0; i < FolderSizeDataMb.Count; ++i)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    var data = FolderSizeDataMb[i];
+
+                    ProcessResourceDataReportHealth(
+                        data,
+                        FolderSizeConfigData.Find(x => !x.IsWarningTheshold && data.Id == x.FolderName.Replace(Path.DirectorySeparatorChar.ToString(), string.Empty)).Threshold,
+                        FolderSizeConfigData.Find(x => x.IsWarningTheshold && data.Id == x.FolderName.Replace(Path.DirectorySeparatorChar.ToString(), string.Empty)).Threshold,
+                        timeToLiveWarning);
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
@@ -272,14 +392,8 @@ namespace FabricObserver.Observers
                 _ = ObserverLogger.TryWriteLogFile(diskInfoPath, diskInfo.ToString());
                 _ = diskInfo.Clear();
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException || e is FabricException)
-                {
-                    throw;
-                }
-
                 ObserverLogger.LogWarning($"Unhandled exception in ReportAsync:{Environment.NewLine}{e}");
 
                 // Fix the bug..
@@ -328,6 +442,10 @@ namespace FabricObserver.Observers
                 {
                     AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
                 }
+
+                // Folder size monitoring.
+                FolderSizeConfigData ??= new List<(string FolderName, double Threshold, bool IsWarningTheshold)>();
+                ProcessFolderSizeConfig();
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException)
             {

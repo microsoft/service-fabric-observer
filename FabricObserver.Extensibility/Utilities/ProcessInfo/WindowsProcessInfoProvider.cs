@@ -158,6 +158,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 // We land here when the target service process is not using KVS (which we can't determine by querying SF (yet))
                 // OR the performance counter is not found/enabled.
+                e = null;
             }
             catch (Exception e)
             {

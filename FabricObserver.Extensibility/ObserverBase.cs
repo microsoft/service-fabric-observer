@@ -797,7 +797,7 @@ namespace FabricObserver.Observers
                 drive = string.Empty;
                 id = data.Id;
 
-                if (ObserverName == ObserverConstants.DiskObserverName)
+                if (ObserverName == ObserverConstants.DiskObserverName && data.Property != ErrorWarningProperty.FolderSizeMB)
                 {
                     drive = $"{id}: ";
 
@@ -925,6 +925,11 @@ namespace FabricObserver.Observers
                     case ErrorWarningProperty.DiskSpaceUsageMb:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorDiskSpaceMB : FOErrorWarningCodes.NodeWarningDiskSpaceMB;
+                        break;
+
+                    case ErrorWarningProperty.FolderSizeMB:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorFolderSizeMB : FOErrorWarningCodes.NodeWarningFolderSizeMB;
                         break;
 
                     case ErrorWarningProperty.TotalMemoryConsumptionMb when healthReportType == HealthReportType.Application:
