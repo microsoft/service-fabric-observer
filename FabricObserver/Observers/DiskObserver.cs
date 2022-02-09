@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
+using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -54,7 +55,12 @@ namespace FabricObserver.Observers
 
         /* For folder size monitoring */
 
-        public List<(string FolderName, double Threshold, bool IsWarningTheshold)> FolderSizeConfigData
+        public Dictionary<string, double> FolderSizeConfigDataError
+        {
+            get; set;
+        }
+
+        public Dictionary<string, double> FolderSizeConfigDataWarning
         {
             get; set;
         }
@@ -99,7 +105,7 @@ namespace FabricObserver.Observers
                 DiskAverageQueueLengthData ??= new List<FabricResourceUsageData<float>>(driveCount);
             }
 
-            try 
+            try
             {
                 foreach (var d in allDrives)
                 {
@@ -183,14 +189,23 @@ namespace FabricObserver.Observers
                     token.ThrowIfCancellationRequested();
 
                     _ = diskInfo.AppendFormat(
-                        "{0}", 
+                        "{0}",
                         GetWindowsPerfCounterDetailsText(DiskAverageQueueLengthData.FirstOrDefault(
                                                             x => d.Name.Length > 0 && x.Id == d.Name[..1])?.Data,
                                                                  "Avg. Disk Queue Length"));
                 }
-                
-                // Process Folder size data.
-                CheckFolderSizeUsage();
+
+                /* Process Folder size data. */
+
+                if (FolderSizeConfigDataWarning?.Count > 0)
+                {
+                    CheckFolderSizeUsage(FolderSizeConfigDataWarning);
+                }
+
+                if (FolderSizeConfigDataError?.Count > 0)
+                {
+                    CheckFolderSizeUsage(FolderSizeConfigDataError);
+                }
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
@@ -217,68 +232,176 @@ namespace FabricObserver.Observers
 
         private void ProcessFolderSizeConfig()
         {
-            string folderPathErrorThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FolderSizePathsErrorThresholdsMb);
-            string folderPathWarningThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FolderSizePathsWarningThresholdsMb);
-            AddFolderSizeConfigData(folderPathErrorThresholdPairs, isWarningThreshold: false);
-            AddFolderSizeConfigData(folderPathWarningThresholdPairs, isWarningThreshold: true);
+            string FolderPathsErrorThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FolderSizePathsErrorThresholdsMb);
+            
+            if (!string.IsNullOrWhiteSpace(FolderPathsErrorThresholdPairs))
+            {
+                FolderSizeConfigDataError ??= new Dictionary<string, double>();
+                AddFolderSizeConfigData(FolderPathsErrorThresholdPairs, false);
+            }
+
+            string FolderPathsWarningThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FolderSizePathsWarningThresholdsMb);
+            
+            if (!string.IsNullOrWhiteSpace(FolderPathsWarningThresholdPairs))
+            {
+                FolderSizeConfigDataWarning ??= new Dictionary<string, double>();
+                AddFolderSizeConfigData(FolderPathsWarningThresholdPairs, true);
+            }
         }
 
         private void AddFolderSizeConfigData(string folderSizeConfig, bool isWarningThreshold)
         {
-            if (!string.IsNullOrWhiteSpace(folderSizeConfig))
+            // No config settings supplied.
+            if (string.IsNullOrWhiteSpace(folderSizeConfig))
             {
-                // "[path, threshold] [path1, threshold1] ..."
-                string[] configData = folderSizeConfig.Split("]", StringSplitOptions.RemoveEmptyEntries);
-                foreach (string data in configData)
-                {
-                    if (!string.IsNullOrWhiteSpace(data))
-                    {
-                        string[] pairs = data.Split(",");
-
-                        try
-                        {
-                            string path = pairs[0].Remove(0, 1);
-
-                            if (!double.TryParse(pairs[1], out double threshold))
-                            {
-                                continue;
-                            }
-
-                            FolderSizeConfigData.Add((path, threshold, isWarningThreshold));
-                        }
-                        catch (ArgumentException)
-                        {
-
-                        }
-                    }
-                }
+                return;
             }
-        }
 
-        private void CheckFolderSizeUsage()
-        {
-            foreach (var (FolderPath, Threshold, _) in FolderSizeConfigData)
+            if (!TryGetFolderSizeConfigSettingData(folderSizeConfig, out string[] configData))
             {
-                if (string.IsNullOrWhiteSpace(FolderPath) || !Directory.Exists(FolderPath) || Threshold < 1.0)
+                return;
+            }
+
+            foreach (string data in configData)
+            {
+                string[] pairs = data.Split(",");
+
+                if (pairs.Length != 2)
                 {
                     continue;
                 }
 
                 try
                 {
-                    string id = FolderPath.Replace(Path.DirectorySeparatorChar.ToString(), string.Empty);
+                    string path = pairs[0];
 
-                    if (!FolderSizeDataMb.Any(x => x.Id == id))
+                    if (!double.TryParse(pairs[1], out double threshold))
                     {
-                        FolderSizeDataMb.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.FolderSizeMB, id, 1));
+                        continue;
                     }
 
-                    double size = GetFolderSize(FolderPath, SizeUnit.Megabytes);
-                    FolderSizeDataMb.Find(x => x.Id == id)?.AddData(size);
+                    if (isWarningThreshold)
+                    {
+                        if (FolderSizeConfigDataWarning != null && !FolderSizeConfigDataWarning.ContainsKey(path))
+                        {
+                            FolderSizeConfigDataWarning.Add(path, threshold);
+                        }
+                    }
+                    else if (FolderSizeConfigDataError != null && !FolderSizeConfigDataError.ContainsKey(path))
+                    {
+                        FolderSizeConfigDataError.Add(path, threshold);
+                    }
                 }
-                catch (ArgumentException)
+                catch (Exception e) when (e is ArgumentException)
                 {
 
+                }
+            }
+        }
+
+        private bool TryGetFolderSizeConfigSettingData(string folderSizeConfig, out string[] configData)
+        {
+            if (string.IsNullOrWhiteSpace(folderSizeConfig))
+            {
+                configData = null;
+                return false;
+            }
+
+            try
+            {
+                string[] data = folderSizeConfig.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                
+                for (int i = 0; i < data.Length; ++i)
+                {
+                    data[i] = data[i].Trim();
+                }
+
+                if (data.Length > 0)
+                {
+                    configData = data.Where(x => x.Contains(',')).ToArray();
+
+                    if (configData.Length < data.Length)
+                    {
+                        ObserverLogger.LogWarning("TryGetFolderSizeConfigSettingData: Some path/threshold pairs were missing ',' between items. Ignoring.");
+                    }
+
+                    return true;
+                }
+                
+                string message = $"Invalid format for Folder paths/thresholds setting. Supplied {folderSizeConfig}. Expected 'path, threshold'. " +
+                                 $"If supplying multiple path/threshold pairs, each pair must be separated by a | character.";
+
+                var healthReport = new Utilities.HealthReport
+                {
+                    EmitLogEvent = true,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = $"InvalidConfigFormat({folderSizeConfig})",
+                    ReportType = HealthReportType.Node,
+                    State = ObserverManager.ObserverFailureHealthStateLevel,
+                    NodeName = NodeName,
+                    Observer = ObserverConstants.DiskObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                                                $"InvalidConfigFormat",
+                                                ObserverManager.ObserverFailureHealthStateLevel,
+                                                message,
+                                                ObserverName,
+                                                Token);
+                }
+
+                // ETW.
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Property = $"InvalidConfigFormat",
+                                        Level = ObserverManager.ObserverFailureHealthStateLevel,
+                                        Message = message,
+                                        ObserverName
+                                    });
+                }
+            }
+            catch (ArgumentException)
+            {
+
+            }
+
+            configData = null;
+            return false;
+        }
+
+        private void CheckFolderSizeUsage(IDictionary<string, double> data)
+        {
+            foreach (var item in data)
+            {
+                if (string.IsNullOrWhiteSpace(item.Key) || !Directory.Exists(item.Key) || item.Value == 0)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (!FolderSizeDataMb.Any(x => x.Id == item.Key))
+                    {
+                        FolderSizeDataMb.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.FolderSizeMB, item.Key, 1));
+                    }
+
+                    double size = GetFolderSize(item.Key, SizeUnit.Megabytes);
+                    FolderSizeDataMb.Find(x => x.Id == item.Key)?.AddData(size);
+                }
+                catch (ArgumentException ae)
+                {
+                    ObserverLogger.LogWarning($"CheckFolderSizeUsage: Handled exception:{Environment.NewLine}{ae}");
                 }
             }
         }
@@ -287,7 +410,13 @@ namespace FabricObserver.Observers
         {
             if (string.IsNullOrWhiteSpace(path))
             {
-                ObserverLogger.LogWarning($"GetFolderSize: Invalid value supplied for {nameof(path)} parameter. Supplied value = {path}");
+                ObserverLogger.LogWarning($"GetFolderSize: Invalid value supplied for {nameof(path)} parameter. Supplied value = '{path}'");
+                return 0.0;
+            }
+
+            if (!Directory.Exists(path))
+            {
+                ObserverLogger.LogWarning($"GetFolderSize: '{path}' does not exist.");
                 return 0.0;
             }
 
@@ -335,12 +464,24 @@ namespace FabricObserver.Observers
                     token.ThrowIfCancellationRequested();
 
                     var data = FolderSizeDataMb[i];
+                    double errorThreshold = 0.0;
+                    double warningThreshold = 0.0;
+
+                    if (FolderSizeConfigDataError?.Count > 0 && FolderSizeConfigDataError.ContainsKey(data.Id))
+                    {
+                        errorThreshold = FolderSizeConfigDataError[data.Id];
+                    }
+
+                    if (FolderSizeConfigDataWarning?.Count > 0 && FolderSizeConfigDataWarning.ContainsKey(data.Id))
+                    {
+                        warningThreshold = FolderSizeConfigDataWarning[data.Id];
+                    }
 
                     ProcessResourceDataReportHealth(
-                        data,
-                        FolderSizeConfigData.Find(x => !x.IsWarningTheshold && data.Id == x.FolderName.Replace(Path.DirectorySeparatorChar.ToString(), string.Empty)).Threshold,
-                        FolderSizeConfigData.Find(x => x.IsWarningTheshold && data.Id == x.FolderName.Replace(Path.DirectorySeparatorChar.ToString(), string.Empty)).Threshold,
-                        timeToLiveWarning);
+                                        data,
+                                        errorThreshold,
+                                        warningThreshold,
+                                        timeToLiveWarning);
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
@@ -444,7 +585,6 @@ namespace FabricObserver.Observers
                 }
 
                 // Folder size monitoring.
-                FolderSizeConfigData ??= new List<(string FolderName, double Threshold, bool IsWarningTheshold)>();
                 ProcessFolderSizeConfig();
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException)

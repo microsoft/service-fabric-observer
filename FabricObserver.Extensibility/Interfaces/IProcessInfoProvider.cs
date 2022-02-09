@@ -36,12 +36,12 @@ namespace FabricObserver.Observers.Utilities
         List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
 
         /// <summary>
-        /// Gets the current percentage of KVS LVIDs in use for the supplied process name (Windows-only. Returns -1 if called on Linux).
+        /// Windows only. Determines the percentage of Windows KVS LVIDs currently in use.
         /// </summary>
-        /// <param name="procName">Name of target process.</param>
-        /// <param name="procId">Optional. The target process ID. This is used to determine the Windows internal process name to pass to the counter. 
-        /// This is very important when there are multiple processes with the same name.</param>
-        /// <returns>Percentage (double) of total LVIDs the process is currently consuming. A result of -1 means failure. Consumer should handle the case when the result is less than 0.</returns>
+        /// <param name="procName">The name of the target process.</param>
+        /// <param name="procId" type="optional">If there may be multiple processes with the same name, 
+        /// then also supply this value to ensure the correct process is measured.</param>
+        /// <returns>double representing the current percentage of LVIDs in use out of a possible int.MaxValue total.</returns>
         double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
     }
 }

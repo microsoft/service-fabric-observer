@@ -3,7 +3,6 @@ using FabricObserver.Observers.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;

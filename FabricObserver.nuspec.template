@@ -6,9 +6,10 @@
     <releaseNotes>
 - New Feature: DiskObserver can be configured to monitor and report on folder size.
 - WindowsInfoProvider.TupleGetSystemMemoryInfo is now more performant (across memory and CPU).
-- Windows KVS LVID monitoring supports same-named service processes.
+- Windows KVS LVID monitoring: Support for same-named service processes.
+- Windows KVS LVID monitoring: Added check for instance name present for category before calling perf counter (and then handling expected exception when not present (old impl)).
 - Updated build scripts to support Setup user requirments in a more simplified way.
-- Updated Settings.xml and ApplicationManifest.xml to support updated build script and new DiskObserver feature.
+- Updated Settings.xml and ApplicationManifest.xml to support updated build script and new DiskObserver folder size monitoring feature.
 - Updated unit tests.
 - Code improvements.
 	</releaseNotes>

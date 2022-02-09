@@ -504,6 +504,10 @@ namespace FabricObserver.Observers
                             msg += $"elevated_docker_stats caps may have been removed (SF cluster upgrade?). " +
                                    "You should restart the FO process to put the caps set back in place (the FO linux setup script does this). " +
                                    "If this consistently happens (it should not), then consider running FO as root (see Policies node in ApplicationManifest.xml).";
+
+                            // TODO: Restart FO? Since the Linux customer is using ContainerObserver and FO is a stateless service, this has little impact on FO itself.
+                            // Restarting FO here would reset the caps on the related binary and ContainerObserver would function correctly the next time it runs.
+                            //Environment.Exit(42);
                         }
                     }
 
@@ -556,7 +560,7 @@ namespace FabricObserver.Observers
                 // Linux caps.
                 if (!isWindows && !isElevatedLinux)
                 {
-                    // This means the caps are in place on the elevated_docker_stats binary. Nothing has touched the binary, which would remove the caps set.
+                    // This means the caps are in place on the elevated_docker_stats binary. Nothing has touched the binary, which would remove the caps.
                     isElevatedLinux = true;
                 }
 

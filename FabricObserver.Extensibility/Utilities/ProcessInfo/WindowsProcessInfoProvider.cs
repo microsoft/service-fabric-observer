@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Linq;
 using System.Management;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
@@ -134,18 +135,58 @@ namespace FabricObserver.Observers.Utilities
 
         public override double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1)
         {
+            if (string.IsNullOrWhiteSpace(procName))
+            {
+                return -1;
+            }
+            
+            const string categoryName = "Windows Fabric Database";
+            const string counterName = "Long-Value Maximum LID";
+            string internalProcName = procName;
+
             try
             {
-                string internalProcName = procName;
-
+                // This is the case when the caller expects there could be multiple instances of the same process.
                 if (procId > 0)
                 {
                     internalProcName = GetInternalProcessNameFromPerfCounter(procName, procId);
+
+                    if (internalProcName == null)
+                    {
+                        return -1;
+                    }
+                }
+
+                /* Check to see if the supplied instance (process) exists in the category for the LVID counter. */
+
+                InstanceDataCollectionCollection instanceDataCollectionCollection = null;
+
+                try
+                {
+                    PerformanceCounterCategory performanceCounterCategory = new PerformanceCounterCategory(categoryName);
+                    instanceDataCollectionCollection = performanceCounterCategory.ReadCategory();
+
+                    // Does the counter exist?
+                    if (instanceDataCollectionCollection.Count == 0 || !instanceDataCollectionCollection.Contains(counterName))
+                    {
+                        return -1;
+                    }
+
+                    // Does the instance name exist in the instance data collection for target counter?
+                    if (!instanceDataCollectionCollection[counterName].Contains(internalProcName))
+                    {
+                        return -1;
+                    }
+                }
+                finally
+                {
+                    instanceDataCollectionCollection?.Clear();
+                    instanceDataCollectionCollection = null;
                 }
 
                 using (var performanceCounter = new PerformanceCounter(
-                                                    categoryName: "Windows Fabric Database",
-                                                    counterName: "Long-Value Maximum LID",
+                                                    categoryName,
+                                                    counterName,
                                                     instanceName: internalProcName,
                                                     readOnly: true))
                 {
@@ -154,15 +195,17 @@ namespace FabricObserver.Observers.Utilities
                     return usedPct;
                 }
             }
-            catch (Exception e) when (e is InvalidOperationException)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception || e is UnauthorizedAccessException)
             {
-                // We land here when the target service process is not using KVS (which we can't determine by querying SF (yet))
-                // OR the performance counter is not found/enabled.
-                e = null;
+                // We shouldn't land here unless there is a failure creating the instance data collection.
+                Logger.LogWarning($"Exception creating the instance data collection for category '{categoryName}':{Environment.NewLine}{e}");
             }
             catch (Exception e)
             {
-                Logger.LogWarning($"Exception querying Long-Value Maximum LID counter:{Environment.NewLine}{e}");
+                Logger.LogWarning($"Unhandled exception querying {counterName} counter:{Environment.NewLine}{e}");
+
+                // fix the bug.
+                throw;
             }
 
             // This means failure. Consumer should handle the case when the result is less than 0..

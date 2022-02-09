@@ -823,13 +823,17 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = client;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            var warningDictionary = new Dictionary<string, double>
+            {
+                { @"C:\SFDevCluster\Log\Traces", 50000 }
+            };
 
             using var obs = new DiskObserver(client, context)
             {
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                FolderSizeConfigData = new List<(string FolderName, double Threshold, bool IsWarningTheshold)> { (@"C:\SFDevCluster\Log\Traces", 50000, true) }
+                FolderSizeConfigDataWarning = warningDictionary
             };
 
 
@@ -874,15 +878,20 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = client;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            var warningDictionary = new Dictionary<string, double>
+            {
+                // Modify the key to point to a path you know exists on your computer.
+                { @"C:\SFDevCluster\Log\Traces", 50 }
+            };
 
             using var obs = new DiskObserver(client, context)
             {
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
 
-                // Folder size monitoring. This will generate a warning.
-                FolderSizeConfigData = new List<(string FolderName, double Threshold, bool IsWarningTheshold)> { (@"C:\SFDevCluster\Log\Traces", 50, true) },
-                
+                // Folder size monitoring. This will most likely generate a warning (you should modify the key above to be some folder you know is larger than 50MB).
+                FolderSizeConfigDataWarning = warningDictionary,
+
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
                 MonitorDuration = TimeSpan.FromSeconds(5)

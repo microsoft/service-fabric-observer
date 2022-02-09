@@ -797,11 +797,11 @@ namespace FabricObserver.Observers
                 drive = string.Empty;
                 id = data.Id;
 
-                if (ObserverName == ObserverConstants.DiskObserverName && data.Property != ErrorWarningProperty.FolderSizeMB)
+                if (ObserverName == ObserverConstants.DiskObserverName)
                 {
                     drive = $"{id}: ";
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && data.Property != ErrorWarningProperty.FolderSizeMB)
                     {
                         drive = $"{id.Remove(1, 2)}: ";
                     }
