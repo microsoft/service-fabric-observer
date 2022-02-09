@@ -510,8 +510,9 @@ After DiskObserver logs basic disk information, it performs measurements on all 
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" MustOverride="true" />
     <Parameter Name="AverageQueueLengthErrorThreshold" Value="" MustOverride="true" />
     <Parameter Name="AverageQueueLengthWarningThreshold" Value="" MustOverride="true" />
-    <Parameter Name="FolderSizePathsErrorThresholdsMb" Value="" MustOverride="true" />
-    <Parameter Name="FolderSizePathsWarningThresholdsMb" Value="" MustOverride="true" />
+    <Parameter Name="EnableFolderSizeMonitoring" Value="" MustOverride="true" />
+    <Parameter Name="FolderPathsErrorThresholdsMb" Value="" MustOverride="true" />
+    <Parameter Name="FolderPathsWarningThresholdsMb" Value="" MustOverride="true" />
 </Section>
 ```
 
@@ -520,7 +521,7 @@ For folder size monitoring (available in FO versions 3.1.24 and above), you supp
 ```"fullpath, threshold | fullpath1 threshold1 ..."``` e.g., in ApplicationManifest.xml:  
 
 ``` XML 
-<Parameter Name="DiskObserverFolderSizePathsWarningThresholdsMb" DefaultValue="C:\SvcFab\Log\Traces, 15000 | C:\somefolder\foo, 500" />
+<Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="E:\SvcFab\Log\Traces, 15000 | C:\somefolder\foo, 500" />
 ```
 
 **Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service.  

@@ -138,9 +138,11 @@
     <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="15" />
-    <!-- Folder size monitoring. Supply full path/threshold(in MB) pairs here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
-    <Parameter Name="DiskObserverFolderSizePathsErrorThresholdsMb" DefaultValue="" />
-    <Parameter Name="DiskObserverFolderSizePathsWarningThresholdsMb" DefaultValue="E:\SvcFab\Log\Traces, 3000" />
+    <!-- Folder size monitoring. -->
+    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
+    <!-- Supply full path/threshold(in MB) pairs here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
+    <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
+    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="" />
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
@@ -255,14 +257,15 @@
             <Parameter Name="Enabled" Value="[DiskObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[DiskObserverEnableTelemetry]" />
             <Parameter Name="EnableEtw" Value="[DiskObserverEnableEtw]" />
+            <Parameter Name="EnableFolderSizeMonitoring" Value="[DiskObserverEnableFolderSizeMonitoring]" />
             <Parameter Name="EnableVerboseLogging" Value="[DiskObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[DiskObserverRunInterval]" />
             <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="[DiskObserverDiskSpacePercentUsageErrorThreshold]" />
             <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="[DiskObserverDiskSpacePercentUsageWarningThreshold]" />
             <Parameter Name="AverageQueueLengthErrorThreshold" Value="[DiskObserverAverageQueueLengthErrorThreshold]" />
             <Parameter Name="AverageQueueLengthWarningThreshold" Value="[DiskObserverAverageQueueLengthWarningThreshold]" />
-            <Parameter Name="FolderSizePathsErrorThresholdsMb" Value="[DiskObserverFolderSizePathsErrorThresholdsMb]" />
-            <Parameter Name="FolderSizePathsWarningThresholdsMb" Value="[DiskObserverFolderSizePathsWarningThresholdsMb]" />
+            <Parameter Name="FolderPathsErrorThresholdsMb" Value="[DiskObserverFolderPathsErrorThresholdsMb]" />
+            <Parameter Name="FolderPathsWarningThresholdsMb" Value="[DiskObserverFolderPathsWarningThresholdsMb]" />
           </Section>
           <Section Name="FabricSystemObserverConfiguration">
             <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
@@ -390,7 +393,7 @@
     </ConfigOverrides>
     <Policies>
       <!-- Change EntryPointType attribute value to All (or remove the EntryPointType attribute entirely) if you want to run FO as system/root user. -->
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="All" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
     </Policies>
   </ServiceManifestImport>
   <DefaultServices>

@@ -74,7 +74,7 @@ namespace ClusterObserver
 
         public static bool EtwEnabled
         {
-            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider), out etwEnabled) && etwEnabled;
+            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProviderParameter), out etwEnabled) && etwEnabled;
             set => etwEnabled = value;
         }
 
@@ -104,7 +104,7 @@ namespace ClusterObserver
 
             // Observer Logger setup.
             string logFolderBasePath;
-            string observerLogPath = GetConfigSettingValue(ObserverConstants.ObserverLogPath);
+            string observerLogPath = GetConfigSettingValue(ObserverConstants.ObserverLogPathParameter);
 
             if (!string.IsNullOrEmpty(observerLogPath))
             {
@@ -158,7 +158,7 @@ namespace ClusterObserver
         private void SetPropertiesFromConfigurationParameters()
         {
             // Observer
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout), out int result))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeoutParameter), out int result))
             {
                 observerExecTimeout = TimeSpan.FromSeconds(result);
             }
@@ -169,13 +169,13 @@ namespace ClusterObserver
                 Logger.EnableVerboseLogging = enableVerboseLogging;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds), out int execFrequency))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSecondsParameter), out int execFrequency))
             {
                 ObserverExecutionLoopSleepSeconds = execFrequency;
             }
 
             // Shutdown
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverShutdownGracePeriodInSeconds), out int gracePeriodInSeconds))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverShutdownGracePeriodInSecondsParameter), out int gracePeriodInSeconds))
             {
                 shutdownGracePeriodInSeconds = gracePeriodInSeconds;
             }
@@ -186,14 +186,14 @@ namespace ClusterObserver
             }
 
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableTelemetry), out bool telemEnabled))
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableTelemetryParameter), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
             }
 
             if (TelemetryEnabled)
             {
-                string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderType);
+                string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderTypeParameter);
 
                 if (string.IsNullOrEmpty(telemetryProviderType))
                 {

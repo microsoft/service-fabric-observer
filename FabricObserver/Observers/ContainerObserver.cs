@@ -507,7 +507,8 @@ namespace FabricObserver.Observers
 
                             // TODO: Restart FO? Since the Linux customer is using ContainerObserver and FO is a stateless service, this has little impact on FO itself.
                             // Restarting FO here would reset the caps on the related binary and ContainerObserver would function correctly the next time it runs.
-                            //Environment.Exit(42);
+                            
+                            Environment.Exit(42);
                         }
                     }
 

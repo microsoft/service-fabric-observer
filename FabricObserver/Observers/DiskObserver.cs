@@ -55,6 +55,11 @@ namespace FabricObserver.Observers
 
         /* For folder size monitoring */
 
+        public bool FolderSizeMonitoringEnabled
+        {
+            get; set;
+        }
+
         public Dictionary<string, double> FolderSizeConfigDataError
         {
             get; set;
@@ -197,14 +202,17 @@ namespace FabricObserver.Observers
 
                 /* Process Folder size data. */
 
-                if (FolderSizeConfigDataWarning?.Count > 0)
+                if (FolderSizeMonitoringEnabled)
                 {
-                    CheckFolderSizeUsage(FolderSizeConfigDataWarning);
-                }
+                    if (FolderSizeConfigDataWarning?.Count > 0)
+                    {
+                        CheckFolderSizeUsage(FolderSizeConfigDataWarning);
+                    }
 
-                if (FolderSizeConfigDataError?.Count > 0)
-                {
-                    CheckFolderSizeUsage(FolderSizeConfigDataError);
+                    if (FolderSizeConfigDataError?.Count > 0)
+                    {
+                        CheckFolderSizeUsage(FolderSizeConfigDataError);
+                    }
                 }
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
@@ -232,7 +240,7 @@ namespace FabricObserver.Observers
 
         private void ProcessFolderSizeConfig()
         {
-            string FolderPathsErrorThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FolderSizePathsErrorThresholdsMb);
+            string FolderPathsErrorThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DiskObserverFolderPathsErrorThresholdsMb);
             
             if (!string.IsNullOrWhiteSpace(FolderPathsErrorThresholdPairs))
             {
@@ -240,7 +248,7 @@ namespace FabricObserver.Observers
                 AddFolderSizeConfigData(FolderPathsErrorThresholdPairs, false);
             }
 
-            string FolderPathsWarningThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FolderSizePathsWarningThresholdsMb);
+            string FolderPathsWarningThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DiskObserverFolderPathsWarningThresholdsMb);
             
             if (!string.IsNullOrWhiteSpace(FolderPathsWarningThresholdPairs))
             {
@@ -599,7 +607,17 @@ namespace FabricObserver.Observers
                 }
 
                 // Folder size monitoring.
-                ProcessFolderSizeConfig();
+                if (bool.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverEnableFolderSizeMonitoring), out bool enableFolderMonitoring))
+                {
+                    FolderSizeMonitoringEnabled = enableFolderMonitoring;
+                    
+                    if (enableFolderMonitoring)
+                    {
+                        ProcessFolderSizeConfig();
+                    }
+                }
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException)
             {

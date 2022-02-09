@@ -49,9 +49,9 @@ namespace ClusterObserver
 
         private static bool EtwEnabled => ClusterObserverManager.EtwEnabled;
 
-        internal ConfigSettings ConfigSettings
+        public ConfigSettings ConfigSettings
         {
-            get;
+            get; set;
         }
 
         public string ObserverName
@@ -78,6 +78,7 @@ namespace ClusterObserver
         public bool IsEnabled => ConfigSettings == null || ConfigSettings.IsEnabled;
 
         public bool HasClusterUpgradeCompleted { get; private set; }
+        
         public bool HasApplicationUpgradeCompleted { get; private set; }
 
         /// <summary>
@@ -101,9 +102,8 @@ namespace ClusterObserver
 
         public async Task ObserveAsync(CancellationToken token)
         {
-            // If set, this observer will only run during the supplied interval.
-            // See Settings.xml/ApplicationManifest.xml
-            if (!IsEnabled || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
+            if (!IsEnabled || !ConfigSettings.EnableTelemetry 
+                || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
             }
@@ -177,16 +177,19 @@ namespace ClusterObserver
                     }
                 }
 
-                /* Cluster Health State Monitoring - App/Node */
+                // Check cluster upgrade status.
+                if (ConfigSettings.MonitorUpgradeStatus)
+                {
+                    await ReportClusterUpgradeStatusAsync(token);
+                }
+
+                /* Cluster Health State Monitoring - App/Node/... */
 
                 ClusterHealth clusterHealth =
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                             () => 
                                 FabricClientInstance.HealthManager.GetClusterHealthAsync(ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout, token), 
                             token);
-
-                // Check cluster upgrade status. This is to support tracking SF runtime upgrades until completion (success or failure outcome).
-                await ReportClusterUpgradeStatusAsync(token);
 
                 // Previous run generated unhealthy evaluation report. It's now Ok.
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok && (LastKnownClusterHealthState == HealthState.Error
@@ -485,7 +488,7 @@ namespace ClusterObserver
                 Uri appName = healthState.ApplicationName;
 
                 // Check upgrade status of unhealthy application. Note, this doesn't apply to System applications as they update as part of a platform update.
-                if (appName.OriginalString != "fabric:/System")
+                if (appName.OriginalString != "fabric:/System" && ConfigSettings.MonitorUpgradeStatus)
                 {
                     await ReportApplicationUpgradeStatus(appName, token);
                 }
