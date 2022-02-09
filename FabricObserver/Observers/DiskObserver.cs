@@ -282,14 +282,28 @@ namespace FabricObserver.Observers
 
                     if (isWarningThreshold)
                     {
-                        if (FolderSizeConfigDataWarning != null && !FolderSizeConfigDataWarning.ContainsKey(path))
+                        if (FolderSizeConfigDataWarning != null)
                         {
-                            FolderSizeConfigDataWarning.Add(path, threshold);
+                            if (!FolderSizeConfigDataWarning.ContainsKey(path))
+                            {
+                                FolderSizeConfigDataWarning.Add(path, threshold);
+                            }
+                            else if (FolderSizeConfigDataWarning[path] != threshold) // App Parameter upgrade?
+                            {
+                                FolderSizeConfigDataWarning[path] = threshold;  
+                            }
                         }
                     }
-                    else if (FolderSizeConfigDataError != null && !FolderSizeConfigDataError.ContainsKey(path))
+                    else if (FolderSizeConfigDataError != null)
                     {
-                        FolderSizeConfigDataError.Add(path, threshold);
+                        if (!FolderSizeConfigDataError.ContainsKey(path))
+                        {
+                            FolderSizeConfigDataError.Add(path, threshold);
+                        }
+                        else if (FolderSizeConfigDataError[path] != threshold) // App Parameter upgrade?
+                        {
+                            FolderSizeConfigDataError[path] = threshold;
+                        }
                     }
                 }
                 catch (Exception e) when (e is ArgumentException)
@@ -384,7 +398,7 @@ namespace FabricObserver.Observers
         {
             foreach (var item in data)
             {
-                if (string.IsNullOrWhiteSpace(item.Key) || !Directory.Exists(item.Key) || item.Value == 0)
+                if (string.IsNullOrWhiteSpace(item.Key) || !Directory.Exists(item.Key) || item.Value <= 0)
                 {
                     continue;
                 }
