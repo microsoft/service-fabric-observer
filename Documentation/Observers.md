@@ -517,9 +517,11 @@ After DiskObserver logs basic disk information, it performs measurements on all 
 
 For folder size monitoring (available in FO versions 3.1.24 and above), you supply full path/threshold size (in MB) in the following format: 
 
-```"[fullpath, threshold] [fullpath1 threshold1] ..."``` e.g., in ApplicationManifest.xml:  
+```"fullpath, threshold | fullpath1 threshold1 ..."``` e.g., in ApplicationManifest.xml:  
 
-```<Parameter Name="FolderSizePathsWarningThresholdsMb" DefaultValue="[C:\SvcFab\Log\Traces, 15000] [C:\somefolder\foo, 500]" />```
+``` XML 
+<Parameter Name="DiskObserverFolderSizePathsWarningThresholdsMb" DefaultValue="C:\SvcFab\Log\Traces, 15000 | C:\somefolder\foo, 500" />
+```
 
 **Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service.  
 

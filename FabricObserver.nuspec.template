@@ -10,6 +10,7 @@
 - Windows KVS LVID monitoring: Added check for instance name present for category before calling perf counter (and then handling expected exception when not present (old impl)).
 - Updated build scripts to support Setup user requirments in a more simplified way.
 - Updated Settings.xml and ApplicationManifest.xml to support updated build script and new DiskObserver folder size monitoring feature.
+- DiskObserver Application Parameters are now prefixed with "DiskObserver".
 - Updated unit tests.
 - Code improvements.
 	</releaseNotes>
