@@ -243,7 +243,7 @@ namespace FabricObserver.TelemetryLib
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
-                    { "FOVersion", errorData.Version },
+                    { source == FOTaskName ? "FOVersion" : "COVersion", errorData.Version },
                     { "CrashTime", errorData.CrashTime },
                     { "ErrorMessage", errorData.ErrorMessage },
                     { "CrashData", errorData.ErrorStack },
@@ -259,7 +259,7 @@ namespace FabricObserver.TelemetryLib
                     eventProperties.Add("NodeNameHash", nodeHashString);
                 }
 
-                telemetryClient.TrackEvent($"{FOTaskName}.{CriticalErrorEventName}", eventProperties);
+                telemetryClient.TrackEvent($"{source}.{CriticalErrorEventName}", eventProperties);
                 telemetryClient.Flush();
 
                 // allow time for flushing

@@ -58,9 +58,19 @@ namespace ClusterObserver.Utilities
             get; set;
         }
 
+        public bool MonitorUpgradeStatus
+        {
+            get; set;
+        }
+
         public bool EnableOperationalTelemetry
         {
             get; set;
+        }
+
+        public bool EnableTelemetry 
+        { 
+            get; set; 
         }
 
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
@@ -81,7 +91,7 @@ namespace ClusterObserver.Utilities
             // Observer enabled?
             if (bool.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.ObserverEnabled),
+                ObserverConstants.ObserverEnabledParameter),
                 out bool enabled))
             {
                 IsEnabled = enabled;
@@ -105,10 +115,19 @@ namespace ClusterObserver.Utilities
                 EnableOperationalTelemetry = enableOpsTelem;
             }
 
+            // Telemetry (user).
+            if (bool.TryParse(
+                GetConfigSettingValue(
+                ObserverConstants.EnableTelemetryParameter),
+                out bool enableTelemetry))
+            {
+                EnableTelemetry = enableTelemetry;
+            }
+
             // RunInterval?
             if (TimeSpan.TryParse(
                 GetConfigSettingValue(
-                ObserverConstants.ObserverRunIntervalParameterName),
+                ObserverConstants.ObserverRunIntervalParameter),
                 out TimeSpan runInterval))
             {
                 RunInterval = runInterval;
@@ -134,7 +153,7 @@ namespace ClusterObserver.Utilities
 
             if (TimeSpan.TryParse(
                 GetConfigSettingValue(
-                   ObserverConstants.MaxTimeNodeStatusNotOkSetting),
+                   ObserverConstants.MaxTimeNodeStatusNotOkSettingParameter),
                    out TimeSpan maxTimeNodeStatusNotOk))
             {
                 MaxTimeNodeStatusNotOk = maxTimeNodeStatusNotOk;
@@ -147,6 +166,15 @@ namespace ClusterObserver.Utilities
                     out bool monitorRepairJobs))
             {
                 MonitorRepairJobStatus = monitorRepairJobs;
+            }
+
+            // Monitor upgrades
+            if (bool.TryParse(
+                GetConfigSettingValue(
+                    ObserverConstants.MonitorUpgradesConfigurationSetting),
+                    out bool monitorUpgrades))
+            {
+                MonitorUpgradeStatus = monitorUpgrades;
             }
         }
 

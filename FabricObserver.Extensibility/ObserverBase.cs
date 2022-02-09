@@ -801,7 +801,7 @@ namespace FabricObserver.Observers
                 {
                     drive = $"{id}: ";
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && data.Property != ErrorWarningProperty.FolderSizeMB)
                     {
                         drive = $"{id.Remove(1, 2)}: ";
                     }
@@ -925,6 +925,11 @@ namespace FabricObserver.Observers
                     case ErrorWarningProperty.DiskSpaceUsageMb:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorDiskSpaceMB : FOErrorWarningCodes.NodeWarningDiskSpaceMB;
+                        break;
+
+                    case ErrorWarningProperty.FolderSizeMB:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorFolderSizeMB : FOErrorWarningCodes.NodeWarningFolderSizeMB;
                         break;
 
                     case ErrorWarningProperty.TotalMemoryConsumptionMb when healthReportType == HealthReportType.Application:

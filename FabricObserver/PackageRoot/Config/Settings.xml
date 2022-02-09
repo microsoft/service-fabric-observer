@@ -222,8 +222,11 @@
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="" MustOverride="true" />
     <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" MustOverride="true" />
-    <Parameter Name="AverageQueueLengthErrorThreshold" Value ="" MustOverride="true" />
-    <Parameter Name="AverageQueueLengthWarningThreshold" Value ="" MustOverride="true" />
+    <Parameter Name="AverageQueueLengthErrorThreshold" Value="" MustOverride="true" />
+    <Parameter Name="AverageQueueLengthWarningThreshold" Value="" MustOverride="true" />
+	<Parameter Name="EnableFolderSizeMonitoring" Value="" MustOverride="true" />
+	<Parameter Name="FolderPathsErrorThresholdsMb" Value="" MustOverride="true" />
+	<Parameter Name="FolderPathsWarningThresholdsMb" Value="" MustOverride="true" />
   </Section>
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />

@@ -26,6 +26,7 @@ namespace FabricObserver.Observers
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
         private readonly bool isWindows;
+        private bool isElevatedLinux;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allMemDataMB;
 
@@ -486,19 +487,29 @@ namespace FabricObserver.Observers
                 // Was there an error running docker stats?
                 if (exitStatus != 0)
                 {
-                    string msg = $"docker stats exited with {exitStatus}: {error}";
+                    string msg = $"docker stats exited with {exitStatus}: {error}{Environment.NewLine}";
 
                     if (isWindows)
                     {
-                        msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
+                        msg += "NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                 "in order for ContainerObserver to function correctly on Windows.";
                     }
-                    else // TODO: Figure out how to make this more resilient to when SF touches the cap binary (probably as part of a cluster upgrade), removing the cap set.. 
+                    else
                     {
-                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the Capabilities set. " +
-                               "In order to fix this, you can do a versionless parameter-only app upgrade (setting ContainerObserverEnableConcurrentMonitoring to false, for example), " +
-                               "which will restart FabricObserver on each node. This will reset the Capabilities on the elevated_docker_stats binary. " +
-                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux, as a last resort.";
+                        // This means ContainerObserver has already run successfully on Linux in this FO instance (proc) and SF may have touched FO's Code folder binaries
+                        // during a cluster upgrade, which breaks the caps set on the related caps binaries (elevated_docker_stats in this case).
+                        // The only recourse is to re-run the FO setup script by restarting the FO process (or by deploying FO as root user on the target machine).
+                        if (isElevatedLinux)
+                        {
+                            msg += $"elevated_docker_stats caps may have been removed (SF cluster upgrade?). " +
+                                   "You should restart the FO process to put the caps set back in place (the FO linux setup script does this). " +
+                                   "If this consistently happens (it should not), then consider running FO as root (see Policies node in ApplicationManifest.xml).";
+
+                            // TODO: Restart FO? Since the Linux customer is using ContainerObserver and FO is a stateless service, this has little impact on FO itself.
+                            // Restarting FO here would reset the caps on the related binary and ContainerObserver would function correctly the next time it runs.
+                            
+                            Environment.Exit(42);
+                        }
                     }
 
                     ObserverLogger.LogWarning(msg);
@@ -545,6 +556,13 @@ namespace FabricObserver.Observers
                     }
 
                     return false;
+                }
+
+                // Linux caps.
+                if (!isWindows && !isElevatedLinux)
+                {
+                    // This means the caps are in place on the elevated_docker_stats binary. Nothing has touched the binary, which would remove the caps.
+                    isElevatedLinux = true;
                 }
 
                 _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>

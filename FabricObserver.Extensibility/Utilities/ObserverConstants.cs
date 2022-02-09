@@ -94,6 +94,9 @@ namespace FabricObserver.Observers.Utilities
         public const string DiskObserverDiskSpacePercentWarning = "DiskSpacePercentUsageWarningThreshold";
         public const string DiskObserverAverageQueueLengthError = "AverageQueueLengthErrorThreshold";
         public const string DiskObserverAverageQueueLengthWarning = "AverageQueueLengthWarningThreshold";
+        public const string DiskObserverEnableFolderSizeMonitoring = "EnableFolderSizeMonitoring";
+        public const string DiskObserverFolderPathsErrorThresholdsMb = "FolderPathsErrorThresholdsMb";
+        public const string DiskObserverFolderPathsWarningThresholdsMb = "FolderPathsWarningThresholdsMb";
 
         // FabricSystemObserver.
         public const string FabricSystemObserverName = "FabricSystemObserver";

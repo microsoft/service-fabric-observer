@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can use an XML diff/merge tool to make upgrading your base configuration to the latest version easier. 
      Get the tool here: https://github.com/gittorre/XmlDiffPatchSF -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.23" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.24" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
     <!-- ObserverManager Configuration -->
@@ -21,7 +21,7 @@
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
-    <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver. -->
+    <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
@@ -57,7 +57,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
@@ -69,9 +69,9 @@
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers.
          If you enable concurrent monitoring for AppObserver and you are running on capable CPU (>= 4 logical processors),
-		 then you should increase this value from 1 second to at most (1/2 the number of logical processors) seconds on the target machine.
-		 **However, if you monitor a *very* large number of services (>200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
-		 Do leave this set at 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4) -->
+         then you should increase this value from 1 second to at most (1/2 the number of logical processors) seconds on the target machine.
+         **However, if you monitor a *very* large number of services (>200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
+         Do leave this set at 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4) -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:03" />
@@ -95,9 +95,9 @@
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree (descendants) monitoring.
-	     Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring.
-		 In that case, enabling this may eat a lot of cpu. Please test, as always. If you know your target services
-		 do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you already know.. -->
+         Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring.
+         In that case, enabling this may eat a lot of cpu. Please test, as always. If you know your target services
+         do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you already know.. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
@@ -113,12 +113,12 @@
     <!-- Concurrency/Parallelism Support -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- The default value is 1/4 of detected logical processors. This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
-	     You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
-		 eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
-		 Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
+         You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
+         eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
+         Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only. NOTE: If you do not monitor stateful Actor services, then this should be set to false.
-	     This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+	 This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- Working set type -->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
@@ -134,10 +134,15 @@
     <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- Disk Observer Warning/Error Thresholds -->
-    <Parameter Name="DiskSpacePercentUsageWarningThreshold" DefaultValue="85" />
-    <Parameter Name="DiskSpacePercentUsageErrorThreshold" DefaultValue="" />
-    <Parameter Name="AverageQueueLengthErrorThreshold" DefaultValue="" />
-    <Parameter Name="AverageQueueLengthWarningThreshold" DefaultValue="15" />
+    <Parameter Name="DiskObserverDiskSpacePercentUsageWarningThreshold" DefaultValue="90" />
+    <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
+    <Parameter Name="DiskObserverAverageQueueLengthErrorThreshold" DefaultValue="" />
+    <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="15" />
+    <!-- Folder size monitoring. -->
+    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
+    <!-- Supply full path/threshold(in MB) pairs here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
+    <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
+    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="" />
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
@@ -146,7 +151,7 @@
     <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
-	     This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <Parameter Name="FabricSystemMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
@@ -208,7 +213,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.23" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.24" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -252,12 +257,15 @@
             <Parameter Name="Enabled" Value="[DiskObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[DiskObserverEnableTelemetry]" />
             <Parameter Name="EnableEtw" Value="[DiskObserverEnableEtw]" />
+            <Parameter Name="EnableFolderSizeMonitoring" Value="[DiskObserverEnableFolderSizeMonitoring]" />
             <Parameter Name="EnableVerboseLogging" Value="[DiskObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[DiskObserverRunInterval]" />
-            <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="[DiskSpacePercentUsageErrorThreshold]" />
-            <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="[DiskSpacePercentUsageWarningThreshold]" />
-            <Parameter Name="AverageQueueLengthErrorThreshold" Value="[AverageQueueLengthErrorThreshold]" />
-            <Parameter Name="AverageQueueLengthWarningThreshold" Value="[AverageQueueLengthWarningThreshold]" />
+            <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="[DiskObserverDiskSpacePercentUsageErrorThreshold]" />
+            <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="[DiskObserverDiskSpacePercentUsageWarningThreshold]" />
+            <Parameter Name="AverageQueueLengthErrorThreshold" Value="[DiskObserverAverageQueueLengthErrorThreshold]" />
+            <Parameter Name="AverageQueueLengthWarningThreshold" Value="[DiskObserverAverageQueueLengthWarningThreshold]" />
+            <Parameter Name="FolderPathsErrorThresholdsMb" Value="[DiskObserverFolderPathsErrorThresholdsMb]" />
+            <Parameter Name="FolderPathsWarningThresholdsMb" Value="[DiskObserverFolderPathsWarningThresholdsMb]" />
           </Section>
           <Section Name="FabricSystemObserverConfiguration">
             <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
@@ -383,10 +391,10 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!-- Note that the FO build script will add a Policies node for System user setup (run setup script as LocalSystem). This is here for your use if you deploy FO from sources and need to run FO as System/root user.
     <Policies>
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies> -->
+      <!-- Change EntryPointType attribute value to All (or remove the EntryPointType attribute entirely) if you want to run FO as system/root user. -->
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+    </Policies>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -399,12 +407,11 @@
       </StatelessService>
     </Service>
   </DefaultServices>
-  <!-- Note that the FO build script will add a Principals node for System user (LocalSystem). This is here for your use if you deploy FO from sources and need to run FO as System/root user.
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
     </Users>
-  </Principals> -->
+  </Principals>
   <Certificates>
     <SecretsCertificate X509FindValue="" Name="" />
   </Certificates>

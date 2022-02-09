@@ -21,18 +21,7 @@ using FabricObserver.Observers.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
-/*
-
- Many of these tests will work without the presence of a Fabric runtime (so, no running cluster).
- Some of them can't because there is a need for things like an actual Fabric runtime instance.
-
- ***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***
-
- Make sure that your observers can run as Network Service (e.g., FabricClientRole.User).
- There is seldom a real need to run FabricObserver as an Admin or System user unless you need to monitor service processes on Windows that run as System.
- As a rule, do not run with system level privileges unless you provably have to.
-
-*/
+/***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
 
 namespace FabricObserverTests
 {
@@ -513,13 +502,19 @@ namespace FabricObserverTests
 
             // On a one-node cluster like your dev machine, pass true for ignoreDefaultQueryTimeout otherwise each FabricClient query will take 2 minutes 
             // to timeout in ClusterObserver.
-            var obs = new ClusterObserver.ClusterObserver(null, true);
+            var obs = new ClusterObserver.ClusterObserver(null, ignoreDefaultQueryTimeout: true)
+            {
+                ConfigSettings = new ClusterObserver.Utilities.ConfigSettings(null, null)
+                {
+                    EnableTelemetry = true
+                }
+            };
+
             await obs.ObserveAsync(token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
         }
-
 
         [TestMethod]
         public async Task CertificateObserver_validCerts()
@@ -824,11 +819,18 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
+            var warningDictionary = new Dictionary<string, double>
+            {
+                { @"C:\SFDevCluster\Log\Traces", 50000 }
+            };
+
             using var obs = new DiskObserver(client, context)
             {
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
-                MonitorDuration = TimeSpan.FromSeconds(1)
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                FolderSizeMonitoringEnabled = true,
+                FolderSizeConfigDataWarning = warningDictionary
             };
 
 
@@ -873,11 +875,20 @@ namespace FabricObserverTests
             ObserverManager.FabricClientInstance = client;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+            var warningDictionary = new Dictionary<string, double>
+            {
+                // Modify the key to point to a path you know exists on your computer.
+                { @"C:\SFDevCluster\Log\Traces", 50 }
+            };
 
             using var obs = new DiskObserver(client, context)
             {
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
+                FolderSizeMonitoringEnabled = true,
+
+                // Folder size monitoring. This will most likely generate a warning (you should modify the key above to be some folder you know is larger than 50MB).
+                FolderSizeConfigDataWarning = warningDictionary,
 
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
@@ -894,8 +905,11 @@ namespace FabricObserverTests
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected error or warning disk health conditions.
+            // observer detected issues with disk/folder size.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // Both disk consumption and folder size warnings were generated.
+            Assert.IsTrue(obs.CurrentWarningCount == 2);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);

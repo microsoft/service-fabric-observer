@@ -11,6 +11,7 @@ using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,10 +19,8 @@ using FabricObserver.Observers.Utilities;
 
 namespace FabricObserver.Observers
 {
-    // This observer monitors logical disk behavior and signals Service Fabric Warning or Error events based on user-supplied thresholds
-    // in Settings.xml.
-    // The output (a local file) is used by the API service and the HTML frontend (http://localhost:5000/api/ObserverManager).
-    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
+    // DiskObserver monitors logical disk states (space consumption, queue length and folder sizes) and creates Service Fabric
+    // Warning or Error Node-level health reports based on settings in ApplicationManifest.xml.
     public class DiskObserver : ObserverBase
     {
         // Data storage containers for post run analysis.
@@ -29,6 +28,7 @@ namespace FabricObserver.Observers
         private List<FabricResourceUsageData<double>> DiskSpaceUsagePercentageData;
         private List<FabricResourceUsageData<double>> DiskSpaceAvailableMbData;
         private List<FabricResourceUsageData<double>> DiskSpaceTotalMbData;
+        private List<FabricResourceUsageData<double>> FolderSizeDataMb;
         private readonly Stopwatch stopWatch;
         private readonly bool isWindows;
         private StringBuilder diskInfo = new StringBuilder();
@@ -49,6 +49,23 @@ namespace FabricObserver.Observers
         }
 
         public int AverageQueueLengthErrorThreshold
+        {
+            get; set;
+        }
+
+        /* For folder size monitoring */
+
+        public bool FolderSizeMonitoringEnabled
+        {
+            get; set;
+        }
+
+        public Dictionary<string, double> FolderSizeConfigDataError
+        {
+            get; set;
+        }
+
+        public Dictionary<string, double> FolderSizeConfigDataWarning
         {
             get; set;
         }
@@ -86,13 +103,14 @@ namespace FabricObserver.Observers
             DiskSpaceUsagePercentageData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceAvailableMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceTotalMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
+            FolderSizeDataMb ??= new List<FabricResourceUsageData<double>>();
 
             if (isWindows)
             {
                 DiskAverageQueueLengthData ??= new List<FabricResourceUsageData<float>>(driveCount);
             }
 
-            try 
+            try
             {
                 foreach (var d in allDrives)
                 {
@@ -119,7 +137,6 @@ namespace FabricObserver.Observers
                         _ = diskInfo.AppendFormat("  % Used    : {0}%\n", DiskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
                     }
 
-                    // Setup monitoring data structures.
                     string id = d.Name;
 
                     // Since these live across iterations, do not duplicate them in the containing list.
@@ -148,6 +165,7 @@ namespace FabricObserver.Observers
                     }
 
                     // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
+                    // Also, this feature is not supported for Linux yet.
                     if (isWindows)
                     {
                         if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
@@ -176,13 +194,28 @@ namespace FabricObserver.Observers
                     token.ThrowIfCancellationRequested();
 
                     _ = diskInfo.AppendFormat(
-                        "{0}", 
+                        "{0}",
                         GetWindowsPerfCounterDetailsText(DiskAverageQueueLengthData.FirstOrDefault(
                                                             x => d.Name.Length > 0 && x.Id == d.Name[..1])?.Data,
                                                                  "Avg. Disk Queue Length"));
                 }
+
+                /* Process Folder size data. */
+
+                if (FolderSizeMonitoringEnabled)
+                {
+                    if (FolderSizeConfigDataWarning?.Count > 0)
+                    {
+                        CheckFolderSizeUsage(FolderSizeConfigDataWarning);
+                    }
+
+                    if (FolderSizeConfigDataError?.Count > 0)
+                    {
+                        CheckFolderSizeUsage(FolderSizeConfigDataError);
+                    }
+                }
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}"); 
                 
@@ -190,7 +223,7 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            await ReportAsync(token).ConfigureAwait(true);
+            await ReportAsync(token).ConfigureAwait(false);
 
             // The time it took to run this observer.
             stopWatch.Stop();
@@ -203,6 +236,229 @@ namespace FabricObserver.Observers
 
             stopWatch.Reset();
             LastRunDateTime = DateTime.Now;
+        }
+
+        private void ProcessFolderSizeConfig()
+        {
+            string FolderPathsErrorThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DiskObserverFolderPathsErrorThresholdsMb);
+            
+            if (!string.IsNullOrWhiteSpace(FolderPathsErrorThresholdPairs))
+            {
+                FolderSizeConfigDataError ??= new Dictionary<string, double>();
+                AddFolderSizeConfigData(FolderPathsErrorThresholdPairs, false);
+            }
+
+            string FolderPathsWarningThresholdPairs = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DiskObserverFolderPathsWarningThresholdsMb);
+            
+            if (!string.IsNullOrWhiteSpace(FolderPathsWarningThresholdPairs))
+            {
+                FolderSizeConfigDataWarning ??= new Dictionary<string, double>();
+                AddFolderSizeConfigData(FolderPathsWarningThresholdPairs, true);
+            }
+        }
+
+        private void AddFolderSizeConfigData(string folderSizeConfig, bool isWarningThreshold)
+        {
+            // No config settings supplied.
+            if (string.IsNullOrWhiteSpace(folderSizeConfig))
+            {
+                return;
+            }
+
+            if (!TryGetFolderSizeConfigSettingData(folderSizeConfig, out string[] configData))
+            {
+                return;
+            }
+
+            foreach (string data in configData)
+            {
+                string[] pairs = data.Split(",");
+
+                if (pairs.Length != 2)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    string path = pairs[0];
+
+                    if (!double.TryParse(pairs[1], out double threshold))
+                    {
+                        continue;
+                    }
+
+                    if (isWarningThreshold)
+                    {
+                        if (FolderSizeConfigDataWarning != null)
+                        {
+                            if (!FolderSizeConfigDataWarning.ContainsKey(path))
+                            {
+                                FolderSizeConfigDataWarning.Add(path, threshold);
+                            }
+                            else if (FolderSizeConfigDataWarning[path] != threshold) // App Parameter upgrade?
+                            {
+                                FolderSizeConfigDataWarning[path] = threshold;  
+                            }
+                        }
+                    }
+                    else if (FolderSizeConfigDataError != null)
+                    {
+                        if (!FolderSizeConfigDataError.ContainsKey(path))
+                        {
+                            FolderSizeConfigDataError.Add(path, threshold);
+                        }
+                        else if (FolderSizeConfigDataError[path] != threshold) // App Parameter upgrade?
+                        {
+                            FolderSizeConfigDataError[path] = threshold;
+                        }
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException)
+                {
+
+                }
+            }
+        }
+
+        private bool TryGetFolderSizeConfigSettingData(string folderSizeConfig, out string[] configData)
+        {
+            if (string.IsNullOrWhiteSpace(folderSizeConfig))
+            {
+                configData = null;
+                return false;
+            }
+
+            try
+            {
+                string[] data = folderSizeConfig.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                
+                for (int i = 0; i < data.Length; ++i)
+                {
+                    data[i] = data[i].Trim();
+                }
+
+                if (data.Length > 0)
+                {
+                    configData = data.Where(x => x.Contains(',')).ToArray();
+
+                    if (configData.Length < data.Length)
+                    {
+                        ObserverLogger.LogWarning("TryGetFolderSizeConfigSettingData: Some path/threshold pairs were missing ',' between items. Ignoring.");
+                    }
+
+                    return true;
+                }
+                
+                string message = $"Invalid format for Folder paths/thresholds setting. Supplied {folderSizeConfig}. Expected 'path, threshold'. " +
+                                 $"If supplying multiple path/threshold pairs, each pair must be separated by a | character.";
+
+                var healthReport = new Utilities.HealthReport
+                {
+                    EmitLogEvent = true,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = $"InvalidConfigFormat({folderSizeConfig})",
+                    ReportType = HealthReportType.Node,
+                    State = ObserverManager.ObserverFailureHealthStateLevel,
+                    NodeName = NodeName,
+                    Observer = ObserverConstants.DiskObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                                                $"InvalidConfigFormat",
+                                                ObserverManager.ObserverFailureHealthStateLevel,
+                                                message,
+                                                ObserverName,
+                                                Token);
+                }
+
+                // ETW.
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Property = $"InvalidConfigFormat",
+                                        Level = ObserverManager.ObserverFailureHealthStateLevel,
+                                        Message = message,
+                                        ObserverName
+                                    });
+                }
+            }
+            catch (ArgumentException)
+            {
+
+            }
+
+            configData = null;
+            return false;
+        }
+
+        private void CheckFolderSizeUsage(IDictionary<string, double> data)
+        {
+            foreach (var item in data)
+            {
+                if (string.IsNullOrWhiteSpace(item.Key) || !Directory.Exists(item.Key) || item.Value <= 0)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (!FolderSizeDataMb.Any(x => x.Id == item.Key))
+                    {
+                        FolderSizeDataMb.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.FolderSizeMB, item.Key, 1));
+                    }
+
+                    double size = GetFolderSize(item.Key, SizeUnit.Megabytes);
+                    FolderSizeDataMb.Find(x => x.Id == item.Key)?.AddData(size);
+                }
+                catch (ArgumentException ae)
+                {
+                    ObserverLogger.LogWarning($"CheckFolderSizeUsage: Handled exception:{Environment.NewLine}{ae}");
+                }
+            }
+        }
+
+        private double GetFolderSize(string path, SizeUnit unit)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                ObserverLogger.LogWarning($"GetFolderSize: Invalid value supplied for {nameof(path)} parameter. Supplied value = '{path}'");
+                return 0.0;
+            }
+
+            if (!Directory.Exists(path))
+            {
+                ObserverLogger.LogWarning($"GetFolderSize: '{path}' does not exist.");
+                return 0.0;
+            }
+
+            try
+            {
+                var dir = new DirectoryInfo(path);
+                double folderSizeInBytes = Convert.ToDouble(dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length));
+
+                if (unit == SizeUnit.Gigabytes)
+                {
+                    return folderSizeInBytes / 1024 / 1024 / 1024;
+                }
+
+                return folderSizeInBytes / 1024 / 1024;
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
+            {
+                ObserverLogger.LogWarning($"Failure computing folder size for {path}:{Environment.NewLine}{e}");
+                return 0.0;
+            }
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -221,6 +477,32 @@ namespace FabricObserver.Observers
                                         data,
                                         DiskSpacePercentErrorThreshold,
                                         DiskSpacePercentWarningThreshold,
+                                        timeToLiveWarning);
+                }
+
+                // Folder size.
+                for (int i = 0; i < FolderSizeDataMb.Count; ++i)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    var data = FolderSizeDataMb[i];
+                    double errorThreshold = 0.0;
+                    double warningThreshold = 0.0;
+
+                    if (FolderSizeConfigDataError?.Count > 0 && FolderSizeConfigDataError.ContainsKey(data.Id))
+                    {
+                        errorThreshold = FolderSizeConfigDataError[data.Id];
+                    }
+
+                    if (FolderSizeConfigDataWarning?.Count > 0 && FolderSizeConfigDataWarning.ContainsKey(data.Id))
+                    {
+                        warningThreshold = FolderSizeConfigDataWarning[data.Id];
+                    }
+
+                    ProcessResourceDataReportHealth(
+                                        data,
+                                        errorThreshold,
+                                        warningThreshold,
                                         timeToLiveWarning);
                 }
 
@@ -273,14 +555,8 @@ namespace FabricObserver.Observers
                 _ = ObserverLogger.TryWriteLogFile(diskInfoPath, diskInfo.ToString());
                 _ = diskInfo.Clear();
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException || e is FabricException)
-                {
-                    throw;
-                }
-
                 ObserverLogger.LogWarning($"Unhandled exception in ReportAsync:{Environment.NewLine}{e}");
 
                 // Fix the bug..
@@ -296,42 +572,51 @@ namespace FabricObserver.Observers
 
             try
             {
-                if (int.TryParse(
-                            GetSettingParameterValue(
-                            ConfigurationSectionName,
-                            ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
+                if (int.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
                     DiskSpacePercentErrorThreshold = diskUsedError;
                 }
 
                 Token.ThrowIfCancellationRequested();
 
-                if (int.TryParse(
-                            GetSettingParameterValue(
-                            ConfigurationSectionName,
-                            ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
+                if (int.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
                     DiskSpacePercentWarningThreshold = diskUsedWarning;
                 }
 
                 Token.ThrowIfCancellationRequested();
 
-                if (int.TryParse(
-                            GetSettingParameterValue(
-                            ConfigurationSectionName,
-                            ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
+                if (int.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
                 {
                     AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
                 }
 
                 Token.ThrowIfCancellationRequested();
 
-                if (int.TryParse(
-                            GetSettingParameterValue(
-                                ConfigurationSectionName,
-                                ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
+                if (int.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
                     AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
+                }
+
+                // Folder size monitoring.
+                if (bool.TryParse(GetSettingParameterValue(
+                                    ConfigurationSectionName,
+                                    ObserverConstants.DiskObserverEnableFolderSizeMonitoring), out bool enableFolderMonitoring))
+                {
+                    FolderSizeMonitoringEnabled = enableFolderMonitoring;
+                    
+                    if (enableFolderMonitoring)
+                    {
+                        ProcessFolderSizeConfig();
+                    }
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException)
@@ -347,6 +632,7 @@ namespace FabricObserver.Observers
                 }
 
                 ObserverLogger.LogWarning($"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
+                
                 // Fix the bug...
                 throw;
             }

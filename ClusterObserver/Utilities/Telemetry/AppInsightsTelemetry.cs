@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,9 +39,9 @@ namespace ClusterObserver.Utilities.Telemetry
             }
 
             logger = new Logger("TelemetryLog");
-
-            TelemetryConfiguration configuration = new TelemetryConfiguration { InstrumentationKey = key };
-            telemetryClient = new TelemetryClient(new TelemetryConfiguration { InstrumentationKey = key });
+            TelemetryConfiguration configuration = TelemetryConfiguration.CreateDefault();
+            configuration.InstrumentationKey = key;
+            telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
             configuration.TelemetryChannel.DeveloperMode = true;
@@ -336,6 +337,94 @@ namespace ClusterObserver.Utilities.Telemetry
             telemetryClient.TrackMetric(mt);
 
             return Task.FromResult(0);
+        }
+
+        public Task<bool> ReportClusterUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
+        {
+            if (!IsEnabled || eventData?.FabricUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return Task.FromResult(false);
+            }
+
+            try
+            {
+                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                {
+                    { "EventName", "ClusterUpgradeEvent" },
+                    { "TaskName", ObserverConstants.ClusterObserverName },
+                    { "ClusterId", eventData.ClusterId },
+                    { "Timestamp", DateTime.UtcNow.ToString("o") },
+                    { "OS", eventData.OS },
+                    { "UpgradeTargetCodeVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion },
+                    { "UpgradeTargetConfigVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion },
+                    { "UpgradeState", Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState) },
+                    { "UpgradeDomain", eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
+                    { "UpgradeDuration", eventData.FabricUpgradeProgress?.CurrentUpgradeDomainDuration.ToString() },
+                    { "FailureReason", eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null }
+                };
+
+                telemetryClient.TrackEvent($"{ObserverConstants.ClusterObserverName}.ClusterUpgradeEvent", eventProperties);
+                telemetryClient.Flush();
+
+                // allow time for flushing
+                Thread.Sleep(1000);
+
+                eventProperties.Clear();
+                eventProperties = null;
+
+                return Task.FromResult(true);
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e}");
+            }
+
+            return Task.FromResult(false);
+        }
+
+        public Task<bool> ReportApplicationUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
+        {
+            if (!IsEnabled || eventData?.ApplicationUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return Task.FromResult(false);
+            }
+
+            try
+            {
+                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                {
+                    { "EventName", "ApplicationUpgradeEvent" },
+                    { "TaskName", ObserverConstants.ClusterObserverName },
+                    { "ClusterId", eventData.ClusterId },
+                    { "Timestamp", DateTime.UtcNow.ToString("o") },
+                    { "OS", eventData.OS },
+                    { "ApplicationName", eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString },
+                    { "UpgradeTargetTypeVersion", eventData.ApplicationUpgradeProgress.UpgradeDescription?.TargetApplicationTypeVersion },
+                    { "UpgradeState", Enum.GetName(typeof(ApplicationUpgradeState), eventData.ApplicationUpgradeProgress.UpgradeState) },
+                    { "UpgradeDomain", eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
+                    { "UpgradeDuration", eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration.ToString() },
+                    { "FailureReason", eventData.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.ApplicationUpgradeProgress.FailureReason.Value) : null }
+                };
+
+                telemetryClient.TrackEvent($"{ObserverConstants.ClusterObserverName}.ApplicationUpgradeEvent", eventProperties);
+                telemetryClient.Flush();
+
+                // allow time for flushing
+                Thread.Sleep(1000);
+
+                eventProperties.Clear();
+                eventProperties = null;
+
+                return Task.FromResult(true);
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                logger.LogWarning($"Failure in ReportApplicationUpgradeStatus:{Environment.NewLine}{e}");
+            }
+
+            return Task.FromResult(false);
         }
     }
 }

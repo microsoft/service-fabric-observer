@@ -4,7 +4,7 @@
     <id>%PACKAGE_ID%</id>
     <version>2.1.13</version>
 	  <releaseNotes>
-- Added readme to nupkg.
+- Added Cluster and Application Upgrade status monitoring feature. See https://github.com/microsoft/service-fabric-observer/issues/195
 	  </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

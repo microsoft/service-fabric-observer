@@ -47,7 +47,7 @@ namespace FabricObserver.Observers.Utilities
         } = new Logger("OSUtilities");
 
 
-        public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetMemoryInfo();
+        public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo();
 
         public abstract int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null);
 

@@ -38,7 +38,7 @@ Example Configuration:
 <?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="ObserverManagerConfiguration">
-    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. Internally, the run loop will sleep for 10 seconds if this
+    <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. Internally, the run loop will sleep for 15 seconds if this
          setting is not greater than 0. -->
     <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
     <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
@@ -96,7 +96,7 @@ Example Configuration:
     <!-- How often to run ClusterObserver. This is a Timespan value, e.g., 00:10:00 means every 10 minutes, for example. -->
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Report on currently executing Repair Jobs in the cluster. -->
-    <Parameter Name="MonitorRepairJobs" Value="" MustOverride ="true" />
+    <Parameter Name="MonitorRepairJobs" Value="" MustOverride="true" />
     <!-- CO diagnostic telemetry. -->
     <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>

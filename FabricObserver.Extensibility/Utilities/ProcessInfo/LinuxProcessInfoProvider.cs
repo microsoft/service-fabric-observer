@@ -154,7 +154,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        public override double ProcessGetCurrentKvsLvidsUsedPercentage(string procName)
+        public override double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1)
         {
             // Not supported on Linux.
             return -1;
