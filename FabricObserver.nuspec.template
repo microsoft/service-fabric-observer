@@ -2,17 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.24</version>
+    <version>3.1.25</version>
     <releaseNotes>
-- New Feature: DiskObserver can be configured to monitor and report on folder size.
-- WindowsInfoProvider.TupleGetSystemMemoryInfo is now more performant (across memory and CPU).
-- Windows KVS LVID monitoring: Support for same-named service processes.
-- Windows KVS LVID monitoring: Added check for instance name present for category before calling perf counter (and then handling expected exception when not present (old impl)).
-- Updated build scripts to support Setup user requirments in a more simplified way.
-- Updated Settings.xml and ApplicationManifest.xml to support updated build script and new DiskObserver folder size monitoring feature.
-- DiskObserver Application Parameters are now prefixed with "DiskObserver".
-- Updated unit tests.
-- Code improvements.
+- Updated error codes to match new DiskObserver feature.
+- Extensibility dll version now matches FabricObserver's.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

@@ -116,6 +116,8 @@ namespace FabricObserver.Observers.Utilities
             { NodeWarningDiskSpaceMB, "NodeWarningDiskSpaceMB" },
             { NodeErrorDiskAverageQueueLength, "NodeErrorDiskAverageQueueLength" },
             { NodeWarningDiskAverageQueueLength, "NodeWarningDiskAverageQueueLength" },
+            { NodeErrorFolderSizeMB, "NodeErrorFolderSizeMB" },
+            { NodeWarningFolderSizeMB, "NodeWarningFolderSizeMB" },
             { NodeErrorMemoryPercent, "NodeErrorMemoryPercent" },
             { NodeWarningMemoryPercent, "NodeWarningMemoryPercent" },
             { NodeErrorMemoryMB, "NodeErrorMemoryMB" },

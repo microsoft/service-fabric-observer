@@ -29,7 +29,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.1.13 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.1.14 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 Example Configuration:  
@@ -140,7 +140,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "TaskName": "ClusterObserver",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "COVersion": "2.1.13",
+    "COVersion": "2.1.14",
     "Timestamp": "2021-11-22T19:02:04.4287671Z",
     "OS": "Windows"
 }

@@ -516,7 +516,7 @@ After DiskObserver logs basic disk information, it performs measurements on all 
 </Section>
 ```
 
-For folder size monitoring (available in FO versions 3.1.24 and above), enable the feature and supply full path/threshold size (in MB) pairs in the following format: 
+For folder size monitoring (available in FO versions 3.1.25 and above), enable the feature and supply full path/threshold size (in MB) pairs in the following format: 
 
 ```"fullpath, threshold | fullpath1 threshold1 ..."``` 
 

@@ -31,6 +31,8 @@ namespace ClusterObserver.Utilities
         public const string NodeWarningDiskSpaceMB = "FO010";
         public const string NodeErrorDiskAverageQueueLength = "FO011";
         public const string NodeWarningDiskAverageQueueLength = "FO012";
+        public const string NodeErrorFolderSizeMB = "FO042";
+        public const string NodeWarningFolderSizeMB = "FO043";
 
         // Memory
         public const string AppErrorMemoryPercent = "FO013";
@@ -70,6 +72,9 @@ namespace ClusterObserver.Utilities
         public const string AppErrorTooManyThreads = "FO039";
         public const string AppWarningTooManyThreads = "FO040";
 
+        // Process KVS LVIDs (Percent of maximum available currently in use)
+        public const string AppWarningKvsLvidsPercentUsed = "FO041";
+
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
             get;
@@ -91,7 +96,8 @@ namespace ClusterObserver.Utilities
             { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
             { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
             { AppErrorTooManyThreads, "AppErrorTooManyThreads" },
-            { AppWarningTooManyThreads, "AppWarningTooManyThreads" }
+            { AppWarningTooManyThreads, "AppWarningTooManyThreads" },
+            { AppWarningKvsLvidsPercentUsed, "AppWarningKvsLvidsPercentUsed"}
         };
 
         public static Dictionary<string, string> NodeErrorCodesDictionary
@@ -110,6 +116,8 @@ namespace ClusterObserver.Utilities
             { NodeWarningDiskSpaceMB, "NodeWarningDiskSpaceMB" },
             { NodeErrorDiskAverageQueueLength, "NodeErrorDiskAverageQueueLength" },
             { NodeWarningDiskAverageQueueLength, "NodeWarningDiskAverageQueueLength" },
+            { NodeErrorFolderSizeMB, "NodeErrorFolderSizeMB" },
+            { NodeWarningFolderSizeMB, "NodeWarningFolderSizeMB" },
             { NodeErrorMemoryPercent, "NodeErrorMemoryPercent" },
             { NodeWarningMemoryPercent, "NodeWarningMemoryPercent" },
             { NodeErrorMemoryMB, "NodeErrorMemoryMB" },
