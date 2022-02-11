@@ -142,7 +142,7 @@
     <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
     <!-- Supply full path/threshold(in MB) pairs here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
     <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
-    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\SomeFolder\Log, 500" />
+    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\SomeFolder\Log, 500 | D:\MyFolder, 1000" />
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
