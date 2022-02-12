@@ -13,6 +13,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
@@ -283,6 +284,20 @@ namespace FabricObserver.Observers
                 {
                     string path = pairs[0];
 
+                    // Contains env variable(s)?
+                    if (path.Contains('%'))
+                    {
+                        if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
+                        {
+                            path = Environment.ExpandEnvironmentVariables(path);
+                        }
+                    }
+
+                    if (!Directory.Exists(path))
+                    {
+                        continue;
+                    }
+
                     if (!double.TryParse(pairs[1], out double threshold))
                     {
                         continue;
@@ -406,24 +421,40 @@ namespace FabricObserver.Observers
         {
             foreach (var item in data)
             {
-                if (string.IsNullOrWhiteSpace(item.Key) || !Directory.Exists(item.Key) || item.Value <= 0)
+                string path = item.Key;
+
+                if (string.IsNullOrWhiteSpace(path))
                 {
                     continue;
                 }
 
+                // Contains env variable(s)?
+                if (path.Contains('%'))
+                {
+                    if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
+                    {
+                        path = Environment.ExpandEnvironmentVariables(path);
+                    }
+                }
+
                 try
                 {
+                    if (!Directory.Exists(path) || item.Value <= 0)
+                    {
+                        continue;
+                    }
+
                     if (!FolderSizeDataMb.Any(x => x.Id == item.Key))
                     {
                         FolderSizeDataMb.Add(new FabricResourceUsageData<double>(ErrorWarningProperty.FolderSizeMB, item.Key, 1));
                     }
 
-                    double size = GetFolderSize(item.Key, SizeUnit.Megabytes);
+                    double size = GetFolderSize(path, SizeUnit.Megabytes);
                     FolderSizeDataMb.Find(x => x.Id == item.Key)?.AddData(size);
                 }
                 catch (ArgumentException ae)
                 {
-                    ObserverLogger.LogWarning($"CheckFolderSizeUsage: Handled exception:{Environment.NewLine}{ae}");
+                    ObserverLogger.LogWarning($"Handled Exception in CheckFolderSizeUsage:{Environment.NewLine}{ae}");
                 }
             }
         }
@@ -445,13 +476,17 @@ namespace FabricObserver.Observers
             try
             {
                 var dir = new DirectoryInfo(path);
-                double folderSizeInBytes = Convert.ToDouble(dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length));
+                double folderSizeInBytes = 
+                        Convert.ToDouble(
+                            dir.EnumerateFiles("*", new EnumerationOptions { IgnoreInaccessible = true, RecurseSubdirectories = true })
+                               .Sum(fi => fi.Length));
 
                 if (unit == SizeUnit.Gigabytes)
                 {
                     return folderSizeInBytes / 1024 / 1024 / 1024;
                 }
 
+                // MB.
                 return folderSizeInBytes / 1024 / 1024;
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)

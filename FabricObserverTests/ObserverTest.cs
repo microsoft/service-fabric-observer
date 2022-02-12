@@ -877,8 +877,12 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             var warningDictionary = new Dictionary<string, double>
             {
-                // Modify the key to point to a path you know exists on your computer.
-                { @"C:\SFDevCluster\Log\Traces", 50 }
+                /* Windows paths.. */
+
+                { @"%USERPROFILE%\AppData\Local\Temp", 50 },
+                
+                // This should be rather large.
+                { "%USERPROFILE%", 50 }
             };
 
             using var obs = new DiskObserver(client, context)
@@ -887,7 +891,7 @@ namespace FabricObserverTests
                 DiskSpacePercentWarningThreshold = 10,
                 FolderSizeMonitoringEnabled = true,
 
-                // Folder size monitoring. This will most likely generate a warning (you should modify the key above to be some folder you know is larger than 50MB).
+                // Folder size monitoring. This will most likely generate a warning.
                 FolderSizeConfigDataWarning = warningDictionary,
 
                 // This is required since output files are only created if fo api app is also deployed to cluster..
@@ -908,8 +912,8 @@ namespace FabricObserverTests
             // observer detected issues with disk/folder size.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
-            // Both disk consumption and folder size warnings were generated.
-            Assert.IsTrue(obs.CurrentWarningCount == 2);
+            // Disk consumption and folder size warnings were generated.
+            Assert.IsTrue(obs.CurrentWarningCount == 3);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
