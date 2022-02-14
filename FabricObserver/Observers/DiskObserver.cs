@@ -280,10 +280,10 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
+                string path = pairs[0];
+
                 try
                 {
-                    string path = pairs[0];
-
                     // Contains env variable(s)?
                     if (path.Contains('%'))
                     {
@@ -329,9 +329,9 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                catch (Exception e) when (e is ArgumentException)
+                catch (ArgumentException)
                 {
-
+                    
                 }
             }
         }
@@ -654,18 +654,8 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is FormatException)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-
-            }
-            catch (Exception e)
-            {
-                // ObserverManager handles these.
-                if (e is OperationCanceledException || e is TaskCanceledException || e is FabricException)
-                {
-                    throw;
-                }
-
                 ObserverLogger.LogWarning($"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
                 
                 // Fix the bug...

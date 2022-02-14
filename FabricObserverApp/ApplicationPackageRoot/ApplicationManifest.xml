@@ -117,10 +117,10 @@
          eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
          Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
-    <!-- KVS LVID Usage Monitoring - Windows-only. NOTE: If you do not monitor stateful Actor services, then this should be set to false.
+    <!-- KVS LVID Usage Monitoring - Windows-only. NOTE: If you monitor stateful Actor services, then you should set this to true.
 	 This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
-    <!-- Working set type -->
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <!-- Working set type. Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). -->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
@@ -138,11 +138,11 @@
     <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="15" />
-    <!-- Folder size monitoring. -->
+    <!-- Folder size monitoring. If you want to monitor folder sizes, then enable this feature and provide full paths (and/or full path env vars). -->
     <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
-    <!-- Supply full path/threshold(in MB) pairs here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
+    <!-- Supply full path/threshold(in MB) pairs for Warning/Error level monitoring here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
     <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
-    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\SomeFolder\Log, 500 | D:\MyFolder, 1000 | %SOMEPATHVAR%, 4000" />
+    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 500 | D:\SomeFolder, 1024 | %SOMEFULLPATHVAR%, 4096" />
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
@@ -153,7 +153,7 @@
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
-    <Parameter Name="FabricSystemMonitorPrivateWorkingSet" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
@@ -190,7 +190,7 @@
     <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
     <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitTotal" DefaultValue="" />
     <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitTotal" DefaultValue="" />
-    <!-- OSObserver Windows AutoUpdate Settings Check -->
+    <!-- OSObserver Windows AutoUpdate Settings Check. -->
     <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
     <!-- NetworkObserver -->
     <Parameter Name="NetworkObserverConfigurationFile" DefaultValue="NetworkObserver.config.json" />
@@ -278,7 +278,7 @@
             <Parameter Name="EnableVerboseLogging" Value="[FabricSystemObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[FabricSystemObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[FabricSystemObserverRunInterval]" />
-            <Parameter Name="MonitorPrivateWorkingSet" Value="[FabricSystemMonitorPrivateWorkingSet]" />
+            <Parameter Name="MonitorPrivateWorkingSet" Value="[FabricSystemObserverMonitorPrivateWorkingSet]" />
             <Parameter Name="UseCircularBuffer" Value="[FabricSystemObserverUseCircularBuffer]" />
             <!-- Required-If UseCircularBuffer = True -->
             <Parameter Name="ResourceUsageDataCapacity" Value="[FabricSystemObserverResourceUsageDataCapacity]" />

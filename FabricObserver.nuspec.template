@@ -4,8 +4,10 @@
     <id>%PACKAGE_ID%</id>
     <version>3.1.25</version>
     <releaseNotes>
-- DiskObserver Folder Size monitoring now supports path Environment variables in fullpath/thresholdMB pair setting (e.g., %SOMEPATHENVVAR%, 1000).
-- Updated error codes to match new DiskObserver feature.
+- Updated DiskObserver folder size monitoring to ignore unauthorized folder/file access issues during file size summation. This does not involve exception handling.
+- DiskObserver Folder Size monitoring now supports full path Environment variables in fullpath/thresholdMB pair setting (e.g., %SOMEFULLPATHENVVAR%, 1000).
+- Minor bug fix: Updated error codes to match new DiskObserver feature.
+- Updated OSObserver IS deployment check.
 - Extensibility dll version now matches FabricObserver's.
 	</releaseNotes>
     <authors>Microsoft</authors>
