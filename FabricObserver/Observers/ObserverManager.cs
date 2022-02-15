@@ -21,6 +21,7 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
 using Octokit;
 using System.Diagnostics;
+using System.ComponentModel;
 
 namespace FabricObserver.Observers
 {
@@ -208,9 +209,8 @@ namespace FabricObserver.Observers
 
             if (isWindows)
             {
-                // TryEnableLvidPerfCounter will fail (handled) if FO is not running as System or Admin user on Windows.
                 // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
-                IsLvidCounterEnabled = TryEnableLvidPerfCounter();
+                IsLvidCounterEnabled = IsLVIDPerfCounterEnabled();
             }
 
             try
@@ -1177,7 +1177,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private bool TryEnableLvidPerfCounter()
+        private bool IsLVIDPerfCounterEnabled()
         {
             if (!isWindows)
             {
@@ -1203,93 +1203,23 @@ namespace FabricObserver.Observers
             //{
             //  return true;
             //}
+       
+            const string categoryName = "Windows Fabric Database";
+            const string counterName = "Long-Value Maximum LID";
 
-            // First see if the Long-Value Maximum LID counter is enabled.
-            // Query the Long-Value Maximum LID counter for local Fabric process (the result for Fabric will *always* be greater than 0 if the performance counter is enabled).
-            double x = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage("Fabric");
-
-            // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
-            if (x > -1)
-            {
-                // Counter is already enabled.
-                return true;
-            }
-
-            // This will fail (gracefully) if FO is not running as Admin/System given the location of the reg hive.
             try
             {
-                string error = null, output = null;
-                string batch = Path.Combine(FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path, "install_lvid_perfcounter.bat");
-
-                var ps = new ProcessStartInfo
+                if (PerformanceCounterCategory.Exists(categoryName) && PerformanceCounterCategory.CounterExists(counterName, categoryName))
                 {
-                    Arguments = $"/c {batch}",
-                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true
-                };
-
-                using var p = new Process();
-
-                // Capture any error information.
-                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                p.OutputDataReceived += (sender, e) => { output += e.Data; };
-                p.StartInfo = ps;
-                _ = p.Start();
-
-                // Start asynchronous read operations on error/output streams.  
-                p.BeginErrorReadLine();
-                p.BeginOutputReadLine();
-                p.WaitForExit();
-                int exitCode = p.ExitCode;
-
-                if (exitCode != 0)
-                {
-                    string message = "Failed to install/enable \"Long-Value Maximum LID\" Service Fabric performance counter. " +
-                                     "This is a required Windows performance counter used in KVS LVID usage monitoring. ";
-
-                    // Access Denied.
-                    if (exitCode == 5)
-                    {
-                        message += $"FabricObserver (FO) must run as System or Admin user on Windows to complete this task given the location of the reg hive. " +
-                                   $"Alternatively, you can build FO using the Build-FabricObserver.ps1 script, then deploy FO from the output folder. " +
-                                   $"This will run the LVID counter setup script as System during app deployment, but FO itself can be deployed as NetworkUser.";
-                    }
-                    else
-                    {
-                        message += $" Error info: {error}";
-                    }
-
-                    Logger.LogWarning($"{message}{Environment.NewLine}Command Output: {output}{Environment.NewLine}Failure Message(s): {error}");
-
-                    /*if (ObserverFailureHealthStateLevel != HealthState.Unknown)
-                    {
-                        HealthReport report = new HealthReport
-                        {
-                            AppName = new Uri("fabric:/" + ObserverConstants.FabricObserverName),
-                            ReportType = HealthReportType.Application,
-                            HealthReportTimeToLive = TimeSpan.MaxValue,
-                            EmitLogEvent = false,
-                            HealthMessage = message,
-                            NodeName = nodeName,
-                            Observer = ObserverConstants.ObserverManagerName,
-                            Property = $"TryEnableLvidPerfCounter({nodeName})",
-                            State = ObserverFailureHealthStateLevel,
-                        };
-
-                        HealthReporter.ReportHealthToServiceFabric(report);
-                    }*/
+                    return true;
                 }
-
-                return exitCode == 0;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is UnauthorizedAccessException || e is Win32Exception)
             {
-                Logger.LogWarning($"TryEnableKVSPerfCounter failed:{Environment.NewLine}{e}");
-                return false;
+                Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state:{Environment.NewLine}{e}");
             }
+
+            return false;
         }
     }
 }

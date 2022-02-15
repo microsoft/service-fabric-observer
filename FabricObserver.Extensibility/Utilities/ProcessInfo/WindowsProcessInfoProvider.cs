@@ -157,32 +157,19 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                /* Check to see if the supplied instance (process) exists in the category for the LVID counter. */
+                /* Check to see if the supplied instance (process) exists in the category. */
 
-                InstanceDataCollectionCollection instanceDataCollectionCollection = null;
-
-                try
+                if (!PerformanceCounterCategory.InstanceExists(internalProcName, categoryName))
                 {
-                    PerformanceCounterCategory performanceCounterCategory = new PerformanceCounterCategory(categoryName);
-                    instanceDataCollectionCollection = performanceCounterCategory.ReadCategory();
-
-                    // Does the counter exist?
-                    if (instanceDataCollectionCollection.Count == 0 || !instanceDataCollectionCollection.Contains(counterName))
-                    {
-                        return -1;
-                    }
-
-                    // Does the instance name exist in the instance data collection for target counter?
-                    if (!instanceDataCollectionCollection[counterName].Contains(internalProcName))
-                    {
-                        return -1;
-                    }
+                    return -1;
                 }
-                finally
-                {
-                    instanceDataCollectionCollection?.Clear();
-                    instanceDataCollectionCollection = null;
-                }
+
+                /* A note on exception handling:
+                   AppObserver and FSO check ObserverManager.IsLvidCounterEnabled before calling this function. Therefore, chances of encountering
+                   an exception when creating the PC or when calling its NextValue function is highly unlikely. That said, exceptions happen...
+                   The target counter is accessible to processes running as Network User (so, no UnauthorizedAccessException).
+                   categoryName and counterName are never null (they are const strings).
+                   Only two possible exceptions can happen here: IOE and Win32Exception. */
 
                 using (var performanceCounter = new PerformanceCounter(
                                                     categoryName,
@@ -195,20 +182,17 @@ namespace FabricObserver.Observers.Utilities
                     return usedPct;
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception || e is UnauthorizedAccessException)
+            catch (InvalidOperationException ioe)
             {
-                // We shouldn't land here unless there is a failure creating the instance data collection.
-                Logger.LogWarning($"Exception creating the instance data collection for category '{categoryName}':{Environment.NewLine}{e}");
+                // The Counter layout for the Category specified is invalid? This can happen if a user messes around with Reg key values. Not likely.
+                Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{ioe}");
             }
-            catch (Exception e)
+            catch (Win32Exception we)
             {
-                Logger.LogWarning($"Unhandled exception querying {counterName} counter:{Environment.NewLine}{e}");
-
-                // fix the bug.
-                throw;
+                // Internal exception querying counter (Win32 code). There is nothing to do here. Log the details. Most likely transient.
+                Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{we}");
             }
 
-            // This means failure. Consumer should handle the case when the result is less than 0..
             return -1;
         }
 
