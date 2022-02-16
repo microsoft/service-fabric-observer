@@ -289,7 +289,7 @@ namespace FabricObserver.Observers
                     {
                         if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
                         {
-                            path = Environment.ExpandEnvironmentVariables(path);
+                            path = Environment.ExpandEnvironmentVariables(pairs[0]);
                         }
                     }
 
@@ -348,7 +348,7 @@ namespace FabricObserver.Observers
             {
                 string[] data = folderSizeConfig.Split('|', StringSplitOptions.RemoveEmptyEntries);
                 
-                for (int i = 0; i < data.Length; ++i)
+                for (int i = 0; i < data.Length; i++)
                 {
                     data[i] = data[i].Trim();
                 }
@@ -433,7 +433,7 @@ namespace FabricObserver.Observers
                 {
                     if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
                     {
-                        path = Environment.ExpandEnvironmentVariables(path);
+                        path = Environment.ExpandEnvironmentVariables(item.Key);
                     }
                 }
 

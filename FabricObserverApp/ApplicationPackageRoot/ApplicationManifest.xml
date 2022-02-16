@@ -138,11 +138,11 @@
     <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="15" />
-    <!-- Folder size monitoring. If you want to monitor folder sizes, then enable this feature and provide full paths (and/or full path env vars). -->
+    <!-- Folder size monitoring. If you want to monitor folder sizes, then enable this feature and provide full paths (and/or path env vars) as shown below. -->
     <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
     <!-- Supply full path/threshold(in MB) pairs for Warning/Error level monitoring here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
     <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
-    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 500 | D:\SomeFolder, 1024 | %SOMEFULLPATHVAR%, 4096" />
+    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 1024 | D:\SomeFolder, 1024 | %SOMEFULLPATHVAR%, 4096 | %SOMEFOLDERVAR%\SubFolder, 1024" />
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
