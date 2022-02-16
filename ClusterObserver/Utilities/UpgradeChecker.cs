@@ -16,8 +16,7 @@ namespace ClusterObserver.Utilities
         private static readonly Logger Logger = new Logger("UpgradeLogger");
 
         /// <summary>
-        /// Gets Application Upgrade Domains (integers) for application or applications
-        /// currently upgrading (or rolling back).
+        /// Gets current Application Upgrade information for supplied application.
         /// </summary>
         /// <param name="fabricClient">FabricClient instance</param>
         /// <param name="token">CancellationToken</param>

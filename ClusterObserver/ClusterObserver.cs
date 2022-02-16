@@ -22,8 +22,8 @@ namespace ClusterObserver
 {
     public class ClusterObserver
     {
-        private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
-        private readonly Uri fabricSystemAppUri = new Uri("fabric:/System");
+        private readonly Uri repairManagerServiceUri = new Uri($"{ObserverConstants.SystemAppName}/RepairManagerService");
+        private readonly Uri fabricSystemAppUri = new Uri(ObserverConstants.SystemAppName);
         private readonly bool ignoreDefaultQueryTimeout;
 
         private HealthState LastKnownClusterHealthState
@@ -35,6 +35,11 @@ namespace ClusterObserver
         /// Dictionary that holds node name (key) and tuple of node status, first detected time, last detected time.
         /// </summary>
         private Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)> NodeStatusDictionary
+        {
+            get;
+        }
+
+        private Dictionary<string, bool> ApplicationUpgradesCompletedStatus
         {
             get;
         }
@@ -78,8 +83,6 @@ namespace ClusterObserver
         public bool IsEnabled => ConfigSettings == null || ConfigSettings.IsEnabled;
 
         public bool HasClusterUpgradeCompleted { get; private set; }
-        
-        public bool HasApplicationUpgradeCompleted { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
@@ -90,6 +93,7 @@ namespace ClusterObserver
             ObserverName = ObserverConstants.ClusterObserverName;
             FabricServiceContext = ClusterObserverManager.FabricServiceContext;
             NodeStatusDictionary = new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
+            ApplicationUpgradesCompletedStatus = new Dictionary<string, bool>();
             settings ??= FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings;
             ConfigSettings = new ConfigSettings(settings, ObserverConstants.ClusterObserverConfigurationSectionName);
             ObserverLogger = new Logger(ObserverName, ClusterObserverManager.LogPath)
@@ -102,7 +106,7 @@ namespace ClusterObserver
 
         public async Task ObserveAsync(CancellationToken token)
         {
-            if (!IsEnabled || !ConfigSettings.EnableTelemetry 
+            if (!IsEnabled || !ClusterObserverManager.TelemetryEnabled 
                 || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
@@ -364,16 +368,30 @@ namespace ClusterObserver
             if (appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingForwardCompleted
                 || appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingBackCompleted)
             {
-                if (HasApplicationUpgradeCompleted)
+                if (ApplicationUpgradesCompletedStatus.ContainsKey(appName.OriginalString))
                 {
-                    return;
-                }
+                    if (ApplicationUpgradesCompletedStatus[appName.OriginalString])
+                    {
+                        return;
+                    }
 
-                HasApplicationUpgradeCompleted = true;
+                    ApplicationUpgradesCompletedStatus[appName.OriginalString] = true;
+                }
+                else
+                {
+                    ApplicationUpgradesCompletedStatus.Add(appName.OriginalString, true);
+                }
             }
             else
             {
-                HasApplicationUpgradeCompleted = false;
+                if (ApplicationUpgradesCompletedStatus.ContainsKey(appName.OriginalString))
+                {
+                    ApplicationUpgradesCompletedStatus[appName.OriginalString] = false;
+                }
+                else
+                {
+                    ApplicationUpgradesCompletedStatus.Add(appName.OriginalString, false);
+                }
             }
 
             // Telemetry.
@@ -386,19 +404,19 @@ namespace ClusterObserver
             if (EtwEnabled)
             {
                 ObserverLogger.LogEtw(
-                                ObserverConstants.ClusterObserverETWEventName,
-                                new
-                                {
-                                    appUpgradeInfo.ClusterId,
-                                    Timestamp = DateTime.UtcNow.ToString("o"),
-                                    appUpgradeInfo.OS,
-                                    ApplicationName = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.ApplicationName?.OriginalString,
-                                    UpgradeTargetAppTypeVersion = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.TargetApplicationTypeVersion,
-                                    UpgradeState = Enum.GetName(typeof(FabricUpgradeState), appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState),
-                                    UpgradeDomain = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
-                                    UpgradeDuration = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
-                                    FailureReason = appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.Value) : null,
-                                });
+                    ObserverConstants.ClusterObserverETWEventName,
+                    new
+                    {
+                        appUpgradeInfo.ClusterId,
+                        Timestamp = DateTime.UtcNow.ToString("o"),
+                        appUpgradeInfo.OS,
+                        ApplicationName = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.ApplicationName?.OriginalString,
+                        UpgradeTargetAppTypeVersion = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.TargetApplicationTypeVersion,
+                        UpgradeState = Enum.GetName(typeof(FabricUpgradeState), appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState),
+                        UpgradeDomain = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
+                        UpgradeDuration = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
+                        FailureReason = appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.Value) : null,
+                    });
             }
         }
 
@@ -413,7 +431,8 @@ namespace ClusterObserver
                 return;
             }
 
-            if (eventData.FabricUpgradeProgress.UpgradeState == FabricUpgradeState.Invalid || eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName == "-1")
+            if (eventData.FabricUpgradeProgress.UpgradeState == FabricUpgradeState.Invalid
+                || eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName == "-1")
             {
                 return;
             }
@@ -443,19 +462,19 @@ namespace ClusterObserver
             if (EtwEnabled)
             {
                 ObserverLogger.LogEtw(
-                                ObserverConstants.ClusterObserverETWEventName,
-                                new
-                                {
-                                    eventData.ClusterId,
-                                    Timestamp = DateTime.UtcNow.ToString("o"),
-                                    eventData.OS,
-                                    UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetCodeVersion,
-                                    UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetConfigVersion,
-                                    UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
-                                    UpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
-                                    UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration.ToString(),
-                                    FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
-                                });
+                    ObserverConstants.ClusterObserverETWEventName,
+                    new
+                    {
+                        eventData.ClusterId,
+                        Timestamp = DateTime.UtcNow.ToString("o"),
+                        eventData.OS,
+                        UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetCodeVersion,
+                        UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetConfigVersion,
+                        UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
+                        UpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
+                        UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration.ToString(),
+                        FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
+                    });
             }
         }
 
@@ -488,12 +507,14 @@ namespace ClusterObserver
                 Uri appName = healthState.ApplicationName;
 
                 // Check upgrade status of unhealthy application. Note, this doesn't apply to System applications as they update as part of a platform update.
-                if (appName.OriginalString != "fabric:/System" && ConfigSettings.MonitorUpgradeStatus)
+                if (ConfigSettings.MonitorUpgradeStatus && !appName.Equals(fabricSystemAppUri))
                 {
                     await ReportApplicationUpgradeStatus(appName, token);
                 }
 
-                var appHealthEvents = appHealth.HealthEvents.Where(e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning).ToList();
+                var appHealthEvents =
+                    appHealth.HealthEvents.Where(
+                        e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning).ToList();
 
                 if (!appHealthEvents.Any())
                 {

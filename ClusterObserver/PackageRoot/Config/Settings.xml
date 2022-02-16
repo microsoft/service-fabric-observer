@@ -19,6 +19,7 @@
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="false" />
     <Parameter Name="EnableETWProvider" Value="true" />
+    <Parameter Name="EnableTelemetry" Value="true" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
@@ -43,8 +44,6 @@
     <Parameter Name="AsyncOperationTimeoutSeconds" Value="" MustOverride="true" />
     <!-- Required: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <!-- Required: Whether the CO should send all of its monitoring data to configured Telemetry service. Disabling this effective disables CO.  -->
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
@@ -58,10 +57,10 @@
     <!-- How often to run ClusterObserver. This is a Timespan value, e.g., 00:10:00 means every 10 minutes, for example. -->
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Report on currently executing Repair Jobs in the cluster. -->
-    <Parameter Name="MonitorRepairJobs" Value="" MustOverride ="true" />
-	<!-- Monitor Cluster and Application Upgrades. -->
-	<Parameter Name="MonitorUpgrades" Value="" MustOverride ="true" />
-	<!-- CO diagnostic telemetry. -->
-	<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="MonitorRepairJobs" Value="" MustOverride="true" />
+    <!-- Monitor Cluster and Application Upgrades. -->
+    <Parameter Name="MonitorUpgrades" Value="" MustOverride="true" />
+    <!-- CO diagnostic telemetry. -->
+    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
 </Settings>
