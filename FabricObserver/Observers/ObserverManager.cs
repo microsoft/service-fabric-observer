@@ -25,9 +25,7 @@ using System.ComponentModel;
 
 namespace FabricObserver.Observers
 {
-    // This class manages the lifetime of all observers from instantiation to "destruction",
-    // and sequentially runs all observer instances in a never-ending while loop,
-    // with optional sleeps, and reliable shutdown event handling.
+    // This class manages the lifetime of all observers.
     public class ObserverManager : IDisposable
     {
         private readonly string nodeName;
@@ -209,7 +207,6 @@ namespace FabricObserver.Observers
 
             if (isWindows)
             {
-                // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
                 IsLvidCounterEnabled = IsLVIDPerfCounterEnabled();
             }
 
@@ -1209,10 +1206,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                if (PerformanceCounterCategory.Exists(categoryName) && PerformanceCounterCategory.CounterExists(counterName, categoryName))
-                {
-                    return true;
-                }
+                return PerformanceCounterCategory.Exists(categoryName) && PerformanceCounterCategory.CounterExists(counterName, categoryName);
             }
             catch (Exception e) when (e is UnauthorizedAccessException || e is Win32Exception)
             {
