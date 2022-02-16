@@ -68,8 +68,7 @@ namespace ClusterObserver
 
         public static bool TelemetryEnabled
         {
-            get;
-            private set;
+            get; set;
         }
 
         public static bool EtwEnabled

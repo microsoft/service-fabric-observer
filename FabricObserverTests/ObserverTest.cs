@@ -499,15 +499,13 @@ namespace FabricObserverTests
             ClusterObserverManager.FabricServiceContext = context;
             ClusterObserverManager.FabricClientInstance = client;
             ClusterObserverManager.EtwEnabled = true;
+            ClusterObserverManager.TelemetryEnabled = true;
 
             // On a one-node cluster like your dev machine, pass true for ignoreDefaultQueryTimeout otherwise each FabricClient query will take 2 minutes 
             // to timeout in ClusterObserver.
             var obs = new ClusterObserver.ClusterObserver(null, ignoreDefaultQueryTimeout: true)
             {
                 ConfigSettings = new ClusterObserver.Utilities.ConfigSettings(null, null)
-                {
-                    EnableTelemetry = true
-                }
             };
 
             await obs.ObserveAsync(token);
