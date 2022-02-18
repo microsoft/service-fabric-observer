@@ -9,33 +9,33 @@
         "description": "The Service Fabric cluster resource name from the Azure resource group. Example: servicefabriccluster123"
       }
     },
-    "applicationTypeVersionFabricObserver": {
+    "applicationTypeVersionClusterObserver": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Provide the app version number of FabricObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '3.1.20'"
+        "description": "Provide the app version number of ClusterObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '3.1.20'"
       }
     },
-    "packageUrlFabricObserver": {
+    "packageUrlClusterObserver": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.1.20.sfpkg"
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the ClusterObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/51751968/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.1.13.sfpkg"
       }
     }
   },
   "variables": {
-    "applicationTypeNameFabricObserver": "FabricObserverType",
-    "applicationNameFabricObserver": "FabricObserverApplication",
-    "serviceNameFabricObserver": "[concat(variables('applicationNameFabricObserver'), '~FabricObserverService')]",
-    "serviceTypeNameFabricObserver": "FabricObserverType",
+    "applicationTypeNameClusterObserver": "ClusterObserverType",
+    "applicationNameClusterObserver": "ClusterObserverApplication",
+    "serviceNameClusterObserver": "[concat(variables('applicationNameClusterObserver'), '~ClusterObserverService')]",
+    "serviceTypeNameClusterObserver": "ClusterObserverType",
     "sfrpApiVersion": "2021-06-01"
   },
   "resources": [
     {
       "apiVersion": "[variables('sfrpApiVersion')]",
       "type": "Microsoft.ServiceFabric/clusters/applicationTypes",
-      "name": "[concat(parameters('clusterName'), '/', variables('applicationTypeNameFabricObserver'))]",
+      "name": "[concat(parameters('clusterName'), '/', variables('applicationTypeNameClusterObserver'))]",
       "location": "[resourceGroup().location]",
       "properties": {
         "provisioningState": "Default"
@@ -44,32 +44,29 @@
     {
       "apiVersion": "[variables('sfrpApiVersion')]",
       "type": "Microsoft.ServiceFabric/clusters/applicationTypes/versions",
-      "name": "[concat(parameters('clusterName'), '/', variables('applicationTypeNameFabricObserver'), '/', parameters('applicationTypeVersionFabricObserver'))]",
+      "name": "[concat(parameters('clusterName'), '/', variables('applicationTypeNameClusterObserver'), '/', parameters('applicationTypeVersionClusterObserver'))]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applicationTypes/', variables('applicationTypeNameFabricObserver'))]"
+        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applicationTypes/', variables('applicationTypeNameClusterObserver'))]"
       ],
       "properties": {
         "provisioningState": "Default",
-        "appPackageUrl": "[parameters('packageUrlFabricObserver')]"
+        "appPackageUrl": "[parameters('packageUrlClusterObserver')]"
       }
     },
     {
       "apiVersion": "[variables('sfrpApiVersion')]",
       "type": "Microsoft.ServiceFabric/clusters/applications",
-      "name": "[concat(parameters('clusterName'), '/', variables('applicationNameFabricObserver'))]",
+      "name": "[concat(parameters('clusterName'), '/', variables('applicationNameClusterObserver'))]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applicationTypes/', variables('applicationTypeNameFabricObserver'), '/versions/', parameters('applicationTypeVersionFabricObserver'))]"
+        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applicationTypes/', variables('applicationTypeNameClusterObserver'), '/versions/', parameters('applicationTypeVersionClusterObserver'))]"
       ],
       "properties": {
         "provisioningState": "Default",
-        "typeName": "[variables('applicationTypeNameFabricObserver')]",
-        "typeVersion": "[parameters('applicationTypeVersionFabricObserver')]",
+        "typeName": "[variables('applicationTypeNameClusterObserver')]",
+        "typeVersion": "[parameters('applicationTypeVersionClusterObserver')]",
         "parameters": {
-          // Example to enable FabricSystemObserverEnabled
-          // Reference: https://github.com/microsoft/service-fabric-observer/blob/main/FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml
-          "FabricSystemObserverEnabled": "true"
         },
         "upgradePolicy": {
           "upgradeReplicaSetCheckTimeout": "01:00:00.0",
@@ -96,16 +93,16 @@
     {
       "apiVersion": "[variables('sfrpApiVersion')]",
       "type": "Microsoft.ServiceFabric/clusters/applications/services",
-      "name": "[concat(parameters('clusterName'), '/', variables('applicationNameFabricObserver'), '/', variables('serviceNameFabricObserver'))]",
+      "name": "[concat(parameters('clusterName'), '/', variables('applicationNameClusterObserver'), '/', variables('serviceNameClusterObserver'))]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applications/', variables('applicationNameFabricObserver'))]"
+        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applications/', variables('applicationNameClusterObserver'))]"
       ],
       "properties": {
         "provisioningState": "Default",
         "serviceKind": "Stateless",
-        "serviceTypeName": "[variables('serviceTypeNameFabricObserver')]",
-        "instanceCount": "-1",
+        "serviceTypeName": "[variables('serviceTypeNameClusterObserver')]",
+        "instanceCount": "1",
         "partitionDescription": {
           "partitionScheme": "Singleton"
         },
