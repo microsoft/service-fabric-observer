@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterName": {
+            "value": "<ClusterResourceName>"
+        },
+        "applicationTypeVersionFabricObserver": {
+            "value": "3.1.24"
+        },
+        "packageUrlFabricObserver": {
+            "value": "https://github.com/microsoft/service-fabric-observer/releases/download/51751968/Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.1.24.sfpkg"
+        },
+        "applicationTypeVersionClusterObserver": {
+            "value": "2.1.13"
+        },
+        "packageUrlClusterObserver": {
+            "value": "https://github.com/microsoft/service-fabric-observer/releases/download/51751968/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.1.13.sfpkg"
+        }
+    }
+}
