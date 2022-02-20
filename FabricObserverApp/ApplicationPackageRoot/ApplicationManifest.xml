@@ -24,7 +24,7 @@
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
     <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
@@ -110,7 +110,8 @@
     <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
-    <!-- Concurrency/Parallelism Support -->
+    <!-- Concurrency/Parallelism Support
+         Note: If you do not monitor several services, then enabling this is not super useful. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- The default value is 1/4 of detected logical processors. This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
@@ -120,7 +121,9 @@
     <!-- KVS LVID Usage Monitoring - Windows-only. NOTE: If you monitor stateful Actor services, then you should set this to true.
 	 This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
-    <!-- Working set type. Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). -->
+    <!-- Working set type. Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
+         ***NOTE***: If you have several service processes of the *same name*, Private Working set measurement on Windows will add significant processing time to AppObserver.
+         Consider *not* enabling Private Set memory measurement in that case. Instead, Full Working set should be measured (Private + Shared), computed using a native API call (fast) via COM interop (PInvoke). -->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
@@ -130,8 +133,9 @@
     <Parameter Name="AppCertCommonNamesToObserve" DefaultValue="[]" />
     <!-- ContainerObserver -->
     <Parameter Name="ContainerObserverConfigurationFile" DefaultValue="ContainerObserver.config.json" />
-    <!-- Concurrency/Parallelism Support -->
-    <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <!-- Concurrency/Parallelism Support 
+         Note: If you do not monitor several containers, then enabling this is not super useful. -->
+    <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="false" />
     <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskObserverDiskSpacePercentUsageWarningThreshold" DefaultValue="90" />
@@ -142,14 +146,11 @@
     <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
     <!-- Supply full path/threshold(in MB) pairs for Warning/Error level monitoring here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
     <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
-    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 1024 | D:\SomeFolder, 1024 | %SOMEFULLPATHVAR%, 4096 | %SOMEFOLDERVAR%\SubFolder, 1024" />
+    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 1024 | D:\SomeFolder, 1024 | %SOMEFULLPATH%, 4096 | %SOMEPATH%\SubFolder, 1024" />
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- Concurrency/Parallelism Support -->
-    <Parameter Name="FabricSystemObserverEnableConcurrentMonitoring" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
@@ -269,9 +270,7 @@
           </Section>
           <Section Name="FabricSystemObserverConfiguration">
             <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
-            <Parameter Name="EnableConcurrentMonitoring" Value="[FabricSystemObserverEnableConcurrentMonitoring]" />
             <Parameter Name="EnableKvsLvidMonitoring" Value="[FabricSystemObserverEnableKvsLvidMonitoring]" />
-            <Parameter Name="MaxConcurrentTasks" Value="[FabricSystemObserverMaxConcurrentTasks]" />
             <Parameter Name="EnableCSVDataLogging" Value="[FabricSystemObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[FabricSystemObserverEnableEtw]" />
             <Parameter Name="EnableTelemetry" Value="[FabricSystemObserverEnableTelemetry]" />
@@ -398,9 +397,9 @@
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
-         application type is created. You can also create one or more instances of service type using the 
-         ServiceFabric PowerShell module.
-         The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
+           application type is created. You can also create one or more instances of service type using the 
+           ServiceFabric PowerShell module.
+           The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
     <Service Name="FabricObserver" ServicePackageActivationMode="ExclusiveProcess">
       <StatelessService ServiceTypeName="FabricObserverType" InstanceCount="[FabricObserver_InstanceCount]">
         <SingletonPartition />

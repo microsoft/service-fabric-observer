@@ -5,11 +5,14 @@
     <version>3.1.25</version>
     <releaseNotes>
 - Updated DiskObserver folder size monitoring to ignore unauthorized folder/file access issues during file size summation. This does not involve exception handling.
-- DiskObserver Folder Size monitoring now supports full path Environment variables in fullpath/thresholdMB pair setting (e.g., %SOMEFULLPATHENVVAR%, 1000).
-- Minor bug fix: Updated error codes to match new DiskObserver feature.
+- DiskObserver Folder Size monitoring now supports Environment variables in fullpath/thresholdMB pair setting (e.g., %SOMEFULLPATHENVVAR%, 1000 | %SOMEPATH%\SomeFolder, 2000).
+- Updated error codes to match new DiskObserver feature.
 - Updated KVS LVID perf counter impl.
+- Removed concurrent processing support in FabricSystemObserver.
 - Updated OSObserver InfraStructureService deployment check impl.
+- Performance improvements across memory and CPU usage.
 - Extensibility dll version now matches FabricObserver's.
+- Added work around (auto-mitigation) to SF Cluster Upgrades unsetting Caps on FO's Linux Caps binaries.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

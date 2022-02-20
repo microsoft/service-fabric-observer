@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Linq;
 using System.Management;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
@@ -18,7 +17,8 @@ namespace FabricObserver.Observers.Utilities
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
         private const int MaxDescendants = 50;
-       
+        //private object _lock = new object();
+
         public override float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false)
         {
             if (!string.IsNullOrWhiteSpace(procName) && getPrivateWorkingSet)
@@ -26,19 +26,13 @@ namespace FabricObserver.Observers.Utilities
                 return GetProcessPrivateWorkingSetMbFromPerfCounter(procName, processId);
             }
 
-            return NativeGetProcessWorkingSet(processId); 
+            // Full Working Set (Private + Shared).
+            return NativeGetProcessFullWorkingSetMb(processId); 
         }
 
-        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false)
+        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null)
         {
-            if (useProcessObject)
-            {
-                return ProcessGetProcessAllocatedHandles(processId);
-            }
-            else
-            {
-                return WmiGetProcessAllocatedHandles(processId);
-            }
+            return NativeGetProcessHandleCount(processId);
         }
 
         public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid)
@@ -143,6 +137,7 @@ namespace FabricObserver.Observers.Utilities
             const string categoryName = "Windows Fabric Database";
             const string counterName = "Long-Value Maximum LID";
             string internalProcName = procName;
+            PerformanceCounter performanceCounter = null;
 
             try
             {
@@ -171,16 +166,16 @@ namespace FabricObserver.Observers.Utilities
                    categoryName and counterName are never null (they are const strings).
                    Only two possible exceptions can happen here: IOE and Win32Exception. */
 
-                using (var performanceCounter = new PerformanceCounter(
-                                                    categoryName,
-                                                    counterName,
-                                                    instanceName: internalProcName,
-                                                    readOnly: true))
-                {
-                    float result = performanceCounter.NextValue();
-                    double usedPct = (double)(result * 100) / int.MaxValue;
-                    return usedPct;
-                }
+                performanceCounter = new PerformanceCounter(
+                                                categoryName,
+                                                counterName,
+                                                instanceName: internalProcName,
+                                                readOnly: true);
+                
+                float result = performanceCounter.NextValue();
+                double usedPct = (double)(result * 100) / int.MaxValue;
+
+                return usedPct;
             }
             catch (InvalidOperationException ioe)
             {
@@ -191,6 +186,11 @@ namespace FabricObserver.Observers.Utilities
             {
                 // Internal exception querying counter (Win32 code). There is nothing to do here. Log the details. Most likely transient.
                 Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{we}");
+            }
+            finally
+            {
+                performanceCounter?.Dispose();
+                performanceCounter = null;
             }
 
             return -1;
@@ -205,10 +205,10 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                using (Process p = Process.GetProcessById(processId))
+                using (Process process = Process.GetProcessById(processId))
                 {
-                    p.Refresh();
-                    return p.HandleCount;
+                    process.Refresh();
+                    return process.HandleCount;
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is SystemException)
@@ -296,6 +296,7 @@ namespace FabricObserver.Observers.Utilities
 
                     // Clean up Process objects.
                     proc.Dispose();
+                    proc = null;
                 }
             }
             catch (Win32Exception we)
@@ -310,7 +311,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        // This is *really* expensive when run concurrently on node with lots of monitored services..
+        // This is *really* expensive when run concurrently on node with lots of monitored services.
         private List<(string procName, int pid)> TupleGetChildProcessesWmi(int processId)
         {
             if (processId < 0)
@@ -377,7 +378,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        // This function is CPU intensive for large service deployments (large number of observed processes).
+        // This function is CPU intensive for large service deployments (large number of service processes).
         private float WmiGetProcessPrivateWorkingSetMb(int processId)
         {
             if (processId < 0)
@@ -428,7 +429,7 @@ namespace FabricObserver.Observers.Utilities
             return 0F;
         }
 
-        private float NativeGetProcessWorkingSet(int processId)
+        private float NativeGetProcessFullWorkingSetMb(int processId)
         {
             try
             {
@@ -442,7 +443,8 @@ namespace FabricObserver.Observers.Utilities
                         throw new Win32Exception($"GetProcessMemoryInfo returned false. Error Code is {Marshal.GetLastWin32Error()}");
                     }
 
-                    return memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
+                    long workingSetSizeMb = memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
+                    return workingSetSizeMb;  
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
@@ -452,22 +454,64 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        private int NativeGetProcessHandleCount(int processId)
+        {
+            try
+            {
+                using (Process p = Process.GetProcessById(processId))
+                {
+                    if (!NativeMethods.GetProcessHandleCount(p.Handle, out uint handles))
+                    {
+                        Logger.LogWarning($"NativeGetProcessHandleCount returned false. Error Code is {Marshal.GetLastWin32Error()}. Trying a different method.");
+
+                        // Try a different approach employing Process object.
+                        return GetProcessAllocatedHandles(p);
+                    }
+       
+                    return (int)handles;
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            {
+                // Access denied (FO is running as a less privileged user than the target process).
+                if (e is Win32Exception && (e as Win32Exception).NativeErrorCode != 5)
+                {
+                    Logger.LogWarning($"NativeGetProcessHandleCount: Exception getting working set for process {processId}:{Environment.NewLine}{e}");
+                }
+            }
+
+            return -1;
+        }
+
+        private int GetProcessAllocatedHandles(Process process)
+        {
+            if (process == null)
+            {
+                return 0;
+            }
+
+            process.Refresh();
+            int count = process.HandleCount;
+
+            return count;
+        }
+
         private float GetProcessPrivateWorkingSetMbFromPerfCounter(string procName, int procId)
         {
             string internalProcName = GetInternalProcessNameFromPerfCounter(procName, procId);
             
-            try
+            if (string.IsNullOrWhiteSpace(internalProcName))
             {
-                if (!string.IsNullOrWhiteSpace(internalProcName))
-                {
-                    using (PerformanceCounter memoryCounter = new PerformanceCounter("Process", "Working Set - Private", internalProcName, true))
-                    {
-                        return memoryCounter.NextValue() / 1024 / 1024;
-                    }
-                }
-
                 Logger.LogWarning($"Unable to get private working set for process {procName} with id {procId}. Returning 0.");
                 return 0F;
+            }
+
+            PerformanceCounter memoryCounter = null;
+
+            try
+            {
+               memoryCounter = new PerformanceCounter("Process", "Working Set - Private", internalProcName, true);
+               return memoryCounter.NextValue() / 1024 / 1024;
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
@@ -477,31 +521,42 @@ namespace FabricObserver.Observers.Utilities
             {
                 Logger.LogWarning($"Unhandled (no-throw): Unable to get private working set for process {procName} with id {procId}. Returning 0.{Environment.NewLine}{ex}");
             }
+            finally
+            {
+                memoryCounter?.Dispose();
+                memoryCounter = null;
+            }
 
             return 0F;
         }
 
+        // NOTE: If you have several service processes of the same name, this will add significant processing time to AppObserver. Consider not enabling Private Set memory.
+        // In that case, the Full Working set will measured (Private + Shared), computed using a native API call (fast) via COM interop (PInvoke).
         private string GetInternalProcessNameFromPerfCounter(string procName, int procId)
         {
             string internalProcName = string.Empty;
+            PerformanceCounter nameCounter = null;
 
             try
             {
                 var category = new PerformanceCounterCategory("Process");
-                string[] instanceNames = category.GetInstanceNames().Where(x => x.Contains(procName)).ToArray();
+                var instanceNames = category.GetInstanceNames().Where(x => x.StartsWith(procName) && x.Contains("#"));
+                int count = instanceNames.Count();
 
-                using (var nameCounter = new PerformanceCounter("Process", "ID Process", true))
+                if (count == 0)
                 {
-                    for (int i = 0; i < instanceNames.Length; ++i)
+                    return procName;
+                }
+
+                nameCounter = new PerformanceCounter("Process", "ID Process", true);
+
+                for (int i = 0; i < count; ++i)
+                {
+                    nameCounter.InstanceName = instanceNames.ElementAt(i);
+
+                    if (procId == nameCounter.RawValue)
                     {
-                        nameCounter.InstanceName = instanceNames[i];
-
-                        if (nameCounter.NextValue() != procId)
-                        {
-                            continue;
-                        }
-
-                        return instanceNames[i];
+                        return nameCounter.InstanceName;
                     }
                 }
             }
@@ -512,6 +567,11 @@ namespace FabricObserver.Observers.Utilities
             catch (Exception ex)
             {
                 Logger.LogWarning($"Unhandled (no-throw): Unable to determine internal process name for {procName} with id {procId}{Environment.NewLine}{ex}");
+            }
+            finally
+            {
+                nameCounter?.Dispose();
+                nameCounter = null;
             }
 
             return null;

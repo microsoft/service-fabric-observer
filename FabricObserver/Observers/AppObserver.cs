@@ -1460,14 +1460,16 @@ namespace FabricObserver.Observers
                             bool checkHandles,
                             bool checkThreads,
                             bool checkLvids,
-                            ConcurrentDictionary<string, int> procs,
+                            ConcurrentDictionary<string, int> processDictionary,
                             string id,
                             CancellationToken token)
         {
-            _ = Parallel.For (0, procs.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, processDictionary.Count, ParallelOptions, (i, state) =>
             {
-                string procName = procs.ElementAt(i).Key;
-                int procId = procs[procName];
+                token.ThrowIfCancellationRequested();
+
+                string procName = processDictionary.ElementAt(i).Key;
+                int procId = processDictionary[procName];
                 
                 TimeSpan maxDuration = TimeSpan.FromSeconds(1);
                 CpuUsage cpuUsage = new CpuUsage();
@@ -1484,7 +1486,7 @@ namespace FabricObserver.Observers
 
                     if (isWindows)
                     {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, null, ReplicaOrInstanceList.Count >= 50); 
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, null); 
                     }
                     else
                     {
@@ -1631,6 +1633,8 @@ namespace FabricObserver.Observers
                     // Memory \\
 
                     // Process working set (total or private, based on user configuration)
+                    // ***NOTE***: If you have several service processes of the same name, Private Working set measurement will add significant processing time to AppObserver.
+                    // Consider not enabling Private Set memory. In that case, the Full Working set will measured (Private + Shared), computed using a native API call (fast) via COM interop (PInvoke).
                     if (checkMemMb)
                     {
                         float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);

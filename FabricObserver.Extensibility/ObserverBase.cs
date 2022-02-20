@@ -357,7 +357,7 @@ namespace FabricObserver.Observers
             }
             else
             {
-                string logFolderBase = Path.Combine(Environment.CurrentDirectory, "observer_logs");
+                string logFolderBase = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs");
                 logFolderBasePath = logFolderBase;
             }
 

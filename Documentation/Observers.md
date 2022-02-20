@@ -545,9 +545,8 @@ By default, FabricObserver runs as NetworkUser on Windows and sfappsuser on Linu
 running as System or root, default FabricObserver can't monitor process behavior (this is always true on Windows). That said, there are only a few system
 services you would care about: Fabric.exe and FabricGateway.exe. Fabric.exe is generally the system service that your code can directly impact with respect to machine resource usage.
 
-**Version 3.1.18 introduced support for concurrent service process monitoring and reporting by FabricSystemObserver**. You can enable/disable this feature by setting the boolean value for ContainerObserverEnableConcurrentMonitoring. Note that this is disabled by default.
-If your compute configuration includes multiple CPUs (logical processors >= 4), then you should consider enabling this capability as it will significantly decrease the time it takes FabricSystemObserver to complete monitoring/reporting.
-If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
+**NOTE: Version 3.1.25 removes support for concurrent service process monitoring and reporting by FabricSystemObserver**. This feature is not worth the resource overhead given the limited number of processes FSO monitors.
+
 
 **Input - Settings.xml**: Only ClusterOperationTimeoutSeconds is set in Settings.xml.
 
@@ -564,15 +563,10 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
 <!-- FabricSystemObserver -->
 <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <!-- Optional: Whether or not FabricSystemObserver should try to monitor service processes concurrently.
-         This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
-         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
-    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
 
     <!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful System services that employs KVS (Fabric, FabricRM).
          Enabling this will put fabric:/System into Warning when either Fabric or FabricRM have consumed 75% of Maximum number of LVIDs (which is int.MaxValue per process). -->
     <Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
-    <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />

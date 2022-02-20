@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">The id of the process.</param>
         /// <param name="context">StatelessServiceContext instance.</param>
         /// <returns>The float value representing number of allocated file handles for the process.</returns>
-        float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false);
+        float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null);
 
         /// <summary>
         /// Gets process information (name, pid) for descendants of the parent process represented by the supplied process id.

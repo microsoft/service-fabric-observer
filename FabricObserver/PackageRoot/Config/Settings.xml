@@ -230,15 +230,10 @@
   </Section>
   <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <!-- Optional: Whether or not FabricSystemObserver should try to monitor service processes concurrently.
-         This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
-         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
-    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
 	  
 	<!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful System services that employs KVS (Fabric, FabricRM).
 	     Enabling this will put fabric:/System into Warning when either Fabric or FabricRM have consumed 75% of Maximum number of LVIDs (which is int.MaxValue per process). -->
 	<Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
-	<Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
@@ -374,7 +369,7 @@
        **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
        Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
        See the SampleObserverPlugin project for a complete example of implementing an observer plugin. If you want to
-       enable versionless application parameter updates, then MustOverride the Parameters you want to be able to change without
+       enable versionless application parameter updates, then add MustOverride to the Parameters you want to be able to change without
        redeploying FO and add them to ApplicationManifest.xml like all the other observers.
   <Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />

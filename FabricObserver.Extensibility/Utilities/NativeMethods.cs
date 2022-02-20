@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security;
 
@@ -15,24 +16,6 @@ namespace FabricObserver.Observers.Utilities
     [SuppressUnmanagedCodeSecurity]
     public static class NativeMethods
     {
-        // Process dump support.
-        [DllImport(
-            "dbghelp.dll",
-            EntryPoint = "MiniDumpWriteDump",
-            CallingConvention = CallingConvention.StdCall,
-            CharSet = CharSet.Unicode,
-            ExactSpelling = true,
-            SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool MiniDumpWriteDump(
-                                          IntPtr hProcess,
-                                          uint processId,
-                                          SafeHandle hFile,
-                                          MINIDUMP_TYPE dumpType,
-                                          IntPtr expParam,
-                                          IntPtr userStreamParam,
-                                          IntPtr callbackParam);
-
         [Flags]
         public enum MINIDUMP_TYPE
         {
@@ -77,10 +60,6 @@ namespace FabricObserver.Observers.Utilities
             internal IntPtr PrivateUsage;
         }
 
-        [DllImport("psapi.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
-    
         //inner enum used only internally
         [Flags]
         private enum SnapshotFlags : uint
@@ -112,18 +91,37 @@ namespace FabricObserver.Observers.Utilities
             internal string szExeFile;
         }
 
-        [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         static extern IntPtr CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
 
-        [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         static extern bool Process32First([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         static extern bool Process32Next([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
 
-        [DllImport("kernel32", SetLastError = true)]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+        [SuppressUnmanagedCodeSecurity]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool CloseHandle([In] IntPtr hObject);
+        static extern bool CloseHandle(IntPtr hObject);
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetProcessHandleCount(IntPtr hProcess, out uint pdwHandleCount);
+
+        // Process dump support.
+        [DllImport("dbghelp.dll", EntryPoint = "MiniDumpWriteDump", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
 
         /// <summary>
         /// Gets the supplied pid's child processes, if any.
@@ -135,7 +133,7 @@ namespace FabricObserver.Observers.Utilities
         public static List<Process> GetChildProcesses(int parentpid)
         {
             List<Process> childProcs = new List<Process>();
-            IntPtr handleToSnapshot = IntPtr.Zero;
+            IntPtr handleToSnapshot = IntPtr.Zero;  
 
             try
             {
@@ -145,7 +143,7 @@ namespace FabricObserver.Observers.Utilities
                 };
 
                 handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process, 0);
-
+                
                 if (Process32First(handleToSnapshot, ref procEntry))
                 {
                     do
@@ -160,7 +158,7 @@ namespace FabricObserver.Observers.Utilities
                 else
                 {
                     throw new Win32Exception(string.Format("Failed with win32 error code {0}", Marshal.GetLastWin32Error()));
-                }
+                }  
             }
             catch (Win32Exception)
             {
@@ -184,8 +182,8 @@ namespace FabricObserver.Observers.Utilities
         /// It will generally be thrown when the target process (with parentpid) no longer exists.</exception>
         public static int GetProcessThreadCount(int procId)
         {
-            IntPtr handleToSnapshot = IntPtr.Zero;
             int threadCount = 0;
+            IntPtr handleToSnapshot = IntPtr.Zero;
 
             try
             {
@@ -195,7 +193,7 @@ namespace FabricObserver.Observers.Utilities
                 };
 
                 handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process, 0);
-
+                
                 if (Process32First(handleToSnapshot, ref procEntry))
                 {
                     do
@@ -282,10 +280,6 @@ namespace FabricObserver.Observers.Utilities
                 this.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
             }
         }
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
 
         public static MEMORYSTATUSEX GetSystemMemoryInfo()
         {

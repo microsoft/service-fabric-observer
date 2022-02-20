@@ -20,59 +20,80 @@ namespace FabricObserver.Observers.Utilities
     public class WindowsInfoProvider : OSInfoProvider
     {
         private const string TcpProtocol = "tcp";
+        private (int, int) windowsDynamicPortRange = (-1, -1);
+
+        public WindowsInfoProvider()
+        {
+            windowsDynamicPortRange = TupleGetDynamicPortRange();
+        }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
-            using (var p = new Process())
+            using (var process = new Process())
             {
                 try
                 {
+                    string error = string.Empty, output = string.Empty;
+
                     var ps = new ProcessStartInfo
                     {
                         Arguments = $"/c netsh int ipv4 show dynamicportrange {TcpProtocol} | find /i \"port\"",
                         FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                         UseShellExecute = false,
                         WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardInput = true,
+                        RedirectStandardError = true,
                         RedirectStandardOutput = true
                     };
 
-                    p.StartInfo = ps;
-                    _ = p.Start();
+                    process.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                    process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output += e.Data + Environment.NewLine; } };
+                    process.StartInfo = ps;
 
-                    var stdOutput = p.StandardOutput;
-                    string output = stdOutput.ReadToEnd();
+                    if (!process.Start())
+                    {
+                        return (-1, -1);
+                    }
+
+                    // Start async reads.
+                    process.BeginErrorReadLine();
+                    process.BeginOutputReadLine();
+                    process.WaitForExit();
+
                     Match match = Regex.Match(
                                         output,
                                         @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
                                         RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-                    p.WaitForExit();
-
                     string startPort = match.Groups["startPort"].Value;
                     string portCount = match.Groups["numberOfPorts"].Value;
-                    int exitStatus = p.ExitCode;
-                    stdOutput.Close();
+                    int exitStatus = process.ExitCode;
 
                     if (exitStatus != 0)
                     {
+                        Logger.LogWarning(
+                            "TupleGetDynamicPortRange: netsh failure. " +
+                            $"Unable to determine dynamic port range (will return (-1, -1)):{Environment.NewLine}{error}");
+
                         return (-1, -1);
                     }
 
-                    int lowPortRange = int.Parse(startPort);
-                    int highPortRange = lowPortRange + int.Parse(portCount);
+                    if (int.TryParse(startPort, out int lowPortRange) && int.TryParse(portCount, out int count))
+                    {
+                        int highPortRange = lowPortRange + count;
 
-                    return (lowPortRange, highPortRange);
+                        return (lowPortRange, highPortRange);
+                    }
                 }
                 catch (Exception e) when (
-                                e is ArgumentException
-                                || e is IOException
-                                || e is InvalidOperationException
-                                || e is RegexMatchTimeoutException
-                                || e is Win32Exception)
+                                 e is ArgumentException ||
+                                 e is IOException ||
+                                 e is InvalidOperationException ||
+                                 e is RegexMatchTimeoutException ||
+                                 e is Win32Exception)
                 {
-
+                    Logger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1)):{Environment.NewLine}{e}");
                 }
+
             }
 
             return (-1, -1);
@@ -95,7 +116,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (AggregateException ae)
             {
-                Logger.LogWarning($"Retry failed for GetActiveEphemeralPortCount:{Environment.NewLine}{ae}");
+                Logger.LogWarning($"Failed all retries (3) for GetActiveEphemeralPortCount (will return -1):{Environment.NewLine}{ae}");
                 count = -1;
             }
 
@@ -119,7 +140,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (AggregateException ae)
             {
-                Logger.LogWarning($"Retry failed for GetActivePortCount:{Environment.NewLine}{ae}");
+                Logger.LogWarning($"Failed all retries (3) for GetActivePortCount (will return -1):{Environment.NewLine}{ae}");
                 count = -1;
             }
 
@@ -145,44 +166,42 @@ namespace FabricObserver.Observers.Utilities
                     while (enumerator.MoveNext())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+                        ManagementObject mObj = (ManagementObject)enumerator.Current;
 
                         try
                         {
-                            using (ManagementObject mObj = (ManagementObject)enumerator.Current)
+                            object captionObj = mObj.Properties["Caption"].Value;
+                            object versionObj = mObj.Properties["Version"].Value;
+                            object statusObj = mObj.Properties["Status"].Value;
+                            object osLanguageObj = mObj.Properties["OSLanguage"].Value;
+                            object numProcsObj = mObj.Properties["NumberOfProcesses"].Value;
+                            object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
+                            object freeVirtualTotalObj = mObj.Properties["FreeVirtualMemory"].Value;
+                            object totalVirtualObj = mObj.Properties["TotalVirtualMemorySize"].Value;
+                            object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
+                            object installDateObj = mObj.Properties["InstallDate"].Value;
+                            object lastBootDateObj = mObj.Properties["LastBootUpTime"].Value;
+
+                            osInfo.Name = captionObj?.ToString();
+
+                            if (int.TryParse(numProcsObj?.ToString(), out int numProcesses))
                             {
-                                object captionObj = mObj.Properties["Caption"].Value;
-                                object versionObj = mObj.Properties["Version"].Value;
-                                object statusObj = mObj.Properties["Status"].Value;
-                                object osLanguageObj = mObj.Properties["OSLanguage"].Value;
-                                object numProcsObj = mObj.Properties["NumberOfProcesses"].Value;
-                                object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
-                                object freeVirtualTotalObj = mObj.Properties["FreeVirtualMemory"].Value;
-                                object totalVirtualObj = mObj.Properties["TotalVirtualMemorySize"].Value;
-                                object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
-                                object installDateObj = mObj.Properties["InstallDate"].Value;
-                                object lastBootDateObj = mObj.Properties["LastBootUpTime"].Value;
-
-                                osInfo.Name = captionObj?.ToString();
-
-                                if (int.TryParse(numProcsObj?.ToString(), out int numProcesses))
-                                {
-                                    osInfo.NumberOfProcesses = numProcesses;
-                                }
-                                else
-                                {
-                                    osInfo.NumberOfProcesses = -1;
-                                }
-
-                                osInfo.Status = statusObj?.ToString();
-                                osInfo.Language = osLanguageObj?.ToString();
-                                osInfo.Version = versionObj?.ToString();
-                                osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");
-                                osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");
-                                osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
-                                osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;
-                                osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;
-                                osInfo.TotalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
+                                osInfo.NumberOfProcesses = numProcesses;
                             }
+                            else
+                            {
+                                osInfo.NumberOfProcesses = -1;
+                            }
+
+                            osInfo.Status = statusObj?.ToString();
+                            osInfo.Language = osLanguageObj?.ToString();
+                            osInfo.Version = versionObj?.ToString();
+                            osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");
+                            osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");
+                            osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
+                            osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;
+                            osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;
+                            osInfo.TotalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;  
                         }
                         catch (ManagementException me)
                         {
@@ -191,6 +210,11 @@ namespace FabricObserver.Observers.Utilities
                         catch (Exception e)
                         {
                             Logger.LogInfo($"Bug? => Exception in GetOSInfoAsync:{Environment.NewLine}{e}");
+                        }
+                        finally
+                        {
+                            mObj?.Dispose();
+                            mObj = null;
                         }
                     }
                 }
@@ -227,7 +251,25 @@ namespace FabricObserver.Observers.Utilities
 
             if (ephemeral)
             {
-                (lowPortRange, highPortRange) = TupleGetDynamicPortRange();
+                // Check to make sure dynamic port range was successfully set in the ctor. If not, try and set it again (once).
+                if (windowsDynamicPortRange == (-1, -1))
+                {
+                    windowsDynamicPortRange = TupleGetDynamicPortRange();
+
+                    if (windowsDynamicPortRange == (-1, -1))
+                    {
+                        string msg =
+                            "GetTcpPortCount(ephemeral = true): Invalid value for windowsDynamicPortRange: (-1, -1). " +
+                            "Retried TupleGetDynamicPortRange with no success. Aborting ephemeral port usage lookup (result = -1).";
+
+                        Logger.LogWarning(msg);
+
+                        // Handled by Retry.Do
+                        throw new Exception(msg);
+                    }
+                }
+
+                (lowPortRange, highPortRange) = windowsDynamicPortRange;
             }
 
             if (processId > 0)
@@ -235,7 +277,7 @@ namespace FabricObserver.Observers.Utilities
                 findStrProc = $" | find \"{processId}\"";
             }
 
-            using (var p = new Process())
+            using (var process = new Process())
             {
                 var ps = new ProcessStartInfo
                 {
@@ -243,19 +285,24 @@ namespace FabricObserver.Observers.Utilities
                     FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    RedirectStandardInput = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
 
                 // Capture any error information from netstat.
-                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                p.StartInfo = ps;
-                _ = p.Start();
-                var stdOutput = p.StandardOutput;
+                process.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                process.StartInfo = ps;
+                
+                if (!process.Start())
+                {
+                    Logger.LogWarning($"Unable to start process: {ps.Arguments}");
+                    return 0;
+                }
+
+                var stdOutput = process.StandardOutput;
 
                 // Start asynchronous read operation on error stream.  
-                p.BeginErrorReadLine();
+                process.BeginErrorReadLine();
 
                 string portRow;
                 while ((portRow = stdOutput.ReadLine()) != null)
@@ -302,9 +349,9 @@ namespace FabricObserver.Observers.Utilities
                     tempLocalPortData.Add((pid, localPort));
                 }
 
-                p.WaitForExit();
+                process.WaitForExit();
 
-                int exitStatus = p.ExitCode;
+                int exitStatus = process.ExitCode;
                 int count = tempLocalPortData.Count;
                 tempLocalPortData.Clear();
                 stdOutput.Close();

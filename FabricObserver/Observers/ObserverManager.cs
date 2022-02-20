@@ -1076,6 +1076,13 @@ namespace FabricObserver.Observers
                     {
                         return;
                     }
+                    
+                    // This means linux Capabilites have been unset on the related binaries. This will take down FO, which will reset them upon restart.
+                    // This happens when SF touches the binaries (like re-acling them during a cluster upgrade).
+                    if (!isWindows && ae.GetBaseException() is LinuxPermissionException)
+                    {
+                        throw;
+                    }
 
                     Logger.LogInfo($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ae}");
                     continue;
@@ -1091,7 +1098,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e)
                 {
-                    Logger.LogWarning($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    Logger.LogWarning($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                 }
             }
         }

@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -28,24 +27,23 @@ namespace FabricObserver.Observers
     public class FabricSystemObserver : ObserverBase
     {
         private const double KvsLvidsWarningPercentage = 75.0;
-        private readonly List<string> processWatchList;
+        private readonly string[] processWatchList;
         private readonly bool isWindows;
         private Stopwatch stopwatch;
         private bool checkPrivateWorkingSet;
 
         // Health Report data container - For use in analysis to determine health state.
-        private ConcurrentDictionary<string, FabricResourceUsageData<int>> allCpuData;
-        private ConcurrentDictionary<string, FabricResourceUsageData<float>> allMemData;
-        private ConcurrentDictionary<string, FabricResourceUsageData<int>> allActiveTcpPortData;
-        private ConcurrentDictionary<string, FabricResourceUsageData<int>> allEphemeralTcpPortData;
-        private ConcurrentDictionary<string, FabricResourceUsageData<float>> allHandlesData;
-        private ConcurrentDictionary<string, FabricResourceUsageData<int>> allThreadsData;
-        private ConcurrentDictionary<string, FabricResourceUsageData<double>> allAppKvsLvidsData;
+        private Dictionary<string, FabricResourceUsageData<int>> allCpuData;
+        private Dictionary<string, FabricResourceUsageData<float>> allMemData;
+        private Dictionary<string, FabricResourceUsageData<int>> allActiveTcpPortData;
+        private Dictionary<string, FabricResourceUsageData<int>> allEphemeralTcpPortData;
+        private Dictionary<string, FabricResourceUsageData<float>> allHandlesData;
+        private Dictionary<string, FabricResourceUsageData<int>> allThreadsData;
+        private Dictionary<string, FabricResourceUsageData<double>> allAppKvsLvidsData;
 
         // Windows only. (EventLog).
         private List<EventRecord> evtRecordList = null;
         private bool monitorWinEventLog;
-        private readonly object lockObj = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
@@ -58,7 +56,7 @@ namespace FabricObserver.Observers
             // Linux
             if (!isWindows)
             {
-                processWatchList = new List<string>
+                processWatchList = new[]
                 {
                     "Fabric",
                     "FabricDCA.dll",
@@ -75,7 +73,7 @@ namespace FabricObserver.Observers
             else
             {
                 // Windows
-                processWatchList = new List<string>
+                processWatchList = new[]
                 {
                     "Fabric",
                     "FabricApplicationGateway",
@@ -165,11 +163,6 @@ namespace FabricObserver.Observers
             get; set;
         } = false;
 
-        public ParallelOptions ParallelOptions
-        {
-            get; set;
-        }
-
         public int ThreadCountError 
         { 
             get; set; 
@@ -237,7 +230,7 @@ namespace FabricObserver.Observers
         {
             Initialize();
 
-            _ = Parallel.ForEach(processWatchList, ParallelOptions, (procName, state) =>
+            foreach (string procName in processWatchList)
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -256,7 +249,7 @@ namespace FabricObserver.Observers
                 {
                     return;
                 }
-            });
+            };
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -265,39 +258,39 @@ namespace FabricObserver.Observers
             {
                 Token.ThrowIfCancellationRequested();
 
-                string info = string.Empty;
+                var info = new StringBuilder();
 
                 if (allMemData != null)
                 {
-                    info += $"Fabric memory: {allMemData["Fabric"].AverageDataValue} MB{Environment.NewLine}" +
-                            $"FabricDCA memory: {allMemData.FirstOrDefault(x => x.Key.Contains("FabricDCA")).Value.AverageDataValue} MB{Environment.NewLine}" +
-                            $"FabricGateway memory: {allMemData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue} MB{Environment.NewLine}" +
+                    info.Append($"Fabric memory: {allMemData["Fabric"].AverageDataValue} MB{Environment.NewLine}" +
+                                $"FabricDCA memory: {allMemData.FirstOrDefault(x => x.Key.Contains("FabricDCA")).Value.AverageDataValue} MB{Environment.NewLine}" +
+                                $"FabricGateway memory: {allMemData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue} MB{Environment.NewLine}" +
 
-                            // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System.
-                            (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                $"FabricHost memory: {allMemData["FabricHost"].AverageDataValue} MB{Environment.NewLine}" : string.Empty);
+                                // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System.
+                                (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+                                    $"FabricHost memory: {allMemData["FabricHost"].AverageDataValue} MB{Environment.NewLine}" : string.Empty));
                 }
 
                 if (allHandlesData != null)
                 {
-                    info += $"Fabric file handles: {allHandlesData["Fabric"].AverageDataValue}{Environment.NewLine}" +
-                            $"FabricDCA file handles: {allHandlesData.FirstOrDefault(x => x.Key.Contains("FabricDCA")).Value.AverageDataValue}{Environment.NewLine}" +
-                            $"FabricGateway file handles: {allHandlesData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue}{Environment.NewLine}" +
+                    info.Append($"Fabric file handles: {allHandlesData["Fabric"].AverageDataValue}{Environment.NewLine}" +
+                                $"FabricDCA file handles: {allHandlesData.FirstOrDefault(x => x.Key.Contains("FabricDCA")).Value.AverageDataValue}{Environment.NewLine}" +
+                                $"FabricGateway file handles: {allHandlesData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue}{Environment.NewLine}" +
 
-                            // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System. 
-                            (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                $"FabricHost file handles: {allHandlesData["FabricHost"]?.AverageDataValue}{Environment.NewLine}" : string.Empty);
+                                // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System. 
+                                (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+                                    $"FabricHost file handles: {allHandlesData["FabricHost"]?.AverageDataValue}{Environment.NewLine}" : string.Empty));
                 }
 
                 if (allThreadsData != null)
                 {
-                    info += $"Fabric threads: {allThreadsData["Fabric"].AverageDataValue}{Environment.NewLine}" +
-                            $"FabricDCA threads: {allThreadsData.FirstOrDefault(x => x.Key.Contains("FabricDCA")).Value.AverageDataValue}{Environment.NewLine}" +
-                            $"FabricGateway threads: {allThreadsData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue}{Environment.NewLine}" +
+                    info.Append($"Fabric threads: {allThreadsData["Fabric"].AverageDataValue}{Environment.NewLine}" +
+                                $"FabricDCA threads: {allThreadsData.FirstOrDefault(x => x.Key.Contains("FabricDCA")).Value.AverageDataValue}{Environment.NewLine}" +
+                                $"FabricGateway threads: {allThreadsData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue}{Environment.NewLine}" +
 
-                            // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System. 
-                            (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                $"FabricHost threads: {allThreadsData["FabricHost"]?.AverageDataValue}" : string.Empty);
+                                // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System. 
+                                (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
+                                    $"FabricHost threads: {allThreadsData["FabricHost"]?.AverageDataValue}" : string.Empty));
                 }
 
                 // Informational report.
@@ -315,6 +308,9 @@ namespace FabricObserver.Observers
                     HealthReportTimeToLive = timeToLiveWarning,
                     ReportType = HealthReportType.Node
                 };
+
+                info.Clear();
+                info = null;
 
                 HealthReporter.ReportHealthToServiceFabric(informationReport);
 
@@ -593,7 +589,7 @@ namespace FabricObserver.Observers
             
             // fabric:/System
             MonitoredAppCount = 1;
-            MonitoredServiceProcessCount = processWatchList.Count;
+            MonitoredServiceProcessCount = processWatchList.Length;
             int frudCapacity = 4;
 
             if (UseCircularBuffer)
@@ -612,7 +608,7 @@ namespace FabricObserver.Observers
             // CPU data
             if (allCpuData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0))
             {
-                allCpuData = new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
+                allCpuData = new Dictionary<string, FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
@@ -630,7 +626,7 @@ namespace FabricObserver.Observers
             // Memory data
             if (allMemData == null && (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0))
             {
-                allMemData = new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
+                allMemData = new Dictionary<string, FabricResourceUsageData<float>>();
 
                 foreach (var proc in processWatchList)
                 {
@@ -648,7 +644,7 @@ namespace FabricObserver.Observers
             // Ports
             if (allActiveTcpPortData == null && (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0))
             {
-                allActiveTcpPortData = new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
+                allActiveTcpPortData = new Dictionary<string, FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
@@ -665,7 +661,7 @@ namespace FabricObserver.Observers
 
             if (allEphemeralTcpPortData == null && (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0))
             {
-                allEphemeralTcpPortData = new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
+                allEphemeralTcpPortData = new Dictionary<string, FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
@@ -683,7 +679,7 @@ namespace FabricObserver.Observers
             // Handles
             if (allHandlesData == null && (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0))
             {
-                allHandlesData = new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
+                allHandlesData = new Dictionary<string, FabricResourceUsageData<float>>();
 
                 foreach (var proc in processWatchList)
                 {
@@ -701,7 +697,7 @@ namespace FabricObserver.Observers
             // Threads
             if (allThreadsData == null && (ThreadCountError > 0 || ThreadCountWarning > 0))
             {
-                allThreadsData = new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
+                allThreadsData = new Dictionary<string, FabricResourceUsageData<int>>();
 
                 foreach (var proc in processWatchList)
                 {
@@ -719,7 +715,7 @@ namespace FabricObserver.Observers
             // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
             if (EnableKvsLvidMonitoring && allAppKvsLvidsData == null)
             {
-                allAppKvsLvidsData = new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+                allAppKvsLvidsData = new Dictionary<string, FabricResourceUsageData<double>>();
 
                 foreach (var proc in processWatchList)
                 {
@@ -892,29 +888,6 @@ namespace FabricObserver.Observers
                 _ = int.TryParse(threadCountWarning, out int threshold);
                 ThreadCountWarning = threshold;
             }
-
-            // Concurrency/Parallelism support.
-            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
-            {
-                EnableConcurrentMonitoring = enableConcurrency;
-            }
-
-            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
-            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
-            // FabricObserver has on the resources it monitors and alerts on...
-            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
-            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
-            {
-                maxDegreeOfParallelism = maxTasks;
-            }
-
-            ParallelOptions = new ParallelOptions
-            {
-                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
-                MaxDegreeOfParallelism = EnableConcurrentMonitoring  ? maxDegreeOfParallelism : 1,
-                CancellationToken = Token,
-                TaskScheduler = TaskScheduler.Default
-            };
 
             // KVS LVID Monitoring - Windows-only.
             if (isWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
@@ -1108,7 +1081,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
-                    ObserverLogger.LogError("Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}");
+                    ObserverLogger.LogError($"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}");
 
                     // Fix the bug..
                     throw;
@@ -1116,6 +1089,7 @@ namespace FabricObserver.Observers
                 finally
                 {
                     process?.Dispose();
+                    process = null;
                 }
 
                 timer.Stop();
@@ -1123,10 +1097,12 @@ namespace FabricObserver.Observers
 
                 await Task.Delay(150, Token).ConfigureAwait(false);
             }
+
+            processes = null;
         }
 
         private void ProcessResourceDataList<T>(
-                            ConcurrentDictionary<string, FabricResourceUsageData<T>> data,
+                            Dictionary<string, FabricResourceUsageData<T>> data,
                             T thresholdError,
                             T thresholdWarning)
                                 where T : struct
@@ -1139,20 +1115,20 @@ namespace FabricObserver.Observers
                 fileName = $"FabricSystemServices{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
             }
 
-            _ = Parallel.ForEach (data, ParallelOptions, (state) =>
+            foreach (var item in data)
             {
                 Token.ThrowIfCancellationRequested();
 
-                var dataItem = state.Value;
+                var frud = item.Value;
 
-                if (dataItem.Data.Count() == 0 || dataItem.AverageDataValue <= 0)
+                if (frud.Data.Count() == 0 || frud.AverageDataValue <= 0)
                 {
                     return;
                 }
 
                 if (EnableCsvLogging)
                 {
-                    var propertyName = dataItem.Property;
+                    var propertyName = frud.Property;
 
                     /* Log average data value to long-running store (CSV).*/
 
@@ -1172,8 +1148,8 @@ namespace FabricObserver.Observers
                     {
                         int procId = -1;
                         Process[] p = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                            ? GetDotnetLinuxProcessesByFirstArgument(dataItem.Id)
-                            : Process.GetProcessesByName(dataItem.Id);
+                            ? GetDotnetLinuxProcessesByFirstArgument(frud.Id)
+                            : Process.GetProcessesByName(frud.Id);
 
                         if (p.Length > 0)
                         {
@@ -1182,10 +1158,7 @@ namespace FabricObserver.Observers
 
                         if (procId > 0)
                         {
-                            lock (lockObj)
-                            {
-                                CsvFileLogger.LogData(fileName, dataItem.Id, "ProcessId", "", procId);
-                            }
+                            CsvFileLogger.LogData(fileName, frud.Id, "ProcessId", "", procId);
                         }
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
@@ -1193,20 +1166,17 @@ namespace FabricObserver.Observers
 
                     }
 
-                    lock (lockObj)
-                    {
-                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Average", dataItem.AverageDataValue);
-                        CsvFileLogger.LogData(fileName, dataItem.Id, dataLogMonitorType, "Peak", Convert.ToDouble(dataItem.MaxDataValue));
-                    }
+                    CsvFileLogger.LogData(fileName, frud.Id, dataLogMonitorType, "Average", frud.AverageDataValue);
+                    CsvFileLogger.LogData(fileName, frud.Id, dataLogMonitorType, "Peak", Convert.ToDouble(frud.MaxDataValue));
                 }
 
                 ProcessResourceDataReportHealth(
-                        dataItem,
+                        frud,
                         thresholdError,
                         thresholdWarning,
                         TTL,
-                        HealthReportType.Application); 
-            });
+                        HealthReportType.Application);
+            }
         }
 
         private void CleanUp()
