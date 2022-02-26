@@ -276,7 +276,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 c.Clear();
             }
-            else if (Data is ConcurrentQueue<T>)
+            else if (Data is ConcurrentQueue<T> e)
             {
                 // .NET Standard 2.0 does not have a Clear() (2.1 does).
                 Data = new ConcurrentQueue<T>();

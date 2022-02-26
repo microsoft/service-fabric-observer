@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -11,7 +12,6 @@ using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Management;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +22,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private const string TcpProtocol = "tcp";
         private (int, int) windowsDynamicPortRange = (-1, -1);
-        private string netstatOutput = null;
+        private ConcurrentQueue<string> netstatOutput = null;
         private const int netstatOutputMaxCacheTimeSeconds = 15;
         private DateTime LastCacheUpdate = DateTime.MinValue;
         private readonly object _lock =  new object();
@@ -256,7 +256,7 @@ namespace FabricObserver.Observers.Utilities
         {
             lock (_lock)
             {
-                if (netstatOutput == null || DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+                if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
                 {
                     RefreshNetstatData();
                 }
@@ -289,15 +289,8 @@ namespace FabricObserver.Observers.Utilities
 
                 (lowPortRange, highPortRange) = windowsDynamicPortRange;
             }
-
-            string[] netstatDataLines = netstatOutput.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-
-            if (processId > 0)
-            {
-                netstatDataLines = netstatDataLines.Where(d => d.Contains(processId.ToString())).ToArray();
-            }
-
-            foreach (string portRow in netstatDataLines)
+     
+            foreach (string portRow in netstatOutput)
             {
                 if (string.IsNullOrWhiteSpace(portRow))
                 {
@@ -344,7 +337,6 @@ namespace FabricObserver.Observers.Utilities
             int count = tempLocalPortData.Count;
             tempLocalPortData.Clear();
             tempLocalPortData = null;
-            netstatDataLines = null;
 
             return count;
         }
@@ -352,11 +344,11 @@ namespace FabricObserver.Observers.Utilities
         private void RefreshNetstatData()
         {
             Process process = null;
-            string error = null;
-            netstatOutput = string.Empty;
 
             try
             {
+                netstatOutput = new ConcurrentQueue<string>();
+                string error = null;
                 process = new Process();
                 var ps = new ProcessStartInfo
                 {
@@ -382,7 +374,6 @@ namespace FabricObserver.Observers.Utilities
 
                 // Start asynchronous read operation on error stream.  
                 process.BeginErrorReadLine();
-                var sb = new StringBuilder();
 
                 string portRow;
                 while ((portRow = stdOutput.ReadLine()) != null)
@@ -392,7 +383,7 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    sb.AppendLine(portRow);
+                    netstatOutput.Enqueue(portRow.Trim());
                 }
 
                 process.WaitForExit();
@@ -402,9 +393,6 @@ namespace FabricObserver.Observers.Utilities
 
                 if (exitStatus == 0)
                 {
-                    netstatOutput = sb.ToString();
-                    sb.Clear();
-                    sb = null;
                     LastCacheUpdate = DateTime.UtcNow;
                     return;
                 }
