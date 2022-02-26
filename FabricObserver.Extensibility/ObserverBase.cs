@@ -733,7 +733,7 @@ namespace FabricObserver.Observers
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
                 // of user telemetry settings.
-                telemetryData = new TelemetryData(FabricClientInstance, Token)
+                telemetryData = new TelemetryData()
                 {
                     ApplicationName = appName?.OriginalString ?? string.Empty,
                     NodeName = NodeName,
@@ -810,7 +810,7 @@ namespace FabricObserver.Observers
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
                 // of user telemetry settings.
-                telemetryData = new TelemetryData(FabricClientInstance, Token)
+                telemetryData = new TelemetryData()
                 {
                     NodeName = NodeName,
                     ObserverName = ObserverName,

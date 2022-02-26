@@ -289,14 +289,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.CompletedTask;
             }
 
-            string clusterid = string.Empty;
-            
-            using (FabricClient fabClient = new FabricClient())
-            {
-                var (clusterId, _, _) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabClient, cancellationToken).Result;
-                clusterid = clusterId;
-            }
-
             string OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
 
             foreach (var telemData in telemetryDataList)
@@ -305,7 +297,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     var properties = new Dictionary<string, string>
                     {
-                        { "ClusterId", clusterid },
+                        { "ClusterId", ClusterIdentificationUtility.ClusterId },
                         { "ApplicationName", telemData.ApplicationName ?? string.Empty },
                         { "ServiceName", telemData.ServiceName ?? string.Empty },
                         { "ProcessId", telemData.ProcessId.ToString() },

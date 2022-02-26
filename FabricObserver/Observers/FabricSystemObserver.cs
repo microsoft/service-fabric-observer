@@ -153,11 +153,6 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public bool EnableConcurrentMonitoring
-        {
-            get; set;
-        } = false;
-
         public bool EnableKvsLvidMonitoring
         {
             get; set;
@@ -180,6 +175,11 @@ namespace FabricObserver.Observers
 
         public override async Task ObserveAsync(CancellationToken token)
         {
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
             // If set, this observer will only run during the supplied interval.
             if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
@@ -188,16 +188,11 @@ namespace FabricObserver.Observers
 
             Token = token;
 
-            if (Token.IsCancellationRequested)
-            {
-                return;
-            }
-
             try
             {
-                ComputeResourceUsage();
+                await ComputeResourceUsageAsync(token);
             }
-            catch (AggregateException e) when (!(e.InnerException is OperationCanceledException || e.InnerException is TaskCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 ObserverLogger.LogError( $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}");
 
@@ -226,37 +221,30 @@ namespace FabricObserver.Observers
             LastRunDateTime = DateTime.Now;
         }
 
-        private void ComputeResourceUsage()
+        private async Task ComputeResourceUsageAsync(CancellationToken token)
         {
             Initialize();
 
             foreach (string procName in processWatchList)
             {
-                Token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
 
-                try
+                string dotnet = string.Empty;
+
+                if (!isWindows && procName.EndsWith(".dll"))
                 {
-                    string dotnet = string.Empty;
-
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && procName.EndsWith(".dll"))
-                    {
-                        dotnet = "dotnet ";
-                    }
-
-                    GetProcessInfoAsync($"{dotnet}{procName}").GetAwaiter().GetResult();
+                    dotnet = "dotnet ";
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-                {
-                    return;
-                }
-            };
+
+                await GetProcessInfoAsync($"{dotnet}{procName}", token).ConfigureAwait(false);
+            }
         }
 
         public override Task ReportAsync(CancellationToken token)
         {
             try
             {
-                Token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
 
                 var info = new StringBuilder();
 
@@ -612,14 +600,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    _ = allCpuData.TryAdd(
-                                    proc,
-                                    new FabricResourceUsageData<int>(
-                                            ErrorWarningProperty.TotalCpuTime,
-                                            proc,
-                                            frudCapacity,
-                                            UseCircularBuffer,
-                                            EnableConcurrentMonitoring));
+                    allCpuData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -630,14 +611,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    _ = allMemData.TryAdd(
-                                    proc,
-                                    new FabricResourceUsageData<float>(
-                                            ErrorWarningProperty.TotalMemoryConsumptionMb,
-                                            proc,
-                                            frudCapacity,
-                                            UseCircularBuffer,
-                                            EnableConcurrentMonitoring));
+                    allMemData.Add(proc, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -648,14 +622,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    _ = allActiveTcpPortData.TryAdd(
-                                              proc,
-                                              new FabricResourceUsageData<int>(
-                                                    ErrorWarningProperty.TotalActivePorts,
-                                                    proc,
-                                                    frudCapacity,
-                                                    UseCircularBuffer,
-                                                    EnableConcurrentMonitoring));
+                    allActiveTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -665,14 +632,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    _ = allEphemeralTcpPortData.TryAdd(
-                                                 proc,
-                                                 new FabricResourceUsageData<int>(
-                                                        ErrorWarningProperty.TotalEphemeralPorts,
-                                                        proc,
-                                                        frudCapacity,
-                                                        UseCircularBuffer,
-                                                        EnableConcurrentMonitoring));
+                    allEphemeralTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -683,14 +643,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    _ = allHandlesData.TryAdd(
-                                        proc,
-                                        new FabricResourceUsageData<float>(
-                                                ErrorWarningProperty.TotalFileHandles,
-                                                proc,
-                                                frudCapacity,
-                                                UseCircularBuffer,
-                                                EnableConcurrentMonitoring));
+                    allHandlesData.Add(proc, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -701,14 +654,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    _ = allThreadsData.TryAdd(
-                                        proc,
-                                        new FabricResourceUsageData<int>(
-                                                ErrorWarningProperty.TotalThreadCount,
-                                                proc,
-                                                frudCapacity,
-                                                UseCircularBuffer,
-                                                EnableConcurrentMonitoring));
+                    allThreadsData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalThreadCount, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -719,19 +665,14 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
+                    Token.ThrowIfCancellationRequested();
+
                     if (proc != "Fabric" && proc != "FabricRM")
                     {
                         continue;
                     }
 
-                    _ = allAppKvsLvidsData.TryAdd(
-                                        proc,
-                                        new FabricResourceUsageData<double>(
-                                                ErrorWarningProperty.TotalKvsLvidsPercent,
-                                                proc,
-                                                frudCapacity,
-                                                UseCircularBuffer,
-                                                EnableConcurrentMonitoring));
+                    allAppKvsLvidsData.Add(proc, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -904,13 +845,14 @@ namespace FabricObserver.Observers
             }
 
             var watchEvtLog = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
+
             if (!string.IsNullOrWhiteSpace(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
             {
                 monitorWinEventLog = watchEl;
             }
         }
 
-        private async Task GetProcessInfoAsync(string procName)
+        private async Task GetProcessInfoAsync(string procName, CancellationToken token)
         {
             // This is to support differences between Linux and Windows dotnet process naming pattern.
             // Default value is what Windows expects for proc name. In linux, the procname is an argument (typically) of a dotnet command.
@@ -934,9 +876,9 @@ namespace FabricObserver.Observers
 
             Stopwatch timer = new Stopwatch();
 
-            for (int i = 0; i < processes.Length; ++i)
+            for (int i = 0; i < processes.Length; i++)
             {
-                Token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
 
                 Process process = processes[i];
 
@@ -975,23 +917,7 @@ namespace FabricObserver.Observers
                     TotalAllocatedHandlesAllSystemServices += handles;
 
                     // Threads
-                    int threads = 0;
-
-                    if (isWindows)
-                    {
-                        try
-                        {
-                            threads = NativeMethods.GetProcessThreadCount(process.Id);
-                        }
-                        catch (Win32Exception we)
-                        {
-                            ObserverLogger.LogInfo($"{we}");
-                        }
-                    }
-                    else
-                    {
-                        threads = ProcessInfoProvider.GetProcessThreadCount(process.Id);
-                    }
+                    int threads = ProcessInfoProvider.GetProcessThreadCount(process.Id);
 
                     TotalThreadsAllSystemServices += threads;
                     
@@ -1039,7 +965,7 @@ namespace FabricObserver.Observers
 
                     while (!process.HasExited && timer.Elapsed <= duration)
                     {
-                        Token.ThrowIfCancellationRequested();
+                        token.ThrowIfCancellationRequested();
 
                         try
                         {
@@ -1057,7 +983,7 @@ namespace FabricObserver.Observers
                                 allMemData[dotnetArg].AddData(processMem);
                             }
 
-                            await Task.Delay(250, Token).ConfigureAwait(true);
+                            await Task.Delay(150, Token);
                         }
                         catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                         {
@@ -1123,7 +1049,7 @@ namespace FabricObserver.Observers
 
                 if (frud.Data.Count() == 0 || frud.AverageDataValue <= 0)
                 {
-                    return;
+                    continue;
                 }
 
                 if (EnableCsvLogging)
@@ -1147,13 +1073,11 @@ namespace FabricObserver.Observers
                     try
                     {
                         int procId = -1;
-                        Process[] p = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                            ? GetDotnetLinuxProcessesByFirstArgument(frud.Id)
-                            : Process.GetProcessesByName(frud.Id);
+                        Process[] ps = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? GetDotnetLinuxProcessesByFirstArgument(frud.Id) : Process.GetProcessesByName(frud.Id);
 
-                        if (p.Length > 0)
+                        if (ps.Length > 0)
                         {
-                            procId = p.First().Id;
+                            procId = ps.First().Id;
                         }
 
                         if (procId > 0)
@@ -1222,6 +1146,8 @@ namespace FabricObserver.Observers
                 allAppKvsLvidsData?.Clear();
                 allAppKvsLvidsData = null;
             }
+
+            GC.Collect();
         }
     }
 }

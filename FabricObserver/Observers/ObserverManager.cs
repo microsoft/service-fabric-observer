@@ -22,6 +22,7 @@ using System.Fabric.Description;
 using Octokit;
 using System.Diagnostics;
 using System.ComponentModel;
+using System.Runtime;
 
 namespace FabricObserver.Observers
 {
@@ -39,6 +40,7 @@ namespace FabricObserver.Observers
         private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
+        private readonly ClusterIdentificationUtility clusterIdentificationUtility;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.1.25";
@@ -175,6 +177,7 @@ namespace FabricObserver.Observers
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            clusterIdentificationUtility = new ClusterIdentificationUtility(fabricClient, token);
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -239,7 +242,7 @@ namespace FabricObserver.Observers
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
+                            using var telemetryEvents = new TelemetryEvents(FabricServiceContext, token);
                             var foData = GetFabricObserverInternalTelemetryData();
 
                             if (foData != null)
@@ -253,10 +256,10 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Telemetry is non-critical and should not take down FO.
-                            // TelemetryLib will log exception details to file in top level FO log folder.
+                            // Telemetry is non-critical and should *not* take down FO.
+                            Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex}");
                         }
                     }
 
@@ -266,6 +269,9 @@ namespace FabricObserver.Observers
                         await CheckGithubForNewVersionAsync();
                         LastVersionCheckDateTime = DateTime.UtcNow;
                     }
+
+                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
@@ -278,11 +284,26 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is TaskCanceledException || e is OperationCanceledException)
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
                 if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                 {
                     await ShutDownAsync().ConfigureAwait(true);
+                }
+            }
+            catch (AggregateException ae)
+            {
+                if (ae.InnerExceptions.Any(e => e is OperationCanceledException) || ae.InnerExceptions.Any(e => e is TaskCanceledException))
+                {
+                    if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
+                    {
+                        await ShutDownAsync().ConfigureAwait(true);
+                    }
+                }
+                else if (!isWindows && ae.GetBaseException() is LinuxPermissionException)
+                {
+                    await ShutDownAsync().ConfigureAwait(true); 
+                    throw;
                 }
             }
             catch (Exception e)
@@ -297,7 +318,7 @@ namespace FabricObserver.Observers
                 // Telemetry.
                 if (TelemetryEnabled)
                 {
-                    var telemetryData = new TelemetryData(FabricClientInstance, token)
+                    var telemetryData = new TelemetryData()
                     {
                         Description = message,
                         HealthState = "Error",
@@ -331,7 +352,7 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext, token);
                         var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,
@@ -343,13 +364,14 @@ namespace FabricObserver.Observers
                         string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_critical_error_telemetry.log");
                         _ = telemetryEvents.EmitCriticalErrorEvent(data, ObserverConstants.FabricObserverName, filepath);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Telemetry is non-critical and should not take down FO.
+                        Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex}");
+                        // Telemetry is non-critical and should not take down FO. Will not throw here.
                     }
                 }
 
-                // Don't swallow the exception.
+                // Don't swallow the unhandled exception.
                 // Take down FO process. Fix the bug(s).
                 throw;
             }
@@ -672,10 +694,6 @@ namespace FabricObserver.Observers
                     {
                         observerData[ObserverConstants.ContainerObserverName].ServiceData.ConcurrencyEnabled = (obs as ContainerObserver).EnableConcurrentMonitoring;
                     }
-                    else if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
-                    {
-                        observerData[ObserverConstants.FabricSystemObserverName].ServiceData.ConcurrencyEnabled = (obs as FabricSystemObserver).EnableConcurrentMonitoring;
-                    }
                 }
                 else
                 {
@@ -984,7 +1002,7 @@ namespace FabricObserver.Observers
                         // Telemetry.
                         if (TelemetryEnabled)
                         {
-                            var telemetryData = new TelemetryData(FabricClientInstance, token)
+                            var telemetryData = new TelemetryData()
                             {
                                 Description = observerHealthWarning,
                                 HealthState = "Error",
@@ -1070,22 +1088,14 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                catch (AggregateException ae)
+                catch (AggregateException)
                 {
                     if (isConfigurationUpdateInProgress)
                     {
                         return;
                     }
-                    
-                    // This means linux Capabilites have been unset on the related binaries. This will take down FO, which will reset them upon restart.
-                    // This happens when SF touches the binaries (like re-acling them during a cluster upgrade).
-                    if (!isWindows && ae.GetBaseException() is LinuxPermissionException)
-                    {
-                        throw;
-                    }
-
-                    Logger.LogInfo($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ae}");
-                    continue;
+                   
+                    throw;
                 }
                 catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
                 {
@@ -1098,7 +1108,8 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e)
                 {
-                    Logger.LogWarning($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    Logger.LogError($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    throw;
                 }
             }
         }
@@ -1145,7 +1156,7 @@ namespace FabricObserver.Observers
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             Description = message,
                             HealthState = "Ok",

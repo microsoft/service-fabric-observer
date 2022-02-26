@@ -617,10 +617,22 @@ namespace FabricObserver.Observers
                         break;
                     }
                });
+
+                output.Clear();
+                output = null;
+            }
+            catch (AggregateException ae) when (!(ae.GetBaseException() is OperationCanceledException || ae.GetBaseException() is TaskCanceledException))
+            {
+                ObserverLogger.LogError($"Unhandled AggregateException in MonitorContainers:{Environment.NewLine}{ae}");
+                throw;
+            }
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            {
+                return false;
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                ObserverLogger.LogError($"Exception in MonitorContainers:{Environment.NewLine}{e}");
+                ObserverLogger.LogError($"Unhandled Exception in MonitorContainers:{Environment.NewLine}{e}");
                 throw;
             }
 
@@ -734,13 +746,6 @@ namespace FabricObserver.Observers
                 }
 
                 ReplicaOrInstanceList.Enqueue(replicaInfo);
-            }
-        }
-
-        internal class DockerStatsPermissionsException : Exception
-        {
-            internal DockerStatsPermissionsException(string message) : base(message)
-            {
             }
         }
     }

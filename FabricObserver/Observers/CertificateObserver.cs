@@ -197,7 +197,7 @@ namespace FabricObserver.Observers
 
                 if (IsTelemetryEnabled)
                 {
-                    var telemetryData = new TelemetryData(FabricClientInstance, token)
+                    var telemetryData = new TelemetryData()
                     {
                         HealthState = "Ok",
                         NodeName = NodeName,
@@ -246,7 +246,7 @@ namespace FabricObserver.Observers
 
                 if (IsTelemetryEnabled)
                 {
-                    var telemetryData = new TelemetryData(FabricClientInstance, token)
+                    var telemetryData = new TelemetryData()
                     {
                         Code = FOErrorWarningCodes.WarningCertificateExpiration,
                         HealthState = "Warning",

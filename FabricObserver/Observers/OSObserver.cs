@@ -114,7 +114,7 @@ namespace FabricObserver.Observers
 
                     if (IsTelemetryEnabled)
                     {
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             Description = healthMessage,
                             HealthState = "Error",
@@ -168,7 +168,7 @@ namespace FabricObserver.Observers
                     // Telemetry
                     if (IsTelemetryEnabled)
                     {
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             Description = healthMessage,
                             HealthState = "Ok",
@@ -254,7 +254,7 @@ namespace FabricObserver.Observers
                     if (IsTelemetryEnabled)
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             Description = auServiceEnabledMessage,
                             HealthState = "Warning",

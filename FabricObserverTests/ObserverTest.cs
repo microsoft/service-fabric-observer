@@ -1125,8 +1125,7 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 DataCapacity = 5,
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                EnableConcurrentMonitoring = true
+                MonitorDuration = TimeSpan.FromSeconds(1)
             };
 
             await obs.ObserveAsync(token);
@@ -1164,8 +1163,7 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                MemWarnUsageThresholdMb = 5,
-                EnableConcurrentMonitoring = true
+                MemWarnUsageThresholdMb = 5
             };
 
             await obs.ObserveAsync(token);
@@ -1208,8 +1206,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ActiveTcpPortCountWarning = 5,
-                EnableConcurrentMonitoring = true
+                ActiveTcpPortCountWarning = 5
             };
 
             await obs.ObserveAsync(token);
@@ -1253,8 +1250,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ActiveEphemeralPortCountWarning = 1,
-                EnableConcurrentMonitoring = true
+                ActiveEphemeralPortCountWarning = 1
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
@@ -1298,8 +1294,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                AllocatedHandlesWarning = 100,
-                EnableConcurrentMonitoring = true
+                AllocatedHandlesWarning = 100
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
@@ -1343,8 +1338,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarnUsageThresholdPct = -42,
-                EnableConcurrentMonitoring = true
+                CpuWarnUsageThresholdPct = -42
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
@@ -1387,8 +1381,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarnUsageThresholdPct = 420,
-                EnableConcurrentMonitoring = true
+                CpuWarnUsageThresholdPct = 420
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);

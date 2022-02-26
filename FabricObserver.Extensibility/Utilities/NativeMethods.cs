@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -14,8 +14,17 @@ using System.Security;
 namespace FabricObserver.Observers.Utilities
 {
     [SuppressUnmanagedCodeSecurity]
-    public static class NativeMethods
+    public class NativeMethods
     {
+        private readonly IntPtr handleToSnapshot = IntPtr.Zero;
+        private readonly Logger _logger = new Logger("NativeMethods");
+
+        public NativeMethods()
+        {
+            // Create a snapshot of all processes currently running on machine.
+            handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+        }
+
         [Flags]
         public enum MINIDUMP_TYPE
         {
@@ -44,7 +53,7 @@ namespace FabricObserver.Observers.Utilities
             MiniDumpValidTypeFlags = 0x001fffff
         }
 
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential)] 
         internal struct PROCESS_MEMORY_COUNTERS_EX
         {
             internal uint cb;
@@ -73,7 +82,7 @@ namespace FabricObserver.Observers.Utilities
             All = 0x0000001F,
             NoHeaps = 0x40000000
         }
-        //inner struct used only internally
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         private struct PROCESSENTRY32
         {
@@ -89,139 +98,6 @@ namespace FabricObserver.Observers.Utilities
             internal uint dwFlags;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
             internal string szExeFile;
-        }
-
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern IntPtr CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
-
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern bool Process32First([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
-
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern bool Process32Next([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-        [SuppressUnmanagedCodeSecurity]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool CloseHandle(IntPtr hObject);
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
-
-        [DllImport("psapi.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetProcessHandleCount(IntPtr hProcess, out uint pdwHandleCount);
-
-        // Process dump support.
-        [DllImport("dbghelp.dll", EntryPoint = "MiniDumpWriteDump", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
-
-        /// <summary>
-        /// Gets the supplied pid's child processes, if any.
-        /// </summary>
-        /// <param name="parentpid">pid of parent process</param>
-        /// <returns>A List of Process objects.</returns>
-        /// <exception cref="Win32Exception">Callers should handle this exception. 
-        /// It will generally be thrown when the target process (with parentpid) no longer exists.</exception>
-        public static List<Process> GetChildProcesses(int parentpid)
-        {
-            List<Process> childProcs = new List<Process>();
-            IntPtr handleToSnapshot = IntPtr.Zero;  
-
-            try
-            {
-                PROCESSENTRY32 procEntry = new PROCESSENTRY32
-                {
-                    dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
-                };
-
-                handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process, 0);
-                
-                if (Process32First(handleToSnapshot, ref procEntry))
-                {
-                    do
-                    {
-                        if (parentpid == procEntry.th32ParentProcessID)
-                        {
-                            childProcs.Add(Process.GetProcessById((int)procEntry.th32ProcessID));
-                        }
-
-                    } while (Process32Next(handleToSnapshot, ref procEntry));
-                }
-                else
-                {
-                    throw new Win32Exception(string.Format("Failed with win32 error code {0}", Marshal.GetLastWin32Error()));
-                }  
-            }
-            catch (Win32Exception)
-            {
-                // If Process32First fails, it generally means the parent process (with parentpid) no longer exists..
-                throw;
-            }
-            finally
-            {
-                CloseHandle(handleToSnapshot);
-            }
-
-            return childProcs;
-        }
-
-        /// <summary>
-        /// Get the number of execution threads started by the process with supplied pid.
-        /// </summary>
-        /// <param name="procId">The id of the process (pid).</param>
-        /// <returns>The number of execution threads started by the process.</returns>
-        /// <exception cref="Win32Exception">Callers should handle this exception. 
-        /// It will generally be thrown when the target process (with parentpid) no longer exists.</exception>
-        public static int GetProcessThreadCount(int procId)
-        {
-            int threadCount = 0;
-            IntPtr handleToSnapshot = IntPtr.Zero;
-
-            try
-            {
-                PROCESSENTRY32 procEntry = new PROCESSENTRY32
-                {
-                    dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
-                };
-
-                handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process, 0);
-                
-                if (Process32First(handleToSnapshot, ref procEntry))
-                {
-                    do
-                    {
-                        if (procId == procEntry.th32ProcessID)
-                        {
-                            threadCount = (int)procEntry.cntThreads;
-                            break;
-                        }
-
-                    } while (Process32Next(handleToSnapshot, ref procEntry));
-                }
-                else
-                {
-                    throw new Win32Exception(string.Format("Failed with win32 error code {0}", Marshal.GetLastWin32Error()));
-                }
-            }
-            catch (Win32Exception)
-            {
-                // If Process32First fails, it generally means the process (with id procId) no longer exists..
-                throw;
-            }
-            finally
-            {
-                CloseHandle(handleToSnapshot);
-            }
-
-            return threadCount;
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -281,10 +157,41 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern IntPtr CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern bool Process32First([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern bool Process32Next([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool CloseHandle(IntPtr hObject);
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetProcessHandleCount(IntPtr hProcess, out uint pdwHandleCount);
+
+        // Process dump support.
+        [DllImport("dbghelp.dll", EntryPoint = "MiniDumpWriteDump", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
+
         public static MEMORYSTATUSEX GetSystemMemoryInfo()
         {
             MEMORYSTATUSEX memory = new MEMORYSTATUSEX();
-            
+
             if (GlobalMemoryStatusEx(memory))
             {
                 return memory;
@@ -292,6 +199,99 @@ namespace FabricObserver.Observers.Utilities
             else
             {
                 throw new Win32Exception(string.Format("NativeMethods.GetSystemMemoryInfo Failed with win32 error code {0}", Marshal.GetLastWin32Error()));
+            }
+        }
+
+        /// <summary>
+        /// Gets the supplied pid's child processes, if any.
+        /// </summary>
+        /// <param name="parentpid">pid of parent process</param>
+        /// <returns>A List of Process objects.</returns>
+        /// <exception cref="Win32Exception">Callers should handle this exception. 
+        /// It will generally be thrown when the target process (with parentpid) no longer exists.</exception>
+        public List<(string procName, int procId)> GetChildProcesses(int parentpid)
+        {
+            List<(string procName, int procId)> childProcs = new List<(string procName, int procId)>();
+            PROCESSENTRY32 procEntry = new PROCESSENTRY32
+            {
+                dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
+            };
+
+            string[] ignoreProcessList = new string[] { "conhost.exe", "csrss.exe", "svchost.exe", "wininit.exe", "lsass.exe" };
+
+            if (!Process32First(handleToSnapshot, ref procEntry))
+            {
+                throw new Win32Exception($"NativeMethods.GetChildProcesses: Failed with win32 error code {Marshal.GetLastWin32Error()}");
+            }
+
+            do
+            {
+                try
+                {
+                    if (parentpid != procEntry.th32ParentProcessID)
+                    {
+                        continue;
+                    }
+
+                    if (ignoreProcessList.Contains(procEntry.szExeFile))
+                    {
+                        continue;
+                    }
+
+                    childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
+                }
+                catch (ArgumentException)
+                {
+
+                }
+                        
+            } while (Process32Next(handleToSnapshot, ref procEntry));
+
+            return childProcs;
+        }
+
+        /// <summary>
+        /// Get the number of execution threads started by the process with supplied pid.
+        /// </summary>
+        /// <param name="procId">The id of the process (pid).</param>
+        /// <returns>The number of execution threads started by the process.</returns>
+        /// <exception cref="Win32Exception">Callers should handle this exception. 
+        /// It will generally be thrown when the target process (with parentpid) no longer exists.</exception>
+        public int GetProcessThreadCount(int procId)
+        {
+            int threadCount = 0;
+            PROCESSENTRY32 procEntry = new PROCESSENTRY32
+            {
+                dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
+            };
+
+            if (!Process32First(handleToSnapshot, ref procEntry))
+            {
+                throw new Win32Exception($"NativeMethods.GetProcessThreadCount: Failed with win32 error code {Marshal.GetLastWin32Error()}");
+            }
+
+            do
+            {
+                if (procId == procEntry.th32ProcessID)
+                {
+                    threadCount = (int)procEntry.cntThreads;
+                    break;
+                }
+
+            } while (Process32Next(handleToSnapshot, ref procEntry));
+
+            return threadCount;
+        }
+
+        ~NativeMethods()
+        {
+            if (handleToSnapshot != IntPtr.Zero)
+            {
+                if (!CloseHandle(handleToSnapshot))
+                {
+                    // Chances of landing here are really slim..
+                    _logger.LogWarning($"CloseHandle failed for handleToSnapshot({handleToSnapshot})");
+                }
             }
         }
     }

@@ -256,7 +256,7 @@ namespace ClusterObserver
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext, token);
                         ClusterObserverOperationalEventData coData = GetClusterObserverInternalTelemetryData();
 
                         if (coData != null)
@@ -330,10 +330,7 @@ namespace ClusterObserver
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(
-                                                            FabricClientInstance,
-                                                            FabricServiceContext,
-                                                            token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext, token);
 
                         var data = new CriticalErrorEventData
                         {

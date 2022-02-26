@@ -73,13 +73,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             string serviceName = null,
                             string instanceName = null)
         {
-            var (clusterId, _, _) =
-                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
-
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
-                    clusterId = clusterId ?? string.Empty,
+                    clusterId = ClusterIdentificationUtility.ClusterId ?? string.Empty,
                     source,
                     property = propertyName,
                     healthState = state.ToString(),
@@ -142,17 +139,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                                     string source,
                                     CancellationToken cancellationToken)
         {
-            var (clusterId, _, _) =
-               await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(
-                   fabricClient,
-                   token).ConfigureAwait(true);
-
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
                     id = $"FO_{Guid.NewGuid()}",
                     datetime = DateTime.UtcNow,
-                    clusterId = clusterId ?? string.Empty,
+                    clusterId = ClusterIdentificationUtility.ClusterId ?? string.Empty,
                     source,
                     property = name,
                     value

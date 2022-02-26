@@ -3,10 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System;
-using System.Fabric;
 using System.Runtime.InteropServices;
-using System.Threading;
 using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
 
@@ -19,10 +16,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public string ClusterId
-        {
-            get; set;
-        }
+        public string ClusterId => ClusterIdentificationUtility.ClusterId;
 
         public string Code
         {
@@ -103,19 +97,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public TelemetryData()
         {
 
-        }
-
-        public TelemetryData(FabricClient fabricClient, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var (clusterId, _, _) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
-                ClusterId = clusterId;
-            }
-            catch (AggregateException)
-            {
-
-            }
         }
     }
 }

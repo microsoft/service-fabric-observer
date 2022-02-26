@@ -11,6 +11,7 @@ using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +22,10 @@ namespace FabricObserver.Observers.Utilities
     {
         private const string TcpProtocol = "tcp";
         private (int, int) windowsDynamicPortRange = (-1, -1);
+        private string netstatOutput = null;
+        private const int netstatOutputMaxCacheTimeSeconds = 15;
+        private DateTime LastCacheUpdate = DateTime.MinValue;
+        private readonly object _lock =  new object();
 
         public WindowsInfoProvider()
         {
@@ -29,6 +34,11 @@ namespace FabricObserver.Observers.Utilities
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
+            if (windowsDynamicPortRange != (-1, -1))
+            {
+                return windowsDynamicPortRange;
+            }
+
             using (var process = new Process())
             {
                 try
@@ -112,7 +122,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                count = Retry.Do(() => GetTcpPortCount(processId, true), TimeSpan.FromSeconds(3), CancellationToken.None);
+                count = Retry.Do(() => GetTcpPortCount(processId, ephemeral: true), TimeSpan.FromSeconds(3), CancellationToken.None);
             }
             catch (AggregateException ae)
             {
@@ -136,7 +146,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                count = Retry.Do(() => GetTcpPortCount(processId), TimeSpan.FromSeconds(3), CancellationToken.None);
+                count = Retry.Do(() => GetTcpPortCount(processId, ephemeral: false), TimeSpan.FromSeconds(3), CancellationToken.None);
             }
             catch (AggregateException ae)
             {
@@ -244,6 +254,14 @@ namespace FabricObserver.Observers.Utilities
 
         private int GetTcpPortCount(int processId = -1, bool ephemeral = false)
         {
+            lock (_lock)
+            {
+                if (netstatOutput == null || DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+                {
+                    RefreshNetstatData();
+                }
+            }
+
             var tempLocalPortData = new List<(int Pid, int Port)>();
             string findStrProc = string.Empty;
             string error = string.Empty;
@@ -272,16 +290,77 @@ namespace FabricObserver.Observers.Utilities
                 (lowPortRange, highPortRange) = windowsDynamicPortRange;
             }
 
+            string[] netstatDataLines = netstatOutput.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+
             if (processId > 0)
             {
-                findStrProc = $" | find \"{processId}\"";
+                netstatDataLines = netstatDataLines.Where(d => d.Contains(processId.ToString())).ToArray();
             }
 
-            using (var process = new Process())
+            foreach (string portRow in netstatDataLines)
             {
+                if (string.IsNullOrWhiteSpace(portRow))
+                {
+                    continue;
+                }
+
+                (int localPort, int pid) = TupleGetLocalPortPidPairFromNetStatString(portRow);
+
+                if (localPort == -1 || pid == -1)
+                {
+                    continue;
+                }
+
+                if (processId > 0)
+                {
+                    if (processId != pid)
+                    {
+                        continue;
+                    }
+
+                    // Only add unique pid (if supplied in call) and local port data to list.
+                    if (tempLocalPortData.Any(t => t.Pid == pid && t.Port == localPort))
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (tempLocalPortData.Any(t => t.Port == localPort))
+                    {
+                        continue;
+                    }
+                }
+
+                // Ephemeral ports query?
+                if (ephemeral && (localPort < lowPortRange || localPort > highPortRange))
+                {
+                    continue;
+                }
+
+                tempLocalPortData.Add((pid, localPort));
+            }
+
+            int count = tempLocalPortData.Count;
+            tempLocalPortData.Clear();
+            tempLocalPortData = null;
+            netstatDataLines = null;
+
+            return count;
+        }
+
+        private void RefreshNetstatData()
+        {
+            Process process = null;
+            string error = null;
+            netstatOutput = string.Empty;
+
+            try
+            {
+                process = new Process();
                 var ps = new ProcessStartInfo
                 {
-                    Arguments = $"/c netstat -qno -p {TcpProtocol}{findStrProc}",
+                    Arguments = $"/c netstat -qno -p {TcpProtocol}",
                     FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -292,17 +371,18 @@ namespace FabricObserver.Observers.Utilities
                 // Capture any error information from netstat.
                 process.ErrorDataReceived += (sender, e) => { error += e.Data; };
                 process.StartInfo = ps;
-                
+
                 if (!process.Start())
                 {
                     Logger.LogWarning($"Unable to start process: {ps.Arguments}");
-                    return 0;
+                    return;
                 }
 
                 var stdOutput = process.StandardOutput;
 
                 // Start asynchronous read operation on error stream.  
                 process.BeginErrorReadLine();
+                var sb = new StringBuilder();
 
                 string portRow;
                 while ((portRow = stdOutput.ReadLine()) != null)
@@ -312,68 +392,34 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    (int localPort, int pid) = TupleGetLocalPortPidPairFromNetStatString(portRow);
-
-                    if (localPort == -1 || pid == -1)
-                    {
-                        continue;
-                    }
-
-                    if (processId > 0)
-                    {
-                        if (processId != pid)
-                        {
-                            continue;
-                        }
-
-                        // Only add unique pid (if supplied in call) and local port data to list.
-                        if (tempLocalPortData.Any(t => t.Pid == pid && t.Port == localPort))
-                        {
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        if (tempLocalPortData.Any(t => t.Port == localPort))
-                        {
-                            continue;
-                        }
-                    }
-
-                    // Ephemeral ports query?
-                    if (ephemeral && (localPort < lowPortRange || localPort > highPortRange))
-                    {
-                        continue;
-                    }
-
-                    tempLocalPortData.Add((pid, localPort));
+                    sb.AppendLine(portRow);
                 }
 
                 process.WaitForExit();
 
                 int exitStatus = process.ExitCode;
-                int count = tempLocalPortData.Count;
-                tempLocalPortData.Clear();
                 stdOutput.Close();
 
                 if (exitStatus == 0)
                 {
-                    return count;
+                    netstatOutput = sb.ToString();
+                    sb.Clear();
+                    sb = null;
+                    LastCacheUpdate = DateTime.UtcNow;
+                    return;
                 }
 
-                // find will exit with a non-zero exit code if it doesn't find any matches in the case where a pid was supplied.
-                // Do not throw in this case. 0 is the right answer.
-                if (processId > 0 && error == string.Empty)
-                {
-                    return 0;
-                }
-
-                // there was an error associated with the non-zero exit code. Log it and throw.
-                string msg = $"netstat -qno -p {TcpProtocol}{findStrProc} exited with {exitStatus}: {error}";
+                // there was an error associated with the non-zero exit code.
+                string msg = $"RefreshNetstatData: netstat -qno -p {TcpProtocol} exited with {exitStatus}: {error}";
                 Logger.LogWarning(msg);
 
-                // this will be handled by Retry.Do().
+                // Handled by Retry.Do.
                 throw new Exception(msg);
+            }
+            finally
+            {
+                process?.Dispose();
+                process = null;
             }
         }
 

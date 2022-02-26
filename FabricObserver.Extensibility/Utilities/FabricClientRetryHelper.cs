@@ -50,8 +50,7 @@ namespace FabricObserver.Observers.Utilities
                                         CancellationToken cancellationToken)
         {
             bool needToWait = false;
-            var watch = new Stopwatch();
-            watch.Start();
+            Stopwatch watch = Stopwatch.StartNew();
 
             while (true)
             {

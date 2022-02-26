@@ -24,7 +24,7 @@
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
     <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
@@ -57,7 +57,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
@@ -67,15 +67,15 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00). This setting only applies to 3 observers.
-         If you enable concurrent monitoring for AppObserver and you are running on capable CPU (>= 4 logical processors),
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an enabled observer should monitor resources (CPU and Memory) per target. This setting only applies to 3 observers.
+         If you enable concurrent monitoring for AppObserver and you are running on capable hardware (>= 4 logical processors),
          then you should increase this value from 1 second to at most (1/2 the number of logical processors) seconds on the target machine.
-         **However, if you monitor a *very* large number of services (>200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
-         Do leave this set at 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4) -->
+         **However, if you monitor a *very* large number of services (> 200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
+         Set this to 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4). -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:03" />
-    <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00) -->
+    <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
@@ -88,43 +88,46 @@
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
-    <!-- Note: CircularBufferCollection is not thread-safe. -->
+    <!-- Note: CircularBufferCollection is not thread safe for writes. If you enable this AND enable concurrent monitoring, a ConcurrentQueue will be used. -->
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Optional-If UseCircularBuffer = true -->
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    <!-- Process family tree (descendants) monitoring.
-         Note: Be careful here if you monitor large numbers of services (> 100) and enable concurrent monitoring.
-         In that case, enabling this may eat a lot of cpu. Please test, as always. If you know your target services
-         do *not* spawn child processes, then disable this feature. Otherwise, AppObserver will spend cycles figuring out what you already know.. -->
-    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
+    <!-- Process family tree (descendants, aka child processes) monitoring.
+         NOTE: Be careful here if you monitor large numbers of services *on Windows* (>= 200). In that case, enabling this may eat a lot of cpu (for a very short period of time, however). 
+         Please test, and measure, as always. The key thing here is: *If you know your target services do *not* spawn child processes, then you should disable this feature*. 
+         Otherwise, AppObserver will waste CPU cycles figuring out what you already know. -->
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError feature).
+    <!-- Service process dumps (dumpProcessOnError setting).
          You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json
          if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
     <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
+    <!-- Supported values are: Mini, MiniPlus, Full. -->
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
     <!-- Max number of dumps to generate per service, per observed metric, within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
     <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
-    <!-- Concurrency/Parallelism Support
-         Note: If you do not monitor several services, then enabling this is not super useful. -->
+    <!-- Concurrency/Parallelism Support.
+         Note: If you do not monitor several services, then enabling this is not super useful. This will only add value (substantial) on machines with capable hardware (>= 4 logical procs). -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- The default value is 1/4 of detected logical processors. This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
-         eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
-         Please test and choose a value that suits your needs or simply leave this unset and go with the default. -->
+         eating CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
+         Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
-    <!-- KVS LVID Usage Monitoring - Windows-only. NOTE: If you monitor stateful Actor services, then you should set this to true.
-	 This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
-    <!-- Working set type. Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         ***NOTE***: If you have several service processes of the *same name*, Private Working set measurement on Windows will add significant processing time to AppObserver.
-         Consider *not* enabling Private Set memory measurement in that case. Instead, Full Working set should be measured (Private + Shared), computed using a native API call (fast) via COM interop (PInvoke). -->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <!-- KVS LVID Usage Monitoring - Windows-only.
+         NOTE: If you monitor stateful Actor services, then you should set this to true.
+         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
+    <!-- Process Working set type. 
+         Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
+         NOTE: If you have *several* service processes of the *same name*, this feature will add significant processing time (and CPU usage) to AppObserver. 
+         In that case, set this to false and the Full Working set will be measured (Private + Shared), computed using a native API call (fast). -->
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -143,10 +146,10 @@
     <Parameter Name="DiskObserverAverageQueueLengthErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="15" />
     <!-- Folder size monitoring. If you want to monitor folder sizes, then enable this feature and provide full paths (and/or path env vars) as shown below. -->
-    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
+    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="true" />
     <!-- Supply full path/threshold(in MB) pairs for Warning/Error level monitoring here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
     <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
-    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 1024 | D:\SomeFolder, 1024 | %SOMEFULLPATH%, 4096 | %SOMEPATH%\SubFolder, 1024" />
+    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 250 | D:\SomeFolder, 1024 | %SOMEFULLPATH%, 4096 | %SOMEPATH%\SubFolder, 1024" />
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
@@ -154,7 +157,7 @@
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
@@ -179,7 +182,7 @@
     <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="95" />
+    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="80" />
     <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
     <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
