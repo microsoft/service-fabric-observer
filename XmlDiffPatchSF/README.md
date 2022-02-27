@@ -18,18 +18,20 @@ Help:
 
 Diff/Patch ApplicationManifest.xml:
 
-``` XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\ApplicationManifest-Main.xml" "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml" ``` 
+```XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\ApplicationManifest-Main.xml" "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml" ``` 
 
-The above command will produce a patched file, C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest_patched.xml, containing any new settings for the latest version and carrying over the settings established in the earlier (yours) version, named ApplicationManifest-Main.xml, which would store all of youre preferred configuration settings for FO.
+The above command will produce a patched file, C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest_patched.xml, containing any new settings for the latest version and carrying over the settings established in the earlier version, in this case named ApplicationManifest-Main.xml, which would store all of your preferred configuration settings for FO, for example (your main configuration file).
 
-You can optionally provide a third parameter which is the full path to the patched file - in this case, named as ApplicationManifest.xml: 
+You can optionally provide a third parameter which is the full path, including file name, to the patched file - in this case, named ApplicationManifest.xml: 
 
-``` XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\ApplicationManifest-Main.xml" "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml"  "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml" ``` 
+```XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\ApplicationManifest-Main.xml" "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml"  "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml" ``` 
 
 Note that if your current config files contain elements that the new (latest, target) file does not, then they will be carried over. This is to support FabricObserver Plugins and their related configuration settings in Settings.xml and ApplicationManifest.xml. 
 
-**Make sure you run this utility over both ApplicationManifest and Settings XML files as new settings added to latest ApplicationManifest will also be present in the latest Settings.xml file.** 
+**NOTE: Make sure you run this utility over both ApplicationManifest and Settings XML files as new settings added to latest ApplicationManifest will also be present in the latest Settings.xml file.** 
 
-``` XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\Settings-Main.xml" "C:\temp\FO-latest\FabrcicObserver\PackageRoot\Config\Settings.xml" ``` 
+Diff/Patch Settings.xml: 
+
+```XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\Settings-Main.xml" "C:\temp\FO-latest\FabrcicObserver\PackageRoot\Config\Settings.xml" "C:\temp\FO-latest\FabrcicObserver\PackageRoot\Config\Settings.xml" ``` 
 
 It should be easy to run this utility in a devops workflow. 
