@@ -26,10 +26,10 @@ namespace FabricObserver.Observers.Utilities
 
         /// <summary>
         /// You must create an instance of this type to use the process-related functions GetChildProcesses and GetProcessThreadCount.
-        /// If you want to cache process data in memory (important to do when you call these functions over and over again),
-        /// then pass true to the type's constructor.
+        /// If you want to cache process data in memory, important to do when you call these functions over and over again, concurrently,
+        /// then pass cacheProcessData as true.
         /// </summary>
-        /// <param name="cacheProcessData">Whether or not to cache process data in memory (recommended for large numbers of target processes).</param>
+        /// <param name="cacheProcessData">Whether or not to cache process data in memory.</param>
         public NativeMethods(bool cacheProcessData)
         {
             if (cacheProcessData)
