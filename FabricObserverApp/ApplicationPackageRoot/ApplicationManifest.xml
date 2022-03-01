@@ -126,7 +126,11 @@
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
          NOTE: If you have *several* service processes of the *same name*, this feature will add significant processing time (and CPU usage) to AppObserver. 
          In that case, set this to false and the Full Working set will be measured (Private + Shared), computed using a native API call (fast). -->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <!-- Windows-only. Whether or not to cache Windows process data used by NativeMethods.GetChildProcesses and NativeMethods.GetProcessThreadCount functions. 
+         This is an important performance optimization, *especially if you have configured AppObserver to monitor large numbers of service processes*. 
+         If unset, this defaults to true. -->
+    <Parameter Name="AppObserverEnableProcessDataInMemoryCache" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -227,6 +231,7 @@
             <Parameter Name="MaxConcurrentTasks" Value="[AppObserverMaxConcurrentTasks]" />
             <Parameter Name="EnableCSVDataLogging" Value="[AppObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[AppObserverEnableEtw]" />
+            <Parameter Name="EnableProcessDataInMemoryCache" Value="[AppObserverEnableProcessDataInMemoryCache]" />
             <Parameter Name="EnableTelemetry" Value="[AppObserverEnableTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[AppObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[AppObserverMonitorDuration]" />

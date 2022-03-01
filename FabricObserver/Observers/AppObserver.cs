@@ -101,6 +101,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        public bool EnableProcessDataInMemoryCache
+        {
+            get; set;
+        } = true;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AppObserver"/> class.
         /// </summary>
@@ -500,6 +505,12 @@ namespace FabricObserver.Observers
                 EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
             }
 
+            // Process data in-memory caching.
+            if (isWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.AppObserverEnableProcessDataInMemoryCache), out bool enableProcessDataInMemoryCache))
+            {
+                EnableProcessDataInMemoryCache = enableProcessDataInMemoryCache;
+            }
+
             configSettings.Initialize(
                             FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                                                                                  ObserverConstants.ObserverConfigurationPackageName)?.Settings,
@@ -757,9 +768,9 @@ namespace FabricObserver.Observers
 
             if (isWindows)
             {
-                // Performance optimization to limit the number of times to retrieve full process snapshot that is used in hot function paths.
-                // For the duration of this run, a single snapshot will be used by multiple functions.
-                WindowsProcessInfoProvider.Win32CreateProcessSnapshot();
+                // Creating an instance of NativeMethods is required to use GetChildProcesses and GetProcessThreadCount functions. 
+                // This enables significant performance optimization to limit the number of times these functions retrieve a full process snapshot.
+                WindowsProcessInfoProvider.CreateNativeMethodsInstance(EnableProcessDataInMemoryCache);
             }
 
             for (int i = 0; i < userTargetList.Count; ++i)
@@ -1955,8 +1966,8 @@ namespace FabricObserver.Observers
 
             if (isWindows)
             {
-                // This will free native memory that holds the snapshot (will run finalizer on the NativeMethods instance).
-                WindowsProcessInfoProvider.Win32CloseProcessSnapshot();
+                // This will free native memory that holds the process data snapshot (will run finalizer on the NativeMethods instance).
+                WindowsProcessInfoProvider.DestroyNativeMethodsInstance();
             }
  
             GC.Collect();

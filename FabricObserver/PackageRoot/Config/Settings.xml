@@ -193,6 +193,10 @@
 
 	<!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
     <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
+
+	<!-- Optional: Windows-only. Whether or not to cache process data used by NativeMethods.GetChildProcesses and NativeMethods.GetProcessThreadCount functions. 
+         This is an important performance optimization for when you have AppObserver monitor greater than 100 service processes. -->
+	<Parameter Name="EnableProcessDataInMemoryCache" Value="" MustOverride="true" /> 
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />

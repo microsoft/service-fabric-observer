@@ -17,22 +17,28 @@ namespace FabricObserver.Observers.Utilities
     {
         private const int MaxDescendants = 50;
 
-        // Consider: caching ChildProcs (Dictionary<int, List<string, int>)
+        // Consider (unlikely): caching ChildProcs (Dictionary<int, List<string, int>>)
 
         public static NativeMethods NativeMethods
         {
             get; private set;
         }
 
-        public static void Win32CreateProcessSnapshot()
+        /// <summary>
+        /// Creating an instance of this type is only necessary when a full process snapshot is needed (by AppObs, first and foremost..).
+        /// The snapshot will reside in memory (cached) until Win32CloseProcessSnapshot is called, which must be done by the consumer (set the NativeMethods instance to null).
+        /// </summary>
+        /// <param name="enableProcessDataCaching">Whether or not to cache the full (no heaps) process snapshot. 
+        /// This is only useful if you have an observer (e.g., AppObserver) configured to monitor > 100 services and you are monitoring them concurrently.</param>
+        public static void CreateNativeMethodsInstance(bool enableProcessDataCaching)
         {
-            // Creating instances of this type is only necessary when a full process snapshot is needed (by AppObs, first and foremost..).
-            // The snapshot will reside in memory until Win32CloseProcessSnapshot is called, which must be done by the consumer.
-            NativeMethods = new NativeMethods();
+
+            NativeMethods = new NativeMethods(enableProcessDataCaching);
         }
 
-        public static void Win32CloseProcessSnapshot()
+        public static void DestroyNativeMethodsInstance()
         {
+            // TOTHINK: Necessary? Doesn't hurt.
             GC.KeepAlive(NativeMethods);
 
             // run dtor (finalizer) on NativeMethods instance (closes native snapshot handle).
@@ -359,8 +365,9 @@ namespace FabricObserver.Observers.Utilities
             return 0F;
         }
 
-        // NOTE: If you have several service processes of the same name, this will add significant processing time to AppObserver. Consider not enabling Private Set memory.
-        // In that case, the Full Working set will be measured (Private + Shared), computed using a native API call (fast).
+        // NOTE: If you have several service processes of the *same name*, this will add significant processing time and CPU usage to AppObserver.
+        // Consider not enabling Private Working Set memory on AppObserver if that is the case. Instead, the Full Working Set should be measured (Private + Shared),
+        // computed using a native API call (fast). See ApplicationManifest.xml for comments.
         private string GetInternalProcessNameFromPerfCounter(string procName, int procId)
         {
             string[] instanceNames;

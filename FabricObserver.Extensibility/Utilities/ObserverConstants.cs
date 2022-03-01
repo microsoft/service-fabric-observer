@@ -62,6 +62,7 @@ namespace FabricObserver.Observers.Utilities
         public const string AppObserverName = "AppObserver";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
         public const string EnableChildProcessMonitoringParameter = "EnableChildProcessMonitoring";
+        public const string AppObserverEnableProcessDataInMemoryCache = "EnableProcessDataInMemoryCache";
         public const string MaxChildProcTelemetryDataCountParameter = "MaxChildProcTelemetryDataCount";
         public const string EnableProcessDumpsParameter = "EnableProcessDumps";
         public const string DumpTypeParameter = "DumpType";

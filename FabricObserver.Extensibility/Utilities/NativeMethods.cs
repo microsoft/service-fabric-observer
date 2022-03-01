@@ -13,16 +13,37 @@ using System.Security;
 
 namespace FabricObserver.Observers.Utilities
 {
+    // TODO: Consider employing IDisposable pattern here so folks can call Dispose directly (or use using block).
+    /// <summary>
+    /// Native helper methods. Note that in order to use the process-related functions, you must create an instance of this type and then set it to null
+    /// when you are done with it. 
+    /// </summary>
     [SuppressUnmanagedCodeSecurity]
     public class NativeMethods
     {
         private readonly IntPtr handleToSnapshot = IntPtr.Zero;
-        private readonly Logger _logger = new Logger("NativeMethods");
+        private readonly bool _cacheSnapshotHandle;
 
-        public NativeMethods()
+        /// <summary>
+        /// You must create an instance of this type to use the process-related functions GetChildProcesses and GetProcessThreadCount.
+        /// If you want to cache process data in memory (important to do when you call these functions over and over again),
+        /// then pass true to the type's constructor.
+        /// </summary>
+        /// <param name="cacheProcessData">Whether or not to cache process data in memory (recommended for large numbers of target processes).</param>
+        public NativeMethods(bool cacheProcessData)
         {
-            // Create a snapshot of all processes currently running on machine.
-            handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+            if (cacheProcessData)
+            {
+                // Create a snapshot of all processes currently running on machine.
+                handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+
+                if (handleToSnapshot.ToInt32() < 1)
+                {
+                    throw new Win32Exception($"NativeMethods.NativeMethods: Failed to create a process snapshot. Bye.");
+                }
+            }
+
+            _cacheSnapshotHandle = cacheProcessData;   
         }
 
         [Flags]
@@ -203,7 +224,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Gets the supplied pid's child processes, if any.
+        /// Gets the supplied process pid's child processes' name/pid pairs, if any.
         /// </summary>
         /// <param name="parentpid">pid of parent process</param>
         /// <returns>A List of Process objects.</returns>
@@ -216,38 +237,57 @@ namespace FabricObserver.Observers.Utilities
             {
                 dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
             };
+            string[] ignoreProcessList = new string[] { "conhost.exe", "csrss.exe", "lsass.exe", "svchost.exe", "wininit.exe", "winlogon.exe" };
+            IntPtr handleToSnapshot = IntPtr.Zero;
 
-            string[] ignoreProcessList = new string[] { "conhost.exe", "csrss.exe", "svchost.exe", "wininit.exe", "lsass.exe" };
-
-            if (!Process32First(handleToSnapshot, ref procEntry))
+            try
             {
-                throw new Win32Exception($"NativeMethods.GetChildProcesses: Failed with win32 error code {Marshal.GetLastWin32Error()}");
+                if (!_cacheSnapshotHandle)
+                {
+                    handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+                }
+                else
+                {
+                    handleToSnapshot = this.handleToSnapshot;
+                }
+
+                if (!Process32First(handleToSnapshot, ref procEntry))
+                {
+                    throw new Win32Exception($"NativeMethods.GetChildProcesses: Failed with win32 error code {Marshal.GetLastWin32Error()}");
+                }
+
+                do
+                {
+                    try
+                    {
+                        if (parentpid != procEntry.th32ParentProcessID)
+                        {
+                            continue;
+                        }
+
+                        if (ignoreProcessList.Contains(procEntry.szExeFile))
+                        {
+                            continue;
+                        }
+
+                        childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+
+                } while (Process32Next(handleToSnapshot, ref procEntry));
+
+                return childProcs;
             }
-
-            do
+            finally
             {
-                try
+                if (!_cacheSnapshotHandle)
                 {
-                    if (parentpid != procEntry.th32ParentProcessID)
-                    {
-                        continue;
-                    }
-
-                    if (ignoreProcessList.Contains(procEntry.szExeFile))
-                    {
-                        continue;
-                    }
-
-                    childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
+                    ReleaseHandle(handleToSnapshot);
                 }
-                catch (ArgumentException)
-                {
-
-                }
-                        
-            } while (Process32Next(handleToSnapshot, ref procEntry));
-
-            return childProcs;
+            }
         }
 
         /// <summary>
@@ -264,35 +304,59 @@ namespace FabricObserver.Observers.Utilities
             {
                 dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
             };
+            IntPtr handleToSnapshot = IntPtr.Zero;
 
-            if (!Process32First(handleToSnapshot, ref procEntry))
+            try
             {
-                throw new Win32Exception($"NativeMethods.GetProcessThreadCount: Failed with win32 error code {Marshal.GetLastWin32Error()}");
-            }
-
-            do
-            {
-                if (procId == procEntry.th32ProcessID)
+                if (!_cacheSnapshotHandle)
                 {
-                    threadCount = (int)procEntry.cntThreads;
-                    break;
+                    handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+                }
+                else
+                {
+                    handleToSnapshot = this.handleToSnapshot;
                 }
 
-            } while (Process32Next(handleToSnapshot, ref procEntry));
+                if (!Process32First(handleToSnapshot, ref procEntry))
+                {
+                    throw new Win32Exception($"NativeMethods.GetProcessThreadCount: Failed with win32 error code {Marshal.GetLastWin32Error()}");
+                }
 
-            return threadCount;
+                do
+                {
+                    if (procId == procEntry.th32ProcessID)
+                    {
+                        threadCount = (int)procEntry.cntThreads;
+                        break;
+                    }
+
+                } while (Process32Next(handleToSnapshot, ref procEntry));
+
+                return threadCount;
+            }
+            finally
+            {
+                if (!_cacheSnapshotHandle)
+                {
+                    ReleaseHandle(handleToSnapshot);
+                }
+            }
+        }
+
+        private void ReleaseHandle(IntPtr handle)
+        {
+            if (handle != IntPtr.Zero)
+            {
+                if (!CloseHandle(handle))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+            }
         }
 
         ~NativeMethods()
         {
-            if (handleToSnapshot != IntPtr.Zero)
-            {
-                if (!CloseHandle(handleToSnapshot))
-                {
-                    // Chances of landing here are really slim..
-                    _logger.LogWarning($"CloseHandle failed for handleToSnapshot({handleToSnapshot})");
-                }
-            }
+            ReleaseHandle(this.handleToSnapshot);
         }
     }
 }
