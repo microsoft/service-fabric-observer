@@ -5,9 +5,9 @@ Like all elementary services such as monitoring, Windows update, scripts, scalin
 There are two options:
 1. Add the resource provided in the ARM template service-fabric-observer.json in the template which also deploys the Service Fabric cluster. To guarantee the correct deployment order the first resource has to depend on the cluster resource. 
 
-```PowerShell
+```ARM
     {
-	"apiVersion": "[variables('sfApiVersion')]",
+	    "apiVersion": "[variables('sfApiVersion')]",
       "type": "Microsoft.ServiceFabric/clusters/applicationTypes",
       "name": "[concat(parameters('clusterName'), '/', variables('applicationTypeName'))]",
       "location": "[resourceGroup().location]",
@@ -20,7 +20,7 @@ There are two options:
     },
 ``` 
 
-2. The app can be deployed separately by using the provided PowerShell script file 'Deploy-FabricObserver.ps1'.
+2. The app can be deployed manually by using the provided PowerShell script file 'Deploy-FabricObserver.ps1'.
 
 
 ## Further reading
