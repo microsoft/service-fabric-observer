@@ -6,10 +6,10 @@
             "value": "<ClusterResourceName>"
         },
         "applicationTypeVersionClusterObserver": {
-            "value": "2.1.13"
+            "value": "X.X.XX"
         },
         "packageUrlClusterObserver": {
-            "value": "https://github.com/microsoft/service-fabric-observer/releases/download/51751968/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.1.13.sfpkg"
+            "value": "https://github.com/microsoft/service-fabric-observer/releases/download/51751968/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.X.X.XX.sfpkg"
         }
     }
 }
