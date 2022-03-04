@@ -3,9 +3,4 @@
 	<Parameters>
 		<Parameter Name="FabricObserverWeb_InstanceCount" DefaultValue="-1" />
 	</Parameters>
-	<Service Name="FabricObserverWeb" ServicePackageActivationMode="ExclusiveProcess">
-		<StatelessService ServiceTypeName="FabricObserverWebType" InstanceCount="[FabricObserverWeb_InstanceCount]">
-			<SingletonPartition />
-		</StatelessService>
-	</Service>
 </StartupServices>

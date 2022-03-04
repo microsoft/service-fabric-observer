@@ -30,8 +30,8 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.9.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
-    <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
+    <PackageReference Include="Microsoft.ServiceFabric" Version="8.0.516" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Octokit" Version="0.50.0" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="5.0.1" />

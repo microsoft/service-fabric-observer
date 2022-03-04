@@ -1,11 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<StartupServices xmlns="http://schemas.microsoft.com/2011/01/fabric" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-	<Parameters>
-		<Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
-	</Parameters>
-	<Service Name="FabricObserver" ServicePackageActivationMode="ExclusiveProcess">
-		<StatelessService ServiceTypeName="FabricObserverType" InstanceCount="[FabricObserver_InstanceCount]">
-			<SingletonPartition />
-		</StatelessService>
-	</Service>
+<StartupServices xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Parameters>
+    <Parameter Name="FabricObserver_InstanceCount" Value="-1" />
+  </Parameters>
 </StartupServices>
