@@ -38,7 +38,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 return windowsDynamicPortRange;
             }
-
+            
             using (var process = new Process())
             {
                 try
@@ -259,6 +259,7 @@ namespace FabricObserver.Observers.Utilities
                 if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
                 {
                     RefreshNetstatData();
+                    windowsDynamicPortRange = TupleGetDynamicPortRange();
                 }
             }
 
@@ -269,24 +270,6 @@ namespace FabricObserver.Observers.Utilities
 
             if (ephemeral)
             {
-                // Check to make sure dynamic port range was successfully set in the ctor. If not, try and set it again (once).
-                if (windowsDynamicPortRange == (-1, -1))
-                {
-                    windowsDynamicPortRange = TupleGetDynamicPortRange();
-
-                    if (windowsDynamicPortRange == (-1, -1))
-                    {
-                        string msg =
-                            "GetTcpPortCount(ephemeral = true): Invalid value for windowsDynamicPortRange: (-1, -1). " +
-                            "Retried TupleGetDynamicPortRange with no success. Aborting ephemeral port usage lookup (result = -1).";
-
-                        Logger.LogWarning(msg);
-
-                        // Handled by Retry.Do
-                        throw new Exception(msg);
-                    }
-                }
-
                 (lowPortRange, highPortRange) = windowsDynamicPortRange;
             }
      

@@ -413,6 +413,43 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public async Task AppObserver_ObserveAsync_Successful_Observer_WarningsOrErrorsDetected()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            using var client = new FabricClient();
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricClientInstance = client;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(client, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
+                EnableConcurrentMonitoring = true
+            };
+
+            await obs.ObserveAsync(token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
+        }
+
+        [TestMethod]
         public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_IsHealthy()
         {
             if (!isSFRuntimePresentOnTestMachine)
@@ -694,7 +731,7 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
-                EphemeralPortsErrorThreshold = -42,
+                EphemeralPortsRawErrorThreshold = -42,
                 FirewallRulesWarningThreshold = -1,
                 ActivePortsWarningThreshold = -100
             };
@@ -730,7 +767,7 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
-                EphemeralPortsErrorThreshold = -42,
+                EphemeralPortsRawErrorThreshold = -42,
                 FirewallRulesWarningThreshold = -1,
                 ActivePortsWarningThreshold = -100
             };
@@ -745,7 +782,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.MemDataInUse == null);
             Assert.IsTrue(obs.MemDataPercent == null);
             Assert.IsTrue(obs.ActivePortsData == null);
-            Assert.IsTrue(obs.EphemeralPortsData == null);
+            Assert.IsTrue(obs.EphemeralPortsDataRaw == null);
 
             // It ran (crashing in Initialize would not set LastRunDate, which is MinValue until set.)
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1029,9 +1066,10 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 DataCapacity = 5,
                 UseCircularBuffer = false,
-                CpuWarningUsageThresholdPct = 1, // This will generate Warning for sure.
+                CpuWarningUsageThresholdPct = 0.01F, // This will generate Warning for sure.
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
-                ActivePortsWarningThreshold = 100 // This will generate Warning for sure.
+                ActivePortsWarningThreshold = 100, // This will generate Warning for sure.
+                EphemeralPortsPercentWarningThreshold = 0.01 // This will generate Warning for sure.
             };
 
             using var obsMgr = new ObserverManager(obs, client);

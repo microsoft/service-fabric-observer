@@ -238,11 +238,11 @@ namespace FabricObserver.Observers
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
-                    if (FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    if (!(shutdownSignaled || token.IsCancellationRequested) && FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(FabricServiceContext, token);
+                            using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
                             var foData = GetFabricObserverInternalTelemetryData();
 
                             if (foData != null)
@@ -264,7 +264,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Check for new version once a day.
-                    if (DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                    if (!(shutdownSignaled || token.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
                     {
                         await CheckGithubForNewVersionAsync();
                         LastVersionCheckDateTime = DateTime.UtcNow;
@@ -291,29 +291,17 @@ namespace FabricObserver.Observers
                     await ShutDownAsync().ConfigureAwait(true);
                 }
             }
-            catch (AggregateException ae)
-            {
-                if (ae.InnerExceptions.Any(e => e is OperationCanceledException) || ae.InnerExceptions.Any(e => e is TaskCanceledException))
-                {
-                    if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
-                    {
-                        await ShutDownAsync().ConfigureAwait(true);
-                    }
-                }
-                else if (!isWindows && ae.GetBaseException() is LinuxPermissionException)
-                {
-                    await ShutDownAsync().ConfigureAwait(true); 
-                    throw;
-                }
-            }
             catch (Exception e)
             {
+                string handled = e is LinuxPermissionException ? "Handled LinuxPermissionException" : "Unhandled Exception";
+
                 var message =
-                    $"Unhandled Exception in {ObserverConstants.ObserverManagerName} on node " +
+                    $"{handled} in {ObserverConstants.ObserverManagerName} on node " +
                     $"{nodeName}. Taking down FO process. " +
                     $"Error info:{Environment.NewLine}{e}";
 
                 Logger.LogError(message);
+                await ShutDownAsync().ConfigureAwait(true);
 
                 // Telemetry.
                 if (TelemetryEnabled)
@@ -352,12 +340,12 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext, token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
                         var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,
                             ErrorMessage = e.Message,
-                            ErrorStack = e.StackTrace,
+                            ErrorStack = e.ToString(),
                             CrashTime = DateTime.UtcNow.ToString("o"),
                             Version = InternalVersionNumber
                         };
@@ -372,7 +360,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Don't swallow the unhandled exception.
-                // Take down FO process. Fix the bug(s).
+                // Take down FO process. Fix the bug(s) or it may be by design (see LinuxPermissionException).
                 throw;
             }
         }
@@ -1088,25 +1076,55 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                catch (AggregateException)
+                catch (AggregateException ae)
                 {
-                    if (isConfigurationUpdateInProgress)
+                    foreach (var e in ae.Flatten().InnerExceptions)
                     {
-                        return;
+                        if (e is LinuxPermissionException)
+                        {
+                            Logger.LogWarning(
+                                $"Handled LinuxPermissionException: was thrown by {observer.ObserverName}. " +
+                                $"Capabilities have been unset on caps binary (due to SF Cluster Upgrade, most likely). " +
+                                $"This will restart FO (by design).{Environment.NewLine}{e}");
+
+                            throw e;
+                        }
+                        else if (e is OperationCanceledException || e is TaskCanceledException)
+                        {
+                            if (isConfigurationUpdateInProgress)
+                            {
+                                // Don't proceed further. FO is processing a parameter-only versionless application upgrade. No observers should run.
+                                return;
+                            }
+                        }
+                        else if (e is FabricException || e is TimeoutException || e is Win32Exception)
+                        {
+                            // These are transient and will have been logged by observer when they happened.
+                        }
                     }
-                   
+                }
+                catch (Exception e) when (e is LinuxPermissionException)
+                {
+                    Logger.LogWarning(
+                        $"Handled LinuxPermissionException: was thrown by {observer.ObserverName}. " +
+                        $"Capabilities have been unset on caps binary (due to SF Cluster Upgrade, most likely). " +
+                        $"This will restart FO (by design).{Environment.NewLine}{e}");
+
                     throw;
                 }
-                catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+                catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
                 {
                     if (isConfigurationUpdateInProgress)
                     {
+                        // Don't proceed further. FO is processing a parameter-only versionless application upgrade. No observers should run.
                         return;
                     }
-
-                    Logger.LogInfo($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is FabricException || e is TimeoutException || e is Win32Exception)
+                {
+
+                }
+                catch (Exception e) when (!(e is LinuxPermissionException))
                 {
                     Logger.LogError($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                     throw;

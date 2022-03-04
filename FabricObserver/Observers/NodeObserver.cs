@@ -25,7 +25,8 @@ namespace FabricObserver.Observers
         public FabricResourceUsageData<float> MemDataInUse;
         public FabricResourceUsageData<int> FirewallData;
         public FabricResourceUsageData<int> ActivePortsData;
-        public FabricResourceUsageData<int> EphemeralPortsData;
+        public FabricResourceUsageData<int> EphemeralPortsDataRaw;
+        public FabricResourceUsageData<double> EphemeralPortsDataPercent;
         public FabricResourceUsageData<double> MemDataPercent;
         public FabricResourceUsageData<float> CpuTimeData;
 
@@ -60,12 +61,12 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public int EphemeralPortsErrorThreshold
+        public int FirewallRulesErrorThreshold
         {
             get; set;
         }
 
-        public int FirewallRulesErrorThreshold
+        public int EphemeralPortsRawErrorThreshold
         {
             get; set;
         }
@@ -75,7 +76,17 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public int EphemeralPortsWarningThreshold
+        public int EphemeralPortsRawWarningThreshold
+        {
+            get; set;
+        }
+
+        public double EphemeralPortsPercentErrorThreshold
+        {
+            get; set;
+        }
+
+        public double EphemeralPortsPercentWarningThreshold
         {
             get; set;
         }
@@ -229,14 +240,14 @@ namespace FabricObserver.Observers
                                         Math.Round(ActivePortsData.AverageDataValue));
                     }
 
-                    if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
+                    if (EphemeralPortsDataRaw != null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
                                         fileName,
                                         NodeName,
                                         "Ephemeral Active Ports",
                                         "Total",
-                                        Math.Round(EphemeralPortsData.AverageDataValue));
+                                        Math.Round(EphemeralPortsDataRaw.AverageDataValue));
                     }
 
                     if (FirewallData != null && isWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
@@ -281,7 +292,7 @@ namespace FabricObserver.Observers
                 // User-configurable in NodeObserver.config.json
                 var timeToLiveWarning = GetHealthReportTimeToLive();
 
-                // CPU
+                // CPU Time - Percent of all cores in use.
                 if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                 {
                     ProcessResourceDataReportHealth(
@@ -291,7 +302,7 @@ namespace FabricObserver.Observers
                             timeToLiveWarning);
                 }
 
-                // Memory - MB
+                // Memory - MB in use.
                 if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                 {
                     ProcessResourceDataReportHealth(
@@ -301,7 +312,7 @@ namespace FabricObserver.Observers
                             timeToLiveWarning);
                 }
 
-                // Memory - Percent
+                // Memory - Percent in use.
                 if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                 {
                     ProcessResourceDataReportHealth(
@@ -311,7 +322,7 @@ namespace FabricObserver.Observers
                             timeToLiveWarning);
                 }
 
-                // Firewall rules
+                // Windows Firewall Rules - Total number of rules in use.
                 if (FirewallData != null && isWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
@@ -321,7 +332,7 @@ namespace FabricObserver.Observers
                             timeToLiveWarning);
                 }
 
-                // Ports - Active TCP
+                // Active TCP - Total number of TCP ports in use.
                 if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
@@ -331,13 +342,25 @@ namespace FabricObserver.Observers
                             timeToLiveWarning);
                 }
 
-                // Ports - Active Ephemeral TCP
-                if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
+                /* TCP Ports - Active Ephemeral */
+
+                // Raw - Total number of ephemeral ports in use.
+                if (EphemeralPortsDataRaw != null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            EphemeralPortsData,
-                            EphemeralPortsErrorThreshold,
-                            EphemeralPortsWarningThreshold,
+                            EphemeralPortsDataRaw,
+                            EphemeralPortsRawErrorThreshold,
+                            EphemeralPortsRawWarningThreshold,
+                            timeToLiveWarning);
+                }
+
+                // Percent - Percentage of available ephemeral ports in use.
+                if (EphemeralPortsDataPercent != null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
+                {
+                    ProcessResourceDataReportHealth(
+                            EphemeralPortsDataPercent,
+                            EphemeralPortsPercentErrorThreshold,
+                            EphemeralPortsPercentWarningThreshold,
                             timeToLiveWarning);
                 }
 
@@ -405,7 +428,7 @@ namespace FabricObserver.Observers
 
             if (MemDataPercent == null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
             {
-                MemDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, "MemoryConsumedPercentage", frudCapacity, UseCircularBuffer);
+                MemDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPercentage, "MemoryConsumedPercentage", frudCapacity, UseCircularBuffer);
             }
 
             if (FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
@@ -418,9 +441,14 @@ namespace FabricObserver.Observers
                 ActivePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, "AllPortsInUse", 1);
             }
 
-            if (EphemeralPortsData == null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
+            if (EphemeralPortsDataRaw == null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
             {
-                EphemeralPortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUse", 1);
+                EphemeralPortsDataRaw = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUseTotal", 1);
+            }
+
+            if (EphemeralPortsDataPercent == null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
+            {
+                EphemeralPortsDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.EphemeralPortsPercentage, "EphemeralPortsInUsePercentage", 1);
             }
 
             // This only makes sense for Linux.
@@ -468,11 +496,18 @@ namespace FabricObserver.Observers
                 ActivePortsErrorThreshold = activePortsErrorThreshold;
             }
 
-            var ephemeralPortsErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorEphemeralPorts);
+            var ephemeralPortsRawErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorEphemeralPorts);
 
-            if (!string.IsNullOrEmpty(ephemeralPortsErr) && int.TryParse(ephemeralPortsErr, out int ephemeralPortsErrorThreshold))
+            if (!string.IsNullOrEmpty(ephemeralPortsRawErr) && int.TryParse(ephemeralPortsRawErr, out int ephemeralPortsRawErrorThreshold))
             {
-                EphemeralPortsErrorThreshold = ephemeralPortsErrorThreshold;
+                EphemeralPortsRawErrorThreshold = ephemeralPortsRawErrorThreshold;
+            }
+
+            var ephemeralPortsPercentageErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorEphemeralPortsPercentage);
+
+            if (!string.IsNullOrEmpty(ephemeralPortsPercentageErr) && double.TryParse(ephemeralPortsPercentageErr, out double ephemeralPortsPercentageErrThreshold))
+            {
+                EphemeralPortsPercentErrorThreshold = ephemeralPortsPercentageErrThreshold;
             }
 
             var errFirewallRules = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorFirewallRules);
@@ -548,7 +583,14 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(ephemeralPortsWarn) && int.TryParse(ephemeralPortsWarn, out int ephemeralPortsWarningThreshold))
             {
-                EphemeralPortsWarningThreshold = ephemeralPortsWarningThreshold;
+                EphemeralPortsRawWarningThreshold = ephemeralPortsWarningThreshold;
+            }
+
+            var ephemeralPortsPercentageWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningEphemeralPortsPercentage);
+
+            if (!string.IsNullOrEmpty(ephemeralPortsPercentageWarn) && double.TryParse(ephemeralPortsPercentageWarn, out double ephemeralPortsPercentageWarnThreshold))
+            {
+                EphemeralPortsPercentWarningThreshold = ephemeralPortsPercentageWarnThreshold;
             }
 
             var warnFirewallRules = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningFirewallRules);
@@ -674,10 +716,38 @@ namespace FabricObserver.Observers
                     ActivePortsData.AddData(activePortCountTotal);
                 }
 
-                if (EphemeralPortsData != null && (EphemeralPortsErrorThreshold > 0 || EphemeralPortsWarningThreshold > 0))
+                if (EphemeralPortsDataRaw != null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
                 {
-                    int ephemeralPortCountTotal = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
-                    EphemeralPortsData.AddData(ephemeralPortCountTotal);
+                    int activeEphemeralPort = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+                    EphemeralPortsDataRaw.AddData(activeEphemeralPort);
+                }
+
+                if (EphemeralPortsDataPercent != null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
+                {
+                    int activeEphemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+                    (int LowPort, int HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                    int totalEphemeralPorts = HighPort - LowPort;
+
+                    if (totalEphemeralPorts > 0)
+                    {
+                        double usedPct = (double)(activeEphemeralPorts * 100) / totalEphemeralPorts;
+                        EphemeralPortsDataPercent.AddData(usedPct);
+                    }
+
+                    /* Raw ETW - Unrelated to Warnings */
+                    if (IsEtwEnabled)
+                    {
+                        ObserverLogger.LogEtw(
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                NodeName,
+                                ObserverName,
+                                Metric = $"Total Ephemeral Ports",
+                                Source = ObserverConstants.FabricObserverName,
+                                Value = totalEphemeralPorts
+                            });
+                    }
                 }
 
                 timer.Start();

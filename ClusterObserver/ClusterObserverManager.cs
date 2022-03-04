@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ClusterObserver.Interfaces;
@@ -256,7 +257,7 @@ namespace ClusterObserver
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext, token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
                         ClusterObserverOperationalEventData coData = GetClusterObserverInternalTelemetryData();
 
                         if (coData != null)
@@ -289,13 +290,17 @@ namespace ClusterObserver
                     await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 15), token);
                 }
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            catch (AggregateException ae) when (ae.GetBaseException() is OperationCanceledException || ae.GetBaseException() is TaskCanceledException)
             {
-
+                if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
+                {
+                    Logger.LogInfo("Shutdown signaled. Stopping.");
+                    await StopAsync().ConfigureAwait(false);
+                }
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException))
             {
-                string message = $"Unhanded Exception in ClusterObserverManager on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
+                string message = $"Unhanded Exception in ClusterObserver on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
                 Logger.LogError(message);
 
                 // Telemetry.
@@ -330,7 +335,7 @@ namespace ClusterObserver
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext, token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
 
                         var data = new CriticalErrorEventData
                         {
@@ -480,7 +485,15 @@ namespace ClusterObserver
                     cts = new CancellationTokenSource();
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (AggregateException ae) when (
+                    !(ae.GetBaseException() is FabricException ||
+                      ae.GetBaseException() is OperationCanceledException ||
+                      ae.GetBaseException() is TaskCanceledException ||
+                      ae.GetBaseException() is TimeoutException))
+            {
+                throw;
+            }
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))    
             {
                 string msg = $"Unhandled exception in ClusterObserverManager.RunObserverAync(). Taking down process. Error info:{Environment.NewLine}{e}";
                 Logger.LogError(msg);

@@ -23,6 +23,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private readonly IntPtr handleToSnapshot = IntPtr.Zero;
         private readonly bool _cacheSnapshotHandle;
+        private readonly Logger _logger = new Logger("NativeMethods");
 
         /// <summary>
         /// You must create an instance of this type to use the process-related functions GetChildProcesses and GetProcessThreadCount.
@@ -37,9 +38,13 @@ namespace FabricObserver.Observers.Utilities
                 // Create a snapshot of all processes currently running on machine.
                 handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
 
+                // 0 or -1 mean failure.
                 if (handleToSnapshot.ToInt32() < 1)
                 {
-                    throw new Win32Exception($"NativeMethods.NativeMethods: Failed to create a process snapshot. Bye.");
+                    string msg = $"NativeMethods initialization failure. Unable to create a process snapshot: {Marshal.GetLastWin32Error()}.";
+                    _logger.LogWarning(msg);
+               
+                    throw new Win32Exception(msg);
                 }
             }
 
@@ -224,12 +229,11 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Gets the supplied process pid's child processes' name/pid pairs, if any.
+        /// Gets the child processes, if any, belonging to the process with supplied pid.
         /// </summary>
-        /// <param name="parentpid">pid of parent process</param>
-        /// <returns>A List of Process objects.</returns>
-        /// <exception cref="Win32Exception">Callers should handle this exception. 
-        /// It will generally be thrown when the target process (with parentpid) no longer exists.</exception>
+        /// <param name="parentpid">The process ID of parent process.</param>
+        /// <returns>A List of tuple (string procName,  int procId) representing each child process.</returns>
+        /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
         public List<(string procName, int procId)> GetChildProcesses(int parentpid)
         {
             List<(string procName, int procId)> childProcs = new List<(string procName, int procId)>();
@@ -291,13 +295,12 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Get the number of execution threads started by the process with supplied pid.
+        /// Gets the number of execution threads started by the process with supplied pid.
         /// </summary>
-        /// <param name="procId">The id of the process (pid).</param>
+        /// <param name="pid">The id of the process (pid).</param>
         /// <returns>The number of execution threads started by the process.</returns>
-        /// <exception cref="Win32Exception">Callers should handle this exception. 
-        /// It will generally be thrown when the target process (with parentpid) no longer exists.</exception>
-        public int GetProcessThreadCount(int procId)
+        /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
+        public int GetProcessThreadCount(int pid)
         {
             int threadCount = 0;
             PROCESSENTRY32 procEntry = new PROCESSENTRY32
@@ -324,7 +327,7 @@ namespace FabricObserver.Observers.Utilities
 
                 do
                 {
-                    if (procId == procEntry.th32ProcessID)
+                    if (pid == procEntry.th32ProcessID)
                     {
                         threadCount = (int)procEntry.cntThreads;
                         break;

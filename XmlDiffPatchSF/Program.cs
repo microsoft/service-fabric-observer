@@ -88,7 +88,7 @@ namespace DiffPatchXmlSF
                 GenerateXmlDiffGram(currentVersionFilePath, latestVersionFilePath, output);
             }
 
-            /* Remove changed values from old configs to support carry over to new version, which generally (not always) may have new elements. 
+            /*  Remove changed values from old configs to support carry over to new version, which generally (not always) may have new elements. 
                 This enables a master config's values to be preserved across app config upgrades of a Service Fabric app's base configuration (AppManifest and Settings). 
                 Based on https://stackoverflow.com/questions/14341490/programmatic-xml-diff-merge-in-c-sharp */
 
@@ -96,14 +96,16 @@ namespace DiffPatchXmlSF
             var xdoc = XDocument.Load(diffGramFilePath);
 
             // xd:change -> match -> @DefaultValue is for ApplicationManifest.xml settings values.
-            // xd:change -> match -> @Value is for Settings.xml settings values.
-            // xd:remove enables bringing over existing elements from source config (current) - like for plugins - to the target config (latest).
+            // xd:change -> match -> @Value is for ApplicationManifest.xml's config override sections and Settings.xml's settings values.
+            // xd:remove -> remove enables bringing over existing elements from source config (current) - like for plugins - to the target config (latest).
             xdoc.Root.Descendants(xd + "remove").Remove();
             xdoc.Root.Descendants(xd + "change")
-                        .Where(n => 
+                        .Where(n =>
                                   n.Attribute("match").Value == "@DefaultValue" ||
                                   n.Attribute("match").Value == "@Value" ||
                                   n.Attribute("match").Value == "@EntryPointType" ||
+                                  n.Attribute("match").Value == "@CodePackageRef" ||
+                                  n.Attribute("match").Value == "@ServiceUser" ||
                                   n.Attribute("match").Value == "@X509FindValue")?.Remove();
 
             xdoc.Save(diffGramFilePath);

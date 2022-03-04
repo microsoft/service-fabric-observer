@@ -8,38 +8,39 @@ namespace FabricObserver.Observers.Utilities
     public sealed class ErrorWarningProperty
     {
         // CPU/Memory
-        public const string TotalCpuTime = "Total CPU Time";
-        public const string TotalMemoryConsumptionMb = "Memory Consumption MB";
-        public const string TotalMemoryConsumptionPct = "Memory Consumption %";
+        public const string TotalCpuTime = "CPU Time (Percent)";
+        public const string TotalMemoryConsumptionMb = "Memory Usage (MB)";
+        public const string TotalMemoryConsumptionPercentage = "Memory Usage (Percent)";
 
         // Certificates
         public const string CertificateExpiration = "Certificate Expiration";
 
         // Disk.
         public const string DiskAverageQueueLength = "Average Disk Queue Length";
-        public const string DiskSpaceUsagePercentage = "Disk Space Consumption %";
-        public const string DiskSpaceUsageMb = "Disk Space Consumption MB";
-        public const string DiskSpaceAvailableMb = "Disk Space Available MB";
-        public const string DiskSpaceTotalMb = "Disk Space Total MB";
-        public const string FolderSizeMB = "Folder Size MB";
+        public const string DiskSpaceUsagePercentage = "Disk Space Usage (Percent)";
+        public const string DiskSpaceUsageMb = "Disk Space Usage (MB)";
+        public const string DiskSpaceAvailableMb = "Disk Space Available (MB)";
+        public const string DiskSpaceTotalMb = "Disk Space Total (MB)";
+        public const string FolderSizeMB = "Folder Size (MB)";
 
         // Network
         public const string InternetConnectionFailure = "Outbound Internet Connection Failure";
-        public const string TotalActiveFirewallRules = "Total Active Firewall Rules";
-        public const string TotalActivePorts = "Total Active TCP Ports";
-        public const string TotalEphemeralPorts = "Total Ephemeral Active TCP Ports";
+        public const string TotalActiveFirewallRules = "Active Firewall Rules";
+        public const string TotalActivePorts = "Active TCP Ports";
+        public const string TotalEphemeralPorts = "Active Ephemeral Ports";
+        public const string EphemeralPortsPercentage = "Active Ephemeral Ports (Percent)";
 
         // File Handles
-        public const string TotalFileHandles = "Total Allocated File Handles";
-        public const string TotalFileHandlesPct = "Total Allocated File Handles %";
+        public const string TotalFileHandles = "Allocated File Handles";
+        public const string TotalFileHandlesPct = "Allocated File Handles (Percent)";
 
         // Threads
-        public const string TotalThreadCount = "Total Thread Count";
+        public const string TotalThreadCount = "Thread Count";
 
         // Child procs
         public const string ChildProcessCount = "Child Process Count";
 
         // KVS LVIDs
-        public const string TotalKvsLvidsPercent = "Total LVID Consumption %";
+        public const string TotalKvsLvidsPercent = "LVID Usage (Percent)";
     }
 }

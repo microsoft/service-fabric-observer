@@ -12,7 +12,7 @@
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
-    <!-- Observer Configuration
+    <!-- Observer Configuration.
          Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
          simple configuration updates for them. By design, any observer you make using our
          extensibility model will employ the same basic config parameters as all observers do.
@@ -56,7 +56,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
@@ -73,14 +73,14 @@
          Set this to 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4). -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:03" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:04" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
     <Parameter Name="ContainerObserverRunInterval" DefaultValue="" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:15:00" />
     <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="00:15:00" />
@@ -124,7 +124,7 @@
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- Process Working set type. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         NOTE: If you have *several* service processes of the *same name*, this feature will add significant processing time (and CPU usage) to AppObserver. 
+         NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* processing time (and CPU usage) to AppObserver. 
          In that case, set this to false and the Full Working set will be measured (Private + Shared), computed using a native API call (fast). -->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- Windows-only. Whether or not to cache Windows process data used by NativeMethods.GetChildProcesses and NativeMethods.GetProcessThreadCount functions. 
@@ -181,17 +181,19 @@
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="NodeObserverResourceUsageDataCapacity" DefaultValue="" />
     <Parameter Name="NodeObserverCpuErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="90" />
+    <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="95" />
     <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="80" />
+    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="90" />
     <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
     <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
     <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
+    <Parameter Name="NodeObserverNetworkErrorEphemeralPortsPercentage" DefaultValue="" />
+    <Parameter Name="NodeObserverNetworkWarningEphemeralPortsPercentage" DefaultValue="90" />
     <!-- The below settings only make sense for Linux. -->
     <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
     <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
@@ -336,6 +338,8 @@
             <Parameter Name="NetworkWarningFirewallRules" Value="[NodeObserverNetworkWarningFirewallRules]" />
             <Parameter Name="NetworkErrorEphemeralPorts" Value="[NodeObserverNetworkErrorEphemeralPorts]" />
             <Parameter Name="NetworkWarningEphemeralPorts" Value="[NodeObserverNetworkWarningEphemeralPorts]" />
+            <Parameter Name="NetworkErrorEphemeralPortsPercentage" Value="[NodeObserverNetworkErrorEphemeralPortsPercentage]" />
+            <Parameter Name="NetworkWarningEphemeralPortsPercentage" Value="[NodeObserverNetworkWarningEphemeralPortsPercentage]" />
             <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="[NodeObserverLinuxFileHandlesErrorLimitPercent]" />
             <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="[NodeObserverLinuxFileHandlesWarningLimitPercent]" />
             <Parameter Name="LinuxFileHandlesErrorLimitTotal" Value="[NodeObserverLinuxFileHandlesErrorLimitTotal]" />

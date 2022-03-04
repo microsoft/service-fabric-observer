@@ -4,10 +4,10 @@
     <id>%PACKAGE_ID%</id>
     <version>2.1.14</version>
 	  <releaseNotes>
-- Important Bug Fix in Telemetry config processing.
-- Reverted EnableTelemetry back to non-App parameter.
-- Updated Cluster and Application Upgrade monitoring impl.
-- Added support for latest FO Error/Warning Codes.
+Important Bug Fix in Telemetry config processing.
+Reverted EnableTelemetry back to non-App parameter.
+Updated Cluster and Application Upgrade monitoring impl.
+Added support for latest FO Error/Warning Codes.
 	  </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

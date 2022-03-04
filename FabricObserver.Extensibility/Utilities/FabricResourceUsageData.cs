@@ -63,7 +63,7 @@ namespace FabricObserver.Observers.Utilities
                 Units = "MB";
             }
 
-            if (property.ToLower().Contains("%") ||
+            if (property.Contains("%") ||
                 property.ToLower().Contains("cpu") ||
                 property.ToLower().Contains("percent"))
             {

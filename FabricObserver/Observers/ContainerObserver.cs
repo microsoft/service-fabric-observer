@@ -580,59 +580,74 @@ namespace FabricObserver.Observers
                     {
                         Token.ThrowIfCancellationRequested();
 
-                        if (line.Contains("CPU"))
+                        try
                         {
-                            continue;
-                        }
+                            if (line.Contains("CPU"))
+                            {
+                                continue;
+                            }
 
-                        string[] stats = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            string[] stats = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-                        // Something went wrong if the collection size is less than 4 given the supplied output table format:
-                        // {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}
-                        if (stats.Length < 4)
-                        {
-                            ObserverLogger.LogWarning($"docker stats not returning expected information: stats.Count = {stats.Length}. Expected 4.");
-                            return;
-                        }
+                            // Something went wrong if the collection size is less than 4 given the supplied output table format:
+                            // {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}
+                            if (stats.Length < 4)
+                            {
+                                ObserverLogger.LogWarning($"docker stats not returning expected information: stats.Count = {stats.Length}. Expected 4.");
+                                return;
+                            }
 
-                        if (!stats[1].Contains(repOrInst.ServicePackageActivationId))
-                        {
-                            continue;
-                        }
+                            if (string.IsNullOrWhiteSpace(repOrInst?.ServicePackageActivationId) || !stats[1].Contains(repOrInst.ServicePackageActivationId))
+                            {
+                                continue;
+                            }
 
-                        containerId = stats[0];
-                        repOrInst.ContainerId = containerId;
+                            containerId = stats[0];
+                            repOrInst.ContainerId = containerId;
 #if DEBUG
-                        ObserverLogger.LogInfo($"cpu: {stats[2]}");
-                        ObserverLogger.LogInfo($"mem: {stats[3]}");
+                            ObserverLogger.LogInfo($"cpu: {stats[2]}");
+                            ObserverLogger.LogInfo($"mem: {stats[3]}");
 #endif
-                        // CPU (%)
-                        double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
-                        allCpuDataPercentage[cpuId].AddData(cpu_percent);
+                            // CPU (%)
+                            double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
+                            allCpuDataPercentage[cpuId].AddData(cpu_percent);
 
-                        // Memory (MiB)
-                        double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
-                        allMemDataMB[memId].AddData(mem_working_set_mb);
+                            // Memory (MiB)
+                            double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
+                            allMemDataMB[memId].AddData(mem_working_set_mb);
 
-                        break;
+                            break;
+                        }
+                        catch (ArgumentException)
+                        {
+                            continue;
+                        }
                     }
                });
 
                 output.Clear();
                 output = null;
             }
-            catch (AggregateException ae) when (!(ae.GetBaseException() is OperationCanceledException || ae.GetBaseException() is TaskCanceledException))
+            catch (AggregateException ae)
             {
-                ObserverLogger.LogError($"Unhandled AggregateException in MonitorContainers:{Environment.NewLine}{ae}");
-                throw;
+                foreach (Exception e in ae.Flatten().InnerExceptions)
+                {
+                    if (e is OperationCanceledException || e is TaskCanceledException)
+                    {
+                        // Time to die. Do not run ReportAsync.
+                        return false;
+                    }
+                }
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
                 return false;
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e)
             {
-                ObserverLogger.LogError($"Unhandled Exception in MonitorContainers:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"Unhandled Exception in MonitorContainers:{Environment.NewLine}{e}");
+                
+                // no-op. Bye.
                 throw;
             }
 

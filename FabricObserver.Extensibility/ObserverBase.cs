@@ -807,9 +807,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // The health event description will be a serialized instance of telemetryData,
-                // so it should be completely constructed (filled with data) regardless
-                // of user telemetry settings.
+                // Report raw data.
                 telemetryData = new TelemetryData()
                 {
                     NodeName = NodeName,
@@ -904,6 +902,8 @@ namespace FabricObserver.Observers
             if (warningOrError)
             {
                 string errorWarningCode = null;
+                string dynamicRange = string.Empty;
+                string totalPorts = string.Empty;
 
                 switch (data.Property)
                 {
@@ -942,12 +942,12 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.NodeErrorMemoryMB : FOErrorWarningCodes.NodeWarningMemoryMB;
                         break;
 
-                    case ErrorWarningProperty.TotalMemoryConsumptionPct when replicaOrInstance != null:
+                    case ErrorWarningProperty.TotalMemoryConsumptionPercentage when replicaOrInstance != null:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorMemoryPercent : FOErrorWarningCodes.AppWarningMemoryPercent;
                         break;
 
-                    case ErrorWarningProperty.TotalMemoryConsumptionPct:
+                    case ErrorWarningProperty.TotalMemoryConsumptionPercentage:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorMemoryPercent : FOErrorWarningCodes.NodeWarningMemoryPercent;
                         break;
@@ -980,6 +980,26 @@ namespace FabricObserver.Observers
                     case ErrorWarningProperty.TotalEphemeralPorts:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
+                        break;
+
+                    case ErrorWarningProperty.EphemeralPortsPercentage when healthReportType == HealthReportType.Application:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.AppWarningActiveEphemeralPortsPercent;
+                        
+                        var (Low, High) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                        dynamicRange = $" (dynamic range: {Low}-{High})";
+                        int count = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId);
+                        totalPorts = $" ({count}/{High - Low})";
+                        break;
+
+                    case ErrorWarningProperty.EphemeralPortsPercentage:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.NodeWarningActiveEphemeralPortsPercent;
+                        
+                        var (LowPort, HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                        dynamicRange = $" (dynamic range: {LowPort}-{HighPort})";
+                        int portCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+                        totalPorts = $" ({portCount}/{HighPort - LowPort})";
                         break;
 
                     case ErrorWarningProperty.TotalFileHandles when healthReportType == HealthReportType.Application:
@@ -1017,8 +1037,8 @@ namespace FabricObserver.Observers
                                    $"Their cumulative impact on {name}'s resource usage has been applied.";
                 }
 
-                _ = healthMessage.Append($"{drive}{data.Property} has exceeded the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.Append($" - {data.Property}: {data.AverageDataValue}{data.Units}");
+                _ = healthMessage.Append($"{drive}{data.Property}{dynamicRange} has exceeded the specified {thresholdName} limit ({threshold}{data.Units})");
+                _ = healthMessage.Append($" - {data.Property}: {data.AverageDataValue}{data.Units}{totalPorts}");
                 
                 if (childProcMsg != string.Empty)
                 {
@@ -1084,9 +1104,9 @@ namespace FabricObserver.Observers
                     SourceId = $"{ObserverName}({errorWarningCode})"
                 };
 
-                if (AppNames.All(a => a != appName?.OriginalString))
+                if (appName != null && AppNames.All(a => a != appName.OriginalString))
                 {
-                    AppNames.Enqueue(appName?.OriginalString);
+                    AppNames.Enqueue(appName.OriginalString);
                 }
 
                 // Generate a Service Fabric Health Report.

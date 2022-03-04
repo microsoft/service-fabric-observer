@@ -2,9 +2,11 @@
   {
     "targetApp": "*",
     "cpuWarningLimitPercent": 85,
-    "memoryWarningLimitMbPrivate": 1024,
-    "networkWarningEphemeralPorts": 7500,
-    "warningThreadCount": 500
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 5000,
+    "networkWarningEphemeralPortsPercent": 20,
+    "warningThreadCount": 500,
+    "warningOpenFileHandles": 5000
   },
   {
     "targetAppType": "FabricObserverType",
