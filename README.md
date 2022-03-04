@@ -23,6 +23,8 @@ FabricObserver is one member of a growing family of open source Service Fabric o
 
 ```If you run your apps on Service Fabric, then you should definitely consider deploying FabricObserver to all of your clusters (Test, Staging, Production).```
 
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)  
+
 ## Using FabricObserver  
 
 To quickly learn how to use FO, please see the **[simple scenario-based examples](./Documentation/Using.md)**.  
