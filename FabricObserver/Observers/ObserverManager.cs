@@ -1087,19 +1087,21 @@ namespace FabricObserver.Observers
                                 $"Capabilities have been unset on caps binary (due to SF Cluster Upgrade, most likely). " +
                                 $"This will restart FO (by design).{Environment.NewLine}{e}");
 
-                            throw e;
+                            throw;
                         }
                         else if (e is OperationCanceledException || e is TaskCanceledException)
                         {
                             if (isConfigurationUpdateInProgress)
                             {
-                                // Don't proceed further. FO is processing a parameter-only versionless application upgrade. No observers should run.
+                                // Exit the loop and function. FO is processing a parameter-only versionless application upgrade.
                                 return;
                             }
+
+                            // FO will fail. Gracefully.
                         }
                         else if (e is FabricException || e is TimeoutException || e is Win32Exception)
                         {
-                            // These are transient and will have been logged by observer when they happened.
+                            // These are transient and will have been logged by observer when they happened. Ignore. If critical (Win32Exception), FO will die soon enough.
                         }
                     }
                 }
@@ -1242,9 +1244,14 @@ namespace FabricObserver.Observers
 
             try
             {
-                return PerformanceCounterCategory.Exists(categoryName) && PerformanceCounterCategory.CounterExists(counterName, categoryName);
+                if (!PerformanceCounterCategory.Exists(categoryName))
+                {
+                    return false;
+                }
+                
+                return PerformanceCounterCategory.CounterExists(counterName, categoryName);
             }
-            catch (Exception e) when (e is UnauthorizedAccessException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
             {
                 Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state:{Environment.NewLine}{e}");
             }

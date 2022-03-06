@@ -141,8 +141,12 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            await MonitorDeployedAppsAsync(token);
-            await ReportAsync(token);
+            ParallelLoopResult result = await MonitorDeployedAppsAsync(token);
+            
+            if (result.IsCompleted)
+            {
+                await ReportAsync(token);
+            }
 
             stopwatch.Stop();
             RunDuration = stopwatch.Elapsed;
@@ -531,12 +535,6 @@ namespace FabricObserver.Observers
                 EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
             }
 
-            // Process data in-memory caching.
-            if (isWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.AppObserverEnableProcessDataInMemoryCache), out bool enableProcessDataInMemoryCache))
-            {
-                EnableProcessDataInMemoryCache = enableProcessDataInMemoryCache;
-            }
-
             configSettings.Initialize(
                             FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
                                                                                  ObserverConstants.ObserverConfigurationPackageName)?.Settings,
@@ -882,13 +880,6 @@ namespace FabricObserver.Observers
 
             int settingsFail = 0;
 
-            if (isWindows)
-            {
-                // Creating an instance of NativeMethods is required to use GetChildProcesses and GetProcessThreadCount functions. 
-                // This enables significant performance optimization to limit the number of times these functions retrieve a full process snapshot.
-                WindowsProcessInfoProvider.CreateNativeMethodsInstance(EnableProcessDataInMemoryCache);
-            }
-
             for (int i = 0; i < userTargetList.Count; i++)
             {
                 Token.ThrowIfCancellationRequested();
@@ -1040,13 +1031,8 @@ namespace FabricObserver.Observers
                 childProcInfo.Metric = metric;
                 childProcInfo.Value = sumAllValues;
                 childProcessTelemetryDataList.Enqueue(childProcInfo);
-                
-                // this lock probably isn't necessary.
-                lock (lockObj)
-                {
-                    parentFrud.ClearData();
-                    parentFrud.AddData((T)Convert.ChangeType(sumAllValues, typeof(T)));
-                }
+                parentFrud.ClearData();
+                parentFrud.AddData((T)Convert.ChangeType(sumAllValues, typeof(T)));
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
@@ -1229,7 +1215,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private Task MonitorDeployedAppsAsync(CancellationToken token)
+        private Task<ParallelLoopResult> MonitorDeployedAppsAsync(CancellationToken token)
         {
             Stopwatch execTimer = Stopwatch.StartNew();
             int capacity = ReplicaOrInstanceList.Count;
@@ -1254,7 +1240,7 @@ namespace FabricObserver.Observers
             // DEBUG
             //var threadData = new ConcurrentQueue<int>();
 
-            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            var result = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
@@ -1553,7 +1539,7 @@ namespace FabricObserver.Observers
             // DEBUG 
             //int threadcount = threadData.Distinct().Count();
             ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}"); //Threads: {threadcount}");
-            return Task.CompletedTask;
+            return Task.FromResult(result);
         }
 
         private void ComputeResourceUsage(
@@ -1620,7 +1606,7 @@ namespace FabricObserver.Observers
                     {
                         // Calling the static property NativeMethods here, which is created when Win32CreateProcessSnapshot is called.
                         // This ensures we use the cached handle to full process list information during this run of AppObs.
-                        threads = WindowsProcessInfoProvider.NativeMethods.GetProcessThreadCount(procId);
+                        threads = NativeMethods.GetProcessThreadCount(procId);
                     }
                     else
                     {
@@ -2093,12 +2079,6 @@ namespace FabricObserver.Observers
                 AllAppKvsLvidsData = null;
             }
 
-            if (isWindows)
-            {
-                // This will free native memory that holds the process data snapshot (will run finalizer on the NativeMethods instance).
-                WindowsProcessInfoProvider.DestroyNativeMethodsInstance();
-            }
- 
             GC.Collect();
         }
 

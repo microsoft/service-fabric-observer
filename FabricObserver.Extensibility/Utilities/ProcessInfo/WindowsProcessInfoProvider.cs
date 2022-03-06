@@ -17,34 +17,6 @@ namespace FabricObserver.Observers.Utilities
     {
         private const int MaxDescendants = 50;
 
-        // Consider (unlikely): caching ChildProcs (Dictionary<int, List<string, int>>)
-
-        public static NativeMethods NativeMethods
-        {
-            get; private set;
-        }
-
-        /// <summary>
-        /// Creating an instance of this type is only necessary when a full process snapshot is needed (by AppObs, first and foremost..).
-        /// The snapshot will reside in memory (cached) until Win32CloseProcessSnapshot is called, which must be done by the consumer (set the NativeMethods instance to null).
-        /// </summary>
-        /// <param name="enableProcessDataCaching">Whether or not to cache the full (no heaps) process snapshot. 
-        /// This is only useful if you have an observer (e.g., AppObserver) configured to monitor > 100 services and you are monitoring them concurrently.</param>
-        public static void CreateNativeMethodsInstance(bool enableProcessDataCaching)
-        {
-
-            NativeMethods = new NativeMethods(enableProcessDataCaching);
-        }
-
-        public static void DestroyNativeMethodsInstance()
-        {
-            // TOTHINK: Necessary? Doesn't hurt.
-            GC.KeepAlive(NativeMethods);
-
-            // run dtor (finalizer) on NativeMethods instance (closes native snapshot handle).
-            NativeMethods = null;
-        }
-
         public override float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false)
         {
             if (!string.IsNullOrWhiteSpace(procName) && getPrivateWorkingSet)

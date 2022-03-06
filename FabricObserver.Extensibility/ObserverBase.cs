@@ -27,7 +27,7 @@ namespace FabricObserver.Observers
 {
     public abstract class ObserverBase : IObserver
     {
-        private const int TtlAddMinutes = 1;
+        private const int TtlAddMinutes = 5;
         private bool disposed;
         private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new object();
@@ -1199,11 +1199,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // this lock probably isn't necessary.
-            lock (lockObj)
-            {
-                data.ClearData();
-            }
+            data.ClearData();
         }
 
         /// <summary>

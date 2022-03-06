@@ -19,38 +19,8 @@ namespace FabricObserver.Observers.Utilities
     /// when you are done with it. 
     /// </summary>
     [SuppressUnmanagedCodeSecurity]
-    public class NativeMethods
+    public static class NativeMethods
     {
-        private readonly IntPtr handleToSnapshot = IntPtr.Zero;
-        private readonly bool _cacheSnapshotHandle;
-        private readonly Logger _logger = new Logger("NativeMethods");
-
-        /// <summary>
-        /// You must create an instance of this type to use the process-related functions GetChildProcesses and GetProcessThreadCount.
-        /// If you want to cache process data in memory, important to do when you call these functions over and over again, concurrently,
-        /// then pass cacheProcessData as true.
-        /// </summary>
-        /// <param name="cacheProcessData">Whether or not to cache process data in memory.</param>
-        public NativeMethods(bool cacheProcessData)
-        {
-            if (cacheProcessData)
-            {
-                // Create a snapshot of all processes currently running on machine.
-                handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
-
-                // 0 or -1 mean failure.
-                if (handleToSnapshot.ToInt32() < 1)
-                {
-                    string msg = $"NativeMethods initialization failure. Unable to create a process snapshot: {Marshal.GetLastWin32Error()}.";
-                    _logger.LogWarning(msg);
-               
-                    throw new Win32Exception(msg);
-                }
-            }
-
-            _cacheSnapshotHandle = cacheProcessData;   
-        }
-
         [Flags]
         public enum MINIDUMP_TYPE
         {
@@ -187,9 +157,11 @@ namespace FabricObserver.Observers.Utilities
         static extern IntPtr CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool Process32First([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool Process32Next([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -197,8 +169,8 @@ namespace FabricObserver.Observers.Utilities
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool CloseHandle(IntPtr hObject);
 
-        [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
 
         [DllImport("psapi.dll", SetLastError = true)]
@@ -234,7 +206,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="parentpid">The process ID of parent process.</param>
         /// <returns>A List of tuple (string procName,  int procId) representing each child process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        public List<(string procName, int procId)> GetChildProcesses(int parentpid)
+        public static List<(string procName, int procId)> GetChildProcesses(int parentpid)
         {
             List<(string procName, int procId)> childProcs = new List<(string procName, int procId)>();
             PROCESSENTRY32 procEntry = new PROCESSENTRY32
@@ -246,18 +218,12 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (!_cacheSnapshotHandle)
-                {
-                    handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
-                }
-                else
-                {
-                    handleToSnapshot = this.handleToSnapshot;
-                }
-
+                handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+                
                 if (!Process32First(handleToSnapshot, ref procEntry))
                 {
-                    throw new Win32Exception($"NativeMethods.GetChildProcesses: Failed with win32 error code {Marshal.GetLastWin32Error()}");
+                    string msg = $"NativeMethods.GetChildProcesses({parentpid}): Unable to process snapshot at Process32First: {Marshal.GetLastWin32Error()}";
+                    throw new Win32Exception(msg);
                 }
 
                 do
@@ -287,10 +253,7 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-                if (!_cacheSnapshotHandle)
-                {
-                    ReleaseHandle(handleToSnapshot);
-                }
+                ReleaseHandle(handleToSnapshot);
             }
         }
 
@@ -300,7 +263,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="pid">The id of the process (pid).</param>
         /// <returns>The number of execution threads started by the process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        public int GetProcessThreadCount(int pid)
+        public static int GetProcessThreadCount(int pid)
         {
             int threadCount = 0;
             PROCESSENTRY32 procEntry = new PROCESSENTRY32
@@ -311,18 +274,12 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (!_cacheSnapshotHandle)
-                {
-                    handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
-                }
-                else
-                {
-                    handleToSnapshot = this.handleToSnapshot;
-                }
-
+                handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+                
                 if (!Process32First(handleToSnapshot, ref procEntry))
                 {
-                    throw new Win32Exception($"NativeMethods.GetProcessThreadCount: Failed with win32 error code {Marshal.GetLastWin32Error()}");
+                    string msg = $"NativeMethods.GetProcessThreadCount({pid}): Unable to process snapshot at Process32First: {Marshal.GetLastWin32Error()}";
+                    throw new Win32Exception(msg);
                 }
 
                 do
@@ -339,27 +296,19 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-                if (!_cacheSnapshotHandle)
-                {
-                    ReleaseHandle(handleToSnapshot);
-                }
+                ReleaseHandle(handleToSnapshot);
             }
         }
 
-        private void ReleaseHandle(IntPtr handle)
+        private static void ReleaseHandle(IntPtr handle)
         {
             if (handle != IntPtr.Zero)
             {
                 if (!CloseHandle(handle))
                 {
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                    throw new Win32Exception($"NativeMethods.ReleaseHandle: Failed to release handle with Win32 error {Marshal.GetLastWin32Error()}");
                 }
             }
-        }
-
-        ~NativeMethods()
-        {
-            ReleaseHandle(this.handleToSnapshot);
         }
     }
 }
