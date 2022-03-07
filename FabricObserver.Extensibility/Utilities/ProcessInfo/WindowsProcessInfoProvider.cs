@@ -134,7 +134,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                var childProcs = NativeMethods.GetChildProcesses(processId);
+                List<(string procName, int procId)> childProcs = NativeMethods.GetChildProcesses(processId);
 
                 if (childProcs?.Count == 0)
                 {
@@ -275,10 +275,10 @@ namespace FabricObserver.Observers.Utilities
                 {
                     if (!NativeMethods.GetProcessHandleCount(p.Handle, out uint handles))
                     {
-                        Logger.LogWarning($"NativeGetProcessHandleCount returned false. Error Code is {Marshal.GetLastWin32Error()}. Trying a different method.");
+                        Logger.LogWarning($"GetProcessHandleCount: Failed with Win32 error code {Marshal.GetLastWin32Error()}. Trying a different approach (Process obj).");
 
                         // Try a different approach employing Process object.
-                        return GetProcessAllocatedHandles(p);
+                        handles = (uint)GetProcessAllocatedHandles(p);
                     }
        
                     return (int)handles;
@@ -337,7 +337,7 @@ namespace FabricObserver.Observers.Utilities
             return 0F;
         }
 
-        // NOTE: If you have several service processes of the *same name*, this will add significant processing time and CPU usage to AppObserver.
+        // NOTE: If you have several service processes of the *same name*, this will add *significant* processing time and CPU usage to AppObserver.
         // Consider not enabling Private Working Set memory on AppObserver if that is the case. Instead, the Full Working Set should be measured (Private + Shared),
         // computed using a native API call (fast). See ApplicationManifest.xml for comments.
         private string GetInternalProcessNameFromPerfCounter(string procName, int procId)

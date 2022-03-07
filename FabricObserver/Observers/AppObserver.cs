@@ -1604,8 +1604,6 @@ namespace FabricObserver.Observers
 
                     if (isWindows)
                     {
-                        // Calling the static property NativeMethods here, which is created when Win32CreateProcessSnapshot is called.
-                        // This ensures we use the cached handle to full process list information during this run of AppObs.
                         threads = NativeMethods.GetProcessThreadCount(procId);
                     }
                     else

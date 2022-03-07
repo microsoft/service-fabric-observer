@@ -262,7 +262,7 @@ namespace FabricObserver.Observers
 
                     // Windows does not have a corresponding FD/FH limit which can be set by a user, nor does Windows have a reliable way of determining the total number of open handles in the system.
                     // As such, it does not make sense to monitor system-wide, percent usage of ALL available file handles on Windows. This feature of NodeObserver is therefore Linux-only.
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    if (!isWindows)
                     {
                         if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                         {
@@ -365,7 +365,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Total Open File Handles % (Linux-only) - Total Percentage Allocated (in use) of the configured Maximum number of File Handles the linux kernel will allocate.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!isWindows)
                 {
                     if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
@@ -452,7 +452,7 @@ namespace FabricObserver.Observers
             }
 
             // This only makes sense for Linux.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (!isWindows)
             {
                 if (LinuxFileHandlesDataPercentAllocated == null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                 {
@@ -528,7 +528,7 @@ namespace FabricObserver.Observers
             }
 
             // Linux FDs.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (!isWindows)
             {
                 var errFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesErrorLimitPct);
 
@@ -612,7 +612,7 @@ namespace FabricObserver.Observers
 
             /* Linux FDs */
 
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (isWindows)
             {
                 return;
             }
@@ -680,7 +680,7 @@ namespace FabricObserver.Observers
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
                 // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
                 // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!isWindows)
                 {
                     if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {

@@ -12,19 +12,18 @@
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
-    <!-- Observer Configuration.
-         Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can deploy
-         simple configuration updates for them. By design, any observer you make using our
-         extensibility model will employ the same basic config parameters as all observers do.
-         (See ObserverBase.cs) -->
+    <!-- Observer Configuration Settings.
+         Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can run
+         versionless parameter-only application upgrades to modify them while FO is running. By design, any observer you make using our
+         extensibility model will employ the same basic config parameters as all observers do. Please see Observers.md -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
-    <Parameter Name="ContainerObserverEnabled" DefaultValue="true" />
+    <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
@@ -93,10 +92,8 @@
     <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- Configuration file name. -->
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
-    <!-- Process family tree (descendants, aka child processes) monitoring.
-         NOTE: Be careful here if you monitor large numbers of services *on Windows* (>= 200). In that case, enabling this may eat a lot of cpu (for a very short period of time, however). 
-         Please test, and measure, as always. The key thing here is: *If you know your target services do *not* spawn child processes, then you should disable this feature*. 
-         Otherwise, AppObserver will waste CPU cycles figuring out what you already know. -->
+    <!-- Process family tree monitoring: AppObserver monitors the resource usage by child processes of target services.
+         NOTE: If you already know that your target services do *not* spawn child processes, then you should not enable this feature. -->
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
@@ -398,7 +395,7 @@
     </ConfigOverrides>
     <Policies>
       <!-- Change EntryPointType attribute value to All (or remove the EntryPointType attribute entirely) if you want to run FO as system/root user. -->
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="All" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
     </Policies>
   </ServiceManifestImport>
   <DefaultServices>

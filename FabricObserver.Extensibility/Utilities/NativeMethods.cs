@@ -13,10 +13,8 @@ using System.Security;
 
 namespace FabricObserver.Observers.Utilities
 {
-    // TODO: Consider employing IDisposable pattern here so folks can call Dispose directly (or use using block).
     /// <summary>
-    /// Native helper methods. Note that in order to use the process-related functions, you must create an instance of this type and then set it to null
-    /// when you are done with it. 
+    /// Win32 PInvoke helper methods. 
     /// </summary>
     [SuppressUnmanagedCodeSecurity]
     public static class NativeMethods
@@ -65,7 +63,6 @@ namespace FabricObserver.Observers.Utilities
             internal IntPtr PrivateUsage;
         }
 
-        //inner enum used only internally
         [Flags]
         private enum SnapshotFlags : uint
         {
@@ -190,14 +187,12 @@ namespace FabricObserver.Observers.Utilities
         {
             MEMORYSTATUSEX memory = new MEMORYSTATUSEX();
 
-            if (GlobalMemoryStatusEx(memory))
+            if (!GlobalMemoryStatusEx(memory))
             {
-                return memory;
+                throw new Win32Exception($"NativeMethods.GetSystemMemoryInfo failed with Win32 error code {Marshal.GetLastWin32Error()}");
             }
-            else
-            {
-                throw new Win32Exception(string.Format("NativeMethods.GetSystemMemoryInfo Failed with win32 error code {0}", Marshal.GetLastWin32Error()));
-            }
+
+            return memory;
         }
 
         /// <summary>
@@ -222,8 +217,7 @@ namespace FabricObserver.Observers.Utilities
                 
                 if (!Process32First(handleToSnapshot, ref procEntry))
                 {
-                    string msg = $"NativeMethods.GetChildProcesses({parentpid}): Unable to process snapshot at Process32First: {Marshal.GetLastWin32Error()}";
-                    throw new Win32Exception(msg);
+                    throw new Win32Exception($"NativeMethods.GetChildProcesses({parentpid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
                 }
 
                 do
@@ -278,8 +272,7 @@ namespace FabricObserver.Observers.Utilities
                 
                 if (!Process32First(handleToSnapshot, ref procEntry))
                 {
-                    string msg = $"NativeMethods.GetProcessThreadCount({pid}): Unable to process snapshot at Process32First: {Marshal.GetLastWin32Error()}";
-                    throw new Win32Exception(msg);
+                    throw new Win32Exception($"NativeMethods.GetProcessThreadCount({pid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
                 }
 
                 do

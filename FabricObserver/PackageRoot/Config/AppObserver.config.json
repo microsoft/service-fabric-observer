@@ -6,10 +6,5 @@
     "networkWarningEphemeralPortsPercent": 30,
     "warningThreadCount": 500,
     "warningOpenFileHandles": 5000
-  },
-  {
-    "targetApp": "VisualObjectsApplicationJava62",
-    "memoryWarningLimitMb": 7000,
-    "networkWarningEphemeralPortsPercent": 10
   }
 ]

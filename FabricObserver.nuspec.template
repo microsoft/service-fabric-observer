@@ -15,7 +15,7 @@ Removed concurrent processing support in FabricSystemObserver.
 Updated OSObserver InfraStructureService deployment check impl.
 Extensibility dll version now matches FabricObserver's.
 Performance improvements across memory and CPU usage.
-Updated default FabricObserver configuration (see ApplicationManifest.xml).
+Updated default FabricObserver configuration to maximize both default capabilities and performance.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
