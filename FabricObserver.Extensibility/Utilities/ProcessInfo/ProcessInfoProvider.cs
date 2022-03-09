@@ -55,6 +55,7 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
 
+        // This is supported on both Linux and Windows.
         public static int GetProcessThreadCount(int processId)
         {
             try

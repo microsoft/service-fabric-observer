@@ -32,7 +32,7 @@ namespace DiffPatchXmlSF
                     "If the optional [outputFileFullPath] arg is not provided, then the patched file name will be [latestXmlFileFullPath] appended with \"_patched\" " +
                     "preceding the file extension.\n\n" +
                     "Example:\n\n" +
-                    "DiffPatchXml \"C:\\repos\\FO\\3.1.17\\configs\\ApplicationManifest.xml\" \"C:\\repos\\FO\\3.1.18\\configs\\ApplicationManifest.xml\"\n");
+                    "DiffPatchXml \"C:\\repos\\FO\\3.1.24\\configs\\ApplicationManifest.xml\" \"C:\\repos\\FO\\3.1.25\\configs\\ApplicationManifest.xml\"\n");
                 return;
             }
 
@@ -99,15 +99,7 @@ namespace DiffPatchXmlSF
             // xd:change -> match -> @Value is for ApplicationManifest.xml's config override sections and Settings.xml's settings values.
             // xd:remove -> remove enables bringing over existing elements from source config (current) - like for plugins - to the target config (latest).
             xdoc.Root.Descendants(xd + "remove").Remove();
-            xdoc.Root.Descendants(xd + "change")
-                        .Where(n =>
-                                  n.Attribute("match").Value == "@DefaultValue" ||
-                                  n.Attribute("match").Value == "@Value" ||
-                                  n.Attribute("match").Value == "@EntryPointType" ||
-                                  n.Attribute("match").Value == "@CodePackageRef" ||
-                                  n.Attribute("match").Value == "@ServiceUser" ||
-                                  n.Attribute("match").Value == "@X509FindValue")?.Remove();
-
+            xdoc.Root.Descendants(xd + "change").Where(n => n.Attribute("match").Value == "@DefaultValue" || n.Attribute("match").Value == "@Value")?.Remove();
             xdoc.Save(diffGramFilePath);
 
             PatchXml(currentVersionFilePath, diffGramFilePath, patchedFilePath);
