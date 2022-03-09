@@ -36,7 +36,9 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FabricObserverWeb\FabricObserverWeb.csproj" />
+    <ProjectReference Include="..\FabricObserverWeb\FabricObserverWeb.csproj">
+      <ServiceLaunchUrl>http://localhost:{ServicePort}/api/ObserverManager/</ServiceLaunchUrl>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
   <PropertyGroup>
