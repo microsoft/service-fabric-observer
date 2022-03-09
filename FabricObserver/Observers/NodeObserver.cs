@@ -150,8 +150,8 @@ namespace FabricObserver.Observers
             stopwatch.Start();
 
             Initialize();
-            await GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(true);
-            await ReportAsync(token).ConfigureAwait(true);
+            await GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(false);
+            await ReportAsync(token).ConfigureAwait(false);
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -778,7 +778,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    await Task.Delay(250, Token).ConfigureAwait(true);
+                    await Task.Delay(250, Token).ConfigureAwait(false);
                 }
 
                 timer.Stop();

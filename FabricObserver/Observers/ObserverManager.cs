@@ -288,7 +288,7 @@ namespace FabricObserver.Observers
             {
                 if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                 {
-                    await ShutDownAsync().ConfigureAwait(true);
+                    await ShutDownAsync().ConfigureAwait(false);
                 }
             }
             catch (Exception e)
@@ -301,7 +301,7 @@ namespace FabricObserver.Observers
                     $"Error info:{Environment.NewLine}{e}";
 
                 Logger.LogError(message);
-                await ShutDownAsync().ConfigureAwait(true);
+                await ShutDownAsync().ConfigureAwait(false);
 
                 // Telemetry.
                 if (TelemetryEnabled)
@@ -407,7 +407,7 @@ namespace FabricObserver.Observers
                         try
                         {
                             Uri appName = new Uri(app);
-                            var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(true);
+                            var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
                             var fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                             if (isConfigurationUpdateInProgress)
@@ -426,7 +426,7 @@ namespace FabricObserver.Observers
                                 var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                 healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                await Task.Delay(50).ConfigureAwait(true);
+                                await Task.Delay(50).ConfigureAwait(false);
                             }
                         }
                         catch (FabricException)
@@ -439,7 +439,7 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(true);
+                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
                         var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                         if (isConfigurationUpdateInProgress)
@@ -459,7 +459,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            await Task.Delay(50).ConfigureAwait(true);
+                            await Task.Delay(50).ConfigureAwait(false);
                         }
 
                     }
@@ -549,7 +549,7 @@ namespace FabricObserver.Observers
 
         private async Task ShutDownAsync()
         {
-            await StopObserversAsync().ConfigureAwait(true);
+            await StopObserversAsync().ConfigureAwait(false);
 
             if (cts != null)
             {
@@ -726,14 +726,14 @@ namespace FabricObserver.Observers
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     // Graceful stop.
-                    await StopObserversAsync(true, true).ConfigureAwait(true);
+                    await StopObserversAsync(true, true).ConfigureAwait(false);
 
                     // Bye.
                     Environment.Exit(42);
                 }
 
                 isConfigurationUpdateInProgress = true;
-                await StopObserversAsync(false).ConfigureAwait(true);
+                await StopObserversAsync(false).ConfigureAwait(false);
 
                 // ObserverManager settings.
                 this.SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);

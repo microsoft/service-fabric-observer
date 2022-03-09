@@ -460,7 +460,7 @@ namespace FabricObserver.Observers
                 string clusterManifestXml =
                     !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(ClusterManifestPath, token)
                                                                     : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                                                                                  AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
+                                                                                  AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
 
                 (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);

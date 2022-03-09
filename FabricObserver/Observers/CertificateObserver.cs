@@ -97,7 +97,7 @@ namespace FabricObserver.Observers
 
             Token = token;
 
-            await Initialize(token).ConfigureAwait(true);
+            await Initialize(token).ConfigureAwait(false);
             
             ExpiredWarnings = new List<string>();
             ExpiringWarnings = new List<string>();
@@ -139,7 +139,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                await ReportAsync(token).ConfigureAwait(true);
+                await ReportAsync(token).ConfigureAwait(false);
             }
             catch (SecurityException e)
             {
@@ -357,7 +357,7 @@ namespace FabricObserver.Observers
                 AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appCommonNamesToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();
             }
 
-            await GetSecurityTypes(token).ConfigureAwait(true);
+            await GetSecurityTypes(token).ConfigureAwait(false);
         }
 
         private async Task GetSecurityTypes(CancellationToken token)
@@ -365,7 +365,7 @@ namespace FabricObserver.Observers
             token.ThrowIfCancellationRequested();
 
             SecurityConfiguration = new SecurityConfiguration();
-            string clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
+            string clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
             XmlReader xreader = null;
             StringReader sreader = null;
 

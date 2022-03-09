@@ -205,7 +205,7 @@ namespace FabricObserver.Observers
                 ReadServiceFabricWindowsEventLog();
             }
 
-            await ReportAsync(token).ConfigureAwait(true);
+            await ReportAsync(token).ConfigureAwait(false);
 
             // The time it took to run this observer to completion.
             stopwatch.Stop();

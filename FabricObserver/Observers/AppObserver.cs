@@ -183,6 +183,11 @@ namespace FabricObserver.Observers
                 }
 
                 var repOrInst = ReplicaOrInstanceList[i];
+                
+                if (repOrInst.HostProcessId < 1)
+                {
+                    return;
+                }
 
                 // For use in process family tree monitoring.
                 ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList = null;
@@ -204,7 +209,15 @@ namespace FabricObserver.Observers
                 try
                 {
                     processId = (int)repOrInst.HostProcessId;
-                    processName = _processInfoDictionary.FirstOrDefault(p => p.Key == processId).Value;
+                    
+                    if (!_processInfoDictionary.ContainsKey(processId))
+                    {
+                        // process with process id processId not in dictionary (which would mean it wasn't monitored due some issue that happened well before this code runs).
+                        // Continue..
+                        return;
+                    }
+
+                    processName = _processInfoDictionary[processId];
                 }
                 catch (Exception e) when (e is ArgumentException)
                 {
@@ -1569,9 +1582,7 @@ namespace FabricObserver.Observers
                 var index = processDictionary.ElementAt(i);
                 string procName = index.Key;
                 int procId = index.Value;
-
                 TimeSpan maxDuration = TimeSpan.FromSeconds(1);
-                CpuUsage cpuUsage = new CpuUsage();
 
                 if (MonitorDuration > TimeSpan.MinValue)
                 {
@@ -1695,6 +1706,7 @@ namespace FabricObserver.Observers
                     state.Stop();
                 }
 
+                CpuUsage cpuUsage = checkCpu ? new CpuUsage() : null;
                 Stopwatch timer = Stopwatch.StartNew();
 
                 while (timer.Elapsed <= maxDuration)
@@ -1706,7 +1718,7 @@ namespace FabricObserver.Observers
 
                     // CPU (all cores) \\
 
-                    if (checkCpu)
+                    if (checkCpu && cpuUsage != null)
                     {
                         double cpu = cpuUsage.GetCpuUsagePercentageProcess(procId);
 
@@ -1770,8 +1782,9 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
-                    Thread.Sleep(150);
+                    Thread.Sleep(50);
                 }
+
                 timer.Stop();
                 timer = null;
             });

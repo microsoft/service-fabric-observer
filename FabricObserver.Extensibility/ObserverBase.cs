@@ -765,7 +765,7 @@ namespace FabricObserver.Observers
                 // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
                 if (IsTelemetryEnabled && replicaOrInstance?.ChildProcesses == null)
                 {
-                     _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(true);
+                     _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(false);
                 }
 
                 // ETW - This is informational, per reading EventSource tracing, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
@@ -819,7 +819,7 @@ namespace FabricObserver.Observers
 
                 if (IsTelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(true);
+                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(false);
                 }
 
                 if (IsEtwEnabled)
@@ -1062,7 +1062,7 @@ namespace FabricObserver.Observers
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token).ConfigureAwait(true);
+                    _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token).ConfigureAwait(false);
                 }
 
                 // ETW.

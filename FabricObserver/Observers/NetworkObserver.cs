@@ -90,7 +90,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!await InitializeAsync() || token.IsCancellationRequested)
+            if (!await InitializeAsync().ConfigureAwait(false) || token.IsCancellationRequested)
             {
                 stopwatch.Stop();
                 stopwatch.Reset();
@@ -108,7 +108,7 @@ namespace FabricObserver.Observers
             
             // Run conn tests.
             Retry.Do(InternetConnectionStateIsConnected, TimeSpan.FromSeconds(10), token);
-            await ReportAsync(token).ConfigureAwait(true);
+            await ReportAsync(token).ConfigureAwait(false);
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -376,7 +376,7 @@ namespace FabricObserver.Observers
 
             foreach (var netConfig in configs)
             {
-                var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, new Uri(netConfig.TargetApp)).ConfigureAwait(true);
+                var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, new Uri(netConfig.TargetApp)).ConfigureAwait(false);
 
                 if (deployedApps == null || deployedApps.Count < 1)
                 {
