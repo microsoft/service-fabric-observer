@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ClusterObserver.Interfaces;
@@ -286,21 +285,20 @@ namespace ClusterObserver
                         break;
                     }
 
-                    await RunObserverAync().ConfigureAwait(false);
+                    await RunAsync().ConfigureAwait(false);
                     await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 15), token);
                 }
             }
-            catch (AggregateException ae) when (ae.GetBaseException() is OperationCanceledException || ae.GetBaseException() is TaskCanceledException)
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
                 if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                 {
-                    Logger.LogInfo("Shutdown signaled. Stopping.");
                     await StopAsync().ConfigureAwait(false);
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException))
+            catch (Exception e)
             {
-                string message = $"Unhanded Exception in ClusterObserver on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
+                string message = $"Unhandled Exception in ClusterObserver on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
                 Logger.LogError(message);
 
                 // Telemetry.
@@ -432,7 +430,7 @@ namespace ClusterObserver
             return Task.CompletedTask;
         }
 
-        private async Task RunObserverAync()
+        private async Task RunAsync()
         {
             if (!observer.IsEnabled)
             {
@@ -485,13 +483,25 @@ namespace ClusterObserver
                     cts = new CancellationTokenSource();
                 }
             }
-            catch (AggregateException ae) when (
-                    !(ae.GetBaseException() is FabricException ||
-                      ae.GetBaseException() is OperationCanceledException ||
-                      ae.GetBaseException() is TaskCanceledException ||
-                      ae.GetBaseException() is TimeoutException))
+            catch (AggregateException ae)
             {
-                throw;
+                foreach (var e in ae.Flatten().InnerExceptions)
+                {
+                    if (e is OperationCanceledException || e is TaskCanceledException)
+                    {
+                        if (appParamsUpdating)
+                        {
+                            // Exit. CO is processing a versionless parameter-only application upgrade.
+                            return;
+                        }
+
+                        // CO will fail. Gracefully.
+                    }
+                    else if (e is FabricException || e is TimeoutException)
+                    {
+                        // These are transient and will have already been logged.
+                    }
+                }
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))    
             {

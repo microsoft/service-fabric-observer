@@ -8,6 +8,7 @@ Important Bug Fix in Telemetry config processing.
 Reverted EnableTelemetry back to non-App parameter.
 Updated Cluster and Application Upgrade monitoring impl.
 Added support for latest FO Error/Warning Codes.
+Code improvements with better error handling.
 	  </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

@@ -1087,7 +1087,7 @@ namespace FabricObserver.Observers
                                 $"Capabilities have been unset on caps binary (due to SF Cluster Upgrade, most likely). " +
                                 $"This will restart FO (by design).{Environment.NewLine}{e}");
 
-                            throw;
+                            throw e;
                         }
                         else if (e is OperationCanceledException || e is TaskCanceledException)
                         {

@@ -146,6 +146,7 @@ namespace ClusterObserver
 
                         foreach (var repair in repairsInProgress)
                         {
+                            token.ThrowIfCancellationRequested();
                             ids +=  $"TaskId: {repair.TaskId}{Environment.NewLine}State: {repair.State}{Environment.NewLine}";
                         }
 
@@ -301,14 +302,14 @@ namespace ClusterObserver
                     LastKnownClusterHealthState = clusterHealth.AggregatedHealthState;
                 }
             }
-            catch (FabricException fe) // This can happen when running CO unit test. In production, this is very rare.
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
-                string msg = $"Handled transient FabricException in ReportClusterHealthAsync:{Environment.NewLine}{fe}";
+                string msg = $"Handled transient exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
 
                 // Log it locally.
                 ObserverLogger.LogWarning(msg);
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 string msg = $"Unhandled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
 
