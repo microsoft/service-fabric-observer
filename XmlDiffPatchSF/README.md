@@ -27,7 +27,13 @@ You can optionally provide a third parameter which is the full path, including f
 
 ```XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\ApplicationManifest-Main.xml" "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml"  "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml" ``` 
 
-Note that if your current config files contain elements that the new (latest, target) file does not, then they will be carried over. This is to support FabricObserver Plugins and their related configuration settings in Settings.xml and ApplicationManifest.xml. 
+Note that if your current config files contain elements that the new (latest, target) file does not, then they will not be carried over. To support FabricObserver Plugins and their related configuration settings in Settings.xml and ApplicationManifest.xml, you need to pass true as the last argument:  
+
+```XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\ApplicationManifest-Main.xml" "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml" true ```
+
+OR
+
+```XmlDiffPatchSF "C:\repos\tools\monitoring\FO\config\ApplicationManifest-Main.xml" "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml"  "C:\temp\FO-latest\FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml" true ```
 
 **NOTE: Make sure you run this utility over both ApplicationManifest and Settings XML files as new settings added to latest ApplicationManifest will also be present in the latest Settings.xml file.** 
 
