@@ -972,14 +972,22 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
                         break;
 
-                    case ErrorWarningProperty.TotalEphemeralPorts when healthReportType == HealthReportType.Application:
+                    case ErrorWarningProperty.ActiveEphemeralPorts when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
+
+                        var (LowPort, HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                        dynamicRange = $" (dynamic range: {LowPort}-{HighPort})";
+                        totalPorts = $" ({data.AverageDataValue}/{HighPort - LowPort})";
                         break;
 
-                    case ErrorWarningProperty.TotalEphemeralPorts:
+                    case ErrorWarningProperty.ActiveEphemeralPorts:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
+
+                        var (Start, End) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                        dynamicRange = $" (dynamic range: {Start}-{End})";
+                        totalPorts = $" ({data.AverageDataValue}/{End - Start})";
                         break;
 
                     case ErrorWarningProperty.ActiveEphemeralPortsPercentage when healthReportType == HealthReportType.Application:
@@ -996,10 +1004,10 @@ namespace FabricObserver.Observers
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.NodeWarningActiveEphemeralPortsPercent;
                         
-                        var (LowPort, HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                        dynamicRange = $" (dynamic range: {LowPort}-{HighPort})";
+                        var (L, H) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                        dynamicRange = $" (dynamic range: {L}-{H})";
                         int portCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
-                        totalPorts = $" ({portCount}/{HighPort - LowPort})";
+                        totalPorts = $" ({portCount}/{H - L})";
                         break;
 
                     case ErrorWarningProperty.AllocatedFileHandles when healthReportType == HealthReportType.Application:
