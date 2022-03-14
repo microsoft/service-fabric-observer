@@ -1,6 +1,6 @@
 # XmlDiffPatchSF
 
-***There are undoubtedly bugs in this tool. Please use at your own risk and always double check the patched file.***
+**There are undoubtedly some bugs in this tool. Please help make this tool more reliable, especially as it relates to merging very old FO configuration files (< 3.1.16) with recent versions. For the general case (no plugin configurations) it works really well. The issues are around merging in old nodes in the plugin scenario. This is actively being addressed and the tool will get better over time.**
 
 Simple command line utility that will diff/patch one version of a Service Fabric configuration file (ApplicationManifest.xml or Settings.xml) into another, later version, preserving setting values of the earlier version. 
 
