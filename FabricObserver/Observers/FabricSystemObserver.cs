@@ -600,7 +600,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    allCpuData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalCpuTime, proc, frudCapacity, UseCircularBuffer));
+                    allCpuData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.CpuTime, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -611,7 +611,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    allMemData.Add(proc, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, proc, frudCapacity, UseCircularBuffer));
+                    allMemData.Add(proc, new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -622,7 +622,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    allActiveTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, proc, frudCapacity, UseCircularBuffer));
+                    allActiveTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -643,7 +643,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    allHandlesData.Add(proc, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, proc, frudCapacity, UseCircularBuffer));
+                    allHandlesData.Add(proc, new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -654,7 +654,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    allThreadsData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalThreadCount, proc, frudCapacity, UseCircularBuffer));
+                    allThreadsData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -672,7 +672,7 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    allAppKvsLvidsData.Add(proc, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, proc, frudCapacity, UseCircularBuffer));
+                    allAppKvsLvidsData.Add(proc, new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -1060,12 +1060,12 @@ namespace FabricObserver.Observers
 
                     var dataLogMonitorType = propertyName switch
                     {
-                        ErrorWarningProperty.TotalCpuTime => "% CPU Time",
-                        ErrorWarningProperty.TotalMemoryConsumptionMb => "Working Set %",
-                        ErrorWarningProperty.TotalActivePorts => "Active TCP Ports",
+                        ErrorWarningProperty.CpuTime => "% CPU Time",
+                        ErrorWarningProperty.MemoryConsumptionMb => "Working Set %",
+                        ErrorWarningProperty.ActiveTcpPorts => "Active TCP Ports",
                         ErrorWarningProperty.TotalEphemeralPorts => "Active Ephemeral Ports",
-                        ErrorWarningProperty.TotalFileHandlesPct => "Allocated (in use) File Handles %",
-                        ErrorWarningProperty.TotalThreadCount => "Threads",
+                        ErrorWarningProperty.AllocatedFileHandlesPct => "Allocated (in use) File Handles %",
+                        ErrorWarningProperty.ThreadCount => "Threads",
                         _ => propertyName
                     };
 

@@ -907,12 +907,12 @@ namespace FabricObserver.Observers
 
                 switch (data.Property)
                 {
-                    case ErrorWarningProperty.TotalCpuTime when healthReportType == HealthReportType.Application:
+                    case ErrorWarningProperty.CpuTime when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorCpuPercent : FOErrorWarningCodes.AppWarningCpuPercent;
                         break;
 
-                    case ErrorWarningProperty.TotalCpuTime:
+                    case ErrorWarningProperty.CpuTime:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorCpuPercent : FOErrorWarningCodes.NodeWarningCpuPercent;
                         break;
@@ -932,22 +932,22 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.NodeErrorFolderSizeMB : FOErrorWarningCodes.NodeWarningFolderSizeMB;
                         break;
 
-                    case ErrorWarningProperty.TotalMemoryConsumptionMb when healthReportType == HealthReportType.Application:
+                    case ErrorWarningProperty.MemoryConsumptionMb when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorMemoryMB : FOErrorWarningCodes.AppWarningMemoryMB;
                         break;
 
-                    case ErrorWarningProperty.TotalMemoryConsumptionMb:
+                    case ErrorWarningProperty.MemoryConsumptionMb:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorMemoryMB : FOErrorWarningCodes.NodeWarningMemoryMB;
                         break;
 
-                    case ErrorWarningProperty.TotalMemoryConsumptionPercentage when replicaOrInstance != null:
+                    case ErrorWarningProperty.MemoryConsumptionPercentage when replicaOrInstance != null:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorMemoryPercent : FOErrorWarningCodes.AppWarningMemoryPercent;
                         break;
 
-                    case ErrorWarningProperty.TotalMemoryConsumptionPercentage:
+                    case ErrorWarningProperty.MemoryConsumptionPercentage:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorMemoryPercent : FOErrorWarningCodes.NodeWarningMemoryPercent;
                         break;
@@ -957,17 +957,17 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.NodeErrorDiskAverageQueueLength : FOErrorWarningCodes.NodeWarningDiskAverageQueueLength;
                         break;
 
-                    case ErrorWarningProperty.TotalActiveFirewallRules:
+                    case ErrorWarningProperty.ActiveFirewallRules:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.ErrorTooManyFirewallRules : FOErrorWarningCodes.WarningTooManyFirewallRules;
                         break;
 
-                    case ErrorWarningProperty.TotalActivePorts when healthReportType == HealthReportType.Application:
+                    case ErrorWarningProperty.ActiveTcpPorts when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
                         break;
 
-                    case ErrorWarningProperty.TotalActivePorts:
+                    case ErrorWarningProperty.ActiveTcpPorts:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
                         break;
@@ -982,7 +982,7 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
                         break;
 
-                    case ErrorWarningProperty.EphemeralPortsPercentage when healthReportType == HealthReportType.Application:
+                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.AppWarningActiveEphemeralPortsPercent;
                         
@@ -992,7 +992,7 @@ namespace FabricObserver.Observers
                         totalPorts = $" ({count}/{High - Low})";
                         break;
 
-                    case ErrorWarningProperty.EphemeralPortsPercentage:
+                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.NodeWarningActiveEphemeralPortsPercent;
                         
@@ -1002,27 +1002,27 @@ namespace FabricObserver.Observers
                         totalPorts = $" ({portCount}/{HighPort - LowPort})";
                         break;
 
-                    case ErrorWarningProperty.TotalFileHandles when healthReportType == HealthReportType.Application:
+                    case ErrorWarningProperty.AllocatedFileHandles when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyOpenFileHandles : FOErrorWarningCodes.AppWarningTooManyOpenFileHandles;
                         break;
 
-                    case ErrorWarningProperty.TotalThreadCount when healthReportType == HealthReportType.Application:
+                    case ErrorWarningProperty.ThreadCount when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyThreads : FOErrorWarningCodes.AppWarningTooManyThreads;
                         break;
 
                     // Internal monitor for Windows KVS LVID consumption. Only Warning state is supported. This is a non-configurable monitor.
-                    case ErrorWarningProperty.TotalKvsLvidsPercent when healthReportType == HealthReportType.Application:
+                    case ErrorWarningProperty.KvsLvidsPercent when healthReportType == HealthReportType.Application:
                         errorWarningCode = FOErrorWarningCodes.AppWarningKvsLvidsPercentUsed;
                         break;
 
-                    case ErrorWarningProperty.TotalFileHandles:
+                    case ErrorWarningProperty.AllocatedFileHandles:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyOpenFileHandles : FOErrorWarningCodes.NodeWarningTooManyOpenFileHandles;
                         break;
 
-                    case ErrorWarningProperty.TotalFileHandlesPct:
+                    case ErrorWarningProperty.AllocatedFileHandlesPct:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent;
                         break;

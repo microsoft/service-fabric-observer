@@ -269,7 +269,7 @@ namespace FabricObserver.Observers
                             CsvFileLogger.LogData(
                                             fileName,
                                             NodeName,
-                                            ErrorWarningProperty.TotalFileHandlesPct,
+                                            ErrorWarningProperty.AllocatedFileHandlesPct,
                                             "Percent In Use",
                                             Math.Round(LinuxFileHandlesDataPercentAllocated.AverageDataValue));
                         }
@@ -279,7 +279,7 @@ namespace FabricObserver.Observers
                             CsvFileLogger.LogData(
                                             fileName,
                                             NodeName,
-                                            ErrorWarningProperty.TotalFileHandles,
+                                            ErrorWarningProperty.AllocatedFileHandles,
                                             "Total Allocated",
                                             Math.Round(LinuxFileHandlesDataTotalAllocated.AverageDataValue));
                         }
@@ -418,27 +418,27 @@ namespace FabricObserver.Observers
 
             if (CpuTimeData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
             {
-                CpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalCpuTime, "TotalCpuTime", frudCapacity, UseCircularBuffer);
+                CpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.CpuTime, "TotalCpuTime", frudCapacity, UseCircularBuffer);
             }
 
             if (MemDataInUse == null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
             {
-                MemDataInUse = new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, "MemoryConsumedMb", frudCapacity, UseCircularBuffer);
+                MemDataInUse = new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, "MemoryConsumedMb", frudCapacity, UseCircularBuffer);
             }
 
             if (MemDataPercent == null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
             {
-                MemDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPercentage, "MemoryConsumedPercentage", frudCapacity, UseCircularBuffer);
+                MemDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, "MemoryConsumedPercentage", frudCapacity, UseCircularBuffer);
             }
 
             if (FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
             {
-                FirewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActiveFirewallRules, "ActiveFirewallRules", 1);
+                FirewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveFirewallRules, "ActiveFirewallRules", 1);
             }
 
             if (ActivePortsData == null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
             {
-                ActivePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, "AllPortsInUse", 1);
+                ActivePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, "AllPortsInUse", 1);
             }
 
             if (EphemeralPortsDataRaw == null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
@@ -448,7 +448,7 @@ namespace FabricObserver.Observers
 
             if (EphemeralPortsDataPercent == null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
             {
-                EphemeralPortsDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.EphemeralPortsPercentage, "EphemeralPortsInUsePercentage", 1);
+                EphemeralPortsDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, "EphemeralPortsInUsePercentage", 1);
             }
 
             // This only makes sense for Linux.
@@ -456,12 +456,12 @@ namespace FabricObserver.Observers
             {
                 if (LinuxFileHandlesDataPercentAllocated == null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                 {
-                    LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.TotalFileHandlesPct, "TotalFileHandlesPercentage", 1);
+                    LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.AllocatedFileHandlesPct, "TotalFileHandlesPercentage", 1);
                 }
 
                 if (LinuxFileHandlesDataTotalAllocated == null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
                 {
-                    LinuxFileHandlesDataTotalAllocated = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalFileHandles, "TotalFileHandlesCount", 1);
+                    LinuxFileHandlesDataTotalAllocated = new FabricResourceUsageData<int>(ErrorWarningProperty.AllocatedFileHandles, "TotalFileHandlesCount", 1);
                 }
             }
         }
@@ -743,7 +743,7 @@ namespace FabricObserver.Observers
                             {
                                 NodeName,
                                 ObserverName,
-                                Metric = $"Total Ephemeral Ports",
+                                Metric = ErrorWarningProperty.TotalEphemeralPorts,
                                 Source = ObserverConstants.FabricObserverName,
                                 Value = totalEphemeralPorts
                             });

@@ -1118,7 +1118,7 @@ namespace FabricObserver.Observers
 
                                 switch (prop)
                                 {
-                                    case ErrorWarningProperty.TotalCpuTime:
+                                    case ErrorWarningProperty.CpuTime:
                                         // Test error threshold breach for supplied metric.
                                         if (frud.Value.IsUnhealthy(app.CpuErrorLimitPercent))
                                         {
@@ -1126,42 +1126,49 @@ namespace FabricObserver.Observers
                                         }
                                         break;
 
-                                    case ErrorWarningProperty.TotalMemoryConsumptionMb:
+                                    case ErrorWarningProperty.MemoryConsumptionMb:
                                         if (frud.Value.IsUnhealthy(app.MemoryErrorLimitMb))
                                         {
                                             dump = true;
                                         }
                                         break;
 
-                                    case ErrorWarningProperty.TotalMemoryConsumptionPercentage:
+                                    case ErrorWarningProperty.MemoryConsumptionPercentage:
                                         if (frud.Value.IsUnhealthy(app.MemoryErrorLimitPercent))
                                         {
                                             dump = true;
                                         }
                                         break;
 
-                                    case ErrorWarningProperty.TotalActivePorts:
+                                    case ErrorWarningProperty.ActiveTcpPorts:
                                         if (frud.Value.IsUnhealthy(app.NetworkErrorActivePorts))
                                         {
                                             dump = true;
                                         }
                                         break;
 
-                                    case ErrorWarningProperty.TotalEphemeralPorts:
+                                    case ErrorWarningProperty.ActiveEphemeralPorts:
                                         if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPorts))
                                         {
                                             dump = true;
                                         }
                                         break;
 
-                                    case ErrorWarningProperty.TotalFileHandles:
+                                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage:
+                                        if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPortsPercent))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.AllocatedFileHandles:
                                         if (frud.Value.IsUnhealthy(app.ErrorOpenFileHandles))
                                         {
                                             dump = true;
                                         }
                                         break;
 
-                                    case ErrorWarningProperty.TotalThreadCount:
+                                    case ErrorWarningProperty.ThreadCount:
                                         if (frud.Value.IsUnhealthy(app.ErrorThreadCount))
                                         {
                                             dump = true;
@@ -1392,7 +1399,7 @@ namespace FabricObserver.Observers
                     // CPU
                     if (application.CpuErrorLimitPercent > 0 || application.CpuWarningLimitPercent > 0)
                     {
-                        _ = AllAppCpuData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, id, capacity, UseCircularBuffer));
+                        _ = AllAppCpuData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, id, capacity, UseCircularBuffer));
                     }
 
                     if (AllAppCpuData.ContainsKey(id))
@@ -1403,7 +1410,7 @@ namespace FabricObserver.Observers
                     // Memory Mb
                     if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0)
                     {
-                        _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                        _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppMemDataMb.ContainsKey(id))
@@ -1414,7 +1421,7 @@ namespace FabricObserver.Observers
                     // Memory percent
                     if (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0)
                     {
-                        _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPercentage, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                        _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppMemDataPercent.ContainsKey(id))
@@ -1425,7 +1432,7 @@ namespace FabricObserver.Observers
                     // Active TCP Ports
                     if (application.NetworkErrorActivePorts > 0 || application.NetworkWarningActivePorts > 0)
                     {
-                        _ = AllAppTotalActivePortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppTotalActivePortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppTotalActivePortsData.ContainsKey(id))
@@ -1436,7 +1443,7 @@ namespace FabricObserver.Observers
                     // Ephemeral TCP Ports - Total number.
                     if (application.NetworkErrorEphemeralPorts > 0 || application.NetworkWarningEphemeralPorts > 0)
                     {
-                        _ = AllAppEphemeralPortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppEphemeralPortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppEphemeralPortsData.ContainsKey(id))
@@ -1447,7 +1454,7 @@ namespace FabricObserver.Observers
                     // Ephemeral TCP Ports - Percentage in use of total available.
                     if (application.NetworkErrorEphemeralPortsPercent > 0 || application.NetworkWarningEphemeralPortsPercent > 0)
                     {
-                        _ = AllAppEphemeralPortsDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.EphemeralPortsPercentage, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppEphemeralPortsDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppEphemeralPortsDataPercent.ContainsKey(id))
@@ -1458,7 +1465,7 @@ namespace FabricObserver.Observers
                     // File Handles
                     if (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0)
                     {
-                        _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppHandlesData.ContainsKey(id))
@@ -1469,7 +1476,7 @@ namespace FabricObserver.Observers
                     // Threads
                     if (application.ErrorThreadCount > 0 || application.WarningThreadCount > 0)
                     {
-                        _ = AllAppThreadsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalThreadCount, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppThreadsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppThreadsData.ContainsKey(id))
@@ -1481,7 +1488,7 @@ namespace FabricObserver.Observers
                     // Note: This is a non-configurable Windows monitor and will be removed when SF ships with the latest version of ESE.
                     if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && repOrInst.ServiceKind == ServiceKind.Stateful)
                     {
-                        _ = AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
@@ -1602,7 +1609,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            _ = AllAppHandlesData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                            _ = AllAppHandlesData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                             AllAppHandlesData[$"{id}:{procName}{procId}"].AddData(handles);
                         }
                     }
@@ -1622,7 +1629,7 @@ namespace FabricObserver.Observers
                         }
                         else // Child procs spawned by the parent service process.
                         {
-                            _ = AllAppThreadsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                            _ = AllAppThreadsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.AllocatedFileHandles, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                             AllAppThreadsData[$"{id}:{procName}{procId}"].AddData(threads);
                         }
                     }
@@ -1638,7 +1645,7 @@ namespace FabricObserver.Observers
                     }
                     else // Child procs spawned by the parent service process.
                     {
-                        _ = AllAppTotalActivePortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        _ = AllAppTotalActivePortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                         AllAppTotalActivePortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
                     }
                 }
@@ -1652,7 +1659,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        _ = AllAppEphemeralPortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        _ = AllAppEphemeralPortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                         AllAppEphemeralPortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
                     }
                 }
@@ -1661,12 +1668,12 @@ namespace FabricObserver.Observers
                 if (checkPercentageEphemeralPorts)
                 {
                     int activeEphemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext);
-                    int totalEphemeralPorts = _dynamicPortRange.HighPort - _dynamicPortRange.LowPort;
+                    int ActiveEphemeralPorts = _dynamicPortRange.HighPort - _dynamicPortRange.LowPort;
                     double usedPct = 0.0;
 
-                    if (totalEphemeralPorts > 0)
+                    if (ActiveEphemeralPorts > 0)
                     {
-                        usedPct = (double)(activeEphemeralPorts * 100) / totalEphemeralPorts;
+                        usedPct = (double)(activeEphemeralPorts * 100) / ActiveEphemeralPorts;
                     }
 
                     if (procId == parentPid)
@@ -1675,7 +1682,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        _ = AllAppEphemeralPortsDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.EphemeralPortsPercentage, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        _ = AllAppEphemeralPortsDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                         AllAppEphemeralPortsDataPercent[$"{id}:{procName}{procId}"].AddData(usedPct);
                     }
                 }
@@ -1694,7 +1701,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            _ = AllAppKvsLvidsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            _ = AllAppKvsLvidsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                             AllAppKvsLvidsData[$"{id}:{procName}{procId}"].AddData(lvidPct);
                         }
                     }
@@ -1735,7 +1742,7 @@ namespace FabricObserver.Observers
                             }
                             else
                             {
-                                _ = AllAppCpuData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                                _ = AllAppCpuData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                                 AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
                             }
                         }
@@ -1756,7 +1763,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            _ = AllAppMemDataMb.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            _ = AllAppMemDataMb.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                             AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(processMemMb);
                         }
                     }
@@ -1777,7 +1784,7 @@ namespace FabricObserver.Observers
                             }
                             else
                             {
-                                _ = AllAppMemDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPercentage, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                                _ = AllAppMemDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                                 AllAppMemDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
                             }
                         }
@@ -2099,14 +2106,14 @@ namespace FabricObserver.Observers
                 CsvFileLogger.LogData(
                     _fileName,
                     appName,
-                    ErrorWarningProperty.TotalCpuTime,
+                    ErrorWarningProperty.CpuTime,
                     "Average",
                     Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
 
                 CsvFileLogger.LogData(
                     _fileName,
                     appName,
-                    ErrorWarningProperty.TotalCpuTime,
+                    ErrorWarningProperty.CpuTime,
                     "Peak",
                     Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue));
             }
@@ -2117,14 +2124,14 @@ namespace FabricObserver.Observers
                 CsvFileLogger.LogData(
                     _fileName,
                     appName,
-                    ErrorWarningProperty.TotalMemoryConsumptionMb,
+                    ErrorWarningProperty.MemoryConsumptionMb,
                     "Average",
                     Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
 
                 CsvFileLogger.LogData(
                     _fileName,
                     appName,
-                    ErrorWarningProperty.TotalMemoryConsumptionMb,
+                    ErrorWarningProperty.MemoryConsumptionMb,
                     "Peak",
                     Math.Round(Convert.ToDouble(AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
             }
@@ -2134,14 +2141,14 @@ namespace FabricObserver.Observers
                 CsvFileLogger.LogData(
                    _fileName,
                    appName,
-                   ErrorWarningProperty.TotalMemoryConsumptionPercentage,
+                   ErrorWarningProperty.MemoryConsumptionPercentage,
                    "Average",
                    Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
 
                 CsvFileLogger.LogData(
                     _fileName,
                     appName,
-                    ErrorWarningProperty.TotalMemoryConsumptionPercentage,
+                    ErrorWarningProperty.MemoryConsumptionPercentage,
                     "Peak",
                     Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
             }
@@ -2152,7 +2159,7 @@ namespace FabricObserver.Observers
                 CsvFileLogger.LogData(
                     _fileName,
                     appName,
-                    ErrorWarningProperty.TotalActivePorts,
+                    ErrorWarningProperty.ActiveTcpPorts,
                     "Total",
                     Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue)));
             }
@@ -2163,7 +2170,7 @@ namespace FabricObserver.Observers
                 CsvFileLogger.LogData(
                     _fileName,
                     appName,
-                    ErrorWarningProperty.TotalEphemeralPorts,
+                    ErrorWarningProperty.ActiveEphemeralPorts,
                     "Total",
                     Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue)));
             }
@@ -2174,7 +2181,7 @@ namespace FabricObserver.Observers
                 CsvFileLogger.LogData(
                      _fileName,
                      appName,
-                     ErrorWarningProperty.TotalFileHandles,
+                     ErrorWarningProperty.AllocatedFileHandles,
                      "Total",
                      AllAppHandlesData.First(x => x.Key == appName).Value.MaxDataValue);
             }

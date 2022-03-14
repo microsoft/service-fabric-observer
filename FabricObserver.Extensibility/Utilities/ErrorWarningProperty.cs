@@ -8,9 +8,9 @@ namespace FabricObserver.Observers.Utilities
     public sealed class ErrorWarningProperty
     {
         // CPU/Memory
-        public const string TotalCpuTime = "CPU Time (Percent)";
-        public const string TotalMemoryConsumptionMb = "Memory Usage (MB)";
-        public const string TotalMemoryConsumptionPercentage = "Memory Usage (Percent)";
+        public const string CpuTime = "CPU Time (Percent)";
+        public const string MemoryConsumptionMb = "Memory Usage (MB)";
+        public const string MemoryConsumptionPercentage = "Memory Usage (Percent)";
 
         // Certificates
         public const string CertificateExpiration = "Certificate Expiration";
@@ -25,22 +25,23 @@ namespace FabricObserver.Observers.Utilities
 
         // Network
         public const string InternetConnectionFailure = "Outbound Internet Connection Failure";
-        public const string TotalActiveFirewallRules = "Active Firewall Rules";
-        public const string TotalActivePorts = "Active TCP Ports";
-        public const string TotalEphemeralPorts = "Active Ephemeral Ports";
-        public const string EphemeralPortsPercentage = "Active Ephemeral Ports (Percent)";
+        public const string ActiveFirewallRules = "Active Firewall Rules";
+        public const string ActiveTcpPorts = "Active TCP Ports";
+        public const string ActiveEphemeralPorts = "Active Ephemeral Ports";
+        public const string ActiveEphemeralPortsPercentage = "Active Ephemeral Ports (Percent)";
+        public const string TotalEphemeralPorts = "Total Ephemeral Ports";
 
         // File Handles
-        public const string TotalFileHandles = "Allocated File Handles";
-        public const string TotalFileHandlesPct = "Allocated File Handles (Percent)";
+        public const string AllocatedFileHandles = "Allocated File Handles";
+        public const string AllocatedFileHandlesPct = "Allocated File Handles (Percent)";
 
         // Threads
-        public const string TotalThreadCount = "Thread Count";
+        public const string ThreadCount = "Thread Count";
 
         // Child procs
         public const string ChildProcessCount = "Child Process Count";
 
         // KVS LVIDs
-        public const string TotalKvsLvidsPercent = "LVID Usage (Percent)";
+        public const string KvsLvidsPercent = "LVID Usage (Percent)";
     }
 }

@@ -137,7 +137,7 @@ namespace FabricObserver.Observers
                         CsvFileLogger.LogData(
                                         csvFileName,
                                         id,
-                                        ErrorWarningProperty.TotalCpuTime,
+                                        ErrorWarningProperty.CpuTime,
                                         "Total",
                                         Math.Round(cpuFrudInst.AverageDataValue));
                     }
@@ -148,7 +148,7 @@ namespace FabricObserver.Observers
                         CsvFileLogger.LogData(
                                         csvFileName,
                                         id,
-                                        ErrorWarningProperty.TotalMemoryConsumptionMb,
+                                        ErrorWarningProperty.MemoryConsumptionMb,
                                         "Total",
                                         Math.Round(memFrudInst.AverageDataValue));
                     }
@@ -568,12 +568,12 @@ namespace FabricObserver.Observers
 
                     if (!allCpuDataPercentage.ContainsKey(cpuId))
                     {
-                        _ = allCpuDataPercentage.TryAdd(cpuId, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, 1, false));
+                        _ = allCpuDataPercentage.TryAdd(cpuId, new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, cpuId, 1, false));
                     }
 
                     if (!allMemDataMB.ContainsKey(memId))
                     {
-                        _ = allMemDataMB.TryAdd(memId, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1, false));
+                        _ = allMemDataMB.TryAdd(memId, new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionMb, memId, 1, false));
                     }
 
                     foreach (string line in output)
