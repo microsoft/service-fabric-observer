@@ -443,7 +443,7 @@ namespace FabricObserver.Observers
 
             if (EphemeralPortsDataRaw == null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
             {
-                EphemeralPortsDataRaw = new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, "EphemeralPortsInUseTotal", 1);
+                EphemeralPortsDataRaw = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, "EphemeralPortsInUseTotal", 1);
             }
 
             if (EphemeralPortsDataPercent == null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
