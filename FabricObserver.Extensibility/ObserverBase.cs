@@ -902,8 +902,28 @@ namespace FabricObserver.Observers
             if (warningOrError)
             {
                 string errorWarningCode = null;
+
+                // Ephemeral port sugar for event description.
                 string dynamicRange = string.Empty;
                 string totalPorts = string.Empty;
+                int Low = 0, High = 0;
+
+                if (data.Property.Contains("Ephemeral"))
+                {
+                    (Low, High) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                    dynamicRange = $" (dynamic range: {Low}-{High})";
+
+                    if (data.Property.Contains("Percent"))
+                    {
+                        int total = High - Low;
+
+                        if (total > 0)
+                        {
+                            int count = (int)(data.AverageDataValue / 100 * total);
+                            totalPorts = $" ({count}/{total})";
+                        }
+                    }
+                }
 
                 switch (data.Property)
                 {
@@ -975,39 +995,21 @@ namespace FabricObserver.Observers
                     case ErrorWarningProperty.ActiveEphemeralPorts when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
-
-                        var (LowPort, HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                        dynamicRange = $" (dynamic range: {LowPort}-{HighPort})";
-                        totalPorts = $" ({data.AverageDataValue}/{HighPort - LowPort})";
                         break;
 
                     case ErrorWarningProperty.ActiveEphemeralPorts:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
-
-                        var (Start, End) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                        dynamicRange = $" (dynamic range: {Start}-{End})";
-                        totalPorts = $" ({data.AverageDataValue}/{End - Start})";
                         break;
 
                     case ErrorWarningProperty.ActiveEphemeralPortsPercentage when healthReportType == HealthReportType.Application:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.AppWarningActiveEphemeralPortsPercent;
-                        
-                        var (Low, High) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                        dynamicRange = $" (dynamic range: {Low}-{High})";
-                        int count = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId);
-                        totalPorts = $" ({count}/{High - Low})";
                         break;
 
                     case ErrorWarningProperty.ActiveEphemeralPortsPercentage:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.NodeWarningActiveEphemeralPortsPercent;
-                        
-                        var (L, H) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                        dynamicRange = $" (dynamic range: {L}-{H})";
-                        int portCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
-                        totalPorts = $" ({portCount}/{H - L})";
                         break;
 
                     case ErrorWarningProperty.AllocatedFileHandles when healthReportType == HealthReportType.Application:
