@@ -132,6 +132,8 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningActivePorts = "NetworkWarningActivePorts";
         public const string NodeObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";
         public const string NodeObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
+        public const string NodeObserverNetworkErrorEphemeralPortsPercentage = "NetworkErrorEphemeralPortsPercentage";
+        public const string NodeObserverNetworkWarningEphemeralPortsPercentage = "NetworkWarningEphemeralPortsPercentage";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
 

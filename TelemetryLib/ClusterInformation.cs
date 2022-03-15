@@ -26,12 +26,35 @@ namespace FabricObserver.TelemetryLib
         private static string diagnosticsClusterId;
         private static XmlDocument clusterManifestXdoc;
         private static readonly object lockObj = new object();
+        
+        public static string ClusterId
+        {
+            get; private set;
+        }
+
+        public static string TenantId
+        {
+            get; private set;
+        }
+
+        public static string ClusterType
+        {
+            get; private set;
+        }
+
+        public ClusterIdentificationUtility(FabricClient fabricClient, CancellationToken token)
+        {
+            var clusterInfo = TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
+            ClusterId = clusterInfo.ClusterId;
+            TenantId = clusterInfo.TenantId;
+            ClusterType = clusterInfo.ClusterType;
+        }
   
         /// <summary>
         /// Gets ClusterID, tenantID and ClusterType for current ServiceFabric cluster
         /// The logic to compute these values closely resembles the logic used in SF runtime's telemetry client.
         /// </summary>
-        public static async Task<(string ClusterId, string TenantId, string ClusterType)> TupleGetClusterIdAndTypeAsync(FabricClient fabricClient, CancellationToken token)
+        private static async Task<(string ClusterId, string TenantId, string ClusterType)> TupleGetClusterIdAndTypeAsync(FabricClient fabricClient, CancellationToken token)
         {
             string clusterManifest = await fabricClient.ClusterManager.GetClusterManifestAsync(
                                         TimeSpan.FromSeconds(TelemetryConstants.AsyncOperationTimeoutSeconds),

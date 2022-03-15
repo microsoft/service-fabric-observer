@@ -21,12 +21,12 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using System.Fabric.Description;
 using Octokit;
 using System.Diagnostics;
+using System.ComponentModel;
+using System.Runtime;
 
 namespace FabricObserver.Observers
 {
-    // This class manages the lifetime of all observers from instantiation to "destruction",
-    // and sequentially runs all observer instances in a never-ending while loop,
-    // with optional sleeps, and reliable shutdown event handling.
+    // This class manages the lifetime of all observers.
     public class ObserverManager : IDisposable
     {
         private readonly string nodeName;
@@ -40,9 +40,10 @@ namespace FabricObserver.Observers
         private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
+        private readonly ClusterIdentificationUtility clusterIdentificationUtility;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.24";
+        private const string InternalVersionNumber = "3.1.25";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -176,6 +177,7 @@ namespace FabricObserver.Observers
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            clusterIdentificationUtility = new ClusterIdentificationUtility(fabricClient, token);
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -208,9 +210,7 @@ namespace FabricObserver.Observers
 
             if (isWindows)
             {
-                // TryEnableLvidPerfCounter will fail (handled) if FO is not running as System or Admin user on Windows.
-                // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
-                IsLvidCounterEnabled = TryEnableLvidPerfCounter();
+                IsLvidCounterEnabled = IsLVIDPerfCounterEnabled();
             }
 
             try
@@ -238,11 +238,11 @@ namespace FabricObserver.Observers
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
-                    if (FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    if (!(shutdownSignaled || token.IsCancellationRequested) && FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
+                            using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
                             var foData = GetFabricObserverInternalTelemetryData();
 
                             if (foData != null)
@@ -256,19 +256,22 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Telemetry is non-critical and should not take down FO.
-                            // TelemetryLib will log exception details to file in top level FO log folder.
+                            // Telemetry is non-critical and should *not* take down FO.
+                            Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex}");
                         }
                     }
 
                     // Check for new version once a day.
-                    if (DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                    if (!(shutdownSignaled || token.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
                     {
                         await CheckGithubForNewVersionAsync();
                         LastVersionCheckDateTime = DateTime.UtcNow;
                     }
+
+                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
@@ -281,26 +284,29 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is TaskCanceledException || e is OperationCanceledException)
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
                 if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                 {
-                    await ShutDownAsync().ConfigureAwait(true);
+                    await ShutDownAsync().ConfigureAwait(false);
                 }
             }
             catch (Exception e)
             {
+                string handled = e is LinuxPermissionException ? "Handled LinuxPermissionException" : "Unhandled Exception";
+
                 var message =
-                    $"Unhandled Exception in {ObserverConstants.ObserverManagerName} on node " +
+                    $"{handled} in {ObserverConstants.ObserverManagerName} on node " +
                     $"{nodeName}. Taking down FO process. " +
                     $"Error info:{Environment.NewLine}{e}";
 
                 Logger.LogError(message);
+                await ShutDownAsync().ConfigureAwait(false);
 
                 // Telemetry.
                 if (TelemetryEnabled)
                 {
-                    var telemetryData = new TelemetryData(FabricClientInstance, token)
+                    var telemetryData = new TelemetryData()
                     {
                         Description = message,
                         HealthState = "Error",
@@ -334,26 +340,27 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
                         var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,
                             ErrorMessage = e.Message,
-                            ErrorStack = e.StackTrace,
+                            ErrorStack = e.ToString(),
                             CrashTime = DateTime.UtcNow.ToString("o"),
                             Version = InternalVersionNumber
                         };
                         string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_critical_error_telemetry.log");
                         _ = telemetryEvents.EmitCriticalErrorEvent(data, ObserverConstants.FabricObserverName, filepath);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Telemetry is non-critical and should not take down FO.
+                        Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex}");
+                        // Telemetry is non-critical and should not take down FO. Will not throw here.
                     }
                 }
 
-                // Don't swallow the exception.
-                // Take down FO process. Fix the bug(s).
+                // Don't swallow the unhandled exception.
+                // Take down FO process. Fix the bug(s) or it may be by design (see LinuxPermissionException).
                 throw;
             }
         }
@@ -400,7 +407,7 @@ namespace FabricObserver.Observers
                         try
                         {
                             Uri appName = new Uri(app);
-                            var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(true);
+                            var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
                             var fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                             if (isConfigurationUpdateInProgress)
@@ -419,7 +426,7 @@ namespace FabricObserver.Observers
                                 var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                 healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                await Task.Delay(50).ConfigureAwait(true);
+                                await Task.Delay(50).ConfigureAwait(false);
                             }
                         }
                         catch (FabricException)
@@ -432,7 +439,7 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(true);
+                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
                         var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                         if (isConfigurationUpdateInProgress)
@@ -452,7 +459,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            await Task.Delay(50).ConfigureAwait(true);
+                            await Task.Delay(50).ConfigureAwait(false);
                         }
 
                     }
@@ -542,7 +549,7 @@ namespace FabricObserver.Observers
 
         private async Task ShutDownAsync()
         {
-            await StopObserversAsync().ConfigureAwait(true);
+            await StopObserversAsync().ConfigureAwait(false);
 
             if (cts != null)
             {
@@ -675,10 +682,6 @@ namespace FabricObserver.Observers
                     {
                         observerData[ObserverConstants.ContainerObserverName].ServiceData.ConcurrencyEnabled = (obs as ContainerObserver).EnableConcurrentMonitoring;
                     }
-                    else if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
-                    {
-                        observerData[ObserverConstants.FabricSystemObserverName].ServiceData.ConcurrencyEnabled = (obs as FabricSystemObserver).EnableConcurrentMonitoring;
-                    }
                 }
                 else
                 {
@@ -723,14 +726,14 @@ namespace FabricObserver.Observers
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     // Graceful stop.
-                    await StopObserversAsync(true, true).ConfigureAwait(true);
+                    await StopObserversAsync(true, true).ConfigureAwait(false);
 
                     // Bye.
                     Environment.Exit(42);
                 }
 
                 isConfigurationUpdateInProgress = true;
-                await StopObserversAsync(false).ConfigureAwait(true);
+                await StopObserversAsync(false).ConfigureAwait(false);
 
                 // ObserverManager settings.
                 this.SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
@@ -987,7 +990,7 @@ namespace FabricObserver.Observers
                         // Telemetry.
                         if (TelemetryEnabled)
                         {
-                            var telemetryData = new TelemetryData(FabricClientInstance, token)
+                            var telemetryData = new TelemetryData()
                             {
                                 Description = observerHealthWarning,
                                 HealthState = "Error",
@@ -1075,26 +1078,58 @@ namespace FabricObserver.Observers
                 }
                 catch (AggregateException ae)
                 {
-                    if (isConfigurationUpdateInProgress)
+                    foreach (var e in ae.Flatten().InnerExceptions)
                     {
-                        return;
-                    }
+                        if (e is LinuxPermissionException)
+                        {
+                            Logger.LogWarning(
+                                $"Handled LinuxPermissionException: was thrown by {observer.ObserverName}. " +
+                                $"Capabilities have been unset on caps binary (due to SF Cluster Upgrade, most likely). " +
+                                $"This will restart FO (by design).{Environment.NewLine}{e}");
 
-                    Logger.LogInfo($"Handled AggregateException from {observer.ObserverName}:{Environment.NewLine}{ae}");
-                    continue;
+                            throw e;
+                        }
+                        else if (e is OperationCanceledException || e is TaskCanceledException)
+                        {
+                            if (isConfigurationUpdateInProgress)
+                            {
+                                // Exit the loop and function. FO is processing a parameter-only versionless application upgrade.
+                                return;
+                            }
+
+                            // FO will fail. Gracefully.
+                        }
+                        else if (e is FabricException || e is TimeoutException || e is Win32Exception)
+                        {
+                            // These are transient and will have been logged by observer when they happened. Ignore. If critical (Win32Exception), FO will die soon enough.
+                        }
+                    }
                 }
-                catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+                catch (Exception e) when (e is LinuxPermissionException)
+                {
+                    Logger.LogWarning(
+                        $"Handled LinuxPermissionException: was thrown by {observer.ObserverName}. " +
+                        $"Capabilities have been unset on caps binary (due to SF Cluster Upgrade, most likely). " +
+                        $"This will restart FO (by design).{Environment.NewLine}{e}");
+
+                    throw;
+                }
+                catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
                 {
                     if (isConfigurationUpdateInProgress)
                     {
+                        // Don't proceed further. FO is processing a parameter-only versionless application upgrade. No observers should run.
                         return;
                     }
-
-                    Logger.LogInfo($"Handled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is FabricException || e is TimeoutException || e is Win32Exception)
                 {
-                    Logger.LogWarning($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+
+                }
+                catch (Exception e) when (!(e is LinuxPermissionException))
+                {
+                    Logger.LogError($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    throw;
                 }
             }
         }
@@ -1141,7 +1176,7 @@ namespace FabricObserver.Observers
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             Description = message,
                             HealthState = "Ok",
@@ -1177,7 +1212,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private bool TryEnableLvidPerfCounter()
+        private bool IsLVIDPerfCounterEnabled()
         {
             if (!isWindows)
             {
@@ -1203,93 +1238,25 @@ namespace FabricObserver.Observers
             //{
             //  return true;
             //}
+       
+            const string categoryName = "Windows Fabric Database";
+            const string counterName = "Long-Value Maximum LID";
 
-            // First see if the Long-Value Maximum LID counter is enabled.
-            // Query the Long-Value Maximum LID counter for local Fabric process (the result for Fabric will *always* be greater than 0 if the performance counter is enabled).
-            double x = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage("Fabric");
-
-            // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
-            if (x > -1)
-            {
-                // Counter is already enabled.
-                return true;
-            }
-
-            // This will fail (gracefully) if FO is not running as Admin/System given the location of the reg hive.
             try
             {
-                string error = null, output = null;
-                string batch = Path.Combine(FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path, "install_lvid_perfcounter.bat");
-
-                var ps = new ProcessStartInfo
+                if (!PerformanceCounterCategory.Exists(categoryName))
                 {
-                    Arguments = $"/c {batch}",
-                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true
-                };
-
-                using var p = new Process();
-
-                // Capture any error information.
-                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                p.OutputDataReceived += (sender, e) => { output += e.Data; };
-                p.StartInfo = ps;
-                _ = p.Start();
-
-                // Start asynchronous read operations on error/output streams.  
-                p.BeginErrorReadLine();
-                p.BeginOutputReadLine();
-                p.WaitForExit();
-                int exitCode = p.ExitCode;
-
-                if (exitCode != 0)
-                {
-                    string message = "Failed to install/enable \"Long-Value Maximum LID\" Service Fabric performance counter. " +
-                                     "This is a required Windows performance counter used in KVS LVID usage monitoring. ";
-
-                    // Access Denied.
-                    if (exitCode == 5)
-                    {
-                        message += $"FabricObserver (FO) must run as System or Admin user on Windows to complete this task given the location of the reg hive. " +
-                                   $"Alternatively, you can build FO using the Build-FabricObserver.ps1 script, then deploy FO from the output folder. " +
-                                   $"This will run the LVID counter setup script as System during app deployment, but FO itself can be deployed as NetworkUser.";
-                    }
-                    else
-                    {
-                        message += $" Error info: {error}";
-                    }
-
-                    Logger.LogWarning($"{message}{Environment.NewLine}Command Output: {output}{Environment.NewLine}Failure Message(s): {error}");
-
-                    /*if (ObserverFailureHealthStateLevel != HealthState.Unknown)
-                    {
-                        HealthReport report = new HealthReport
-                        {
-                            AppName = new Uri("fabric:/" + ObserverConstants.FabricObserverName),
-                            ReportType = HealthReportType.Application,
-                            HealthReportTimeToLive = TimeSpan.MaxValue,
-                            EmitLogEvent = false,
-                            HealthMessage = message,
-                            NodeName = nodeName,
-                            Observer = ObserverConstants.ObserverManagerName,
-                            Property = $"TryEnableLvidPerfCounter({nodeName})",
-                            State = ObserverFailureHealthStateLevel,
-                        };
-
-                        HealthReporter.ReportHealthToServiceFabric(report);
-                    }*/
+                    return false;
                 }
-
-                return exitCode == 0;
+                
+                return PerformanceCounterCategory.CounterExists(counterName, categoryName);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
             {
-                Logger.LogWarning($"TryEnableKVSPerfCounter failed:{Environment.NewLine}{e}");
-                return false;
+                Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state:{Environment.NewLine}{e}");
             }
+
+            return false;
         }
     }
 }

@@ -73,13 +73,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             string serviceName = null,
                             string instanceName = null)
         {
-            var (clusterId, _, _) =
-                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
-
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
-                    clusterId = clusterId ?? string.Empty,
+                    clusterId = ClusterIdentificationUtility.ClusterId ?? string.Empty,
                     source,
                     property = propertyName,
                     healthState = state.ToString(),
@@ -89,7 +86,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -100,7 +97,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -111,7 +108,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReportMetricAsync(List<ChildProcessTelemetryData> telemetryData, CancellationToken cancellationToken)
@@ -122,7 +119,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReportMetricAsync(MachineTelemetryData machineTelemetryData, CancellationToken cancellationToken)
@@ -133,7 +130,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(machineTelemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -142,25 +139,20 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                                     string source,
                                     CancellationToken cancellationToken)
         {
-            var (clusterId, _, _) =
-               await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(
-                   fabricClient,
-                   token).ConfigureAwait(true);
-
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
                     id = $"FO_{Guid.NewGuid()}",
                     datetime = DateTime.UtcNow,
-                    clusterId = clusterId ?? string.Empty,
+                    clusterId = ClusterIdentificationUtility.ClusterId ?? string.Empty,
                     source,
                     property = name,
                     value
                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
 
-            return await Task.FromResult(true).ConfigureAwait(true);
+            return await Task.FromResult(true).ConfigureAwait(false);
         }
 
         // Implement functions below as you need.

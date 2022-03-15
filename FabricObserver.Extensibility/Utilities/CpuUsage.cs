@@ -39,7 +39,7 @@ namespace FabricObserver.Observers.Utilities
                     {
                         prevTime = DateTime.Now;
                         prevTotalProcessorTime = p.TotalProcessorTime;
-                        Thread.Sleep(150);
+                        Thread.Sleep(50);
                     }
                     
                     currentTimeTime = DateTime.Now;

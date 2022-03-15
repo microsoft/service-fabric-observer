@@ -33,8 +33,8 @@
 | FO028 | Number of enabled Firewall Rules at or exceeding configured ***Warning*** threshold on a VM instance. | 
 | FO029 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Error*** threshold for an app service process. | 
 | FO030 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold for an app service process. | 
-| FO031 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Error*** threshold on a VM instance.  | 
-| FO032 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold on a VM instance.  | 
+| FO031 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Error*** threshold for a machine.  | 
+| FO032 | Number of active Ephemeral TCP ports (ports in the Windows dynamic port range) at or exceeding configured ***Warning*** threshold for a machine.  | 
 | FO033 | Number of allocated File Handles is at or exceeding configured ***Error*** threshold for an app service process.  | 
 | FO034 | Number of allocated File Handles is at or exceeding configured ***Warning*** threshold for an app service process.  |
 | FO035 | Percentage of Maximum number of File Handles in use is at or exceeding configured ***Error*** threshold on a Linux VM instance.  | 
@@ -46,3 +46,7 @@
 | FO041 | Percentage of Maximum number of KVS LVIDs in use is at or exceeding internal ***Warning*** threshold (75%) for an app service process. This is non-configurable and Windows-only. | 
 | FO042 | Folder size (MB) has exceeded configured ***Error*** threshold |  
 | FO043 | Folder size (MB) has exceeded configured ***Warning*** threshold | 
+| FO044 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO045 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO046 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for a machine. | 
+| FO047 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for a machine. | 

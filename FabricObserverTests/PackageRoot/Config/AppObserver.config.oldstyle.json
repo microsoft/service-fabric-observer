@@ -3,7 +3,7 @@
     "targetAppType": "FabricObserverType",
     "cpuWarningLimitPercent": 30,
     "memoryWarningLimitPercent": 20,
-    "memoryWarningLimitMbPrivate": 1024
+    "memoryWarningLimitMb": 1024
   },
   {
     "targetApp": "fabric:/CpuStress",
@@ -21,9 +21,9 @@
     "memoryWarningLimitPercent": 20
   },
   {
-    "targetApp": "BadApp",
+    "targetApp": "fabric:/BadApp",
     "cpuWarningLimitPercent": 60,
     "memoryWarningLimitPercent": 30,
-    "memoryWarningLimitMbPrivate": 1024
+    "memoryWarningLimitMb": 1024
   }
 ]

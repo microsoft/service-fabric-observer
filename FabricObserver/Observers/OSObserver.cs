@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Fabric;
 using System.Fabric.Health;
@@ -73,12 +72,12 @@ namespace FabricObserver.Observers
 
                 if (IsAUCheckSettingEnabled)
                 {
-                    await CheckWuAutoDownloadEnabledAsync(token).ConfigureAwait(true);
+                    CheckWuAutoDownloadEnabled();
                 }
             }
 
-            await GetComputerInfoAsync(token).ConfigureAwait(true);
-            await ReportAsync(token).ConfigureAwait(true);
+            await GetComputerInfoAsync(token);
+            await ReportAsync(token);
             osReport = null;
             osStatus = null;
 
@@ -115,7 +114,7 @@ namespace FabricObserver.Observers
 
                     if (IsTelemetryEnabled)
                     {
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             Description = healthMessage,
                             HealthState = "Error",
@@ -169,7 +168,7 @@ namespace FabricObserver.Observers
                     // Telemetry
                     if (IsTelemetryEnabled)
                     {
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             Description = healthMessage,
                             HealthState = "Ok",
@@ -255,7 +254,7 @@ namespace FabricObserver.Observers
                     if (IsTelemetryEnabled)
                     {
                         // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             Description = auServiceEnabledMessage,
                             HealthState = "Warning",
@@ -285,7 +284,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
@@ -302,32 +301,36 @@ namespace FabricObserver.Observers
             }
 
             var checkAU = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableWindowsAutoUpdateCheck);
-            var infraServices = await GetInfrastructureServiceInstancesAsync().ConfigureAwait(true);
+            bool isISDeployed = await IsInfrastructureServiceDeployedAsync();
 
-            if (!string.IsNullOrEmpty(checkAU) && bool.TryParse(checkAU, out bool auChk) && infraServices?.Count() > 0)
+            if (isISDeployed && !string.IsNullOrEmpty(checkAU) && bool.TryParse(checkAU, out bool auChk))
             {
                 IsAUCheckSettingEnabled = auChk;
             }
         }
 
-        private async Task<IEnumerable<Service>> GetInfrastructureServiceInstancesAsync()
+        public async Task<bool> IsInfrastructureServiceDeployedAsync()
         {
-            var allSystemServices =
-                await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () =>
-                                                   FabricClientInstance.QueryManager.GetServiceListAsync(
-                                                                                        new Uri(ObserverConstants.SystemAppName),
-                                                                                        null,
-                                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                                        Token),
-                                                Token).ConfigureAwait(true);
+            try
+            {
+                var allSystemServices =
+                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                    () => FabricClientInstance.QueryManager.GetServiceListAsync(
+                                                new Uri(ObserverConstants.SystemAppName),
+                                                null,
+                                                AsyncClusterOperationTimeoutSeconds,
+                                                Token), Token).ConfigureAwait(false);
 
-            var infraInstances = allSystemServices.Where(
-                                    i => i.ServiceTypeName.Equals(
-                                        "InfrastructureServiceType",
-                                        StringComparison.InvariantCultureIgnoreCase));
-
-            return infraInstances;
+                return allSystemServices.Count > 0 && allSystemServices.Count(
+                                service => service.ServiceTypeName.Equals(
+                                            ObserverConstants.InfrastructureServiceType,
+                                            StringComparison.InvariantCultureIgnoreCase)) > 0;
+            }
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+                ObserverLogger.LogWarning($"Unable to determine IS deployment status:{Environment.NewLine}{e}");
+                return false;
+            }
         }
 
         private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
@@ -353,7 +356,7 @@ namespace FabricObserver.Observers
                 }
 
                 resultsOrdered = results.Cast<ManagementObject>()
-#pragma warning disable CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility - This is Windows-only (!isWindows means this function doesn't run..).
                                             .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
 #pragma warning restore CA1416 // Validate platform compatibility
 #pragma warning disable CA1416 // Validate platform compatibility
@@ -405,9 +408,14 @@ namespace FabricObserver.Observers
             return ret;
         }
 
-        private Task CheckWuAutoDownloadEnabledAsync(CancellationToken token)
+        private void CheckWuAutoDownloadEnabled()
         {
-            token.ThrowIfCancellationRequested();
+            if (!isWindows)
+            {
+                return;
+            }
+
+            Token.ThrowIfCancellationRequested();
 
             // Windows Update Automatic Download enabled (automatically downloading an update without notification beforehand)?
             // If so, it's best to disable this and deploy either POA (for Bronze durability clusters)
@@ -429,8 +437,6 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogWarning($"{AuStateUnknownMessage}{Environment.NewLine}{e}");
                 auStateUnknown = true;
             }
-
-            return Task.CompletedTask;
         }
 
         private async Task GetComputerInfoAsync(CancellationToken token)
@@ -451,9 +457,10 @@ namespace FabricObserver.Observers
                 (int lowPortOS, int highPortOS) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
                 string osEphemeralPortRange = string.Empty;
                 string fabricAppPortRange = string.Empty;
-                string clusterManifestXml = !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(
-                                                                ClusterManifestPath, token) : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                                                                                                AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
+                string clusterManifestXml =
+                    !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(ClusterManifestPath, token)
+                                                                    : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
+                                                                                  AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
 
                 (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);

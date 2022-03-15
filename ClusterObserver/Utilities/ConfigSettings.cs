@@ -68,11 +68,6 @@ namespace ClusterObserver.Utilities
             get; set;
         }
 
-        public bool EnableTelemetry 
-        { 
-            get; set; 
-        }
-
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
             Settings = settings;
@@ -113,15 +108,6 @@ namespace ClusterObserver.Utilities
                 out bool enableOpsTelem))
             {
                 EnableOperationalTelemetry = enableOpsTelem;
-            }
-
-            // Telemetry (user).
-            if (bool.TryParse(
-                GetConfigSettingValue(
-                ObserverConstants.EnableTelemetryParameter),
-                out bool enableTelemetry))
-            {
-                EnableTelemetry = enableTelemetry;
             }
 
             // RunInterval?

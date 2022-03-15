@@ -26,7 +26,6 @@ namespace FabricObserver.Observers
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
         private readonly bool isWindows;
-        private bool isElevatedLinux;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allMemDataMB;
 
@@ -138,7 +137,7 @@ namespace FabricObserver.Observers
                         CsvFileLogger.LogData(
                                         csvFileName,
                                         id,
-                                        ErrorWarningProperty.TotalCpuTime,
+                                        ErrorWarningProperty.CpuTime,
                                         "Total",
                                         Math.Round(cpuFrudInst.AverageDataValue));
                     }
@@ -149,7 +148,7 @@ namespace FabricObserver.Observers
                         CsvFileLogger.LogData(
                                         csvFileName,
                                         id,
-                                        ErrorWarningProperty.TotalMemoryConsumptionMb,
+                                        ErrorWarningProperty.MemoryConsumptionMb,
                                         "Total",
                                         Math.Round(memFrudInst.AverageDataValue));
                     }
@@ -455,23 +454,27 @@ namespace FabricObserver.Observers
                 };
 
                 var output = new List<string>();
-                using Process p = new Process();
-                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                p.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Add(e.Data); } };
-                p.StartInfo = ps;
-                _ = p.Start();
+                using Process process = new Process();
+                process.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Add(e.Data); } };
+                process.StartInfo = ps;
+                
+                if (!process.Start())
+                {
+                    return false;
+                }
 
                 // Start async reads.
-                p.BeginErrorReadLine();
-                p.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                process.BeginOutputReadLine();
 
                 // It should not take 60 seconds for the process that calls docker stats to exit.
                 // If so, then end execution of the outer loop: stop monitoring for this run of ContainerObserver.
-                if (!p.WaitForExit(MaxProcessExitWaitTimeMS))
+                if (!process.WaitForExit(MaxProcessExitWaitTimeMS))
                 {
                     try
                     {
-                        p?.Kill(true);
+                        process?.Kill(true);
                     }
                     catch (Exception e) when (e is AggregateException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
                     {
@@ -482,7 +485,7 @@ namespace FabricObserver.Observers
                     return false;
                 }
 
-                int exitStatus = p.ExitCode;
+                int exitStatus = process.ExitCode;
 
                 // Was there an error running docker stats?
                 if (exitStatus != 0)
@@ -495,21 +498,10 @@ namespace FabricObserver.Observers
                                 "in order for ContainerObserver to function correctly on Windows.";
                     }
                     else
-                    {
-                        // This means ContainerObserver has already run successfully on Linux in this FO instance (proc) and SF may have touched FO's Code folder binaries
-                        // during a cluster upgrade, which breaks the caps set on the related caps binaries (elevated_docker_stats in this case).
-                        // The only recourse is to re-run the FO setup script by restarting the FO process (or by deploying FO as root user on the target machine).
-                        if (isElevatedLinux)
-                        {
-                            msg += $"elevated_docker_stats caps may have been removed (SF cluster upgrade?). " +
-                                   "You should restart the FO process to put the caps set back in place (the FO linux setup script does this). " +
-                                   "If this consistently happens (it should not), then consider running FO as root (see Policies node in ApplicationManifest.xml).";
-
-                            // TODO: Restart FO? Since the Linux customer is using ContainerObserver and FO is a stateless service, this has little impact on FO itself.
-                            // Restarting FO here would reset the caps on the related binary and ContainerObserver would function correctly the next time it runs.
-                            
-                            Environment.Exit(42);
-                        }
+                    { 
+                        msg += "elevated_docker_stats caps may have been removed (SF cluster upgrade?). " +
+                               "You should restart the FO process to put the caps set back in place (the FO linux setup script does this). " +
+                               "If this consistently happens (it should not), then consider running FO as root (see Policies node in ApplicationManifest.xml).";
                     }
 
                     ObserverLogger.LogWarning(msg);
@@ -555,14 +547,16 @@ namespace FabricObserver.Observers
                                         });
                     }
 
-                    return false;
-                }
+                    // Linux: Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
+                    if (!isWindows && error.ToLower().Contains("permission denied"))
+                    {
+                        // Throwing LinuxPermissionException here will eventually take down FO (by design). The failure will be logged and telemetry will be emitted, then
+                        // the exception will be re-thrown by ObserverManager and the FO process will fail fast exit. Then, SF will create a new instance of FO on the offending node which
+                        // will run the setup bash script that ensures the elevated_docker_stats binary has the correct caps in place.
+                        throw new LinuxPermissionException($"Capabilities have been removed from elevated_docker_stats{Environment.NewLine}{error}");
+                    }
 
-                // Linux caps.
-                if (!isWindows && !isElevatedLinux)
-                {
-                    // This means the caps are in place on the elevated_docker_stats binary. Nothing has touched the binary, which would remove the caps.
-                    isElevatedLinux = true;
+                    return false;
                 }
 
                 _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
@@ -574,59 +568,86 @@ namespace FabricObserver.Observers
 
                     if (!allCpuDataPercentage.ContainsKey(cpuId))
                     {
-                        _ = allCpuDataPercentage.TryAdd(cpuId, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, 1, false));
+                        _ = allCpuDataPercentage.TryAdd(cpuId, new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, cpuId, 1, false));
                     }
 
                     if (!allMemDataMB.ContainsKey(memId))
                     {
-                        _ = allMemDataMB.TryAdd(memId, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1, false));
+                        _ = allMemDataMB.TryAdd(memId, new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionMb, memId, 1, false));
                     }
 
                     foreach (string line in output)
                     {
                         Token.ThrowIfCancellationRequested();
 
-                        if (line.Contains("CPU"))
+                        try
                         {
-                            continue;
-                        }
+                            if (line.Contains("CPU"))
+                            {
+                                continue;
+                            }
 
-                        string[] stats = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            string[] stats = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-                        // Something went wrong if the collection size is less than 4 given the supplied output table format:
-                        // {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}
-                        if (stats.Length < 4)
-                        {
-                            ObserverLogger.LogWarning($"docker stats not returning expected information: stats.Count = {stats.Length}. Expected 4.");
-                            return;
-                        }
+                            // Something went wrong if the collection size is less than 4 given the supplied output table format:
+                            // {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}
+                            if (stats.Length < 4)
+                            {
+                                ObserverLogger.LogWarning($"docker stats not returning expected information: stats.Count = {stats.Length}. Expected 4.");
+                                return;
+                            }
 
-                        if (!stats[1].Contains(repOrInst.ServicePackageActivationId))
-                        {
-                            continue;
-                        }
+                            if (string.IsNullOrWhiteSpace(repOrInst?.ServicePackageActivationId) || !stats[1].Contains(repOrInst.ServicePackageActivationId))
+                            {
+                                continue;
+                            }
 
-                        containerId = stats[0];
-                        repOrInst.ContainerId = containerId;
+                            containerId = stats[0];
+                            repOrInst.ContainerId = containerId;
 #if DEBUG
-                        ObserverLogger.LogInfo($"cpu: {stats[2]}");
-                        ObserverLogger.LogInfo($"mem: {stats[3]}");
+                            ObserverLogger.LogInfo($"cpu: {stats[2]}");
+                            ObserverLogger.LogInfo($"mem: {stats[3]}");
 #endif
-                        // CPU (%)
-                        double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
-                        allCpuDataPercentage[cpuId].AddData(cpu_percent);
+                            // CPU (%)
+                            double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
+                            allCpuDataPercentage[cpuId].AddData(cpu_percent);
 
-                        // Memory (MiB)
-                        double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
-                        allMemDataMB[memId].AddData(mem_working_set_mb);
+                            // Memory (MiB)
+                            double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
+                            allMemDataMB[memId].AddData(mem_working_set_mb);
 
-                        break;
+                            break;
+                        }
+                        catch (ArgumentException)
+                        {
+                            continue;
+                        }
                     }
                });
+
+                output.Clear();
+                output = null;
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (AggregateException ae)
             {
-                ObserverLogger.LogError($"Exception in MonitorContainers:{Environment.NewLine}{e}");
+                foreach (Exception e in ae.Flatten().InnerExceptions)
+                {
+                    if (e is OperationCanceledException || e is TaskCanceledException)
+                    {
+                        // Time to die. Do not run ReportAsync.
+                        return false;
+                    }
+                }
+            }
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            {
+                return false;
+            }
+            catch (Exception e)
+            {
+                ObserverLogger.LogWarning($"Unhandled Exception in MonitorContainers:{Environment.NewLine}{e}");
+                
+                // no-op. Bye.
                 throw;
             }
 

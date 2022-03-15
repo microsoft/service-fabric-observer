@@ -413,6 +413,43 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public async Task AppObserver_ObserveAsync_Successful_Observer_WarningsOrErrorsDetected()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            using var client = new FabricClient();
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricClientInstance = client;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(client, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
+                EnableConcurrentMonitoring = true
+            };
+
+            await obs.ObserveAsync(token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
+        }
+
+        [TestMethod]
         public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_IsHealthy()
         {
             if (!isSFRuntimePresentOnTestMachine)
@@ -499,15 +536,13 @@ namespace FabricObserverTests
             ClusterObserverManager.FabricServiceContext = context;
             ClusterObserverManager.FabricClientInstance = client;
             ClusterObserverManager.EtwEnabled = true;
+            ClusterObserverManager.TelemetryEnabled = true;
 
             // On a one-node cluster like your dev machine, pass true for ignoreDefaultQueryTimeout otherwise each FabricClient query will take 2 minutes 
             // to timeout in ClusterObserver.
             var obs = new ClusterObserver.ClusterObserver(null, ignoreDefaultQueryTimeout: true)
             {
                 ConfigSettings = new ClusterObserver.Utilities.ConfigSettings(null, null)
-                {
-                    EnableTelemetry = true
-                }
             };
 
             await obs.ObserveAsync(token);
@@ -696,7 +731,7 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
-                EphemeralPortsErrorThreshold = -42,
+                EphemeralPortsRawErrorThreshold = -42,
                 FirewallRulesWarningThreshold = -1,
                 ActivePortsWarningThreshold = -100
             };
@@ -732,7 +767,7 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
-                EphemeralPortsErrorThreshold = -42,
+                EphemeralPortsRawErrorThreshold = -42,
                 FirewallRulesWarningThreshold = -1,
                 ActivePortsWarningThreshold = -100
             };
@@ -747,7 +782,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.MemDataInUse == null);
             Assert.IsTrue(obs.MemDataPercent == null);
             Assert.IsTrue(obs.ActivePortsData == null);
-            Assert.IsTrue(obs.EphemeralPortsData == null);
+            Assert.IsTrue(obs.EphemeralPortsDataRaw == null);
 
             // It ran (crashing in Initialize would not set LastRunDate, which is MinValue until set.)
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -788,7 +823,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "SysInfo.txt");
+            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "SysInfo.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
@@ -845,7 +880,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "disks.txt");
+            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "disks.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
@@ -877,8 +912,12 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
             var warningDictionary = new Dictionary<string, double>
             {
-                // Modify the key to point to a path you know exists on your computer.
-                { @"C:\SFDevCluster\Log\Traces", 50 }
+                /* Windows paths.. */
+
+                { @"%USERPROFILE%\AppData\Local\Temp", 50 },
+                
+                // This should be rather large.
+                { "%USERPROFILE%", 50 }
             };
 
             using var obs = new DiskObserver(client, context)
@@ -887,7 +926,7 @@ namespace FabricObserverTests
                 DiskSpacePercentWarningThreshold = 10,
                 FolderSizeMonitoringEnabled = true,
 
-                // Folder size monitoring. This will most likely generate a warning (you should modify the key above to be some folder you know is larger than 50MB).
+                // Folder size monitoring. This will most likely generate a warning.
                 FolderSizeConfigDataWarning = warningDictionary,
 
                 // This is required since output files are only created if fo api app is also deployed to cluster..
@@ -908,13 +947,13 @@ namespace FabricObserverTests
             // observer detected issues with disk/folder size.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
-            // Both disk consumption and folder size warnings were generated.
-            Assert.IsTrue(obs.CurrentWarningCount == 2);
+            // Disk consumption and folder size warnings were generated.
+            Assert.IsTrue(obs.CurrentWarningCount == 3);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "disks.txt");
+            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "disks.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
@@ -995,7 +1034,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "NetInfo.txt");
+            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "NetInfo.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
@@ -1027,9 +1066,10 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 DataCapacity = 5,
                 UseCircularBuffer = false,
-                CpuWarningUsageThresholdPct = 1, // This will generate Warning for sure.
+                CpuWarningUsageThresholdPct = 0.01F, // This will generate Warning for sure.
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
-                ActivePortsWarningThreshold = 100 // This will generate Warning for sure.
+                ActivePortsWarningThreshold = 100, // This will generate Warning for sure.
+                EphemeralPortsPercentWarningThreshold = 0.01 // This will generate Warning for sure.
             };
 
             using var obsMgr = new ObserverManager(obs, client);
@@ -1083,7 +1123,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "observer_logs", "SFInfraInfo.txt");
+            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "SFInfraInfo.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)
@@ -1123,8 +1163,7 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 DataCapacity = 5,
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                EnableConcurrentMonitoring = true
+                MonitorDuration = TimeSpan.FromSeconds(1)
             };
 
             await obs.ObserveAsync(token);
@@ -1162,8 +1201,7 @@ namespace FabricObserverTests
             {
                 IsEnabled = true,
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                MemWarnUsageThresholdMb = 5,
-                EnableConcurrentMonitoring = true
+                MemWarnUsageThresholdMb = 5
             };
 
             await obs.ObserveAsync(token);
@@ -1206,8 +1244,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ActiveTcpPortCountWarning = 5,
-                EnableConcurrentMonitoring = true
+                ActiveTcpPortCountWarning = 5
             };
 
             await obs.ObserveAsync(token);
@@ -1251,8 +1288,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ActiveEphemeralPortCountWarning = 1,
-                EnableConcurrentMonitoring = true
+                ActiveEphemeralPortCountWarning = 1
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
@@ -1296,8 +1332,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                AllocatedHandlesWarning = 100,
-                EnableConcurrentMonitoring = true
+                AllocatedHandlesWarning = 100
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
@@ -1341,8 +1376,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarnUsageThresholdPct = -42,
-                EnableConcurrentMonitoring = true
+                CpuWarnUsageThresholdPct = -42
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);
@@ -1385,8 +1419,7 @@ namespace FabricObserverTests
             using var obs = new FabricSystemObserver(client, context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                CpuWarnUsageThresholdPct = 420,
-                EnableConcurrentMonitoring = true
+                CpuWarnUsageThresholdPct = 420
             };
 
             await obs.ObserveAsync(token).ConfigureAwait(true);

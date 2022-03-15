@@ -13,13 +13,16 @@ using System.Threading.Tasks;
 
 namespace FabricObserver.Utilities.ServiceFabric
 {
-    public class Client
+    /// <summary>
+    /// Utility class that supplies useful Service Fabric client API wrapper functions.
+    /// </summary>
+    public class FabricClientUtilities
     {
         private readonly FabricClient _fabricClient;
         private readonly ServiceContext _serviceContext;
         private readonly ParallelOptions _parallelOptions;
 
-        public Client(FabricClient fabricClient, ServiceContext serviceContext)
+        public FabricClientUtilities(FabricClient fabricClient, ServiceContext serviceContext)
         {
             _fabricClient = fabricClient;
             _serviceContext = serviceContext;
@@ -51,9 +54,9 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => _fabricClient.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                   deployedAppQueryDesc,
-                                                                                   TimeSpan.FromSeconds(120),
-                                                                                   token),
+                                                    deployedAppQueryDesc,
+                                                    TimeSpan.FromSeconds(120),
+                                                    token),
                                         token);
 
             // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
@@ -70,9 +73,9 @@ namespace FabricObserver.Utilities.ServiceFabric
                 deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
                 appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => _fabricClient.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                   deployedAppQueryDesc,
-                                                                                   TimeSpan.FromSeconds(120),
-                                                                                   token),
+                                                    deployedAppQueryDesc,
+                                                    TimeSpan.FromSeconds(120),
+                                                    token),
                                         token);
 
                 apps.AddRange(appList.ToList());

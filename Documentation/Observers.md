@@ -184,7 +184,9 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate an Error. |
 | **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Warning. |
 | **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate an Error. |
-| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Warning. |  
+| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Warning. | 
+| **networkErrorEphemeralPortsPercent** | Maximum percentage of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate an Error. |
+| **networkWarningEphemeralPortsPercent** | Minimum percentage of established TCP ports (within a dynamic port range) in use by app process that will generate a Warning. |   
 | **errorOpenFileHandles** | Maximum number of open file handles in use by an app process that will generate an Error. |  
 | **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Warning. |  
 | **errorThreadCount** | Maximum number of threads in use by an app process that will generate an Error. |  
@@ -516,7 +518,7 @@ After DiskObserver logs basic disk information, it performs measurements on all 
 </Section>
 ```
 
-For folder size monitoring (available in FO versions 3.1.24 and above), enable the feature and supply full path/threshold size (in MB) pairs in the following format: 
+For folder size monitoring (available in FO versions 3.1.25 and above), enable the feature and supply full path/threshold size (in MB) pairs in the following format: 
 
 ```"fullpath, threshold | fullpath1 threshold1 ..."``` 
 
@@ -545,9 +547,8 @@ By default, FabricObserver runs as NetworkUser on Windows and sfappsuser on Linu
 running as System or root, default FabricObserver can't monitor process behavior (this is always true on Windows). That said, there are only a few system
 services you would care about: Fabric.exe and FabricGateway.exe. Fabric.exe is generally the system service that your code can directly impact with respect to machine resource usage.
 
-**Version 3.1.18 introduced support for concurrent service process monitoring and reporting by FabricSystemObserver**. You can enable/disable this feature by setting the boolean value for ContainerObserverEnableConcurrentMonitoring. Note that this is disabled by default.
-If your compute configuration includes multiple CPUs (logical processors >= 4), then you should consider enabling this capability as it will significantly decrease the time it takes FabricSystemObserver to complete monitoring/reporting.
-If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
+**NOTE: Version 3.1.25 removes support for concurrent service process monitoring and reporting by FabricSystemObserver**. This feature is not worth the resource overhead given the limited number of processes FSO monitors.
+
 
 **Input - Settings.xml**: Only ClusterOperationTimeoutSeconds is set in Settings.xml.
 
@@ -564,15 +565,10 @@ If you do not have a capable CPU configuration, then enabling concurrent monitor
 <!-- FabricSystemObserver -->
 <Section Name="FabricSystemObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <!-- Optional: Whether or not FabricSystemObserver should try to monitor service processes concurrently.
-         This can significantly decrease the amount of time it takes FSO to monitor and report on system services. 
-         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
-    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
 
     <!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful System services that employs KVS (Fabric, FabricRM).
          Enabling this will put fabric:/System into Warning when either Fabric or FabricRM have consumed 75% of Maximum number of LVIDs (which is int.MaxValue per process). -->
     <Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
-    <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
@@ -703,19 +699,20 @@ network failures which will result in Fabric Health warnings that live until the
 <Parameter Name="NodeObserverUseCircularBuffer" DefaultValue="false" />
 <!-- Required-If UseCircularBuffer = True -->
 <Parameter Name="NodeObserverResourceUsageDataCapacity" DefaultValue="" />
-<!-- NodeObserver Warning/Error Thresholds -->
 <Parameter Name="NodeObserverCpuErrorLimitPercent" DefaultValue="" />
-<Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="90" />
+<Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="95" />
 <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
 <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
 <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
-<Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="95" />
+<Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="90" />
 <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
 <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
 <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
 <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
 <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
 <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
+<Parameter Name="NodeObserverNetworkErrorEphemeralPortsPercentage" DefaultValue="" />
+<Parameter Name="NodeObserverNetworkWarningEphemeralPortsPercentage" DefaultValue="90" />
 <!-- The below settings only make sense for Linux. -->
 <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
 <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
@@ -728,23 +725,25 @@ network failures which will result in Fabric Health warnings that live until the
 | **CpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |  
 | **CpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning | 
 | **EnableTelemetry** | Whether or not to send Observer data to diagnostics/log analytics service. |  
-| **MemoryErrorLimitMb** | Maximum amount of committed memory on virtual machine that will generate an Error. | 
+| **MemoryErrorLimitMb** | Maximum amount of committed memory on machine that will generate an Error. | 
 | **MemoryWarningLimitMb** | Minimum amount of committed memory that will generate a Warning. |  
-| **MemoryErrorLimitPercent** | Maximum percentage of memory in use on virtual machine that will generate an Error. | 
-| **MemoryWarningLimitPercent** | Minimum percentage of memory in use on virtual machine that will generate a Warning. |  
+| **MemoryErrorLimitPercent** | Maximum percentage of memory in use on machine that will generate an Error. | 
+| **MemoryWarningLimitPercent** | Minimum percentage of memory in use on machine that will generate a Warning. |  
 | **MonitorDuration** | The amount of time this observer conducts resource usage probing. | 
 | **NetworkErrorFirewallRules** | Number of established Firewall Rules that will generate a Health Warning. |  
 | **NetworkWarningFirewallRules** |  Number of established Firewall Rules that will generate a Health Error. |  
 | **NetworkErrorActivePorts** | Maximum number of established ports in use by all processes on node that will generate a Fabric Error. |
-| **NetworkWarningActivePorts** | Minimum number of established TCP ports in use by all processes on node that will generate a Fabric Warning. |
-| **NetworkErrorEphemeralPorts** | Maximum number of established ephemeral TCP ports in use by app process that will generate a Fabric Error. |
-| **NetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on node that will generate a Fabric warning. |
+| **NetworkWarningActivePorts** | Minimum number of established TCP ports in use by all processes on machine that will generate a Fabric Warning. |
+| **NetworkErrorEphemeralPorts** | Maximum number of established ephemeral TCP ports in use all processes on machine that will generate a Fabric Error. |
+| **NetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on machine that will generate a Fabric warning. |
+| **NetworkErrorEphemeralPortsPercentage** | Maximum percentage of configured ephemeral TCP ports in use by all processes on machine that will generate a Fabric Error. |
+| **NetworkWarningEphemeralPortsPercentage** | Minimum percentage of configured ephemeral TCP ports in use by all processes on machine that will generate a Fabric warning. |
 | **UseCircularBuffer** | You can choose between of `List<T>` or a `CircularBufferCollection<T>` for observer data storage. | 
 | **ResourceUsageDataCapacity** | Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for the observer. | 
-| **LinuxFileHandlesErrorLimitPercent** | Maximum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux virtual machine that will generate an Error. | 
-| **LinuxFileHandlesWarningLimitPercent** | Minumum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux virtual machine that will generate a Warning. |
-| **LinuxFileHandlesErrorLimitTotal** | Total number of allocated file handles in use on Linux virtual machine that will generate an Error. | 
-| **LinuxFileHandlesWarningLimitTotal** | Total number of allocated file handles in use on Linux virtual machine that will generate a Warning. |
+| **LinuxFileHandlesErrorLimitPercent** | Maximum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux machine that will generate an Error. | 
+| **LinuxFileHandlesWarningLimitPercent** | Minumum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux machine that will generate a Warning. |
+| **LinuxFileHandlesErrorLimitTotal** | Total number of allocated file handles in use on Linux machine that will generate an Error. | 
+| **LinuxFileHandlesWarningLimitTotal** | Total number of allocated file handles in use on Linux machine that will generate a Warning. |
 
 **Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service. 
 

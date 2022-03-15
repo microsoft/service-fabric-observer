@@ -89,6 +89,16 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public double NetworkErrorEphemeralPortsPercent
+        {
+            get; set;
+        }
+
+        public double NetworkWarningEphemeralPortsPercent
+        {
+            get; set;
+        }
+
         public bool DumpProcessOnError
         {
             get; set;
@@ -130,6 +140,8 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"NetworkWarningActivePorts: {NetworkWarningActivePorts}{Environment.NewLine}" +
                                              $"NetworkErrorEphemeralPorts: {NetworkErrorEphemeralPorts}{Environment.NewLine}" +
                                              $"NetworkWarningEphemeralPorts: {NetworkWarningEphemeralPorts}{Environment.NewLine}" +
+                                             $"NetworkErrorEphemeralPortsPercent: {NetworkErrorEphemeralPortsPercent}{Environment.NewLine}" +
+                                             $"NetworkWarningEphemeralPortsPercent: {NetworkWarningEphemeralPortsPercent}{Environment.NewLine}" +
                                              $"DumpProcessOnError: {DumpProcessOnError}{Environment.NewLine}" +
                                              $"ErrorOpenFileHandles: {ErrorOpenFileHandles}{Environment.NewLine}" +
                                              $"WarningOpenFileHandles: {WarningOpenFileHandles}{Environment.NewLine}" +

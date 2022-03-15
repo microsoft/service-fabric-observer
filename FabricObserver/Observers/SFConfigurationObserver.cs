@@ -79,7 +79,7 @@ namespace FabricObserver.Observers
                 unsupportedPreviewFeaturesEnabled = config.EnableUnsupportedPreviewFeatures;
                 SFNodeLastBootTime = config.NodeLastBootUpTime;
 
-                await ReportAsync(token).ConfigureAwait(true);
+                await ReportAsync(token).ConfigureAwait(false);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException)
             {
@@ -148,7 +148,7 @@ namespace FabricObserver.Observers
                 _ = sb.AppendLine("Enable Circular trace session: " + SFEnableCircularTraceSession);
             }
 
-            _ = sb.Append(await GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
+            _ = sb.Append(await GetDeployedAppsInfoAsync(token).ConfigureAwait(false));
             _ = sb.AppendLine();
 
             token.ThrowIfCancellationRequested();
@@ -174,7 +174,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                appList = await FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
+                appList = await FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(false);
                     
                 if (!string.IsNullOrWhiteSpace(ClusterManifestPath))
                 {
@@ -182,7 +182,7 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
+                    clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
                 }
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)
@@ -281,8 +281,8 @@ namespace FabricObserver.Observers
 
                         // Service(s).
                         _ = sb.AppendLine($"{Environment.NewLine}\tServices:");
-                        var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
-                        var replicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName).ConfigureAwait(true);
+                        var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(false);
+                        var replicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName).ConfigureAwait(false);
 
                         foreach (var service in serviceList)
                         {
@@ -290,7 +290,7 @@ namespace FabricObserver.Observers
                             var type = service.ServiceTypeName;
                             var serviceManifestVersion = service.ServiceManifestVersion;
                             var serviceName = service.ServiceName;
-                            var serviceDescription = await FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
+                            var serviceDescription = await FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(false);
                             var processModel = serviceDescription.ServicePackageActivationMode.ToString();
 
                             foreach (var rep in replicaList)

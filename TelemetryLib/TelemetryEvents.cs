@@ -31,7 +31,7 @@ namespace FabricObserver.TelemetryLib
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
 
-        public TelemetryEvents(FabricClient fabricClient, ServiceContext context, CancellationToken token)
+        public TelemetryEvents(ServiceContext context)
         {
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
@@ -39,10 +39,9 @@ namespace FabricObserver.TelemetryLib
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
 
             // Set instance fields.
-            var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
-            clusterId = ClusterId;
-            tenantId = TenantId;
-            clusterType = ClusterType;
+            clusterId = ClusterIdentificationUtility.ClusterId;
+            tenantId = ClusterIdentificationUtility.TenantId;
+            clusterType = ClusterIdentificationUtility.ClusterType;
         }
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
@@ -246,7 +245,7 @@ namespace FabricObserver.TelemetryLib
                     { source == FOTaskName ? "FOVersion" : "COVersion", errorData.Version },
                     { "CrashTime", errorData.CrashTime },
                     { "ErrorMessage", errorData.ErrorMessage },
-                    { "CrashData", errorData.ErrorStack },
+                    { "Stack", errorData.ErrorStack },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", errorData.OS }
                 };

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers.Interfaces

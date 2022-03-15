@@ -1,0 +1,15 @@
+﻿[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 10,
+    "networkWarningEphemeralPorts": 1,
+    "networkWarningEphemeralPortsPercent": 0.0010,
+    "warningThreadCount": 12,
+    "warningOpenFileHandles": 50
+  },
+  {
+    "targetAppType": "FabricObserverType",
+    "warningOpenFileHandles": 15
+  }
+]

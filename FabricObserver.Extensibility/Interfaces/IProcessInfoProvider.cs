@@ -11,8 +11,8 @@ namespace FabricObserver.Observers.Utilities
     public interface IProcessInfoProvider
     {
         /// <summary>
-        /// Gets the amount, in megabytes, of Working Set memory for a specified process. By default, this is the full Working Set amount (private plus shared process memory). You can supply
-        /// a boolean value for optional parameter getPrivateWorkingSet to inform the function that you want Active Private Working Set only.
+        /// Gets the amount, in megabytes, of Working Set memory for a specified process. By default, this is the full Working Set amount (private plus shared process memory).
+        /// If you want Private Working Set data, then you must provide a process name and pass true for getPrivateWorkingSet.
         /// </summary>
         /// <param name="processId">The id of the process.</param>
         /// <param name="procName">Optional: The name of the process. This value is required if you supply true for getPrivateWorkingSet.</param>
@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">The id of the process.</param>
         /// <param name="context">StatelessServiceContext instance.</param>
         /// <returns>The float value representing number of allocated file handles for the process.</returns>
-        float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false);
+        float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null);
 
         /// <summary>
         /// Gets process information (name, pid) for descendants of the parent process represented by the supplied process id.

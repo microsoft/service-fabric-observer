@@ -33,7 +33,7 @@ namespace ClusterObserver
         private bool appParamsUpdating;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.1.13";
+        private const string InternalVersionNumber = "2.1.14";
 
         public bool IsObserverRunning
         {
@@ -68,8 +68,7 @@ namespace ClusterObserver
 
         public static bool TelemetryEnabled
         {
-            get;
-            private set;
+            get; set;
         }
 
         public static bool EtwEnabled
@@ -257,7 +256,7 @@ namespace ClusterObserver
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricClientInstance, FabricServiceContext, token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
                         ClusterObserverOperationalEventData coData = GetClusterObserverInternalTelemetryData();
 
                         if (coData != null)
@@ -286,17 +285,20 @@ namespace ClusterObserver
                         break;
                     }
 
-                    await RunObserverAync().ConfigureAwait(false);
+                    await RunAsync().ConfigureAwait(false);
                     await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 15), token);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
-
+                if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
+                {
+                    await StopAsync().ConfigureAwait(false);
+                }
             }
             catch (Exception e)
             {
-                string message = $"Unhanded Exception in ClusterObserverManager on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
+                string message = $"Unhandled Exception in ClusterObserver on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
                 Logger.LogError(message);
 
                 // Telemetry.
@@ -331,10 +333,7 @@ namespace ClusterObserver
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(
-                                                            FabricClientInstance,
-                                                            FabricServiceContext,
-                                                            token);
+                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
 
                         var data = new CriticalErrorEventData
                         {
@@ -431,7 +430,7 @@ namespace ClusterObserver
             return Task.CompletedTask;
         }
 
-        private async Task RunObserverAync()
+        private async Task RunAsync()
         {
             if (!observer.IsEnabled)
             {
@@ -484,7 +483,27 @@ namespace ClusterObserver
                     cts = new CancellationTokenSource();
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (AggregateException ae)
+            {
+                foreach (var e in ae.Flatten().InnerExceptions)
+                {
+                    if (e is OperationCanceledException || e is TaskCanceledException)
+                    {
+                        if (appParamsUpdating)
+                        {
+                            // Exit. CO is processing a versionless parameter-only application upgrade.
+                            return;
+                        }
+
+                        // CO will fail. Gracefully.
+                    }
+                    else if (e is FabricException || e is TimeoutException)
+                    {
+                        // These are transient and will have already been logged.
+                    }
+                }
+            }
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))    
             {
                 string msg = $"Unhandled exception in ClusterObserverManager.RunObserverAync(). Taking down process. Error info:{Environment.NewLine}{e}";
                 Logger.LogError(msg);

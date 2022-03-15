@@ -54,6 +54,9 @@
     <None Update="PackageRoot\Config\AppObserver.config.oldstyle.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="PackageRoot\Config\AppObserver_warnings.config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="PackageRoot\Config\ContainerObserver.config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

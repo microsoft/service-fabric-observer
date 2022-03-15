@@ -32,7 +32,7 @@ namespace FabricObserver.Observers.Utilities
                           function,
                           new FabricClientRetryErrors(),
                           DefaultOperationTimeout,
-                          cancellationToken).ConfigureAwait(true);
+                          cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -50,8 +50,7 @@ namespace FabricObserver.Observers.Utilities
                                         CancellationToken cancellationToken)
         {
             bool needToWait = false;
-            var watch = new Stopwatch();
-            watch.Start();
+            Stopwatch watch = Stopwatch.StartNew();
 
             while (true)
             {
@@ -59,12 +58,12 @@ namespace FabricObserver.Observers.Utilities
 
                 if (needToWait)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(true);
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
                 }
 
                 try
                 {
-                    return await function().ConfigureAwait(true);
+                    return await function().ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {

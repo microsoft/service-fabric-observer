@@ -7,7 +7,6 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
-using FabricObserver.TelemetryLib;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {

@@ -147,12 +147,24 @@ namespace FabricObserver.Observers.Utilities
                 WindowStyle = ProcessWindowStyle.Hidden,
                 RedirectStandardInput = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = false
+                RedirectStandardError = true
             };
 
             int count = 0;
-            using (Process process = Process.Start(startInfo))
+            string error = string.Empty;
+            using (Process process = new Process())
             {
+                process.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                process.StartInfo = startInfo;
+
+                if (!process.Start())
+                {
+                    return -1;
+                }
+
+                // Start async reads.
+                process.BeginErrorReadLine();
+
                 string line;
                 while (process != null && (line = process.StandardOutput.ReadLine()) != null)
                 {
@@ -177,8 +189,17 @@ namespace FabricObserver.Observers.Utilities
 
                 process?.WaitForExit();
 
-                if (process != null && process.ExitCode != 0)
+                if (process?.ExitCode != 0)
                 {
+                    // Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
+                    if (error.ToLower().Contains("permission denied"))
+                    {
+                        // Throwing LinuxPermissionException here will eventually take down FO (by design). The failure will be logged and telemetry will be emitted, then
+                        // the exception will be re-thrown by ObserverManager and the FO process will fail fast exit. Then, SF will create a new instance of FO on the offending node which
+                        // will run the setup bash script that ensures the elevated_netstats binary has the correct caps in place.
+                        throw new LinuxPermissionException($"Capabilities have been removed from elevated_netstats{Environment.NewLine}{error}");
+                    }
+
                     return -1;
                 }
             }

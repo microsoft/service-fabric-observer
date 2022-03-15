@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PublishProfile xmlns="http://schemas.microsoft.com/2015/05/fabrictools">
   <ClusterConnectionParameters ConnectionEndpoint=""
-								               X509Credential="true"
+							   X509Credential="true"
                                ServerCertThumbprint=""
                                FindType="FindByThumbprint"
                                FindValue=""

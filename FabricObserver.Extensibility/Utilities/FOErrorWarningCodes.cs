@@ -57,6 +57,10 @@ namespace FabricObserver.Observers.Utilities
         public const string AppWarningTooManyActiveEphemeralPorts = "FO030";
         public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
+        public const string AppErrorActiveEphemeralPortsPercent = "FO044";
+        public const string AppWarningActiveEphemeralPortsPercent = "FO045";
+        public const string NodeErrorActiveEphemeralPortsPercent = "FO046";
+        public const string NodeWarningActiveEphemeralPortsPercent = "FO047";
 
         // Process owned File Handles / File Descriptors - Linux (File Descriptors) and Windows (File Handles)
         public const string AppErrorTooManyOpenFileHandles = "FO033";
@@ -93,6 +97,8 @@ namespace FabricObserver.Observers.Utilities
             { AppWarningTooManyActiveTcpPorts, "AppWarningTooManyActiveTcpPorts" },
             { AppErrorTooManyActiveEphemeralPorts, "AppErrorTooManyActiveEphemeralPorts" },
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
+            { AppErrorActiveEphemeralPortsPercent, "AppErrorActiveEphemeralPortsPercent" },
+            { AppWarningActiveEphemeralPortsPercent, "AppWarningActiveEphemeralPortsPercent" },
             { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
             { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
             { AppErrorTooManyThreads, "AppErrorTooManyThreads" },
@@ -116,6 +122,8 @@ namespace FabricObserver.Observers.Utilities
             { NodeWarningDiskSpaceMB, "NodeWarningDiskSpaceMB" },
             { NodeErrorDiskAverageQueueLength, "NodeErrorDiskAverageQueueLength" },
             { NodeWarningDiskAverageQueueLength, "NodeWarningDiskAverageQueueLength" },
+            { NodeErrorFolderSizeMB, "NodeErrorFolderSizeMB" },
+            { NodeWarningFolderSizeMB, "NodeWarningFolderSizeMB" },
             { NodeErrorMemoryPercent, "NodeErrorMemoryPercent" },
             { NodeWarningMemoryPercent, "NodeWarningMemoryPercent" },
             { NodeErrorMemoryMB, "NodeErrorMemoryMB" },
@@ -126,6 +134,8 @@ namespace FabricObserver.Observers.Utilities
             { WarningTooManyFirewallRules, "NodeWarningTooManyFirewallRules" },
             { NodeErrorTooManyActiveEphemeralPorts, "NodeErrorTooManyActiveEphemeralPorts" },
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
+            { NodeErrorActiveEphemeralPortsPercent, "NodeErrorActiveEphemeralPortsPercent" },
+            { NodeWarningActiveEphemeralPortsPercent, "NodeWarningActiveEphemeralPortsPercent" },
             { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
             { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
             { NodeErrorTooManyOpenFileHandles, "NodeErrorTooManyOpenFileHandles" },

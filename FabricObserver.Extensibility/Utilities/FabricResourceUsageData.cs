@@ -63,7 +63,7 @@ namespace FabricObserver.Observers.Utilities
                 Units = "MB";
             }
 
-            if (property.ToLower().Contains("%") ||
+            if (property.Contains("%") ||
                 property.ToLower().Contains("cpu") ||
                 property.ToLower().Contains("percent"))
             {
@@ -213,12 +213,12 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Determines whether or not a supplied threshold has been reached when taking the average of the values in the Data collection.
         /// </summary>
-        /// <typeparam name="TU">Error/Warning Threshold value to determine health state decision.</typeparam>
-        /// <param name="threshold">Threshold value to measure against.</param>
+        /// <typeparam name="TU">Error/Warning numeric (thus struct) threshold value to determine health state.</typeparam>
+        /// <param name="threshold">Numeric threshold value to measure against.</param>
         /// <returns>Returns true or false depending upon computed health state based on supplied threshold value.</returns>
-        public bool IsUnhealthy<TU>(TU threshold)
+        public bool IsUnhealthy<TU>(TU threshold) where TU : struct
         {
-            if (Data == null || !Data.Any() || Convert.ToDouble(threshold) <= 0)
+            if (Data == null || !Data.Any() || Convert.ToDouble(threshold) <= 0.0)
             {
                 return false;
             }

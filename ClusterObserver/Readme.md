@@ -29,7 +29,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.1.13 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.1.14 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 Example Configuration:  
@@ -56,8 +56,6 @@ Example Configuration:
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
     <Parameter Name="EnableVerboseLogging" Value="false" />
     <Parameter Name="EnableETWProvider" Value="true" />
-    <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. This can be overriden by the setting 
-         in the ClusterObserverConfiguration section. The idea there is that you can do an application parameter update and turn this feature on and off. -->
     <Parameter Name="EnableTelemetry" Value="true" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
@@ -97,6 +95,8 @@ Example Configuration:
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <!-- Report on currently executing Repair Jobs in the cluster. -->
     <Parameter Name="MonitorRepairJobs" Value="" MustOverride="true" />
+    <!-- Monitor Cluster and Application Upgrades. -->
+    <Parameter Name="MonitorUpgrades" Value="" MustOverride="true" />
     <!-- CO diagnostic telemetry. -->
     <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
@@ -140,7 +140,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "TaskName": "ClusterObserver",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "COVersion": "2.1.13",
+    "COVersion": "2.1.14",
     "Timestamp": "2021-11-22T19:02:04.4287671Z",
     "OS": "Windows"
 }

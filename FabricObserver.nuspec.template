@@ -2,17 +2,20 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.24</version>
+    <version>3.1.25</version>
     <releaseNotes>
-- New Feature: DiskObserver can be configured to monitor and report on folder size.
-- WindowsInfoProvider.TupleGetSystemMemoryInfo is now more performant (across memory and CPU).
-- Windows KVS LVID monitoring: Support for same-named service processes.
-- Windows KVS LVID monitoring: Added check for instance name present for category before calling perf counter (and then handling expected exception when not present (old impl)).
-- Updated build scripts to support Setup user requirments in a more simplified way.
-- Updated Settings.xml and ApplicationManifest.xml to support updated build script and new DiskObserver folder size monitoring feature.
-- DiskObserver Application Parameters are now prefixed with "DiskObserver".
-- Updated unit tests.
-- Code improvements.
+New metric for AppObserver and NodeObserver: Percentage Active Ephemeral Ports. You can supply a threshold value (double) for percentage of dynamic ports in use that will generate a warning or error.
+Potential Breaking Changes: Altered metric/property names. See FabricObserver.Extensibility/Utilities/ErrorWarningProperty.cs. This was done to make the property values more consistent.
+DiskObserver Folder Size monitoring now supports Environment variables in fullpath/thresholdMB pair setting (e.g., %SOMEFULLPATHENVVAR%, 1000 | %SOMEPATH%\SomeFolder, 2000).
+Updated DiskObserver folder size monitoring to ignore unauthorized folder/file access issues during file size summation. This does not involve exception handling.
+Added work around (auto-mitigation) to SF Cluster Upgrades unsetting Caps on FO's Linux Caps binaries.
+Updated error codes to match new features.
+Updated KVS LVID perf counter impl.
+Removed concurrent processing support in FabricSystemObserver.
+Updated OSObserver InfraStructureService deployment check impl.
+Extensibility dll version now matches FabricObserver's.
+Performance improvements across memory and CPU usage.
+Updated default FabricObserver configuration to maximize both default capabilities and performance.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

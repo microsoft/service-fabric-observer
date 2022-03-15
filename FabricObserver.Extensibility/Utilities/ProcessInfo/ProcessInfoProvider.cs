@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -52,10 +51,11 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
 
-        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false);
+        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null);
 
         public abstract double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
 
+        // This is supported on both Linux and Windows.
         public static int GetProcessThreadCount(int processId)
         {
             try
