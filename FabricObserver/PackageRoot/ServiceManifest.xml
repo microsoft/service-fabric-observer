@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceManifest Name="FabricObserverPkg"
-                 Version="3.1.25"
+                 Version="3.1.26"
                  xmlns="http://schemas.microsoft.com/2011/01/fabric"
                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -9,7 +9,7 @@
          This name must match the string used in RegisterServiceType call in Program.cs. -->
     <StatelessServiceType ServiceTypeName="FabricObserverType" />
   </ServiceTypes>
-  <CodePackage Name="Code" Version="3.1.25">
+  <CodePackage Name="Code" Version="3.1.26">
 	<SetupEntryPoint>
 	    <ExeHost>
 	        <Program>install_lvid_perfcounter.bat</Program>
@@ -25,10 +25,10 @@
 
   <!-- Config package is the contents of the Config directory under PackageRoot that contains an 
        independently-updateable and versioned set of custom configuration settings for your service. -->
-  <ConfigPackage Name="Config" Version="3.1.25" />
+  <ConfigPackage Name="Config" Version="3.1.26" />
   
   <!-- Data package is the contents of the Data directory under PackageRoot that contains an 
        independently-updateable and versioned custom data for your service.
        Observer plugin dlls must live in this folder, in a child folder named Plugins. -->
-  <DataPackage Name="Data" Version="3.1.25" />
+  <DataPackage Name="Data" Version="3.1.26" />
 </ServiceManifest>

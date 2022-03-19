@@ -43,7 +43,7 @@ namespace FabricObserver.Observers
         private readonly ClusterIdentificationUtility clusterIdentificationUtility;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.25";
+        private const string InternalVersionNumber = "3.1.26";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;

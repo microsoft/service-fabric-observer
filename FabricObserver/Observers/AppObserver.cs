@@ -474,8 +474,8 @@ namespace FabricObserver.Observers
             _deployedTargetList = new List<ApplicationInfo>();
             _dynamicPortRange = OSInfoProvider.Instance.TupleGetDynamicPortRange();
             _client = new FabricClientUtilities(FabricClientInstance, FabricServiceContext);
-            _deployedApps = await _client.GetAllLocalDeployedAppsAsync(Token);
-            
+            _deployedApps = await _client.GetAllLocalDeployedAppsAsync(Token).ConfigureAwait(false);
+
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
 
@@ -709,16 +709,14 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            // Filter target list.
+            // Filter targetApp list.
             for (int i = 0; i < _userTargetList.Count; i++)
             {
                 var target = _userTargetList[i];
 
+                // We are only filtering targetApps.
                 if (string.IsNullOrWhiteSpace(target.TargetApp))
                 {
-                    _userTargetList.RemoveAt(i);
-                    ObserverLogger.LogWarning($"InitializeAsync: targetApp can't be null or blank. " +
-                                              $"Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\". Ignoring.");
                     continue;
                 }
 
@@ -746,13 +744,16 @@ namespace FabricObserver.Observers
                         target.TargetApp = target.TargetApp.Replace(" ", string.Empty);
                     }
 
-                    Uri appUri = new Uri(target.TargetApp);
+                    if (!Uri.IsWellFormedUriString(target.TargetApp, UriKind.RelativeOrAbsolute))
+                    {
+                        _userTargetList.RemoveAt(i);
+                        ObserverLogger.LogWarning($"InitializeAsync: Unexpected TargetApp value {target.TargetApp}. " +
+                                                  $"Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\". Ignoring targetApp.");
+                    }
                 }
-                catch (Exception e) when (e is ArgumentException || e is UriFormatException)
+                catch (ArgumentException)
                 {
-                    _userTargetList.RemoveAt(i);
-                    ObserverLogger.LogWarning($"InitializeAsync: Unexpected TargetApp value {target.TargetApp}. " +
-                                              $"Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\". Ignoring targetApp.");
+                   
                 }
             }
 
@@ -903,7 +904,10 @@ namespace FabricObserver.Observers
 
                 try
                 {
-                    appUri = new Uri(application.TargetApp);
+                    if (application.TargetApp != null)
+                    {
+                        appUri = new Uri(application.TargetApp);
+                    }
                 }
                 catch (UriFormatException)
                 {
@@ -1006,7 +1010,12 @@ namespace FabricObserver.Observers
             {
                 return true;
             }
-
+#if DEBUG
+            for (int i = 0; i < _deployedTargetList.Count; i++)
+            {
+                ObserverLogger.LogInfo($"AppObserver settings applied to deployed application services: {Environment.NewLine}{_deployedTargetList[i]}");
+            }
+#endif
             for (int i = 0; i < repCount; ++i)
             {
                 Token.ThrowIfCancellationRequested();
@@ -1050,7 +1059,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                ObserverLogger.LogWarning($"Error processing child processes:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"ProcessChildProcs - Failure processing descendants:{Environment.NewLine}{e}");
             }
         }
 
@@ -1085,11 +1094,11 @@ namespace FabricObserver.Observers
             {
                 token.ThrowIfCancellationRequested();
 
-                int childPid = childProcs[i].Pid;
-                string childProcName = childProcs[i].procName;
-
                 try
                 {
+                    int childPid = childProcs[i].Pid;
+                    string childProcName = childProcs[i].procName;
+
                     if (fruds.Any(x => x.Key.Contains(childProcName)))
                     {
                         var childFruds = fruds.Where(x => x.Key.Contains(childProcName)).ToList();
@@ -1193,13 +1202,9 @@ namespace FabricObserver.Observers
                         childFruds = null;
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is Win32Exception || e is InvalidOperationException)
-                {
-                    // ignore
-                }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
-                    ObserverLogger.LogWarning($"Error processing child processes:{Environment.NewLine}{e}");
+                    ObserverLogger.LogWarning($"ProcessChildFrudsGetDataSum - Failure processing descendants:{Environment.NewLine}{e}");
                 }
             }
 
@@ -1800,19 +1805,19 @@ namespace FabricObserver.Observers
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
             List<DeployedApplication> deployedApps = _deployedApps;
+
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
-
             if (applicationNameFilter != null)
             {
-                deployedApps = deployedApps.FindAll(a => a.ApplicationName == applicationNameFilter);
+                deployedApps = deployedApps.FindAll(a => a.ApplicationName.Equals(applicationNameFilter));
             }
             else if (!string.IsNullOrWhiteSpace(applicationType))
             {
                 deployedApps = deployedApps.FindAll(a => a.ApplicationTypeName == applicationType);
             }
 
-            for (int i = 0; i < deployedApps.Count; ++i)
+            for (int i = 0; i < deployedApps.Count; i++)
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -1822,8 +1827,8 @@ namespace FabricObserver.Observers
                 // Filter service list if ServiceExcludeList/ServiceIncludeList config setting is non-empty.
                 var serviceFilter = 
                     _userTargetList.FirstOrDefault(x => (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                        || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
-                                                        && (!string.IsNullOrWhiteSpace(x.ServiceExcludeList) || !string.IsNullOrWhiteSpace(x.ServiceIncludeList)));
+                                                         || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
+                                                         && (!string.IsNullOrWhiteSpace(x.ServiceExcludeList) || !string.IsNullOrWhiteSpace(x.ServiceIncludeList)));
 
                 ServiceFilterType filterType = ServiceFilterType.None;
 
@@ -2188,6 +2193,5 @@ namespace FabricObserver.Observers
 
             DataTableFileLogger.Flush();
         }
-
     }
 }
