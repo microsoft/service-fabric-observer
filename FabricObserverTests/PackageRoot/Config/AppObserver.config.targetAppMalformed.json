@@ -1,0 +1,7 @@
+﻿[
+  {
+    "targetApp": "^fabric_foo:*%",
+    "cpuWarningLimitPercent": 45,
+    "memoryWarningLimitMb": 400
+  }
+]

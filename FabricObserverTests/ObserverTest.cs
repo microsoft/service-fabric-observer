@@ -409,7 +409,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
             
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
         }
 
         [TestMethod]
@@ -446,7 +446,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
         }
 
         [TestMethod]
@@ -483,7 +483,41 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_MalformedTargetAppValue_GeneratesWarningHealthEvent()
+        {
+            if (!isSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
+            using var client = new FabricClient();
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = context;
+            ObserverManager.FabricClientInstance = client;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(client, context)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.targetAppMalformed.json"),
+                EnableConcurrentMonitoring = true
+            };
+
+            await obs.ObserveAsync(token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer had internal issues during run - in this case creating a Warning due to malformed targetApp value.
+            Assert.IsTrue(obs.OperationalHealthEvents == 1);
+
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
         }
 
         [TestMethod]
@@ -519,7 +553,7 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(true);
+            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
         }
 
         [TestMethod]
@@ -670,7 +704,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             // stop clears health warning
-            await obsMgr.StopObserversAsync().ConfigureAwait(true);
+            await obsMgr.StopObserversAsync().ConfigureAwait(false);
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1143,7 +1177,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1225,7 +1259,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1269,7 +1303,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1291,7 +1325,7 @@ namespace FabricObserverTests
                 ActiveEphemeralPortCountWarning = 1
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(true);
+            await obs.ObserveAsync(token).ConfigureAwait(false);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1313,7 +1347,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1335,7 +1369,7 @@ namespace FabricObserverTests
                 AllocatedHandlesWarning = 100
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(true);
+            await obs.ObserveAsync(token).ConfigureAwait(false);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1357,7 +1391,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
             
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1379,7 +1413,7 @@ namespace FabricObserverTests
                 CpuWarnUsageThresholdPct = -42
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(true);
+            await obs.ObserveAsync(token).ConfigureAwait(false);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1400,7 +1434,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(true);
+            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1422,7 +1456,7 @@ namespace FabricObserverTests
                 CpuWarnUsageThresholdPct = 420
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(true);
+            await obs.ObserveAsync(token).ConfigureAwait(false);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
