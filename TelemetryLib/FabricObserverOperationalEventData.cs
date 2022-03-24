@@ -35,6 +35,11 @@ namespace FabricObserver.TelemetryLib
             get; set; 
         }
 
+        public string SFRuntimeVersion
+        {
+            get; set;
+        }
+
         public Dictionary<string, ObserverData> ObserverData
         {
             get; set;

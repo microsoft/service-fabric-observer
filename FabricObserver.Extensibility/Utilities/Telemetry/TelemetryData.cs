@@ -16,7 +16,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public string ClusterId => ClusterIdentificationUtility.ClusterId;
+        public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
 
         public string Code
         {

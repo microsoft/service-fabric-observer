@@ -297,7 +297,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     var properties = new Dictionary<string, string>
                     {
-                        { "ClusterId", ClusterIdentificationUtility.ClusterId },
+                        { "ClusterId", ClusterInformation.ClusterInfoTuple.ClusterId },
                         { "ApplicationName", telemData.ApplicationName ?? string.Empty },
                         { "ServiceName", telemData.ServiceName ?? string.Empty },
                         { "ProcessId", telemData.ProcessId.ToString() },

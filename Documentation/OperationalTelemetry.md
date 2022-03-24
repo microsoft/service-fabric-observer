@@ -47,21 +47,22 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "FOVersion": "3.1.26",
     "HasPlugins": "False",
     "ParallelCapable": "True",
+    "SFRuntimeVersion":"8.2.1363.9590"
     "UpTime": "1.00:30:18.8058379",
-    "Timestamp": "2022-03-19T02:45:28.9827940Z",
+    "Timestamp": "2022-03-24T02:45:28.9827940Z",
     "OS": "Windows",
     "EnabledObserverCount": 5,
     "AppObserverTotalMonitoredApps": 5,
-    "AppObserverTotalMonitoredServiceProcesses": 6,
+    "AppObserverTotalMonitoredServiceProcesses": 11,
     "AppObserverConcurrencyEnabled": 1,
     "AppObserverErrorDetections": 0,
-    "AppObserverWarningDetections": 0,
+    "AppObserverWarningDetections": 2,
     "CertificateObserverErrorDetections": 0,
     "CertificateObserverWarningDetections": 0,
     "DiskObserverErrorDetections": 0,
-    "DiskObserverWarningDetections": 0,
+    "DiskObserverWarningDetections": 3,
     "NodeObserverErrorDetections": 0,
-    "NodeObserverWarningDetections": 0,
+    "NodeObserverWarningDetections": 7,
     "OSObserverErrorDetections": 0,
     "OSObserverWarningDetections": 0
   }
@@ -77,6 +78,7 @@ Let's take a look at the data and why we think it is useful to share with us. We
 -	**FOVersion** - this is the internal version of FO (if you have your own version naming, we will only know what the FO code version is (not your specific FO app version name)).
 -	**HasPlugins** - this informs us about whether or not FO plugins are being used (we would love to know if folks are using the plugin model).
 -   **ParallelCapable** - this informs us about whether or not the underlying (virtual) machine's CPU configuration is parallel capable.
+-   **SFRuntimeVersion** - this is the version of the Service Fabric runtime.
 -	**UpTime** - this is the amount of time FO has been running since it last started.
 -	**Timestamp** - this is the time, in UTC, when FO sent the telemetry.
 -	**OS** - this is the operating system FO is running on (Windows or Linux).

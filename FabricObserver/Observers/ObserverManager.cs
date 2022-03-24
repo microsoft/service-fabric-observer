@@ -33,6 +33,7 @@ namespace FabricObserver.Observers
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
         private readonly List<ObserverBase> observers;
+        private readonly string sfVersion;
         private readonly bool isWindows;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
@@ -40,7 +41,6 @@ namespace FabricObserver.Observers
         private bool isConfigurationUpdateInProgress;
         private CancellationTokenSource cts;
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
-        private readonly ClusterIdentificationUtility clusterIdentificationUtility;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.1.26";
@@ -177,7 +177,7 @@ namespace FabricObserver.Observers
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            clusterIdentificationUtility = new ClusterIdentificationUtility(fabricClient, token);
+            sfVersion = GetServiceFabricRuntimeVersion();
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -202,6 +202,21 @@ namespace FabricObserver.Observers
             SetPropertiesFromConfigurationParameters();
             observers = serviceProvider.GetServices<ObserverBase>().ToList();
             HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+        }
+
+        private string GetServiceFabricRuntimeVersion()
+        {
+            try
+            {
+                var config = ServiceFabricConfiguration.Instance;
+                return config.FabricVersion;
+            }
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            {
+                Logger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e}");
+            }
+
+            return null;
         }
 
         public async Task StartObserversAsync()
@@ -603,6 +618,7 @@ namespace FabricObserver.Observers
                     EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
                     HasPlugins = hasPlugins,
                     ParallelExecutionCapable = Environment.ProcessorCount >= 4,
+                    SFRuntimeVersion = sfVersion,
                     ObserverData = GetObserverData(),
                 };
             }

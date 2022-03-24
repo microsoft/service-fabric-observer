@@ -9,7 +9,7 @@
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
-Note that in version 3.1.18 and higher, AppObserver, ContainerObserver and FabricSystemObserver can run their monitoring loops in parallel on capable hardware (logical CPU processors >= 4).
+Note that in version 3.1.18 and higher, AppObserver and ContainerObserver can run their monitoring loops in parallel on capable hardware (logical CPU processors >= 4).
 This feature is enabled by default. You can disable/enable with parameter-only, versionless application upgrades with the related settings found in ApplicationManifest.xml under the AppObserver, ContainerObserver and FabricSystemObserver settings sections.
 Enabling this feature greatly decreases the time it takes for an observer running on capable hardware to complete monitoring. This is especially important if you monitor a large number of services.
 

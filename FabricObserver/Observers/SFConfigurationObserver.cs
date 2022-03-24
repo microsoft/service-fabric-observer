@@ -85,7 +85,7 @@ namespace FabricObserver.Observers
             {
                 
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"Unhandled Exception in ObserveAsync:{Environment.NewLine}{e}");
 
