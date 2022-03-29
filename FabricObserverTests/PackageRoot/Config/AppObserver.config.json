@@ -34,12 +34,36 @@
   {
     "targetAppType": "GettingStartedApplicationType",
     "cpuWarningLimitPercent": 40,
-    "memoryWarningLimitPercent": 10,
+    "memoryWarningLimitPercent": 500,
     "memoryWarningLimitMb": 500
   },
   {
     "targetAppType": "Health Metrics",
     "cpuWarningLimitPercent": 90,
     "memoryWarningLimitPercent": 60
+  },
+  {
+    "targetApp": "GettingStartedApplication",
+    "serviceIncludeList": "MyActorService",
+    "cpuWarningLimitPercent": 20,
+    "memoryWarningLimitMb": 800
+  },
+  {
+    "targetApp": "GettingStartedApplication",
+    "serviceIncludeList": "StatefulBackendService",
+    "cpuWarningLimitPercent": 0.05,
+    "memoryWarningLimitMb": 700
+  },
+  {
+    "targetApp": "Voting",
+    "serviceExcludeList": "VotingWeb",
+    "cpuWarningLimitPercent": 0.05,
+    "memoryWarningLimitMb": 1500
+  },
+  {
+    "targetApp": "Foo",
+    "serviceIncludeList": "FooService",
+    "cpuWarningLimitPercent": 0.05,
+    "memoryWarningLimitMb": 500
   }
 ]

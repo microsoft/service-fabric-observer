@@ -152,8 +152,8 @@
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
