@@ -173,7 +173,7 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
 
-            var stopwatch = Stopwatch.StartNew();
+            //var stopwatch = Stopwatch.StartNew();
             TimeSpan TTL = GetHealthReportTimeToLive();
 
             // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
@@ -484,8 +484,7 @@ namespace FabricObserver.Observers
                 }
            });
 
-            stopwatch.Stop();
-
+            //stopwatch.Stop();
             //ObserverLogger.LogInfo($"ReportAsync run duration with parallel: {stopwatch.Elapsed}");
             return Task.CompletedTask;
         }
