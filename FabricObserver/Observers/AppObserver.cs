@@ -184,7 +184,7 @@ namespace FabricObserver.Observers
                     state.Stop();
                 }
 
-                var repOrInst = ReplicaOrInstanceList.ElementAt(i);
+                var repOrInst = ReplicaOrInstanceList[i];
                 
                 if (repOrInst.HostProcessId < 1)
                 {
@@ -224,7 +224,7 @@ namespace FabricObserver.Observers
                             a => a.ServiceIncludeList != null &&
                                     a.ServiceIncludeList.Contains(repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1))))
                     {
-                        // It could be the case that user config specifies multiple inclusion lists per a single app in configuration. We want the correct service here.
+                        // It could be the case that user config specifies multiple inclusion lists for a single app/type in user configuration. We want the correct service here.
                         app = _deployedTargetList.First(
                                 a => a.ServiceIncludeList != null &&
                                 a.ServiceIncludeList.Contains(repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1)));
@@ -639,14 +639,14 @@ namespace FabricObserver.Observers
 #if DEBUG
             for (int i = 0; i < _deployedTargetList.Count; i++)
             {
-                ObserverLogger.LogInfo($"AppObserver settings applied to {_deployedTargetList.ElementAt(i).TargetApp}:{Environment.NewLine}{_deployedTargetList.ElementAt(i)}");
+                ObserverLogger.LogInfo($"AppObserver settings applied to {_deployedTargetList[i].TargetApp}:{Environment.NewLine}{_deployedTargetList[i]}");
             }
 #endif
             for (int i = 0; i < repCount; ++i)
             {
                 Token.ThrowIfCancellationRequested();
 
-                var rep = ReplicaOrInstanceList.ElementAt(i);
+                var rep = ReplicaOrInstanceList[i];
                 ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName?.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");
             }
 
@@ -1385,7 +1385,7 @@ namespace FabricObserver.Observers
 
                 // DEBUG
                 //threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
-                var repOrInst = ReplicaOrInstanceList.ElementAt(i);
+                var repOrInst = ReplicaOrInstanceList[i];
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
                 bool checkCpu = false;
