@@ -100,6 +100,7 @@ namespace FabricObserver.Observers.Utilities
 
         // FabricSystemObserver.
         public const string FabricSystemObserverName = "FabricSystemObserver";
+        public const string FabricSystemObserverConfigurationName = "FabricSystemObserverConfiguration";
         public const string FabricSystemObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
         public const string FabricSystemObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
         public const string FabricSystemObserverMemoryErrorLimitMb = "MemoryErrorLimitMb";

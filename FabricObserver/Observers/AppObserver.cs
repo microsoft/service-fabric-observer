@@ -173,6 +173,7 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
 
+            //DEBUG
             //var stopwatch = Stopwatch.StartNew();
             TimeSpan TTL = GetHealthReportTimeToLive();
 
@@ -216,7 +217,7 @@ namespace FabricObserver.Observers
                                 (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
                 
 
-                // Support for serviceIncludeList thresholds per service/per app.
+                // process serviceIncludeList config items for a single app.
                 if (app?.ServiceIncludeList != null)
                 {
                     // Ensure the service is the one we are looking for.

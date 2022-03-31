@@ -23,6 +23,7 @@ using Octokit;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime;
+using System.Fabric.Management.ServiceModel;
 
 namespace FabricObserver.Observers
 {
@@ -222,11 +223,6 @@ namespace FabricObserver.Observers
         public async Task StartObserversAsync()
         {
             StartDateTime = DateTime.UtcNow;
-
-            if (isWindows)
-            {
-                IsLvidCounterEnabled = IsLVIDPerfCounterEnabled();
-            }
 
             try
             {
@@ -534,11 +530,16 @@ namespace FabricObserver.Observers
             return false;
         }
 
-        private static string GetConfigSettingValue(string parameterName, ConfigurationSettings settings)
+        private static string GetConfigSettingValue(string parameterName, ConfigurationSettings settings, string sectionName = null)
         {
             try
             {
                 ConfigurationSettings configSettings = null;
+                
+                if (sectionName == null)
+                {
+                    sectionName = ObserverConstants.ObserverManagerConfigurationSectionName;
+                }
 
                 if (settings != null)
                 {
@@ -549,7 +550,8 @@ namespace FabricObserver.Observers
                     configSettings = FabricServiceContext.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
                 }
 
-                var section = configSettings?.Sections[ObserverConstants.ObserverManagerConfigurationSectionName];
+                var section = configSettings?.Sections[sectionName];
+                
                 var parameter = section?.Parameters[parameterName];
 
                 return parameter?.Value;
@@ -751,16 +753,14 @@ namespace FabricObserver.Observers
                 isConfigurationUpdateInProgress = true;
                 await StopObserversAsync(false).ConfigureAwait(false);
 
-                // ObserverManager settings.
-                this.SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
-
+                // Observer settings.
                 foreach (var observer in observers)
                 {
                     if (token.IsCancellationRequested)
                     {
                         return;
                     }
-                   
+
                     observer.ConfigurationSettings = new ConfigSettings(e.NewPackage.Settings, $"{observer.ObserverName}Configuration");
 
                     // The ObserverLogger instance (member of each observer type) checks its EnableVerboseLogging setting before writing Info events (it won't write if this setting is false, thus non-verbose).
@@ -777,6 +777,9 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
+
+                // ObserverManager settings. This happens after observer settings are set since obsmgr LVID code depends on specific observer config. See IsLvidCounterEnabled().
+                SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
 
                 cts ??= new CancellationTokenSource();
                 linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
@@ -864,6 +867,12 @@ namespace FabricObserver.Observers
                 ObserverFailureHealthStateLevel = healthState;
             }
 
+            // LVID monitoring.
+            if (isWindows)
+            {
+                IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
+            }
+
             // Telemetry (AppInsights, LogAnalytics, etc) - Override
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled, settings), out bool telemEnabled))
             {
@@ -880,56 +889,52 @@ namespace FabricObserver.Observers
             if (string.IsNullOrEmpty(telemetryProviderType))
             {
                 TelemetryEnabled = false;
-
                 return;
             }
 
             if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
             {
                 TelemetryEnabled = false;
-
                 return;
             }
 
             switch (telemetryProvider)
             {
                 case TelemetryProviderType.AzureLogAnalytics:
+                    
+                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings);
+                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
+                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
+
+                    if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                     {
-                        string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings);
-                        string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
-                        string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
-
-                        if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
-                        {
-                            TelemetryEnabled = false;
-                            return;
-                        }
-
-                        TelemetryClient = new LogAnalyticsTelemetry(
-                                                logAnalyticsWorkspaceId,
-                                                logAnalyticsSharedKey,
-                                                logAnalyticsLogType,
-                                                FabricClientInstance,
-                                                token);
-
-                        break;
+                        TelemetryEnabled = false;
+                        return;
                     }
 
+                    TelemetryClient = new LogAnalyticsTelemetry(
+                                            logAnalyticsWorkspaceId,
+                                            logAnalyticsSharedKey,
+                                            logAnalyticsLogType,
+                                            FabricClientInstance,
+                                            token);
+                    break;
+                    
                 case TelemetryProviderType.AzureApplicationInsights:
+                    
+                    string aiKey = GetConfigSettingValue(ObserverConstants.AiKey, settings);
+
+                    if (string.IsNullOrEmpty(aiKey))
                     {
-                        string aiKey = GetConfigSettingValue(ObserverConstants.AiKey, settings);
-
-                        if (string.IsNullOrEmpty(aiKey))
-                        {
-                            TelemetryEnabled = false;
-                            return;
-                        }
-
-                        TelemetryClient = new AppInsightsTelemetry(aiKey);
-                        break;
+                        TelemetryEnabled = false;
+                        return;
                     }
+
+                    TelemetryClient = new AppInsightsTelemetry(aiKey);
+                    break;
 
                 default:
+
                     TelemetryEnabled = false;
                     break;
             }
@@ -1228,13 +1233,39 @@ namespace FabricObserver.Observers
             }
         }
 
-        private bool IsLVIDPerfCounterEnabled()
+        private bool IsLVIDPerfCounterEnabled(ConfigurationSettings settings = null)
         {
             if (!isWindows)
             {
                 return false;
             }
 
+            // We already figured this out the first time this function ran.
+            if (IsLvidCounterEnabled)
+            {
+                // DEBUG
+                Logger.LogInfo("IsLVIDPerfCounterEnabled: Counter has already been determined to be enabled. Not running the check again..");
+                return true;
+            }
+
+            // Get AO and FSO LVID monitoring settings. During a versionless, parameter-only app upgrade, settings instance will contain the updated observer settings.
+            _ = bool.TryParse(
+                GetConfigSettingValue(ObserverConstants.EnableKvsLvidMonitoringParameter, settings, ObserverConstants.AppObserverConfigurationSectionName), out bool isLvidEnabledAO);
+
+            _ = bool.TryParse(
+                GetConfigSettingValue(ObserverConstants.EnableKvsLvidMonitoringParameter, settings, ObserverConstants.FabricSystemObserverConfigurationName), out bool isLvidEnabledFSO);
+            
+            // If neither AO nor FSO are configured to monitor LVID usage, then do not proceed; it doesn't matter and this check is not cheap.
+            if (!isLvidEnabledAO && !isLvidEnabledFSO)
+            {
+                // DEBUG
+                Logger.LogInfo("IsLVIDPerfCounterEnabled: Not running check since no supported observer is enabled for LVID monitoring.");
+                return false;
+            }
+
+            // DEBUG
+            Logger.LogInfo("IsLVIDPerfCounterEnabled: Running check since a supported observer is enabled for LVID monitoring.");
+            
             /* This counter will be enabled by default in a future version of SF (probably an 8.2 CU release).
 
                 SF Version scheme: 
@@ -1254,12 +1285,18 @@ namespace FabricObserver.Observers
             //{
             //  return true;
             //}
-       
+
             const string categoryName = "Windows Fabric Database";
             const string counterName = "Long-Value Maximum LID";
 
+            // If there is corrupted state on the machine with respect to performance counters, an AV can occur (in native code, then wrapped in AccessViolationException)
+            // when calling PerformanceCounterCategory.Exists below. This is actually a symptom of a problem that extends beyond just this counter category..
+            // *Do not catch AV exception*. FO will crash, of course, but that is safer than pretending nothing is wrong.
+            // To mitigate the issue in that case, you will need to restart the machine or rebuild performance counters manually. Other perf counters that FO relies on will most likely 
+            // cause issues (not FO crashes necessarily, but inaccurate data related to the metrics they represent (like, you will always see 0 or -1 measurement values)).
             try
             {
+                // This is a pretty expensive call.
                 if (!PerformanceCounterCategory.Exists(categoryName))
                 {
                     return false;
