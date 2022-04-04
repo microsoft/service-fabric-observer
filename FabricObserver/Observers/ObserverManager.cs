@@ -23,13 +23,17 @@ using Octokit;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime;
-using System.Fabric.Management.ServiceModel;
 
 namespace FabricObserver.Observers
 {
     // This class manages the lifetime of all observers.
     public class ObserverManager : IDisposable
-    {
+    { 
+        private static ITelemetryProvider TelemetryClient
+        {
+            get; set;
+        }
+
         private readonly string nodeName;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
@@ -49,17 +53,13 @@ namespace FabricObserver.Observers
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
 
-        private static int ObserverExecutionLoopSleepSeconds
+        private int ObserverExecutionLoopSleepSeconds
         {
             get; set;
         } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
 
-        private static ITelemetryProvider TelemetryClient
-        {
-            get; set;
-        }
 
-        private static bool FabricObserverOperationalTelemetryEnabled
+        private bool FabricObserverOperationalTelemetryEnabled
         {
             get; set;
         }
@@ -249,7 +249,8 @@ namespace FabricObserver.Observers
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
-                    if (!(shutdownSignaled || token.IsCancellationRequested) && FabricObserverOperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    if (FabricObserverOperationalTelemetryEnabled && !(shutdownSignaled || token.IsCancellationRequested)
+                        && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
                         {

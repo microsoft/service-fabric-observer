@@ -32,12 +32,6 @@
     "memoryWarningLimitMb": 2048
   },
   {
-    "targetAppType": "GettingStartedApplicationType",
-    "cpuWarningLimitPercent": 40,
-    "memoryWarningLimitPercent": 500,
-    "memoryWarningLimitMb": 500
-  },
-  {
     "targetAppType": "Health Metrics",
     "cpuWarningLimitPercent": 90,
     "memoryWarningLimitPercent": 60

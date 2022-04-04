@@ -46,15 +46,15 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppKvsLvidsData;
         private ConcurrentDictionary<int, string> _processInfoDictionary;
 
-        // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration. List<T> is thread-safe for reads.
-        // There are no concurrent writes to this List, so no need it for ConcurrentQueue here, for example.
+        // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in user configuration.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         private List<ApplicationInfo> _userTargetList;
 
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
-        // List<T> is thread-safe for reads. There are no concurrent writes to this List.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         private List<ApplicationInfo> _deployedTargetList;
 
-        // List of all apps currently deployed to the local (where FO is running) Fabric node.
+        // List of all apps currently deployed on the local Fabric node.
         private List<DeployedApplication> _deployedApps;
 
         private readonly ConfigSettings _configSettings;
@@ -75,7 +75,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        // List<T> is thread-safe for reads. There are no concurrent writes to this IList.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
         {
             get; set;
@@ -716,53 +716,57 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance with data supplied in the All//* apps config entry.
+                // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance with data supplied in the All/* apps config entry.
                 // Note that if you supply a conflicting setting (where you specify a threshold for a specific app target config item and also in a global config item), then the target-specific setting will be used.
                 // E.g., if you supply a memoryWarningLimitMb threshold for an app named fabric:/MyApp and also supply a memoryWarningLimitMb threshold for all apps ("targetApp" : "All"),
                 // then the threshold specified for fabric:/MyApp will remain in place for that app target. So, target specificity overrides any global setting.
                 if (_userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName))
                 {
-                    var existingAppConfig = _userTargetList.First(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName);
+                    var existingAppConfig = _userTargetList.FindAll(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName);
 
-                    if (existingAppConfig == null)
+                    if (existingAppConfig == null || existingAppConfig.Count == 0)
                     {
                         continue;
                     }
 
-                    // Service include/exclude lists
-                    existingAppConfig.ServiceExcludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceExcludeList) && !string.IsNullOrWhiteSpace(application.ServiceExcludeList) ? application.ServiceExcludeList : existingAppConfig.ServiceExcludeList;
-                    existingAppConfig.ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig.ServiceIncludeList;
+                    for (int j = 0; j < existingAppConfig.Count; j++)
+                    {
+                        // Service include/exclude lists
+                        existingAppConfig[j].ServiceExcludeList = string.IsNullOrWhiteSpace(existingAppConfig[j].ServiceExcludeList) && !string.IsNullOrWhiteSpace(application.ServiceExcludeList) ? application.ServiceExcludeList : existingAppConfig[j].ServiceExcludeList;
+                        existingAppConfig[j].ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig[j].ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig[j].ServiceIncludeList;
 
-                    // Memory
-                    existingAppConfig.MemoryErrorLimitMb = existingAppConfig.MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig.MemoryErrorLimitMb;
-                    existingAppConfig.MemoryWarningLimitMb = existingAppConfig.MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig.MemoryWarningLimitMb;
-                    existingAppConfig.MemoryErrorLimitPercent = existingAppConfig.MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig.MemoryErrorLimitPercent;
-                    existingAppConfig.MemoryWarningLimitPercent = existingAppConfig.MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig.MemoryWarningLimitPercent;
+                        // Memory
+                        existingAppConfig[j].MemoryErrorLimitMb = existingAppConfig[j].MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig[j].MemoryErrorLimitMb;
+                        existingAppConfig[j].MemoryWarningLimitMb = existingAppConfig[j].MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig[j].MemoryWarningLimitMb;
+                        existingAppConfig[j].MemoryErrorLimitPercent = existingAppConfig[j].MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig[j].MemoryErrorLimitPercent;
+                        existingAppConfig[j].MemoryWarningLimitPercent = existingAppConfig[j].MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig[j].MemoryWarningLimitPercent;
 
-                    // CPU
-                    existingAppConfig.CpuErrorLimitPercent = existingAppConfig.CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig.CpuErrorLimitPercent;
-                    existingAppConfig.CpuWarningLimitPercent = existingAppConfig.CpuWarningLimitPercent == 0 && application.CpuWarningLimitPercent > 0 ? application.CpuWarningLimitPercent : existingAppConfig.CpuWarningLimitPercent;
+                        // CPU
+                        existingAppConfig[j].CpuErrorLimitPercent = existingAppConfig[j].CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig[j].CpuErrorLimitPercent;
+                        existingAppConfig[j].CpuWarningLimitPercent = existingAppConfig[j].CpuWarningLimitPercent == 0 && application.CpuWarningLimitPercent > 0 ? application.CpuWarningLimitPercent : existingAppConfig[j].CpuWarningLimitPercent;
 
-                    // Active TCP Ports
-                    existingAppConfig.NetworkErrorActivePorts = existingAppConfig.NetworkErrorActivePorts == 0 && application.NetworkErrorActivePorts > 0 ? application.NetworkErrorActivePorts : existingAppConfig.NetworkErrorActivePorts;
-                    existingAppConfig.NetworkWarningActivePorts = existingAppConfig.NetworkWarningActivePorts == 0 && application.NetworkWarningActivePorts > 0 ? application.NetworkWarningActivePorts : existingAppConfig.NetworkWarningActivePorts;
+                        // Active TCP Ports
+                        existingAppConfig[j].NetworkErrorActivePorts = existingAppConfig[j].NetworkErrorActivePorts == 0 && application.NetworkErrorActivePorts > 0 ? application.NetworkErrorActivePorts : existingAppConfig[j].NetworkErrorActivePorts;
+                        existingAppConfig[j].NetworkWarningActivePorts = existingAppConfig[j].NetworkWarningActivePorts == 0 && application.NetworkWarningActivePorts > 0 ? application.NetworkWarningActivePorts : existingAppConfig[j].NetworkWarningActivePorts;
 
-                    // Active Ephemeral Ports
-                    existingAppConfig.NetworkErrorEphemeralPorts = existingAppConfig.NetworkErrorEphemeralPorts == 0 && application.NetworkErrorEphemeralPorts > 0 ? application.NetworkErrorEphemeralPorts : existingAppConfig.NetworkErrorEphemeralPorts;
-                    existingAppConfig.NetworkWarningEphemeralPorts = existingAppConfig.NetworkWarningEphemeralPorts == 0 && application.NetworkWarningEphemeralPorts > 0 ? application.NetworkWarningEphemeralPorts : existingAppConfig.NetworkWarningEphemeralPorts;
-                    existingAppConfig.NetworkErrorEphemeralPortsPercent = existingAppConfig.NetworkErrorEphemeralPortsPercent == 0 && application.NetworkErrorEphemeralPortsPercent > 0 ? application.NetworkErrorEphemeralPortsPercent : existingAppConfig.NetworkErrorEphemeralPortsPercent;
-                    existingAppConfig.NetworkWarningEphemeralPortsPercent = existingAppConfig.NetworkWarningEphemeralPortsPercent == 0 && application.NetworkWarningEphemeralPortsPercent > 0 ? application.NetworkWarningEphemeralPortsPercent : existingAppConfig.NetworkWarningEphemeralPortsPercent;
+                        // Active Ephemeral Ports
+                        existingAppConfig[j].NetworkErrorEphemeralPorts = existingAppConfig[j].NetworkErrorEphemeralPorts == 0 && application.NetworkErrorEphemeralPorts > 0 ? application.NetworkErrorEphemeralPorts : existingAppConfig[j].NetworkErrorEphemeralPorts;
+                        existingAppConfig[j].NetworkWarningEphemeralPorts = existingAppConfig[j].NetworkWarningEphemeralPorts == 0 && application.NetworkWarningEphemeralPorts > 0 ? application.NetworkWarningEphemeralPorts : existingAppConfig[j].NetworkWarningEphemeralPorts;
+                        existingAppConfig[j].NetworkErrorEphemeralPortsPercent = existingAppConfig[j].NetworkErrorEphemeralPortsPercent == 0 && application.NetworkErrorEphemeralPortsPercent > 0 ? application.NetworkErrorEphemeralPortsPercent : existingAppConfig[j].NetworkErrorEphemeralPortsPercent;
+                        existingAppConfig[j].NetworkWarningEphemeralPortsPercent = existingAppConfig[j].NetworkWarningEphemeralPortsPercent == 0 && application.NetworkWarningEphemeralPortsPercent > 0 ? application.NetworkWarningEphemeralPortsPercent : existingAppConfig[j].NetworkWarningEphemeralPortsPercent;
 
-                    // DumpOnError
-                    existingAppConfig.DumpProcessOnError = application.DumpProcessOnError == existingAppConfig.DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig.DumpProcessOnError;
+                        // DumpOnError
+                        existingAppConfig[j].DumpProcessOnError = application.DumpProcessOnError == existingAppConfig[j].DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig[j].DumpProcessOnError;
 
-                    // Handles
-                    existingAppConfig.ErrorOpenFileHandles = existingAppConfig.ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig.ErrorOpenFileHandles;
-                    existingAppConfig.WarningOpenFileHandles = existingAppConfig.WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig.WarningOpenFileHandles;
+                        // Handles
+                        existingAppConfig[j].ErrorOpenFileHandles = existingAppConfig[j].ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig[j].ErrorOpenFileHandles;
+                        existingAppConfig[j].WarningOpenFileHandles = existingAppConfig[j].WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig[j].WarningOpenFileHandles;
 
-                    // Threads
-                    existingAppConfig.ErrorThreadCount = existingAppConfig.ErrorThreadCount == 0 && application.ErrorThreadCount > 0 ? application.ErrorThreadCount : existingAppConfig.ErrorThreadCount;
-                    existingAppConfig.WarningThreadCount = existingAppConfig.WarningThreadCount == 0 && application.WarningThreadCount > 0 ? application.WarningThreadCount : existingAppConfig.WarningThreadCount;
+                        // Threads
+                        existingAppConfig[j].ErrorThreadCount = existingAppConfig[j].ErrorThreadCount == 0 && application.ErrorThreadCount > 0 ? application.ErrorThreadCount : existingAppConfig[j].ErrorThreadCount;
+                        existingAppConfig[j].WarningThreadCount = existingAppConfig[j].WarningThreadCount == 0 && application.WarningThreadCount > 0 ? application.WarningThreadCount : existingAppConfig[j].WarningThreadCount;
+
+                    }
                 }
                 else
                 {
@@ -797,9 +801,8 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // Remove the All or * config item.
-            _ = _userTargetList.Remove(application);
-            
+            // Remove the All/* config item.
+             _ = _userTargetList.Remove(application);
         }
 
         private void FilterTargetAppFormat()
@@ -1915,76 +1918,100 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            List<ApplicationInfo> deployedApps = _userTargetList;
+            List<DeployedApplication> deployedApps = _deployedApps;
 
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
-            if (applicationNameFilter != null)
+
+            try
             {
-                deployedApps = deployedApps.FindAll(a => a.TargetApp?.ToLower() == applicationNameFilter.OriginalString.ToLower());
+                if (applicationNameFilter != null)
+                {
+                    deployedApps = deployedApps.FindAll(a => a.ApplicationName.Equals(applicationNameFilter));
+                }
+                else if (!string.IsNullOrWhiteSpace(applicationType))
+                {
+                    deployedApps = deployedApps.FindAll(a => a.ApplicationTypeName == applicationType);
+                }
             }
-            else if (!string.IsNullOrWhiteSpace(applicationType))
+            catch (ArgumentException ae)
             {
-                deployedApps = deployedApps.FindAll(a => a.TargetAppType?.ToLower() == applicationType.ToLower());
+                ObserverLogger.LogWarning($"SetDeployedApplicationReplicaOrInstanceListAsync: Unable to process replica information:{Environment.NewLine}{ae}");
+                return;
             }
 
             for (int i = 0; i < deployedApps.Count; i++)
             {
                 Token.ThrowIfCancellationRequested();
 
-                var deployedApp = deployedApps[i];
-                
-                // TargetAppType supplied in user config, so set TargetApp on deployedApp instance by searching for it in the currently deployed application list.
-                if (deployedApp.TargetApp == null)
+                try
                 {
-                    deployedApp.TargetApp = _deployedApps.Find(d => d.ApplicationTypeName.ToLower() == deployedApp.TargetAppType.ToLower())?.ApplicationName?.OriginalString;
-                }
-
-                // If the app is not actually deployed, ignore the config.
-                if (deployedApp.TargetApp == null)
-                {
-                    continue;
-                }
-
-                string[] filteredServiceList = null;
-                ServiceFilterType filterType = ServiceFilterType.None;
-
-                // Filter serviceInclude/Exclude config.
-                if (!string.IsNullOrWhiteSpace(deployedApp.ServiceExcludeList))
-                {
-                    filteredServiceList = deployedApp.ServiceExcludeList.Replace(" ", string.Empty).Split(',');
-                    filterType = ServiceFilterType.Exclude;
-                }
-                else if (!string.IsNullOrWhiteSpace(deployedApp.ServiceIncludeList))
-                {
-                    filteredServiceList = deployedApp.ServiceIncludeList.Replace(" ", string.Empty).Split(',');
-                    filterType = ServiceFilterType.Include;
-                }
-
-                List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(new Uri(deployedApp.TargetApp), filteredServiceList, filterType, applicationType).ConfigureAwait(false);
-
-                if (replicasOrInstances?.Count > 0)
-                {
-                    ReplicaOrInstanceList.AddRange(replicasOrInstances);
-
-                    var targets = _userTargetList.Where(
-                                    x => (x.TargetApp != null || x.TargetAppType != null)
-                                            && (x.TargetApp?.ToLower() == deployedApp.TargetApp?.ToLower()
-                                            || x.TargetAppType?.ToLower() == deployedApp.TargetAppType?.ToLower()));
-
-                    if (!_deployedTargetList.Any(r => r.TargetApp?.ToLower() == deployedApp.TargetApp.ToLower()))
+                    foreach (var userTarget in _userTargetList)
                     {
-                        _deployedTargetList.AddRange(targets);
+                        Token.ThrowIfCancellationRequested();
+
+                        // TargetAppType supplied in user config, so set TargetApp on deployedApp instance by searching for it in the currently deployed application list.
+                        if (userTarget.TargetAppType != null)
+                        {
+                            if (deployedApps[i].ApplicationTypeName != userTarget.TargetAppType)
+                            {
+                                continue;
+                            }
+
+                            userTarget.TargetApp = deployedApps[i].ApplicationName.OriginalString;
+                        }
+
+                        if (userTarget.TargetApp == null)
+                        {
+                            continue;
+                        }
+
+                        string[] filteredServiceList = null;
+                        ServiceFilterType filterType = ServiceFilterType.None;
+
+                        // Filter serviceInclude/Exclude config.
+                        if (!string.IsNullOrWhiteSpace(userTarget.ServiceExcludeList))
+                        {
+                            filteredServiceList = userTarget.ServiceExcludeList.Replace(" ", string.Empty).Split(',');
+                            filterType = ServiceFilterType.Exclude;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(userTarget.ServiceIncludeList))
+                        {
+                            filteredServiceList = userTarget.ServiceIncludeList.Replace(" ", string.Empty).Split(',');
+                            filterType = ServiceFilterType.Include;
+                        }
+
+                        List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
+                                                                                            new Uri(userTarget.TargetApp),
+                                                                                            filteredServiceList,
+                                                                                            filterType,
+                                                                                            applicationType).ConfigureAwait(false);
+
+                        if (replicasOrInstances?.Count > 0)
+                        {
+                            ReplicaOrInstanceList.AddRange(replicasOrInstances);
+
+                            var targets = _userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
+                                                                    || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
+
+                            if (userTarget.TargetApp != null && !_deployedTargetList.Any(r => r.TargetApp == userTarget.TargetApp))
+                            {
+                                _deployedTargetList.AddRange(targets);
+                            }
+                        }
+
+                        replicasOrInstances.Clear();
+                        replicasOrInstances = null;
                     }
                 }
+                catch (ArgumentException)
+                {
 
-                replicasOrInstances.Clear();
-                replicasOrInstances = null;
+                }
             }
-           
+
             deployedApps.Clear();
             deployedApps = null;
-
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetDeployedApplicationReplicaOrInstanceListAsync for {applicationNameFilter?.OriginalString} run duration: {stopwatch.Elapsed}");
         }
