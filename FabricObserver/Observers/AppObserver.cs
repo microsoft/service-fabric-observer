@@ -1940,14 +1940,15 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            for (int i = 0; i < deployedApps.Count; i++)
+            foreach (var userTarget in _userTargetList)
             {
-                Token.ThrowIfCancellationRequested();
-
-                try
+                for (int i = 0; i < deployedApps.Count; i++)
                 {
-                    foreach (var userTarget in _userTargetList)
+                    Token.ThrowIfCancellationRequested();
+
+                    try
                     {
+
                         Token.ThrowIfCancellationRequested();
 
                         // TargetAppType supplied in user config, so set TargetApp on deployedApp instance by searching for it in the currently deployed application list.
@@ -1962,6 +1963,11 @@ namespace FabricObserver.Observers
                         }
 
                         if (userTarget.TargetApp == null)
+                        {
+                            continue;
+                        }
+
+                        if (deployedApps[i].ApplicationName.OriginalString != userTarget.TargetApp)
                         {
                             continue;
                         }
@@ -2002,11 +2008,12 @@ namespace FabricObserver.Observers
 
                         replicasOrInstances.Clear();
                         replicasOrInstances = null;
-                    }
-                }
-                catch (ArgumentException)
-                {
 
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
                 }
             }
 
