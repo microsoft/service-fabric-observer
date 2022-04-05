@@ -1998,7 +1998,7 @@ namespace FabricObserver.Observers
                             ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
                             var targets = _userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
-                                                                    || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
+                                                                  || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
 
                             if (userTarget.TargetApp != null && !_deployedTargetList.Any(r => r.TargetApp == userTarget.TargetApp))
                             {
@@ -2008,11 +2008,11 @@ namespace FabricObserver.Observers
 
                         replicasOrInstances.Clear();
                         replicasOrInstances = null;
-
                     }
-                    catch (ArgumentException)
+                    catch (Exception e) when (e is ArgumentException || e is FabricException)
                     {
-
+                        ObserverLogger.LogWarning(
+                            $"SetDeployedApplicationReplicaOrInstanceListAsync: Unable to process replica information for {userTarget}{Environment.NewLine}{e}");
                     }
                 }
             }

@@ -5,8 +5,8 @@
     <version>3.1.26</version>
     <releaseNotes>
 Bug fix: AppObserver targetAppType regression.
-Bug fix: Concurrency setting missing for AppObserver's CPU data type.
-Added: Support for specifying serviceIncludeList in multiple config objects for one targetApp/targetAppType.
+Bug fix: Concurrency setting missing for AppObserver's CPU FRUD type.
+AppObserver: Added support for specifying serviceIncludeList in multiple config objects for one targetApp/targetAppType.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
