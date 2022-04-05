@@ -34,7 +34,10 @@ namespace FabricObserver.Observers
         private readonly object _lock = new object();
         private (int LowPort, int HighPort) _dynamicPortRange = (-1, -1);
 
-        // Support for concurrent monitoring.
+        // These are the concurrent data containers that hold all monitoring data for all application targets for specific metrics.
+        // In the case where machine has capable CPU configuration and AppObserverEnableConcurrentMonitoring is enabled, these ConcurrentDictionaries
+        // will be read by and written to by multiple threads. In the case where concurrency is not possible (or not enabled), they will act as normal
+        // Dictionaries since the monitoring loop will be sequential and there will not be any concurrent reads/writes.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppMemDataMb;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppMemDataPercent;
@@ -44,22 +47,30 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppHandlesData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppThreadsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppKvsLvidsData;
+
+        // Stores process id (key) / process name pairs for all monitored service processes.
         private ConcurrentDictionary<int, string> _processInfoDictionary;
 
-        // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in user configuration.
+        // _userTargetList is the list of ApplicationInfo objects representing app/app types supplied in user configuration (AppObserver.config.json).
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         private List<ApplicationInfo> _userTargetList;
 
-        // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
+        // _deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied target list.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         private List<ApplicationInfo> _deployedTargetList;
 
-        // List of all apps currently deployed on the local Fabric node.
+        // _deployedApps is the List of all apps currently deployed on the local Fabric node.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         private List<DeployedApplication> _deployedApps;
+
+        // _replicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
+        private List<ReplicaOrInstanceMonitoringInfo> _replicaOrInstanceList;
 
         private readonly ConfigSettings _configSettings;
         private readonly Stopwatch _stopwatch;
         private FabricClientUtilities _client;
+        private ParallelOptions _parallelOptions;
         private string _fileName;
         private int _appCount;
         private int _serviceCount;
@@ -75,23 +86,12 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
-        public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
-        {
-            get; set;
-        }
-
         public string ConfigPackagePath
         {
             get; set;
         }
 
         public bool EnableConcurrentMonitoring
-        {
-            get; set;
-        }
-
-        ParallelOptions ParallelOptions
         {
             get; set;
         }
@@ -157,8 +157,8 @@ namespace FabricObserver.Observers
            
             if (EnableVerboseLogging)
             {
-                ObserverLogger.LogInfo($"Run Duration {(ParallelOptions.MaxDegreeOfParallelism > 1 ? "with" : "without")} " +
-                                       $"Parallel (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {ParallelOptions.MaxDegreeOfParallelism}):{RunDuration}");
+                ObserverLogger.LogInfo($"Run Duration {(_parallelOptions.MaxDegreeOfParallelism > 1 ? "with" : "without")} " +
+                                       $"Parallel (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {_parallelOptions.MaxDegreeOfParallelism}):{RunDuration}");
             }
 
             CleanUp();
@@ -178,14 +178,14 @@ namespace FabricObserver.Observers
             TimeSpan TTL = GetHealthReportTimeToLive();
 
             // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
-            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, _replicaOrInstanceList.Count, _parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
                     state.Stop();
                 }
 
-                var repOrInst = ReplicaOrInstanceList[i];
+                var repOrInst = _replicaOrInstanceList[i];
                 
                 if (repOrInst.HostProcessId < 1)
                 {
@@ -494,7 +494,7 @@ namespace FabricObserver.Observers
         // be up to date.
         private async Task<bool> InitializeAsync()
         {
-            ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
+            _replicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             _userTargetList = new List<ApplicationInfo>();
             _deployedTargetList = new List<ApplicationInfo>();
             _dynamicPortRange = OSInfoProvider.Instance.TupleGetDynamicPortRange();
@@ -607,7 +607,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            int repCount = ReplicaOrInstanceList.Count;
+            int repCount = _replicaOrInstanceList.Count;
 
             // internal diagnostic telemetry \\
 
@@ -647,7 +647,7 @@ namespace FabricObserver.Observers
             {
                 Token.ThrowIfCancellationRequested();
 
-                var rep = ReplicaOrInstanceList[i];
+                var rep = _replicaOrInstanceList[i];
                 ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName?.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");
             }
 
@@ -1129,7 +1129,7 @@ namespace FabricObserver.Observers
                 maxDegreeOfParallelism = maxTasks;
             }
 
-            ParallelOptions = new ParallelOptions
+            _parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = EnableConcurrentMonitoring ? maxDegreeOfParallelism : 1,
                 CancellationToken = Token,
@@ -1358,7 +1358,7 @@ namespace FabricObserver.Observers
         private Task<ParallelLoopResult> MonitorDeployedAppsAsync(CancellationToken token)
         {
             Stopwatch execTimer = Stopwatch.StartNew();
-            int capacity = ReplicaOrInstanceList.Count;
+            int capacity = _replicaOrInstanceList.Count;
             var exceptions = new ConcurrentQueue<Exception>();
             AllAppCpuData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppMemDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
@@ -1380,7 +1380,7 @@ namespace FabricObserver.Observers
             // DEBUG
             //var threadData = new ConcurrentQueue<int>();
 
-            ParallelLoopResult result = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            ParallelLoopResult result = Parallel.For (0, _replicaOrInstanceList.Count, _parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
@@ -1389,7 +1389,7 @@ namespace FabricObserver.Observers
 
                 // DEBUG
                 //threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
-                var repOrInst = ReplicaOrInstanceList[i];
+                var repOrInst = _replicaOrInstanceList[i];
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
                 bool checkCpu = false;
@@ -1698,7 +1698,7 @@ namespace FabricObserver.Observers
                             ReplicaOrInstanceMonitoringInfo repOrInst,
                             CancellationToken token)
         {
-            _ = Parallel.For (0, processDictionary.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, processDictionary.Count, _parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
@@ -1995,7 +1995,7 @@ namespace FabricObserver.Observers
 
                         if (replicasOrInstances?.Count > 0)
                         {
-                            ReplicaOrInstanceList.AddRange(replicasOrInstances);
+                            _replicaOrInstanceList.AddRange(replicasOrInstances);
 
                             var targets = _userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
                                                                   || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
@@ -2062,7 +2062,7 @@ namespace FabricObserver.Observers
             
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
-            _ = Parallel.For (0, deployedReplicaList.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, deployedReplicaList.Count, _parallelOptions, (i, state) =>
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -2166,7 +2166,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
+                if (replicaInfo?.HostProcessId > 0 && !_replicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
                 {
                     replicaMonitoringList.Enqueue(replicaInfo);
                 }
@@ -2279,8 +2279,8 @@ namespace FabricObserver.Observers
             _userTargetList?.Clear();
             _userTargetList = null;
 
-            ReplicaOrInstanceList?.Clear();
-            ReplicaOrInstanceList = null;
+            _replicaOrInstanceList?.Clear();
+            _replicaOrInstanceList = null;
 
             _processInfoDictionary?.Clear();
             _processInfoDictionary = null;
