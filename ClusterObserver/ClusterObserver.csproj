@@ -22,6 +22,9 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Utilities\ClusterIdentificationUtility.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="ApplicationInsights.config" />
   </ItemGroup>
   <ItemGroup>

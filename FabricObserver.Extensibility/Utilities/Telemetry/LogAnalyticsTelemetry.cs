@@ -76,7 +76,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
-                    clusterId = ClusterIdentificationUtility.ClusterId ?? string.Empty,
+                    clusterId = ClusterInformation.ClusterInfoTuple.ClusterId ?? string.Empty,
                     source,
                     property = propertyName,
                     healthState = state.ToString(),
@@ -144,7 +144,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     id = $"FO_{Guid.NewGuid()}",
                     datetime = DateTime.UtcNow,
-                    clusterId = ClusterIdentificationUtility.ClusterId ?? string.Empty,
+                    clusterId = ClusterInformation.ClusterInfoTuple.ClusterId ?? string.Empty,
                     source,
                     property = name,
                     value

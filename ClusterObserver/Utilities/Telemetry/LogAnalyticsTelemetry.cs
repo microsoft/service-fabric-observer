@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ClusterObserver.Interfaces;
 using Newtonsoft.Json;
+using FabricObserver.TelemetryLib;
 
 namespace ClusterObserver.Utilities.Telemetry
 {
@@ -174,8 +175,7 @@ namespace ClusterObserver.Utilities.Telemetry
                             string serviceName = null,
                             string instanceName = null)
         {
-            var (clusterId, _) = await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
-
+            string clusterId = ClusterInformation.ClusterInfoTuple.ClusterId;
             string jsonPayload = JsonConvert.SerializeObject(
                                                 new
                                                 {

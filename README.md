@@ -1,4 +1,4 @@
-# FabricObserver 3.1.25
+# FabricObserver 3.1.26
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
@@ -9,7 +9,7 @@
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
-Note that in version 3.1.18 and higher, AppObserver, ContainerObserver and FabricSystemObserver can run their monitoring loops in parallel on capable hardware (logical CPU processors >= 4).
+Note that in version 3.1.18 and higher, AppObserver and ContainerObserver can run their monitoring loops in parallel on capable hardware (logical CPU processors >= 4).
 This feature is enabled by default. You can disable/enable with parameter-only, versionless application upgrades with the related settings found in ApplicationManifest.xml under the AppObserver, ContainerObserver and FabricSystemObserver settings sections.
 Enabling this feature greatly decreases the time it takes for an observer running on capable hardware to complete monitoring. This is especially important if you monitor a large number of services.
 
@@ -143,19 +143,19 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO3122 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO3126 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO3122
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO3126
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.25   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.26   
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.25 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.1.26 -Monitored -FailureAction rollback
 ```  
 
 ## Configuration Change Support

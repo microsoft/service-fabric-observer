@@ -19,10 +19,19 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
+    /// <summary>
+    /// An observer plugin muse derive from ObserverBase and implement 2 abstract functions, ObserveAsync and ReportAsync.
+    /// </summary>
     public class SampleNewObserver : ObserverBase
     {
         private readonly StringBuilder message;
 
+        /// <summary>
+        /// All observer constructors must take a FabricClient instance and a ServiceContext instance of the same type as FabricObserver's (StatelessServiceContext).
+        /// These are then passed to the ObserverBase base class instance and used throughout FO.
+        /// </summary>
+        /// <param name="fabricClient">FabricClient instance. This will be supplied by FabricObserver when it contructs your type.</param>
+        /// <param name="context">StatelessServiceContext. This will be supplied by FabricObserver when it contructs your type.</param>
         public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
@@ -49,7 +58,9 @@ namespace FabricObserver.Observers
                 MaxResults = 150
             };
 
-            // Fabric retry.
+            // Fabric retry. This is built into FabricObserver. Commented out here to showcase using a different retry approach using an external library, Polly.
+            // Note how you handle external libraries that your plugin library requires by simply building this sample, which will place this plugin (SampleNewObserver.dll) and
+            // Polly.dll - *and any of its dependencies* - into the FO package's PackageRoot/Data folder.
             /*var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                              () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
                                                                                          deployedAppQueryDesc,
@@ -98,7 +109,7 @@ namespace FabricObserver.Observers
                 apps.AddRange(appList.ToList());
 
                 // Wait a second before grabbing the next batch of apps..
-                await Task.Delay(TimeSpan.FromSeconds(1), Token).ConfigureAwait(true);
+                await Task.Delay(TimeSpan.FromSeconds(1), Token).ConfigureAwait(false);
             }
 
             var totalNumberOfDeployedSFApps = apps.Count;
@@ -110,7 +121,7 @@ namespace FabricObserver.Observers
                                                                         app.ApplicationName,
                                                                         null,
                                                                         AsyncClusterOperationTimeoutSeconds,
-                                                                        token).ConfigureAwait(true);
+                                                                        token).ConfigureAwait(false);
 
                 totalNumberOfDeployedServices += services.Count;
                 servicesInWarningError += services.Count(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error);
@@ -121,7 +132,7 @@ namespace FabricObserver.Observers
                                                                                 service.ServiceName,
                                                                                 null,
                                                                                 AsyncClusterOperationTimeoutSeconds,
-                                                                                token).ConfigureAwait(true);
+                                                                                token).ConfigureAwait(false);
 
                     totalNumberOfPartitions += partitions.Count;
                     partitionsInWarningError += partitions.Count(p => p.HealthState == HealthState.Warning || p.HealthState == HealthState.Error);
@@ -132,7 +143,7 @@ namespace FabricObserver.Observers
                                                                                 partition.PartitionInformation.Id,
                                                                                 null,
                                                                                 AsyncClusterOperationTimeoutSeconds,
-                                                                                token).ConfigureAwait(true);
+                                                                                token).ConfigureAwait(false);
 
                         totalNumberOfReplicas += replicas.Count;
                         replicasInWarningError += replicas.Count(r => r.HealthState == HealthState.Warning || r.HealthState == HealthState.Error);
@@ -214,7 +225,6 @@ namespace FabricObserver.Observers
             }
 
             message.Clear();
-
             return Task.CompletedTask;
         }
     }

@@ -190,7 +190,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     HealthMessage = "All cluster and monitored app certificates are healthy.",
                     State = HealthState.Ok,
-                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : this.HealthReportTimeToLive
+                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : HealthReportTimeToLive
                 };
 
                 HasActiveFabricErrorOrWarning = false;

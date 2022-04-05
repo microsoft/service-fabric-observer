@@ -50,7 +50,7 @@ namespace ClusterObserver.Utilities
                     return null;
                 }
 
-                var appUgradeEventData = new ServiceFabricUpgradeEventData(fabricClient, token)
+                var appUgradeEventData = new ServiceFabricUpgradeEventData()
                 {
                     ApplicationUpgradeProgress = appUpgradeProgress
                 };
@@ -92,7 +92,7 @@ namespace ClusterObserver.Utilities
                    return null;
                 }
 
-                ServiceFabricUpgradeEventData serviceFabricUpgradeEventData = new ServiceFabricUpgradeEventData(fabricClient, token)
+                ServiceFabricUpgradeEventData serviceFabricUpgradeEventData = new ServiceFabricUpgradeEventData()
                 {
                     FabricUpgradeProgress = clusterUpgradeProgress
                 };

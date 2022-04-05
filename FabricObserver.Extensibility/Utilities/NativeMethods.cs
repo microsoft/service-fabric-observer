@@ -146,7 +146,7 @@ namespace FabricObserver.Observers.Utilities
             /// </summary>
             public MEMORYSTATUSEX()
             {
-                this.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
+                dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
             }
         }
 

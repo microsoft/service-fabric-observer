@@ -39,9 +39,9 @@ namespace FabricObserver.TelemetryLib
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
 
             // Set instance fields.
-            clusterId = ClusterIdentificationUtility.ClusterId;
-            tenantId = ClusterIdentificationUtility.TenantId;
-            clusterType = ClusterIdentificationUtility.ClusterType;
+            clusterId = ClusterInformation.ClusterInfoTuple.ClusterId;
+            tenantId = ClusterInformation.ClusterInfoTuple.TenantId;
+            clusterType = ClusterInformation.ClusterInfoTuple.ClusterType;
         }
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
@@ -64,6 +64,7 @@ namespace FabricObserver.TelemetryLib
                     { "ClusterType", clusterType },
                     { "NodeNameHash", nodeHashString },
                     { "FOVersion", foData.Version },
+                    { "SFRuntimeVersion", foData.SFRuntimeVersion },
                     { "HasPlugins", foData.HasPlugins.ToString() },
                     { "ParallelCapable", foData.ParallelExecutionCapable.ToString() },
                     { "UpTime", foData.UpTime },
@@ -243,6 +244,7 @@ namespace FabricObserver.TelemetryLib
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
                     { source == FOTaskName ? "FOVersion" : "COVersion", errorData.Version },
+                    { "SFRuntimeVersion", errorData.SFRuntimeVersion },
                     { "CrashTime", errorData.CrashTime },
                     { "ErrorMessage", errorData.ErrorMessage },
                     { "Stack", errorData.ErrorStack },

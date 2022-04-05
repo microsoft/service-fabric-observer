@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using NLog.Filters;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -139,13 +140,15 @@ namespace FabricObserver.Observers.Utilities
             {
                 double average = 0.0;
 
-                if (Data == null || !Data.Any())
+                if (Data == null || Data.Count() == 0)
                 {
                     return average;
                 }
 
                 switch (Data)
                 {
+                    // Thread safe for reads only: List<T>, CircularBufferCollection<T> \\
+
                     case IList<long> v:
                         average = Math.Round(v.Average(), 2);
                         break;
@@ -162,19 +165,22 @@ namespace FabricObserver.Observers.Utilities
                         average = Math.Round(z.Average(), 2);
                         break;
 
-                    case ConcurrentQueue<long> v:
+
+                    // Thread safe for reads and writes: ConcurrentQueue<T> \\
+
+                    case IProducerConsumerCollection<long> v:
                         average = Math.Round(v.Average(), 2);
                         break;
 
-                    case ConcurrentQueue<int> x:
+                    case IProducerConsumerCollection<int> x:
                         average = Math.Round(x.Average(), 2);
                         break;
 
-                    case ConcurrentQueue<float> y:
+                    case IProducerConsumerCollection<float> y:
                         average = Math.Round(y.Average(), 2);
                         break;
 
-                    case ConcurrentQueue<double> z:
+                    case IProducerConsumerCollection<double> z:
                         average = Math.Round(z.Average(), 2);
                         break;
                 }

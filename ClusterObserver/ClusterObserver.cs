@@ -106,7 +106,7 @@ namespace ClusterObserver
 
         public async Task ObserveAsync(CancellationToken token)
         {
-            if (!IsEnabled || !ClusterObserverManager.TelemetryEnabled 
+            if (!IsEnabled /*|| !ClusterObserverManager.TelemetryEnabled */
                 || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
@@ -155,7 +155,7 @@ namespace ClusterObserver
                         // Telemetry.
                         if (TelemetryEnabled)
                         {
-                            var telemetry = new TelemetryData(FabricClientInstance, token)
+                            var telemetry = new TelemetryData()
                             {
                                 HealthState = "Ok",
                                 Description = repairState,
@@ -205,7 +205,7 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        var telemetry = new TelemetryData(FabricClientInstance, token)
+                        var telemetry = new TelemetryData()
                         {
                             HealthState = "Ok",
                             Description = "Cluster has recovered from previous Error/Warning state.",
@@ -319,7 +319,7 @@ namespace ClusterObserver
                 // Send Telemetry.
                 if (TelemetryEnabled)
                 {
-                    var telemetryData = new TelemetryData(FabricClientInstance, token)
+                    var telemetryData = new TelemetryData()
                     {
                         HealthState = "Warning",
                         Description = msg
@@ -577,7 +577,7 @@ namespace ClusterObserver
                         // Telemetry.
                         if (TelemetryEnabled)
                         {
-                            var telemetryData = new TelemetryData(FabricClientInstance, token)
+                            var telemetryData = new TelemetryData()
                             {
                                 ApplicationName = appName.OriginalString,
                                 HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
@@ -690,7 +690,7 @@ namespace ClusterObserver
 
                     if (TelemetryEnabled)
                     {
-                        var telemetryData = new TelemetryData(FabricClientInstance, token)
+                        var telemetryData = new TelemetryData()
                         {
                             NodeName = node.NodeName,
                             HealthState = Enum.GetName(typeof(HealthState), node.AggregatedHealthState),
@@ -736,7 +736,7 @@ namespace ClusterObserver
             string telemetryDescription = evaluation.Description;
             string healthState = Enum.GetName(typeof(HealthState), evaluation.AggregatedHealthState);
 
-            var telemetryData = new TelemetryData(FabricClientInstance, token)
+            var telemetryData = new TelemetryData()
             {
                 Description = telemetryDescription,
                 HealthState = healthState,
@@ -789,7 +789,7 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        var telemetry = new TelemetryData(FabricClientInstance, token)
+                        var telemetry = new TelemetryData()
                         {
                             HealthState = "Ok",
                             Description = $"{nodeDictItem.Key} is now Up.",
@@ -862,7 +862,7 @@ namespace ClusterObserver
                         // Telemetry.
                         if (TelemetryEnabled)
                         {
-                            var telemetry = new TelemetryData(FabricClientInstance, token)
+                            var telemetry = new TelemetryData()
                             {
                                 HealthState = "Warning",
                                 Description = message,

@@ -6,16 +6,13 @@
 using Newtonsoft.Json;
 using System.Fabric;
 using System.Runtime.InteropServices;
-using System.Threading;
+using FabricObserver.TelemetryLib;
 
 namespace ClusterObserver.Utilities.Telemetry
 {
     public class ServiceFabricUpgradeEventData
     {
-        public string ClusterId
-        {
-            get; set;
-        }
+        public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
 
         public ApplicationUpgradeProgress ApplicationUpgradeProgress
         {
@@ -33,12 +30,6 @@ namespace ClusterObserver.Utilities.Telemetry
         public ServiceFabricUpgradeEventData()
         {
 
-        }
-
-        public ServiceFabricUpgradeEventData (FabricClient fabricClient, CancellationToken cancellationToken)
-        {
-            var (clusterId, _) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, cancellationToken).Result;
-            ClusterId = clusterId;
         }
     }
 }

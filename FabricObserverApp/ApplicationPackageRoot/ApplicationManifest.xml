@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can use the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.25" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.26" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
     <!-- ObserverManager Configuration -->
@@ -110,9 +110,9 @@
     <!-- Concurrency/Parallelism Support.
          Note: If you do not monitor several services, then enabling this is not super useful. This will only add value (substantial) on machines with capable hardware (>= 4 logical procs). -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
-    <!-- The default value is 1/4 of detected logical processors. This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
+    <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
-         eating CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 200). The impact of parallelization on nodes with less than 200 services is minimal.
+         eating CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
          Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
@@ -152,8 +152,8 @@
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
@@ -215,7 +215,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.25" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.26" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
