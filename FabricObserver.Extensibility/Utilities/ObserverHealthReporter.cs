@@ -146,7 +146,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                switch (healthReport.ReportType)
+                switch (healthReport.EntityType)
                 {
                     // To SFX.
                     case EntityType.Application when healthReport.AppName != null:

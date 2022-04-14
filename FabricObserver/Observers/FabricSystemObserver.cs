@@ -295,7 +295,7 @@ namespace FabricObserver.Observers
 
                     State = HealthState.Ok,
                     HealthReportTimeToLive = timeToLiveWarning,
-                    ReportType = EntityType.Node
+                    EntityType = EntityType.Node
                 };
 
                 info.Clear();

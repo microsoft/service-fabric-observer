@@ -160,7 +160,7 @@ namespace FabricObserverTests
                     Code = FOErrorWarningCodes.Ok,
                     HealthMessage = "Clearing existing Error/Warning Test Health Reports.",
                     State = HealthState.Ok,
-                    ReportType = EntityType.Application,
+                    EntityType = EntityType.Application,
                     NodeName = "_Node_0"
                 };
 
@@ -236,7 +236,7 @@ namespace FabricObserverTests
                                                                     && (s.HealthInformation.HealthState == HealthState.Error
                                                                         || s.HealthInformation.HealthState == HealthState.Warning));
 
-                healthReport.ReportType = EntityType.Node;
+                healthReport.EntityType = EntityType.Node;
 
                 if (unhealthyFONodeEvents != null)
                 {

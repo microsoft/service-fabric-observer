@@ -104,7 +104,7 @@ namespace FabricObserver.Observers
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                        ReportType = EntityType.Node
+                        EntityType = EntityType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -160,7 +160,7 @@ namespace FabricObserver.Observers
                         HealthMessage = healthMessage,
                         State = HealthState.Ok,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                        ReportType = EntityType.Node
+                        EntityType = EntityType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -218,7 +218,7 @@ namespace FabricObserver.Observers
                     State = HealthState.Ok,
                     NodeName = NodeName,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                    ReportType = EntityType.Node
+                    EntityType = EntityType.Node
                 };
 
                 HealthReporter.ReportHealthToServiceFabric(report);
@@ -245,7 +245,7 @@ namespace FabricObserver.Observers
                         State = HealthState.Warning,
                         NodeName = NodeName,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                        ReportType = EntityType.Node
+                        EntityType = EntityType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(report);

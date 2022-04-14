@@ -186,7 +186,7 @@ namespace FabricObserver.Observers
                 healthReport = new HealthReport
                 {
                     Observer = ObserverName,
-                    ReportType = EntityType.Node,
+                    EntityType = EntityType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
                     HealthMessage = "All cluster and monitored app certificates are healthy.",
@@ -234,7 +234,7 @@ namespace FabricObserver.Observers
                 {
                     Code = FOErrorWarningCodes.WarningCertificateExpiration,
                     Observer = ObserverName,
-                    ReportType = EntityType.Node,
+                    EntityType = EntityType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
                     HealthMessage = healthMessage,

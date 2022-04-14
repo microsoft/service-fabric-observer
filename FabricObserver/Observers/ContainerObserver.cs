@@ -513,7 +513,7 @@ namespace FabricObserver.Observers
                         HealthMessage = $"{msg}",
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
                         Property = "docker_stats_failure",
-                        ReportType = EntityType.Application,
+                        EntityType = EntityType.Application,
                         State = HealthState.Warning,
                         NodeName = NodeName,
                         Observer = ObserverName,

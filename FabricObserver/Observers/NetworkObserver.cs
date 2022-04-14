@@ -171,7 +171,7 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
-                            ReportType = EntityType.Application,
+                            EntityType = EntityType.Application,
                             ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {conn.HostName}"
                         };
 
@@ -222,7 +222,7 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
-                            ReportType = EntityType.Application
+                            EntityType = EntityType.Application
                         };
 
                         HealthReporter.ReportHealthToServiceFabric(report);

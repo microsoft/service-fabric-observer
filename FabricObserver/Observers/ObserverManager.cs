@@ -408,7 +408,7 @@ namespace FabricObserver.Observers
                     Code = FOErrorWarningCodes.Ok,
                     HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or updating.{configUpdateLinux}.",
                     State = HealthState.Ok,
-                    ReportType = EntityType.Application,
+                    EntityType = EntityType.Application,
                     NodeName = obs.NodeName
                 };
 
@@ -461,7 +461,7 @@ namespace FabricObserver.Observers
                                                                                               || s.HealthInformation.HealthState == HealthState.Error);
                         }
 
-                        healthReport.ReportType = EntityType.Node;
+                        healthReport.EntityType = EntityType.Node;
 
                         foreach (var evt in fabricObserverNodeHealthEvents)
                         {
@@ -791,7 +791,7 @@ namespace FabricObserver.Observers
                 {
                     AppName = new Uri(FabricServiceContext.CodePackageActivationContext.ApplicationName),
                     Code = FOErrorWarningCodes.Ok,
-                    ReportType = EntityType.Application,
+                    EntityType = EntityType.Application,
                     HealthMessage = $"Error updating FabricObserver with new configuration settings:{Environment.NewLine}{err}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
@@ -1051,7 +1051,7 @@ namespace FabricObserver.Observers
                                 HealthMessage = observerHealthWarning,
                                 HealthReportTimeToLive = TimeSpan.MaxValue,
                                 Property = $"{observer.ObserverName}_HealthState",
-                                ReportType = EntityType.Application,
+                                EntityType = EntityType.Application,
                                 State = ObserverFailureHealthStateLevel,
                                 NodeName = nodeName,
                                 Observer = ObserverConstants.ObserverManagerName,
@@ -1186,7 +1186,7 @@ namespace FabricObserver.Observers
                         HealthMessage = message,
                         HealthReportTimeToLive = TimeSpan.FromDays(1),
                         Property = "NewVersionAvailable",
-                        ReportType = EntityType.Application,
+                        EntityType = EntityType.Application,
                         State = HealthState.Ok,
                         NodeName = nodeName,
                         Observer = ObserverConstants.ObserverManagerName

@@ -375,7 +375,7 @@ namespace FabricObserver.Observers
                     HealthMessage = message,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     Property = $"InvalidConfigFormat({folderSizeConfig})",
-                    ReportType = EntityType.Node,
+                    EntityType = EntityType.Node,
                     State = ObserverManager.ObserverFailureHealthStateLevel,
                     NodeName = NodeName,
                     Observer = ObserverConstants.DiskObserverName,
