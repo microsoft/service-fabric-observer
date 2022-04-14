@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<StartupServicesManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+	<Parameters>
+		<Parameter Name="ClusterObserver_InstanceCount" DefaultValue="1" />
+	</Parameters>
+	<Services>
+		<Service Name="ClusterObserver" ServicePackageActivationMode="ExclusiveProcess">
+			<StatelessService ServiceTypeName="ClusterObserverType" InstanceCount="[ClusterObserver_InstanceCount]">
+				<SingletonPartition />
+			</StatelessService>
+		</Service>
+	</Services>
+</StartupServicesManifest>

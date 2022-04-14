@@ -30,8 +30,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
-    <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
+	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="NLog" Version="4.7.10" />

@@ -33,6 +33,10 @@
     <Content Include="ApplicationPackageRoot\ApplicationManifest.xml" />
     <Content Include="packages.config" />
     <Content Include="PublishProfiles\Cloud.xml" />
+    <Content Include="StartupServiceParameters\Cloud.xml" />
+    <Content Include="StartupServiceParameters\Local.1Node.xml" />
+    <Content Include="StartupServiceParameters\Local.5Node.xml" />
+    <Content Include="StartupServices.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
   <PropertyGroup>

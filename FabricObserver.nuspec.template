@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-  <metadata minClientVersion="3.3.0">
+	<metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>3.2.0</version>
     <releaseNotes>
-Bug fix: AppObserver targetAppType regression.
-Bug fix: Concurrency setting missing for AppObserver's CPU FRUD type.
-AppObserver: Added support for specifying serviceIncludeList in multiple config objects for one targetApp/targetAppType.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
@@ -20,7 +17,25 @@ AppObserver: Added support for specifying serviceIncludeList in multiple config 
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
     <dependencies>
-      <group targetFramework=".NETStandard2.0" />
+		<group targetFramework=".NETStandard2.0">
+			<dependency id="Azure.Storage.Blobs" version="12.9.1" />
+			<dependency id="Microsoft.Extensions.DependencyInjection" version="5.0.2" />
+			<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
+			<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
+			<dependency id="Newtonsoft.Json" version="13.0.1" />
+			<dependency id="Octokit" version="0.50.0" />
+			<dependency id="System.Diagnostics.DiagnosticSource" version="5.0.1" />
+			<dependency id="System.Diagnostics.EventLog" version="5.0.1" />
+			<dependency id="System.IO" version="4.3.0" />
+			<dependency id="System.Management" version="5.0.0" />
+			<dependency id="System.Numerics.Vectors" version="4.5.0" />
+			<dependency id="System.Runtime" version="4.3.1" />
+			<dependency id="System.Security.Cryptography.Algorithms" version="4.3.1" />
+			<dependency id="System.Security.Cryptography.Encoding" version="4.3.0" />
+			<dependency id="System.Security.Cryptography.Primitives" version="4.3.0" />
+			<dependency id="System.Security.Cryptography.X509Certificates" version="4.3.2" />
+			<dependency id="McMaster.NETCore.Plugins" version="1.4.0" />
+		</group>
     </dependencies>
     <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
     <tags>azure service-fabric fabric-observer utility watchdog-service observability</tags>
