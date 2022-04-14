@@ -4,7 +4,7 @@
 		<Parameter Name="ClusterObserver_InstanceCount" DefaultValue="1" />
 	</Parameters>
 	<Services>
-		<Service Name="ClusterObserver" ServicePackageActivationMode="ExclusiveProcess">
+		<Service Name="ClusterObserverService" ServicePackageActivationMode="ExclusiveProcess">
 			<StatelessService ServiceTypeName="ClusterObserverType" InstanceCount="[ClusterObserver_InstanceCount]">
 				<SingletonPartition />
 			</StatelessService>
