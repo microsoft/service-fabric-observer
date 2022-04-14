@@ -126,7 +126,7 @@ namespace ClusterObserver.Utilities.Telemetry
                 Dictionary<string, string> properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? string.Empty },
-                    { "HealthState", telemetryData.HealthState ?? string.Empty },
+                    { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "Application", telemetryData.ApplicationName ?? string.Empty },
                     { "Service", telemetryData.ServiceName ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
@@ -135,7 +135,7 @@ namespace ClusterObserver.Utilities.Telemetry
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "Value", telemetryData.Value == 0 ? "Up" : "Down" },
-                    { "Partition", telemetryData.PartitionId },
+                    { "Partition", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "Replica", telemetryData.ReplicaId.ToString() },
                     { "Source", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },

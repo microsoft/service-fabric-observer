@@ -18,6 +18,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -294,7 +295,7 @@ namespace FabricObserver.Observers
 
                     State = HealthState.Ok,
                     HealthReportTimeToLive = timeToLiveWarning,
-                    ReportType = HealthReportType.Node
+                    ReportType = EntityType.Node
                 };
 
                 info.Clear();
@@ -1099,7 +1100,7 @@ namespace FabricObserver.Observers
                         thresholdError,
                         thresholdWarning,
                         TTL,
-                        HealthReportType.Application);
+                        EntityType.Application);
             }
         }
 

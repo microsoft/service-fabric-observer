@@ -33,7 +33,7 @@ namespace FabricObserver.Observers.Utilities
 
         public bool EmitLogEvent { get; set; } = true;
 
-        public HealthReportType ReportType
+        public EntityType ReportType
         {
             get; set;
         }

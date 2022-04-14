@@ -157,7 +157,7 @@ namespace ClusterObserver
                         {
                             var telemetry = new TelemetryData()
                             {
-                                HealthState = "Ok",
+                                HealthState = HealthState.Ok,
                                 Description = repairState,
                                 Metric = "AggregatedClusterHealth",
                                 Source = ObserverName
@@ -207,7 +207,7 @@ namespace ClusterObserver
                     {
                         var telemetry = new TelemetryData()
                         {
-                            HealthState = "Ok",
+                            HealthState = HealthState.Ok,
                             Description = "Cluster has recovered from previous Error/Warning state.",
                             Metric = "AggregatedClusterHealth",
                             Source = ObserverName
@@ -321,7 +321,7 @@ namespace ClusterObserver
                 {
                     var telemetryData = new TelemetryData()
                     {
-                        HealthState = "Warning",
+                        HealthState = HealthState.Warning,
                         Description = msg
                     };
 
@@ -580,7 +580,7 @@ namespace ClusterObserver
                             var telemetryData = new TelemetryData()
                             {
                                 ApplicationName = appName.OriginalString,
-                                HealthState = Enum.GetName(typeof(HealthState), appHealth.AggregatedHealthState),
+                                HealthState = appHealth.AggregatedHealthState,
                                 Description = telemetryDescription,
                                 Source = ObserverName
                             };
@@ -693,7 +693,7 @@ namespace ClusterObserver
                         var telemetryData = new TelemetryData()
                         {
                             NodeName = node.NodeName,
-                            HealthState = Enum.GetName(typeof(HealthState), node.AggregatedHealthState),
+                            HealthState = node.AggregatedHealthState,
                             Description = $"{telemetryDescription}{Environment.NewLine}Node Status: {(targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty)}",
                             Metric = metric ?? "AggregatedClusterHealth",
                             ObserverName = sourceObserver ?? string.Empty,
@@ -734,12 +734,11 @@ namespace ClusterObserver
             token.ThrowIfCancellationRequested();
 
             string telemetryDescription = evaluation.Description;
-            string healthState = Enum.GetName(typeof(HealthState), evaluation.AggregatedHealthState);
 
             var telemetryData = new TelemetryData()
             {
                 Description = telemetryDescription,
-                HealthState = healthState,
+                HealthState = evaluation.AggregatedHealthState,
                 Source = ObserverName
             };
 
@@ -757,7 +756,7 @@ namespace ClusterObserver
                                 new
                                 {
                                     Description = telemetryDescription,
-                                    HealthState = healthState,
+                                    HealthState = Enum.GetName(typeof(HealthState), evaluation.AggregatedHealthState),
                                     Source = ObserverName
                                 });
             }
@@ -791,7 +790,7 @@ namespace ClusterObserver
                     {
                         var telemetry = new TelemetryData()
                         {
-                            HealthState = "Ok",
+                            HealthState = HealthState.Ok,
                             Description = $"{nodeDictItem.Key} is now Up.",
                             Metric = "NodeStatus",
                             NodeName = nodeDictItem.Key,
@@ -864,7 +863,7 @@ namespace ClusterObserver
                         {
                             var telemetry = new TelemetryData()
                             {
-                                HealthState = "Warning",
+                                HealthState = HealthState.Warning,
                                 Description = message,
                                 Metric = "NodeStatus",
                                 NodeName = kvp.Key,
@@ -920,8 +919,8 @@ namespace ClusterObserver
             switch (scope)
             {
                 // Supported Error code from FO?
-                case HealthScope.Node when !FOErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(foHealthData.Code):
-                case HealthScope.Application when !FOErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(foHealthData.Code):
+                case HealthScope.Node when !SupportedErrorCodes.NodeErrorCodesDictionary.ContainsKey(foHealthData.Code):
+                case HealthScope.Application when !SupportedErrorCodes.AppErrorCodesDictionary.ContainsKey(foHealthData.Code):
                     return null;
 
                 default:

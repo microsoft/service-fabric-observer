@@ -21,7 +21,6 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using ConfigSettings = FabricObserver.Observers.MachineInfoModel.ConfigSettings;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -61,15 +60,14 @@ namespace FabricObserver.Observers
             }
         };
 
-        private readonly string dataPackagePath;
         private readonly List<NetworkObserverConfig> userConfig = new List<NetworkObserverConfig>();
         private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
         private readonly Dictionary<string, bool> connEndpointTestResults = new Dictionary<string, bool>();
         private readonly Stopwatch stopwatch;
-        private readonly ConfigSettings configSettings;
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;
         private int tcpConnTestRetried;
+        private readonly string _settingsPath;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NetworkObserver"/> class.
@@ -77,8 +75,7 @@ namespace FabricObserver.Observers
         public NetworkObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            configSettings = new ConfigSettings(FabricServiceContext);
-            dataPackagePath = configSettings.ConfigPackagePath;
+            _settingsPath = context.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
             stopwatch = new Stopwatch();
         }
 
@@ -148,7 +145,7 @@ namespace FabricObserver.Observers
                         {
                             ApplicationName = conn.TargetApp,
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
-                            HealthState = "Warning",
+                            HealthState = HealthState.Warning,
                             Description = healthMessage,
                             ObserverName = ObserverName,
                             Metric = ErrorWarningProperty.InternetConnectionFailure,
@@ -174,7 +171,7 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
-                            ReportType = HealthReportType.Application,
+                            ReportType = EntityType.Application,
                             ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {conn.HostName}"
                         };
 
@@ -225,7 +222,7 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
-                            ReportType = HealthReportType.Application
+                            ReportType = EntityType.Application
                         };
 
                         HealthReporter.ReportHealthToServiceFabric(report);
@@ -237,7 +234,7 @@ namespace FabricObserver.Observers
                             {
                                 ApplicationName = conn.TargetApp,
                                 Code = FOErrorWarningCodes.Ok,
-                                HealthState = "Ok",
+                                HealthState = HealthState.Ok,
                                 Description = healthMessage,
                                 ObserverName = ObserverName,
                                 Metric = "Internet Connection State",
@@ -348,9 +345,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            var settings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Settings;
-            configSettings.Initialize(settings, ConfigurationSectionName, "NetworkObserverDataFileName");
-            var networkObserverConfigFileName = Path.Combine(dataPackagePath ?? string.Empty, configSettings.NetworkObserverConfigFileName);
+            var networkObserverConfigFileName = Path.Combine(_settingsPath, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {
@@ -444,7 +439,6 @@ namespace FabricObserver.Observers
                             }
 
                             var request = (HttpWebRequest)WebRequest.Create(new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}"));
-
                             request.AuthenticationLevel = AuthenticationLevel.MutualAuthRequired;
                             request.ImpersonationLevel = TokenImpersonationLevel.Impersonation;
                             request.Timeout = 60000;

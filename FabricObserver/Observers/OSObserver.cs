@@ -104,7 +104,7 @@ namespace FabricObserver.Observers
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                        ReportType = HealthReportType.Node
+                        ReportType = EntityType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -117,7 +117,7 @@ namespace FabricObserver.Observers
                         var telemetryData = new TelemetryData()
                         {
                             Description = healthMessage,
-                            HealthState = "Error",
+                            HealthState = HealthState.Error,
                             Metric = "OS Health",
                             NodeName = NodeName,
                             ObserverName = ObserverName,
@@ -160,7 +160,7 @@ namespace FabricObserver.Observers
                         HealthMessage = healthMessage,
                         State = HealthState.Ok,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                        ReportType = HealthReportType.Node
+                        ReportType = EntityType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
@@ -171,7 +171,7 @@ namespace FabricObserver.Observers
                         var telemetryData = new TelemetryData()
                         {
                             Description = healthMessage,
-                            HealthState = "Ok",
+                            HealthState = HealthState.Ok,
                             Metric = "OS Health",
                             NodeName = NodeName,
                             ObserverName = ObserverName,
@@ -218,7 +218,7 @@ namespace FabricObserver.Observers
                     State = HealthState.Ok,
                     NodeName = NodeName,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                    ReportType = HealthReportType.Node
+                    ReportType = EntityType.Node
                 };
 
                 HealthReporter.ReportHealthToServiceFabric(report);
@@ -245,7 +245,7 @@ namespace FabricObserver.Observers
                         State = HealthState.Warning,
                         NodeName = NodeName,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                        ReportType = HealthReportType.Node
+                        ReportType = EntityType.Node
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(report);
@@ -257,7 +257,7 @@ namespace FabricObserver.Observers
                         var telemetryData = new TelemetryData()
                         {
                             Description = auServiceEnabledMessage,
-                            HealthState = "Warning",
+                            HealthState = HealthState.Warning,
                             Metric = "WUAutoDownloadEnabled",
                             NodeName = NodeName,
                             ObserverName = ObserverName,

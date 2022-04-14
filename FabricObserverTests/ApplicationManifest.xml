@@ -20,10 +20,10 @@
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
-    <Parameter Name="ContainerObserverEnabled" DefaultValue="true" />
+    <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
@@ -395,7 +395,7 @@
     </ConfigOverrides>
     <Policies>
       <!-- Change EntryPointType attribute value to All (or remove the EntryPointType attribute entirely) if you want to run FO as system/root user. -->
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="All" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
     </Policies>
   </ServiceManifestImport>
   <DefaultServices>

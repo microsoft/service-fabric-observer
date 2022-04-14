@@ -57,9 +57,11 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxConcurrentTasks = "MaxConcurrentTasks";
         public const string EnableKvsLvidMonitoringParameter = "EnableKvsLvidMonitoring";
         public const string MonitorPrivateWorkingSet = "MonitorPrivateWorkingSet";
+        public const string ConfigurationFileName = "ConfigurationFileName";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";
+        public const string AppObserverDataFileName = "AppObserverDataFileName";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
         public const string EnableChildProcessMonitoringParameter = "EnableChildProcessMonitoring";
         public const string MaxChildProcTelemetryDataCountParameter = "MaxChildProcTelemetryDataCount";

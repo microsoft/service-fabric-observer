@@ -13,10 +13,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class ConfigSettings
     {
-        private ConfigurationSection Section
-        {
-            get;
-        }
+        private readonly ConfigurationSection _section;
 
         public TimeSpan RunInterval
         {
@@ -61,11 +58,6 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
-        private ConfigurationSettings Settings
-        {
-            get; set;
-        }
-
         public bool UseCircularBuffer
         {
             get; set;
@@ -84,14 +76,12 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
-            Settings = settings;
-            Section = settings.Sections[observerConfiguration];
+            _section = settings.Sections[observerConfiguration];
             UpdateConfigSettings();
         }
 
         private void UpdateConfigSettings()
         {
-
             // Observer enabled?
             if (bool.TryParse(
                     GetConfigSettingValue(
@@ -187,9 +177,9 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                if (Section.Parameters.Any(p => p.Name == parameterName))
+                if (_section.Parameters.Any(p => p.Name == parameterName))
                 {
-                    return Section.Parameters[parameterName]?.Value;
+                    return _section.Parameters[parameterName]?.Value;
                 }
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)

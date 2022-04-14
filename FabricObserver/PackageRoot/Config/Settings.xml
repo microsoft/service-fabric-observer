@@ -153,7 +153,7 @@
     
     <!-- Required: The thresholds are held in a json file. Note that these thresholds apply to any service that is part 
          of the Target Application, which is the logical container for service processes in Service Fabric parlance.-->
-    <Parameter Name="AppObserverDataFileName" Value="" MustOverride="true" />
+    <Parameter Name="ConfigurationFileName" Value="" MustOverride="true" />
     
     <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="" MustOverride="true" />
@@ -281,7 +281,7 @@
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
          These values are held in a json file, NetworkObserver.config.json". -->
-    <Parameter Name="NetworkObserverDataFileName" Value="NetworkObserver.config.json" />
+    <Parameter Name="ConfigurationFileName" Value="NetworkObserver.config.json" />
   </Section>
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
@@ -365,7 +365,7 @@
      <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
      <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
      <Parameter Name="RunInterval" Value="" MustOverride="true" />
-     <Parameter Name="ConfigFileName" Value="" MustOverride="true" />
+     <Parameter Name="ConfigurationFileName" Value="" MustOverride="true" />
   </Section>
   <!-- Plugin model sample. Just add the configuration info here that your observer needs.
        **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.

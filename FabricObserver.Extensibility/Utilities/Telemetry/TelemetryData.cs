@@ -4,19 +4,21 @@
 // ------------------------------------------------------------
 
 using System.Runtime.InteropServices;
-using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
+using FabricObserver.Observers.Interfaces;
+using System.Fabric.Health;
+using System;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
-    public class TelemetryData
+    public class TelemetryData : ITelemetryData
     {
+        private readonly string _os;
+
         public string ApplicationName
         {
             get; set;
         }
-
-        public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
 
         public string Code
         {
@@ -28,12 +30,22 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string ClusterId
+        {
+            get; set;
+        }
+
         public string Description
         {
             get; set;
         }
 
-        public string HealthState
+        public EntityType EntityType
+        {
+            get; set;
+        }
+
+        public HealthState HealthState
         {
             get; set;
         }
@@ -55,15 +67,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         public string OS
         {
-            get; set;
-        } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+            get { return _os; }
+        }
 
-        public string PartitionId
+        public Guid PartitionId
         {
             get; set;
         }
 
-        public int ProcessId
+        public long ProcessId
         {
             get; set;
         }
@@ -93,10 +105,20 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string NodeType
+        {
+            get; set;
+        }
+
+        public string Property
+        {
+            get; set;
+        }
+
         [JsonConstructor]
         public TelemetryData()
         {
-
+            _os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
         }
     }
 }

@@ -17,6 +17,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
@@ -374,7 +375,7 @@ namespace FabricObserver.Observers
                     HealthMessage = message,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     Property = $"InvalidConfigFormat({folderSizeConfig})",
-                    ReportType = HealthReportType.Node,
+                    ReportType = EntityType.Node,
                     State = ObserverManager.ObserverFailureHealthStateLevel,
                     NodeName = NodeName,
                     Observer = ObserverConstants.DiskObserverName,

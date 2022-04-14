@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>3.1.26</version>
+    <version>3.2.0</version>
     <releaseNotes>
 Bug fix: AppObserver targetAppType regression.
 Bug fix: Concurrency setting missing for AppObserver's CPU FRUD type.

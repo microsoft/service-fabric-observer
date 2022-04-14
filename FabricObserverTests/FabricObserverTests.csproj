@@ -14,7 +14,8 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="ApplicationManifest.xml" />
+    <Compile Remove="IMockCodePackageActivationContext.cs" />
+    <Compile Remove="MockCodePackageActivationContext.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="MyExpiredCert.p12">
@@ -42,16 +43,53 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+	<PackageReference Include="ServiceFabric.Mocks" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClusterObserver\ClusterObserver.csproj" />
     <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="ApplicationManifest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="clusterManifest.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="PackageRoot\Config\AppObserver.config.oldstyle.json">
+    <None Update="PackageRoot\Config\AppObserver.config.app.exclude.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.app.include.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.app.multi-exclude.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.app.multi-include.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.apptype.exclude.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.apptype.include.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.apptype.multi-exclude.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.apptype.multi-include.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.empty.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.invalid.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.oldstyle_nowarnings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\AppObserver.config.oldstyle_warnings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="PackageRoot\Config\AppObserver.config.targetAppMalformed.json">

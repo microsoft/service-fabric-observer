@@ -19,6 +19,7 @@ using System.Fabric.Description;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Fabric.Health;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
@@ -53,8 +54,7 @@ namespace FabricObserver.Observers
         public ContainerObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            var configSettings = new MachineInfoModel.ConfigSettings(context);
-            ConfigPackagePath = configSettings.ConfigPackagePath;
+            ConfigPackagePath = context.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
@@ -161,7 +161,7 @@ namespace FabricObserver.Observers
                                     app.CpuErrorLimitPercent,
                                     app.CpuWarningLimitPercent,
                                     timeToLive,
-                                    HealthReportType.Application,
+                                    EntityType.Application,
                                     repOrInst);
                 
                 ProcessResourceDataReportHealth(
@@ -169,7 +169,7 @@ namespace FabricObserver.Observers
                                     app.MemoryErrorLimitMb,
                                     app.MemoryWarningLimitMb,
                                     timeToLive,
-                                    HealthReportType.Application,
+                                    EntityType.Application,
                                     repOrInst);
                
             });
@@ -513,7 +513,7 @@ namespace FabricObserver.Observers
                         HealthMessage = $"{msg}",
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
                         Property = "docker_stats_failure",
-                        ReportType = HealthReportType.Application,
+                        ReportType = EntityType.Application,
                         State = HealthState.Warning,
                         NodeName = NodeName,
                         Observer = ObserverName,
@@ -662,14 +662,14 @@ namespace FabricObserver.Observers
                 return true;
             }
 
-            string configDataFilename = GetSettingParameterValue(ConfigurationSectionName, "ConfigFileName");
+            string configFilename = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName);
             
-            if (string.IsNullOrWhiteSpace(configDataFilename))
+            if (string.IsNullOrWhiteSpace(configFilename))
             {
                 return false;
             }
 
-            string path = Path.Combine(ConfigPackagePath, configDataFilename);
+            string path = Path.Combine(ConfigPackagePath, configFilename);
             
             if (File.Exists(path))
             {

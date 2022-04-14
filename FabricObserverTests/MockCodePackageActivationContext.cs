@@ -10,35 +10,48 @@ using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Health;
 
-namespace FabricObserverTests
+namespace ServiceFabric.Mocks
 {
+    /// <summary>
+    /// Represents activation context for the Service Fabric activated service.
+    /// </summary>
+    /// <remarks>Includes information from the service manifest as well as information
+    /// about the currently activated code package like work directory, context id etc.</remarks>
     public class MockCodePackageActivationContext : ICodePackageActivationContext
     {
+        private bool _isDisposed;
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="MockCodePackageActivationContext"/> class.
+        /// Returns a default instance, using mock values.
         /// </summary>
-        /// <param name="applicationName">applicationName.</param>
-        /// <param name="applicationTypeName">applicationTypeName.</param>
-        /// <param name="codePackageName">codePackageName.</param>
-        /// <param name="codePackageVersion">codePackageVersion.</param>
-        /// <param name="context">context.</param>
-        /// <param name="logDirectory">logDirectory.</param>
-        /// <param name="tempDirectory">tempDirectory.</param>
-        /// <param name="workDirectory">workDirectory.</param>
-        /// <param name="serviceManifestName">serviceManifestName.</param>
-        /// <param name="serviceManifestVersion">serviceManifestVersion.</param>
+        public static ICodePackageActivationContext Default { get; } = new MockCodePackageActivationContext(
+            "fabric:/MockApp",
+            "MockAppType",
+            "Code",
+            "1.0.0.0",
+            Guid.NewGuid().ToString(),
+            @"C:\logDirectory",
+            @"C:\tempDirectory",
+            @"C:\workDirectory",
+            "ServiceManifestName",
+            "1.0.0.0"
+        );
+
+
+
         public MockCodePackageActivationContext(
-                        string applicationName,
-                        string applicationTypeName,
-                        string codePackageName,
-                        string codePackageVersion,
-                        string context,
-                        string logDirectory,
-                        string tempDirectory,
-                        string workDirectory,
-                        string serviceManifestName,
-                        string serviceManifestVersion)
+           string applicationName,
+           string applicationTypeName,
+           string codePackageName,
+           string codePackageVersion,
+           string context,
+           string logDirectory,
+           string tempDirectory,
+           string workDirectory,
+           string serviceManifestName,
+           string serviceManifestVersion)
         {
+
             ApplicationName = applicationName;
             ApplicationTypeName = applicationTypeName;
             CodePackageName = codePackageName;
@@ -51,88 +64,113 @@ namespace FabricObserverTests
             ServiceManifestVersion = serviceManifestVersion;
         }
 
-        private string ServiceManifestName { get; set; }
-
-        private string ServiceManifestVersion { get; set; }
-
-        public string ApplicationName { get; private set; }
-
-        public string ApplicationTypeName { get; private set; }
-
-        public string CodePackageName { get; private set; }
-
-        public string CodePackageVersion { get; private set; }
-
-        public string ContextId { get; private set; }
-
-        public string LogDirectory { get; private set; }
-
-        public string TempDirectory { get; private set; }
-
-        public string WorkDirectory { get; private set; }
-
-        // Interface required events. These are never used. Ignore the Warnings(CS0067) The event 'MockCodePackageActivationContext.CodePackageRemovedEvent' is never used
-#pragma warning disable CS0067
-        
         public event EventHandler<PackageAddedEventArgs<CodePackage>> CodePackageAddedEvent;
+
         public event EventHandler<PackageModifiedEventArgs<CodePackage>> CodePackageModifiedEvent;
+
         public event EventHandler<PackageRemovedEventArgs<CodePackage>> CodePackageRemovedEvent;
+
         public event EventHandler<PackageAddedEventArgs<ConfigurationPackage>> ConfigurationPackageAddedEvent;
+
         public event EventHandler<PackageModifiedEventArgs<ConfigurationPackage>> ConfigurationPackageModifiedEvent;
+
         public event EventHandler<PackageRemovedEventArgs<ConfigurationPackage>> ConfigurationPackageRemovedEvent;
+
         public event EventHandler<PackageAddedEventArgs<DataPackage>> DataPackageAddedEvent;
+
         public event EventHandler<PackageModifiedEventArgs<DataPackage>> DataPackageModifiedEvent;
+
         public event EventHandler<PackageRemovedEventArgs<DataPackage>> DataPackageRemovedEvent;
-#pragma warning restore
+
+        public string ApplicationName { get; set; }
+
+        public ApplicationPrincipalsDescription ApplicationPrincipalsDescription { get; set; }
+        public string ApplicationTypeName { get; set; }
+
+        public CodePackage CodePackage { get; set; }
+        public string CodePackageName { get; set; }
+
+        public string CodePackageVersion { get; set; }
+
+        public ConfigurationPackage ConfigurationPackage { get; set; }
+        public List<string> ConfigurationPackageNames { get; set; }
+        public string ContextId { get; set; }
+
+        public DataPackage DataPackage { get; set; }
+        public List<string> DataPackageNames { get; set; }
+        public KeyedCollection<string, EndpointResourceDescription> EndpointResourceDescriptions { get; set; } = new MockConfigurationPackage.EndpointResourceDescriptionsKeyedCollection();
+        public List<HealthInformation> HealthInformations { get; set; } = new List<HealthInformation>();
+        public string LogDirectory { get; set; }
+
+        public KeyedCollection<string, ServiceGroupTypeDescription> ServiceGroupTypes { get; set; } = new MockConfigurationPackage.ServiceGroupTypeDescriptionKeyedCollection();
+        public string ServiceManifestName { get; set; }
+        public string ServiceManifestVersion { get; set; }
+        public KeyedCollection<string, ServiceTypeDescription> ServiceTypes { get; set; } = new MockConfigurationPackage.ServiceTypeDescriptionKeyedCollection();
+        public string TempDirectory { get; set; }
+
+        public string WorkDirectory { get; set; }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public virtual void Dispose(bool disposing)
+        {
+            if (!_isDisposed)
+            {
+                _isDisposed = true;
+            }
+        }
 
         public ApplicationPrincipalsDescription GetApplicationPrincipals()
         {
-            return default;
+            return ApplicationPrincipalsDescription;
         }
 
         public IList<string> GetCodePackageNames()
         {
-            return new List<string> { CodePackageName };
+            return new List<string>() { CodePackageName };
         }
 
         public CodePackage GetCodePackageObject(string packageName)
         {
-            return default;
+            return CodePackage;
         }
 
         public IList<string> GetConfigurationPackageNames()
         {
-            return new List<string> { string.Empty };
+            return ConfigurationPackageNames;
         }
 
         public ConfigurationPackage GetConfigurationPackageObject(string packageName)
         {
-            return default;
+            return ConfigurationPackage;
         }
 
         public IList<string> GetDataPackageNames()
         {
-            return new List<string> { string.Empty };
+            return DataPackageNames;
         }
 
         public DataPackage GetDataPackageObject(string packageName)
         {
-            return default;
+            return DataPackage;
         }
 
         public EndpointResourceDescription GetEndpoint(string endpointName)
         {
-            return default;
+            return EndpointResourceDescriptions[endpointName];
         }
 
         public KeyedCollection<string, EndpointResourceDescription> GetEndpoints()
         {
-            return null;
+            return EndpointResourceDescriptions;
         }
 
         public KeyedCollection<string, ServiceGroupTypeDescription> GetServiceGroupTypes()
         {
-            return null;
+            return ServiceGroupTypes;
         }
 
         public string GetServiceManifestName()
@@ -147,54 +185,82 @@ namespace FabricObserverTests
 
         public KeyedCollection<string, ServiceTypeDescription> GetServiceTypes()
         {
-            return null;
+            return ServiceTypes;
+        }
+
+        public void OnCodePackageAddedEvent(PackageAddedEventArgs<CodePackage> e)
+        {
+            CodePackageAddedEvent?.Invoke(this, e);
+        }
+
+        public void OnCodePackageModifiedEvent(PackageModifiedEventArgs<CodePackage> e)
+        {
+            CodePackageModifiedEvent?.Invoke(this, e);
+        }
+
+        public void OnCodePackageRemovedEvent(PackageRemovedEventArgs<CodePackage> e)
+        {
+            CodePackageRemovedEvent?.Invoke(this, e);
+        }
+
+        public void OnConfigurationPackageAddedEvent(PackageAddedEventArgs<ConfigurationPackage> e)
+        {
+            ConfigurationPackageAddedEvent?.Invoke(this, e);
+        }
+
+        public void OnConfigurationPackageModifiedEvent(PackageModifiedEventArgs<ConfigurationPackage> e)
+        {
+            ConfigurationPackageModifiedEvent?.Invoke(this, e);
+        }
+
+        public void OnConfigurationPackageRemovedEvent(PackageRemovedEventArgs<ConfigurationPackage> e)
+        {
+            ConfigurationPackageRemovedEvent?.Invoke(this, e);
+        }
+
+        public void OnDataPackageAddedEvent(PackageAddedEventArgs<DataPackage> e)
+        {
+            DataPackageAddedEvent?.Invoke(this, e);
+        }
+
+        public void OnDataPackageModifiedEvent(PackageModifiedEventArgs<DataPackage> e)
+        {
+            DataPackageModifiedEvent?.Invoke(this, e);
+        }
+
+        public void OnDataPackageRemovedEvent(PackageRemovedEventArgs<DataPackage> e)
+        {
+            DataPackageRemovedEvent?.Invoke(this, e);
         }
 
         public void ReportApplicationHealth(HealthInformation healthInformation)
         {
-        }
-
-        public void ReportDeployedServicePackageHealth(HealthInformation healthInformation)
-        {
+            HealthInformations?.Add(healthInformation);
         }
 
         public void ReportDeployedApplicationHealth(HealthInformation healthInformation)
         {
+            HealthInformations?.Add(healthInformation);
         }
 
-        private bool disposedValue; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
+        public void ReportDeployedServicePackageHealth(HealthInformation healthInformation)
         {
-            if (disposedValue)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-                // TODO: dispose managed state (managed objects).
-            }
-
-            disposedValue = true;
+            HealthInformations?.Add(healthInformation);
         }
 
-        public void Dispose()
+        public void ReportApplicationHealth(HealthInformation healthInformation, HealthReportSendOptions sendOptions)
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
+            HealthInformations?.Add(healthInformation);
         }
 
-        public void ReportApplicationHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
+        public void ReportDeployedApplicationHealth(HealthInformation healthInformation, HealthReportSendOptions sendOptions)
         {
+            HealthInformations?.Add(healthInformation);
         }
 
-        public void ReportDeployedApplicationHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
+        public void ReportDeployedServicePackageHealth(HealthInformation healthInformation, HealthReportSendOptions sendOptions)
         {
-        }
-
-        public void ReportDeployedServicePackageHealth(HealthInformation healthInfo, HealthReportSendOptions sendOptions)
-        {
+            HealthInformations?.Add(healthInformation);
         }
     }
 }

@@ -21,7 +21,6 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
 using Newtonsoft.Json;
-using ConfigSettings = FabricObserver.Observers.MachineInfoModel.ConfigSettings;
 
 namespace FabricObserver.Observers
 {
@@ -33,6 +32,7 @@ namespace FabricObserver.Observers
         private readonly bool _isWindows;
         private readonly object _lock = new object();
         private (int LowPort, int HighPort) _dynamicPortRange = (-1, -1);
+        private readonly string _settingsPath;
 
         // These are the concurrent data containers that hold all monitoring data for all application targets for specific metrics.
         // In the case where machine has capable CPU configuration and AppObserverEnableConcurrentMonitoring is enabled, these ConcurrentDictionaries
@@ -63,11 +63,6 @@ namespace FabricObserver.Observers
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         private List<DeployedApplication> _deployedApps;
 
-        // _replicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
-        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
-        private List<ReplicaOrInstanceMonitoringInfo> _replicaOrInstanceList;
-
-        private readonly ConfigSettings _configSettings;
         private readonly Stopwatch _stopwatch;
         private FabricClientUtilities _client;
         private ParallelOptions _parallelOptions;
@@ -75,6 +70,10 @@ namespace FabricObserver.Observers
         private int _appCount;
         private int _serviceCount;
         private bool _checkPrivateWorkingSet;
+
+        // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
+        public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
 
         public int MaxChildProcTelemetryDataCount
         {
@@ -117,8 +116,7 @@ namespace FabricObserver.Observers
         public AppObserver(FabricClient fabricClient, StatelessServiceContext context)
             : base(fabricClient, context)
         {
-            _configSettings = new ConfigSettings(FabricServiceContext);
-            ConfigPackagePath = _configSettings.ConfigPackagePath;
+            _settingsPath = context.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
             _stopwatch = new Stopwatch();
             _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
@@ -178,14 +176,14 @@ namespace FabricObserver.Observers
             TimeSpan TTL = GetHealthReportTimeToLive();
 
             // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
-            _ = Parallel.For (0, _replicaOrInstanceList.Count, _parallelOptions, (i, state) =>
+            _ = Parallel.For (0, ReplicaOrInstanceList.Count, _parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
                     state.Stop();
                 }
 
-                var repOrInst = _replicaOrInstanceList[i];
+                var repOrInst = ReplicaOrInstanceList[i];
                 
                 if (repOrInst.HostProcessId < 1)
                 {
@@ -299,7 +297,7 @@ namespace FabricObserver.Observers
                             app.CpuErrorLimitPercent,
                             app.CpuWarningLimitPercent,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -319,7 +317,7 @@ namespace FabricObserver.Observers
                             app.MemoryErrorLimitMb,
                             app.MemoryWarningLimitMb,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -339,7 +337,7 @@ namespace FabricObserver.Observers
                             app.MemoryErrorLimitPercent,
                             app.MemoryWarningLimitPercent,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -359,7 +357,7 @@ namespace FabricObserver.Observers
                             app.NetworkErrorActivePorts,
                             app.NetworkWarningActivePorts,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -379,7 +377,7 @@ namespace FabricObserver.Observers
                             app.NetworkErrorEphemeralPorts,
                             app.NetworkWarningEphemeralPorts,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -399,7 +397,7 @@ namespace FabricObserver.Observers
                             app.NetworkErrorEphemeralPortsPercent,
                             app.NetworkWarningEphemeralPortsPercent,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -419,7 +417,7 @@ namespace FabricObserver.Observers
                             app.ErrorOpenFileHandles,
                             app.WarningOpenFileHandles,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -439,7 +437,7 @@ namespace FabricObserver.Observers
                             app.ErrorThreadCount,
                             app.WarningThreadCount,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -460,7 +458,7 @@ namespace FabricObserver.Observers
                             0,
                             KvsLvidsWarningPercentage,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Application,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }           
@@ -492,9 +490,9 @@ namespace FabricObserver.Observers
 
         // This runs each time ObserveAsync is run to ensure that any new app targets and config changes will
         // be up to date.
-        private async Task<bool> InitializeAsync()
+        public async Task<bool> InitializeAsync()
         {
-            _replicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
+            ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             _userTargetList = new List<ApplicationInfo>();
             _deployedTargetList = new List<ApplicationInfo>();
             _dynamicPortRange = OSInfoProvider.Instance.TupleGetDynamicPortRange();
@@ -559,7 +557,7 @@ namespace FabricObserver.Observers
                         HealthMessage = message,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
                         Property = "AppMisconfiguration",
-                        ReportType = HealthReportType.Application,
+                        ReportType = EntityType.Application,
                         State = HealthState.Warning,
                         NodeName = NodeName,
                         Observer = ObserverConstants.AppObserverName,
@@ -572,25 +570,25 @@ namespace FabricObserver.Observers
                     if (IsTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportHealthAsync(
-                                                    "AppMisconfiguration",
-                                                    HealthState.Warning,
-                                                    message,
-                                                    ObserverName,
-                                                    Token);
+                                "AppMisconfiguration",
+                                HealthState.Warning,
+                                message,
+                                ObserverName,
+                                Token);
                     }
 
                     // ETW.
                     if (IsEtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.FabricObserverETWEventName,
-                                        new
-                                        {
-                                            Property = "AppMisconfiguration",
-                                            Level = "Warning",
-                                            Message = message,
-                                            ObserverName
-                                        });
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                Property = "AppMisconfiguration",
+                                Level = "Warning",
+                                Message = message,
+                                ObserverName
+                            });
                     }
 
                     OperationalHealthEvents++;
@@ -607,7 +605,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            int repCount = _replicaOrInstanceList.Count;
+            int repCount = ReplicaOrInstanceList.Count;
 
             // internal diagnostic telemetry \\
 
@@ -647,7 +645,7 @@ namespace FabricObserver.Observers
             {
                 Token.ThrowIfCancellationRequested();
 
-                var rep = _replicaOrInstanceList[i];
+                var rep = ReplicaOrInstanceList[i];
                 ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName?.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");
             }
 
@@ -855,7 +853,7 @@ namespace FabricObserver.Observers
                             HealthMessage = msg,
                             HealthReportTimeToLive = GetHealthReportTimeToLive(),
                             Property = "UnsupportedTargetAppValue",
-                            ReportType = HealthReportType.Application,
+                            ReportType = EntityType.Application,
                             State = HealthState.Warning,
                             NodeName = NodeName,
                             Observer = ObserverConstants.AppObserverName
@@ -899,17 +897,7 @@ namespace FabricObserver.Observers
 
         private async Task<bool> ProcessJSONConfigAsync()
         {
-            // Initialize the JSON settings processor.
-            _configSettings.Initialize(
-                            FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
-                                                                                 ObserverConstants.ObserverConfigurationPackageName)?.Settings,
-                                                                                 ConfigurationSectionName,
-                                                                                 "AppObserverDataFileName");
-
-            // Unit tests may have null path and filename, thus the null equivalence operations.
-            var appObserverConfigFileName = Path.Combine(ConfigPackagePath ?? string.Empty, _configSettings.AppObserverConfigFileName ?? string.Empty);
-
-            if (!File.Exists(appObserverConfigFileName))
+            if (!File.Exists(ConfigPackagePath))
             {
                 string message = $"Will not observe resource consumption on node {NodeName} as no configuration file has been supplied.";
                 var healthReport = new Utilities.HealthReport
@@ -919,7 +907,7 @@ namespace FabricObserver.Observers
                     HealthMessage = message,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     Property = "MissingAppConfiguration",
-                    ReportType = HealthReportType.Application,
+                    ReportType = EntityType.Application,
                     State = HealthState.Warning,
                     NodeName = NodeName,
                     Observer = ObserverConstants.AppObserverName,
@@ -956,7 +944,7 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            bool isJson = JsonHelper.IsJson<List<ApplicationInfo>>(await File.ReadAllTextAsync(appObserverConfigFileName));
+            bool isJson = JsonHelper.IsJson<List<ApplicationInfo>>(await File.ReadAllTextAsync(ConfigPackagePath));
 
             if (!isJson)
             {
@@ -968,7 +956,7 @@ namespace FabricObserver.Observers
                     HealthMessage = message,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     Property = "JsonValidation",
-                    ReportType = HealthReportType.Application,
+                    ReportType = EntityType.Application,
                     State = HealthState.Warning,
                     NodeName = NodeName,
                     Observer = ObserverConstants.AppObserverName,
@@ -1007,7 +995,7 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            await using Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using Stream stream = new FileStream(ConfigPackagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var appInfo = JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream);
             _userTargetList.AddRange(appInfo);
 
@@ -1023,7 +1011,7 @@ namespace FabricObserver.Observers
                     HealthMessage = message,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     Property = "Misconfiguration",
-                    ReportType = HealthReportType.Application,
+                    ReportType = EntityType.Application,
                     State = HealthState.Warning,
                     NodeName = NodeName,
                     Observer = ObserverConstants.AppObserverName,
@@ -1058,6 +1046,7 @@ namespace FabricObserver.Observers
                                     });
                 }
 
+                OperationalHealthEvents++;
                 IsUnhealthy = true;
                 return false;
             }
@@ -1070,6 +1059,12 @@ namespace FabricObserver.Observers
         /// </summary>
         private void SetPropertiesFromApplicationSettings()
         {
+            // Config path.
+            if (ConfigPackagePath == null)
+            {
+                ConfigPackagePath = Path.Combine(_settingsPath, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
+            }
+
             // Private working set monitoring.
             if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet), out bool monitorWsPriv))
             {
@@ -1358,7 +1353,7 @@ namespace FabricObserver.Observers
         private Task<ParallelLoopResult> MonitorDeployedAppsAsync(CancellationToken token)
         {
             Stopwatch execTimer = Stopwatch.StartNew();
-            int capacity = _replicaOrInstanceList.Count;
+            int capacity = ReplicaOrInstanceList.Count;
             var exceptions = new ConcurrentQueue<Exception>();
             AllAppCpuData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppMemDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
@@ -1380,7 +1375,7 @@ namespace FabricObserver.Observers
             // DEBUG
             //var threadData = new ConcurrentQueue<int>();
 
-            ParallelLoopResult result = Parallel.For (0, _replicaOrInstanceList.Count, _parallelOptions, (i, state) =>
+            ParallelLoopResult result = Parallel.For (0, ReplicaOrInstanceList.Count, _parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
@@ -1389,7 +1384,7 @@ namespace FabricObserver.Observers
 
                 // DEBUG
                 //threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
-                var repOrInst = _replicaOrInstanceList[i];
+                var repOrInst = ReplicaOrInstanceList[i];
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
                 bool checkCpu = false;
@@ -1448,7 +1443,7 @@ namespace FabricObserver.Observers
                                 HealthMessage = message,
                                 HealthReportTimeToLive = GetHealthReportTimeToLive(),
                                 Property = $"UserAccount({parentProc?.ProcessName})",
-                                ReportType = HealthReportType.Application,
+                                ReportType = EntityType.Application,
                                 State = ObserverManager.ObserverFailureHealthStateLevel,
                                 NodeName = NodeName,
                                 Observer = ObserverName,
@@ -1995,7 +1990,7 @@ namespace FabricObserver.Observers
 
                         if (replicasOrInstances?.Count > 0)
                         {
-                            _replicaOrInstanceList.AddRange(replicasOrInstances);
+                            ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
                             var targets = _userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
                                                                   || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
@@ -2166,7 +2161,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                if (replicaInfo?.HostProcessId > 0 && !_replicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
+                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
                 {
                     replicaMonitoringList.Enqueue(replicaInfo);
                 }
@@ -2279,14 +2274,14 @@ namespace FabricObserver.Observers
             _userTargetList?.Clear();
             _userTargetList = null;
 
-            _replicaOrInstanceList?.Clear();
-            _replicaOrInstanceList = null;
+            ReplicaOrInstanceList?.Clear();
+            ReplicaOrInstanceList = null;
 
             _processInfoDictionary?.Clear();
             _processInfoDictionary = null;
 
             _deployedApps?.Clear();
-            _deployedApps = null;   
+            _deployedApps = null;
 
             if (AllAppCpuData != null && AllAppCpuData.All(frud => !frud.Value.ActiveErrorOrWarning))
             {

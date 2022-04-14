@@ -48,7 +48,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.1.26";
+        private const string InternalVersionNumber = "3.2.0";
 
         private bool TaskCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -321,7 +321,7 @@ namespace FabricObserver.Observers
                     var telemetryData = new TelemetryData()
                     {
                         Description = message,
-                        HealthState = "Error",
+                        HealthState = HealthState.Error,
                         Metric = $"{ObserverConstants.FabricObserverName}_ServiceHealth",
                         NodeName = nodeName,
                         ObserverName = ObserverConstants.ObserverManagerName,
@@ -408,7 +408,7 @@ namespace FabricObserver.Observers
                     Code = FOErrorWarningCodes.Ok,
                     HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or updating.{configUpdateLinux}.",
                     State = HealthState.Ok,
-                    ReportType = HealthReportType.Application,
+                    ReportType = EntityType.Application,
                     NodeName = obs.NodeName
                 };
 
@@ -461,7 +461,7 @@ namespace FabricObserver.Observers
                                                                                               || s.HealthInformation.HealthState == HealthState.Error);
                         }
 
-                        healthReport.ReportType = HealthReportType.Node;
+                        healthReport.ReportType = EntityType.Node;
 
                         foreach (var evt in fabricObserverNodeHealthEvents)
                         {
@@ -791,7 +791,7 @@ namespace FabricObserver.Observers
                 {
                     AppName = new Uri(FabricServiceContext.CodePackageActivationContext.ApplicationName),
                     Code = FOErrorWarningCodes.Ok,
-                    ReportType = HealthReportType.Application,
+                    ReportType = EntityType.Application,
                     HealthMessage = $"Error updating FabricObserver with new configuration settings:{Environment.NewLine}{err}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
@@ -1015,7 +1015,7 @@ namespace FabricObserver.Observers
                             var telemetryData = new TelemetryData()
                             {
                                 Description = observerHealthWarning,
-                                HealthState = "Error",
+                                HealthState = HealthState.Error,
                                 Metric = $"{observer.ObserverName}_HealthState",
                                 NodeName = nodeName,
                                 ObserverName = ObserverConstants.ObserverManagerName,
@@ -1051,7 +1051,7 @@ namespace FabricObserver.Observers
                                 HealthMessage = observerHealthWarning,
                                 HealthReportTimeToLive = TimeSpan.MaxValue,
                                 Property = $"{observer.ObserverName}_HealthState",
-                                ReportType = HealthReportType.Application,
+                                ReportType = EntityType.Application,
                                 State = ObserverFailureHealthStateLevel,
                                 NodeName = nodeName,
                                 Observer = ObserverConstants.ObserverManagerName,
@@ -1186,7 +1186,7 @@ namespace FabricObserver.Observers
                         HealthMessage = message,
                         HealthReportTimeToLive = TimeSpan.FromDays(1),
                         Property = "NewVersionAvailable",
-                        ReportType = HealthReportType.Application,
+                        ReportType = EntityType.Application,
                         State = HealthState.Ok,
                         NodeName = nodeName,
                         Observer = ObserverConstants.ObserverManagerName
@@ -1201,7 +1201,7 @@ namespace FabricObserver.Observers
                         var telemetryData = new TelemetryData()
                         {
                             Description = message,
-                            HealthState = "Ok",
+                            HealthState = HealthState.Ok,
                             Metric = "NewVersionAvailable",
                             NodeName = nodeName,
                             ObserverName = ObserverConstants.ObserverManagerName,

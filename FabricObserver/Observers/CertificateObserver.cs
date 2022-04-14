@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -185,7 +186,7 @@ namespace FabricObserver.Observers
                 healthReport = new HealthReport
                 {
                     Observer = ObserverName,
-                    ReportType = HealthReportType.Node,
+                    ReportType = EntityType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
                     HealthMessage = "All cluster and monitored app certificates are healthy.",
@@ -199,7 +200,7 @@ namespace FabricObserver.Observers
                 {
                     var telemetryData = new TelemetryData()
                     {
-                        HealthState = "Ok",
+                        HealthState = HealthState.Ok,
                         NodeName = NodeName,
                         Description = "All cluster and monitored app certificates are healthy.",
                         ObserverName = ObserverName,
@@ -233,7 +234,7 @@ namespace FabricObserver.Observers
                 {
                     Code = FOErrorWarningCodes.WarningCertificateExpiration,
                     Observer = ObserverName,
-                    ReportType = HealthReportType.Node,
+                    ReportType = EntityType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
                     HealthMessage = healthMessage,
@@ -248,13 +249,13 @@ namespace FabricObserver.Observers
                 {
                     var telemetryData = new TelemetryData()
                     {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         Code = FOErrorWarningCodes.WarningCertificateExpiration,
-                        HealthState = "Warning",
+                        HealthState = HealthState.Warning,
                         NodeName = NodeName,
                         Metric = ErrorWarningProperty.CertificateExpiration,
                         Description = healthMessage,
                         ObserverName = ObserverName,
-                        OS = isWindows ? "Windows" : "Linux",
                         Source = ObserverConstants.FabricObserverName,
                     };
 
@@ -275,7 +276,7 @@ namespace FabricObserver.Observers
                                         ObserverName,
                                         OS = isWindows ? "Windows" : "Linux",
                                         Source = ObserverConstants.FabricObserverName,
-                                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration)
+                                        Value = FOErrorWarningCodes.GetCodeNameFromErrorCode(FOErrorWarningCodes.WarningCertificateExpiration)
                                     });
                 }
             }

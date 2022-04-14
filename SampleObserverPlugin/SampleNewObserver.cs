@@ -184,14 +184,14 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
-                ReportType = HealthReportType.Node,
+                ReportType = EntityType.Node,
                 State = HealthState.Ok
             };
 
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
             // Emit Telemetry - This will use whatever telemetry provider you have configured in FabricObserver Settings.xml.
-            var telemetryData = new TelemetryData(FabricClientInstance, Token)
+            var telemetryData = new TelemetryData()
             {
                 Code = FOErrorWarningCodes.Ok,
                 Description = message.ToString(),
@@ -203,9 +203,7 @@ namespace FabricObserver.Observers
 
             if (IsTelemetryEnabled)
             {
-                _ = TelemetryClient?.ReportHealthAsync(
-                        telemetryData,
-                        Token);
+                _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
             }
 
             // ETW.
