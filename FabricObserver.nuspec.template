@@ -1,50 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
-    <id>%PACKAGE_ID%</id>
-    <version>3.2.0</version>
-    <releaseNotes>
-	</releaseNotes>
-    <authors>Microsoft</authors>
-    <license type="expression">MIT</license>
-    <requireLicenseAcceptance>true</requireLicenseAcceptance>
-    <title>Service Fabric FabricObserver Application</title>
-    <icon>icon.png</icon>
-	<readme>fonuget.md</readme>
-    <language>en-US</language>
-    <description>This package contains the FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and is required to build .NET Standard 2.0 observer plugins.</description>
-    <contentFiles>
-      <files include="**" buildAction="None" copyToOutput="true" />
-    </contentFiles>
-    <dependencies>
-		<group targetFramework=".NETStandard2.0">
-			<dependency id="Azure.Storage.Blobs" version="12.9.1" />
-			<dependency id="Microsoft.Extensions.DependencyInjection" version="5.0.2" />
-			<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
-			<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
-			<dependency id="Newtonsoft.Json" version="13.0.1" />
-			<dependency id="Octokit" version="0.50.0" />
-			<dependency id="System.Diagnostics.DiagnosticSource" version="5.0.1" />
-			<dependency id="System.Diagnostics.EventLog" version="5.0.1" />
-			<dependency id="System.IO" version="4.3.0" />
-			<dependency id="System.Management" version="5.0.0" />
-			<dependency id="System.Numerics.Vectors" version="4.5.0" />
-			<dependency id="System.Runtime" version="4.3.1" />
-			<dependency id="System.Security.Cryptography.Algorithms" version="4.3.1" />
-			<dependency id="System.Security.Cryptography.Encoding" version="4.3.0" />
-			<dependency id="System.Security.Cryptography.Primitives" version="4.3.0" />
-			<dependency id="System.Security.Cryptography.X509Certificates" version="4.3.2" />
-			<dependency id="McMaster.NETCore.Plugins" version="1.4.0" />
-		</group>
-    </dependencies>
-    <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
-    <tags>azure service-fabric fabric-observer utility watchdog-service observability</tags>
-    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
-  </metadata>
-  <files>
-    <file src="**" target="contentFiles\any\any" />
-    <file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
-    <file src="%ROOT_PATH%\icon.png" target="" />
-	<file src="%ROOT_PATH%\fonuget.md" target="" />
-  </files>
+		<id>%PACKAGE_ID%</id>
+		<version>3.2.0</version>
+		<releaseNotes>
+			Bug fix: AppObserver targetAppType regression.
+			Bug fix: Concurrency setting missing for AppObserver's CPU FRUD type.
+			AppObserver: Added support for specifying serviceIncludeList in multiple config objects for one targetApp/targetAppType.
+		</releaseNotes>
+		<authors>Microsoft</authors>
+		<license type="expression">MIT</license>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<title>Service Fabric FabricObserver Application</title>
+		<icon>icon.png</icon>
+		<readme>fonuget.md</readme>
+		<language>en-US</language>
+		<description>This package contains the FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and is required to build .NET Standard 2.0 observer plugins.</description>
+		<contentFiles>
+			<files include="**" buildAction="None" copyToOutput="true" />
+		</contentFiles>
+		<dependencies>
+			<group targetFramework=".NETStandard2.0" />
+		</dependencies>
+		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
+		<tags>azure service-fabric fabric-observer utility watchdog-service observability</tags>
+		<copyright>© Microsoft Corporation. All rights reserved.</copyright>
+	</metadata>
+	<files>
+		<file src="**" target="contentFiles\any\any" />
+		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
+		<file src="%ROOT_PATH%\icon.png" target="" />
+		<file src="%ROOT_PATH%\fonuget.md" target="" />
+	</files>
 </package>
