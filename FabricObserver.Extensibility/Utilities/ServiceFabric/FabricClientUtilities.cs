@@ -22,6 +22,11 @@ namespace FabricObserver.Utilities.ServiceFabric
         private readonly ServiceContext _serviceContext;
         private readonly ParallelOptions _parallelOptions;
 
+        /// <summary>
+        /// FabricClient utilities class.
+        /// </summary>
+        /// <param name="fabricClient"></param>
+        /// <param name="serviceContext"></param>
         public FabricClientUtilities(FabricClient fabricClient, ServiceContext serviceContext)
         {
             _fabricClient = fabricClient;
