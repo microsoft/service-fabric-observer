@@ -222,7 +222,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public ConcurrentQueue<string> AppNames
+        public ConcurrentQueue<string> ServiceNames
         {
             get; set;
         } = new ConcurrentQueue<string>();
@@ -939,7 +939,7 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorCpuPercent : FOErrorWarningCodes.AppWarningCpuPercent;
                         break;
 
-                    case ErrorWarningProperty.CpuTime when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.CpuTime when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorCpuPercent : FOErrorWarningCodes.NodeWarningCpuPercent;
                         break;
@@ -964,12 +964,12 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.NodeErrorDiskAverageQueueLength : FOErrorWarningCodes.NodeWarningDiskAverageQueueLength;
                         break;
 
-                    case ErrorWarningProperty.MemoryConsumptionMb when entityType == EntityType.Application:
+                    case ErrorWarningProperty.MemoryConsumptionMb when entityType == EntityType.Application || entityType == EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorMemoryMB : FOErrorWarningCodes.AppWarningMemoryMB;
                         break;
 
-                    case ErrorWarningProperty.MemoryConsumptionMb when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.MemoryConsumptionMb when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorMemoryMB : FOErrorWarningCodes.NodeWarningMemoryMB;
                         break;
@@ -979,12 +979,12 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorMemoryPercent : FOErrorWarningCodes.AppWarningMemoryPercent;
                         break;
 
-                    case ErrorWarningProperty.MemoryConsumptionPercentage when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.MemoryConsumptionPercentage when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorMemoryPercent : FOErrorWarningCodes.NodeWarningMemoryPercent;
                         break;
 
-                    case ErrorWarningProperty.ActiveFirewallRules when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.ActiveFirewallRules when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.ErrorTooManyFirewallRules : FOErrorWarningCodes.WarningTooManyFirewallRules;
                         break;
@@ -994,7 +994,7 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
                         break;
 
-                    case ErrorWarningProperty.ActiveTcpPorts when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.ActiveTcpPorts when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
                         break;
@@ -1004,7 +1004,7 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
                         break;
 
-                    case ErrorWarningProperty.ActiveEphemeralPorts when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.ActiveEphemeralPorts when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
                         break;
@@ -1014,7 +1014,7 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.AppErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.AppWarningActiveEphemeralPortsPercent;
                         break;
 
-                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.NodeWarningActiveEphemeralPortsPercent;
                         break;
@@ -1034,12 +1034,12 @@ namespace FabricObserver.Observers
                         errorWarningCode = FOErrorWarningCodes.AppWarningKvsLvidsPercentUsed;
                         break;
 
-                    case ErrorWarningProperty.AllocatedFileHandles when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.AllocatedFileHandles when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyOpenFileHandles : FOErrorWarningCodes.NodeWarningTooManyOpenFileHandles;
                         break;
 
-                    case ErrorWarningProperty.AllocatedFileHandlesPct when entityType == EntityType.Machine:
+                    case ErrorWarningProperty.AllocatedFileHandlesPct when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent;
                         break;
@@ -1132,9 +1132,9 @@ namespace FabricObserver.Observers
                     SourceId = $"{ObserverName}({errorWarningCode})"
                 };
 
-                if (appName != null && AppNames.All(a => a != appName.OriginalString))
+                if (serviceName != null && ServiceNames.All(a => a != serviceName.OriginalString))
                 {
-                    AppNames.Enqueue(appName.OriginalString);
+                    ServiceNames.Enqueue(serviceName.OriginalString);
                 }
 
                 // Generate a Service Fabric Health Report.
@@ -1159,6 +1159,7 @@ namespace FabricObserver.Observers
                     // so it should be completely constructed (filled with data) regardless
                     // of user telemetry settings.
                     telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
+                    telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
                     telemetryData.Code = FOErrorWarningCodes.Ok;
 
                     if (replicaOrInstance != null && !string.IsNullOrWhiteSpace(replicaOrInstance.ContainerId))
@@ -1200,7 +1201,7 @@ namespace FabricObserver.Observers
                                 PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : string.Empty,
                                 ProcessId = procId,
                                 ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                                ServiceName = name ?? string.Empty,
+                                ServiceName = serviceName != null ? serviceName.OriginalString : string.Empty,
                                 Source = $"{ObserverName}({data.ActiveErrorOrWarningCode})",
                                 SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
                                 Value = data.AverageDataValue
@@ -1210,6 +1211,7 @@ namespace FabricObserver.Observers
                     var healthReport = new HealthReport
                     {
                         AppName = appName,
+                        ServiceName = serviceName,
                         Code = data.ActiveErrorOrWarningCode,
                         EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
                         HealthData = telemetryData,

@@ -183,8 +183,10 @@ namespace FabricObserver.Observers.Utilities
                         fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                         break;
 
-                    case EntityType.Node:
+                    case EntityType.Disk:
                     case EntityType.Machine:
+                    case EntityType.Node:
+ 
                         var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
                         fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                         break;

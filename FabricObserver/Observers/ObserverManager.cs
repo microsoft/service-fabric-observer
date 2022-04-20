@@ -408,62 +408,131 @@ namespace FabricObserver.Observers
                     Code = FOErrorWarningCodes.Ok,
                     HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or updating.{configUpdateLinux}.",
                     State = HealthState.Ok,
-                    EntityType = EntityType.Application,
                     NodeName = obs.NodeName
                 };
 
-                if (obs.AppNames.Count(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")) > 0)
+                // Service reports.
+                if (obs.ServiceNames.Count(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")) > 0)
                 {
-                    foreach (var app in obs.AppNames)
+                    foreach (var service in obs.ServiceNames)
                     {
-                        try
+                        // NetworkObserver generates ApplicationHealthReports..
+                        if (obs.ObserverName == ObserverConstants.NetworkObserverName)
                         {
-                            Uri appName = new Uri(app);
-                            var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
-                            var fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
-
-                            if (isConfigurationUpdateInProgress)
+                            try
                             {
-                                fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                                        && s.HealthInformation.HealthState == HealthState.Warning
-                                                                                        || s.HealthInformation.HealthState == HealthState.Error);
+                                Uri appName = new Uri(service);
+                                var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
+                                var fabricObserverAppHealthEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+
+                                if (isConfigurationUpdateInProgress)
+                                {
+                                    fabricObserverAppHealthEvents =
+                                        appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                                        && s.HealthInformation.HealthState == HealthState.Warning
+                                                                        || s.HealthInformation.HealthState == HealthState.Error);
+                                }
+
+                                foreach (var evt in fabricObserverAppHealthEvents)
+                                {
+                                    healthReport.AppName = appName;
+                                    healthReport.EntityType = EntityType.Application;
+                                    healthReport.Property = evt.HealthInformation.Property;
+                                    healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                    healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                                    await Task.Delay(150).ConfigureAwait(false);
+                                }
                             }
-
-                            foreach (var evt in fabricObserverAppHealthEvents)
+                            catch (FabricException)
                             {
-                                healthReport.AppName = appName;
+
+                            }
+                        }
+                        else
+                        {
+                            try
+                            {
+                                Uri serviceName = new Uri(service);
+                                var serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName).ConfigureAwait(false);
+                                var fabricObserverServiceHealthEvents = serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+
+                                if (isConfigurationUpdateInProgress)
+                                {
+                                    fabricObserverServiceHealthEvents =
+                                        serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                                        && s.HealthInformation.HealthState == HealthState.Warning
+                                                                        || s.HealthInformation.HealthState == HealthState.Error);
+                                }
+
+                                foreach (var evt in fabricObserverServiceHealthEvents)
+                                {
+                                    healthReport.ServiceName = serviceName;
+                                    healthReport.EntityType = EntityType.Service;
+                                    healthReport.Property = evt.HealthInformation.Property;
+                                    healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                    healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                                    await Task.Delay(150).ConfigureAwait(false);
+                                }
+                            }
+                            catch (FabricException)
+                            {
+
+                            }
+                        }
+                    }
+                }
+                else if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
+                {
+                    // System app reports.
+                    var sysAppHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName)).ConfigureAwait(false);
+
+                    if (sysAppHealth != null)
+                    {
+                        foreach (var evt in sysAppHealth.HealthEvents.Where(s => s.HealthInformation.SourceId.Contains(ObserverConstants.FabricSystemObserverName)))
+                        {
+                            try
+                            {
+                                healthReport.AppName = new Uri(ObserverConstants.SystemAppName);
                                 healthReport.Property = evt.HealthInformation.Property;
                                 healthReport.SourceId = evt.HealthInformation.SourceId;
+                                healthReport.EntityType = EntityType.Application;
 
                                 var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                                 healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                await Task.Delay(50).ConfigureAwait(false);
+                                await Task.Delay(150).ConfigureAwait(false);
+                            }
+                            catch (FabricException)
+                            {
+
                             }
                         }
-                        catch (FabricException)
-                        {
-
-                        }
-                    }
+                    }   
                 }
                 else
-                {
-                    try
+                { 
+                    // Node reports.
+                    var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
+                    var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+
+                    if (isConfigurationUpdateInProgress)
                     {
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
-                        var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+                        fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                                                            && s.HealthInformation.HealthState == HealthState.Warning
+                                                                                            || s.HealthInformation.HealthState == HealthState.Error);
+                    }
 
-                        if (isConfigurationUpdateInProgress)
-                        {
-                            fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                                              && s.HealthInformation.HealthState == HealthState.Warning
-                                                                                              || s.HealthInformation.HealthState == HealthState.Error);
-                        }
+                    healthReport.EntityType = EntityType.Machine;
 
-                        healthReport.EntityType = EntityType.Node;
-
-                        foreach (var evt in fabricObserverNodeHealthEvents)
+                    foreach (var evt in fabricObserverNodeHealthEvents)
+                    {
+                        try
                         {
                             healthReport.Property = evt.HealthInformation.Property;
                             healthReport.SourceId = evt.HealthInformation.SourceId;
@@ -471,13 +540,13 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            await Task.Delay(50).ConfigureAwait(false);
+                            await Task.Delay(150).ConfigureAwait(false);
+
                         }
+                        catch (FabricException)
+                        {
 
-                    }
-                    catch (FabricException)
-                    {
-
+                        }
                     }
                 }
 

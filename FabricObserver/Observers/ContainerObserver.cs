@@ -155,13 +155,13 @@ namespace FabricObserver.Observers
                 }
 
                 // Report -> Send Telemetry/Write ETW/Create SF Health Warnings (if threshold breach)
-               
+                
                 ProcessResourceDataReportHealth(
                                     cpuFrudInst,
                                     app.CpuErrorLimitPercent,
                                     app.CpuWarningLimitPercent,
                                     timeToLive,
-                                    EntityType.Application,
+                                    EntityType.Service,
                                     repOrInst);
                 
                 ProcessResourceDataReportHealth(
@@ -169,7 +169,7 @@ namespace FabricObserver.Observers
                                     app.MemoryErrorLimitMb,
                                     app.MemoryWarningLimitMb,
                                     timeToLive,
-                                    EntityType.Application,
+                                    EntityType.Service,
                                     repOrInst);
                
             });

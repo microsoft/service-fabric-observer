@@ -145,6 +145,7 @@ namespace FabricObserver.Observers
                         {
                             ApplicationName = conn.TargetApp,
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
+                            EntityType = EntityType.Application,
                             HealthState = HealthState.Warning,
                             Description = healthMessage,
                             ObserverName = ObserverName,
@@ -162,6 +163,7 @@ namespace FabricObserver.Observers
                         {
                             AppName = new Uri(conn.TargetApp),
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
+                            EntityType = EntityType.Application,
                             EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
                             HealthData = telemetryData,
                             HealthMessage = healthMessage,
@@ -171,7 +173,6 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
-                            EntityType = EntityType.Application,
                             ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {conn.HostName}"
                         };
 
@@ -234,6 +235,7 @@ namespace FabricObserver.Observers
                             {
                                 ApplicationName = conn.TargetApp,
                                 Code = FOErrorWarningCodes.Ok,
+                                EntityType = EntityType.Application,
                                 HealthState = HealthState.Ok,
                                 Description = healthMessage,
                                 ObserverName = ObserverName,
@@ -627,9 +629,9 @@ namespace FabricObserver.Observers
                         TargetApp = targetApp
                     });
 
-                if (!AppNames.Contains(targetApp))
+                if (!ServiceNames.Contains(targetApp))
                 {
-                    AppNames.Enqueue(targetApp);
+                    ServiceNames.Enqueue(targetApp);
                 }
             }
         }

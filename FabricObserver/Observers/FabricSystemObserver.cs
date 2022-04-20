@@ -633,7 +633,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    allEphemeralTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, proc, frudCapacity, UseCircularBuffer));
+                    allEphemeralTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 

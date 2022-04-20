@@ -74,7 +74,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string ActiveEphemeralPortsPercentage = "Active Ephemeral Ports (Percent)";
         /// <summary>
-        /// Total Ephemeral Ports
+        /// Total Ephemeral Ports. This is used by NodeObserver only.
         /// </summary>
         public const string TotalEphemeralPorts = "Total Ephemeral Ports";
 
