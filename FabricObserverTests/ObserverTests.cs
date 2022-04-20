@@ -193,13 +193,10 @@ namespace FabricObserverTests
                         IEnumerable<HealthEvent> fabricObserverServiceHealthEvents = null;
 
                         var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(serviceName).ConfigureAwait(false);
-                        fabricObserverServiceHealthEvents = serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                    && s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
-
-                        if (fabricObserverServiceHealthEvents == null)
-                        {
-                            continue;
-                        }
+                        fabricObserverServiceHealthEvents = serviceHealth.HealthEvents?.Where(
+                            s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                              && s.HealthInformation.HealthState == HealthState.Error
+                              || s.HealthInformation.HealthState == HealthState.Warning);
 
                         foreach (var evt in fabricObserverServiceHealthEvents)
                         {
@@ -208,8 +205,8 @@ namespace FabricObserverTests
                             healthReport.SourceId = evt.HealthInformation.SourceId;
                             var healthReporter = new ObserverHealthReporter(logger, fabricClient);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
-                            await Task.Delay(500);
-                            await HealthReportExistsAsync(healthReport.EntityType, service, evt, fabricClient);
+                            await Task.Delay(150);
+                            await HealthReportNotExistsThrowAsync(healthReport.EntityType, service, evt, fabricClient);
                         }
                     }
                 }
@@ -221,8 +218,9 @@ namespace FabricObserverTests
             if (sysAppHealth != null)
             {
                 foreach (var evt in sysAppHealth.HealthEvents.Where(
-                            s => s.HealthInformation.SourceId.Contains(ObserverConstants.FabricSystemObserverName)
-                              && s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning))
+                                s => s.HealthInformation.SourceId.Contains(ObserverConstants.FabricSystemObserverName)
+                                  && s.HealthInformation.HealthState == HealthState.Error 
+                                  || s.HealthInformation.HealthState == HealthState.Warning))
                 {
                     
                     healthReport.AppName = new Uri(ObserverConstants.SystemAppName);
@@ -231,17 +229,18 @@ namespace FabricObserverTests
                     healthReport.EntityType = EntityType.Application;
                     var healthReporter = new ObserverHealthReporter(logger, fabricClient);
                     healthReporter.ReportHealthToServiceFabric(healthReport);
-                    await Task.Delay(500);
-                    await HealthReportExistsAsync(healthReport.EntityType, ObserverConstants.SystemAppName, evt, fabricClient);
+                    await Task.Delay(150);
+                    await HealthReportNotExistsThrowAsync(healthReport.EntityType, ObserverConstants.SystemAppName, evt, fabricClient);
                 }
             }
 
             // Node reports.
             var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName).ConfigureAwait(false);
             var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(
-                s => (s.HealthInformation.SourceId.Contains(ObserverConstants.NodeObserverName)
-                    || s.HealthInformation.SourceId.Contains(ObserverConstants.DiskObserverName))
-                    && s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
+                    s => (s.HealthInformation.SourceId.Contains(ObserverConstants.NodeObserverName)
+                          || s.HealthInformation.SourceId.Contains(ObserverConstants.DiskObserverName))
+                      && s.HealthInformation.HealthState == HealthState.Error
+                      || s.HealthInformation.HealthState == HealthState.Warning);
 
             healthReport.EntityType = EntityType.Machine;
 
@@ -251,12 +250,12 @@ namespace FabricObserverTests
                 healthReport.SourceId = evt.HealthInformation.SourceId;
                 var healthReporter = new ObserverHealthReporter(logger, fabricClient);
                 healthReporter.ReportHealthToServiceFabric(healthReport);
-                await Task.Delay(500);
-                await HealthReportExistsAsync(healthReport.EntityType, NodeName, evt, fabricClient);
+                await Task.Delay(150);
+                await HealthReportNotExistsThrowAsync(healthReport.EntityType, NodeName, evt, fabricClient);
             }
         }
 
-        private static async Task HealthReportExistsAsync(EntityType entityType, string name, HealthEvent evt, FabricClient fabricClient)
+        private static async Task HealthReportNotExistsThrowAsync(EntityType entityType, string name, HealthEvent evt, FabricClient fabricClient)
         {
             if (entityType == EntityType.Application && name == ObserverConstants.SystemAppName)
             {
@@ -264,8 +263,8 @@ namespace FabricObserverTests
                 var healthyEvents =
                     appHealth.HealthEvents?.Where(
                         s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId
-                        && s.HealthInformation.Property == evt.HealthInformation.Property
-                        && s.HealthInformation.HealthState == HealthState.Ok);
+                          && s.HealthInformation.Property == evt.HealthInformation.Property
+                          && s.HealthInformation.HealthState == HealthState.Ok);
 
                 if (healthyEvents?.Count() == 0)
                 {
@@ -278,8 +277,8 @@ namespace FabricObserverTests
                 var healthyEvents =
                     serviceHealth.HealthEvents?.Where(
                         s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId 
-                        && s.HealthInformation.Property == evt.HealthInformation.Property
-                        && s.HealthInformation.HealthState == HealthState.Ok);
+                          && s.HealthInformation.Property == evt.HealthInformation.Property
+                          && s.HealthInformation.HealthState == HealthState.Ok);
 
                 if (healthyEvents?.Count() == 0)
                 {
@@ -294,8 +293,8 @@ namespace FabricObserverTests
                 var healthyEvents =
                     nodeHealth.HealthEvents?.Where(
                         s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId
-                        && s.HealthInformation.Property == evt.HealthInformation.Property
-                        && s.HealthInformation.HealthState == HealthState.Ok);
+                          && s.HealthInformation.Property == evt.HealthInformation.Property
+                          && s.HealthInformation.HealthState == HealthState.Ok);
 
                 if (healthyEvents?.Count() == 0)
                 {
