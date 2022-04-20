@@ -69,18 +69,23 @@ namespace FabricObserver.Observers
                                              Token);*/
 
             // Polly retry policy for when FabricException is thrown by its Execute predicate (GetDeployedApplicationPagedListAsync).
-            var policy = Policy.Handle<FabricException>().WaitAndRetry(
-                                                            new[]
-                                                            {
-                                                                TimeSpan.FromSeconds(1),
-                                                                TimeSpan.FromSeconds(2),
-                                                                TimeSpan.FromSeconds(3)
-                                                            });
+            var policy = Policy.Handle<FabricException>()
+                                   .Or<TimeoutException>()
+                                   .WaitAndRetryAsync(
+                                        new[]
+                                        {
+                                            TimeSpan.FromSeconds(1),
+                                            TimeSpan.FromSeconds(3),
+                                            TimeSpan.FromSeconds(5),
+                                            TimeSpan.FromSeconds(10),
+                                        });
 
-            var appList = await policy.Execute(() => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                        deployedAppQueryDesc,
-                                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                                        Token));
+            var appList = 
+                await policy.ExecuteAsync(
+                () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                            deployedAppQueryDesc,
+                                                            ConfigurationSettings.AsyncTimeout,
+                                                            Token));
 
             // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
             // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports

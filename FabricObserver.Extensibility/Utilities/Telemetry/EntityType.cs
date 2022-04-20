@@ -11,23 +11,23 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     public enum EntityType
     {
         /// <summary>
-        /// Application report.
+        /// Application type.
         /// </summary>
         Application,
         /// <summary>
-        /// Node report.
+        /// Node type.
         /// </summary>
         Node,
         /// <summary>
-        /// Service report.
+        /// Service type.
         /// </summary>
         Service,
         /// <summary>
-        /// StatefulService report.
+        /// StatefulService type.
         /// </summary>
         StatefulService,
         /// <summary>
-        /// StatelessService report.
+        /// StatelessService type.
         /// </summary>
         StatelessService,
         /// <summary>
@@ -35,12 +35,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// </summary>
         Partition,
         /// <summary>
-        /// DeployedApplication report.
+        /// DeployedApplication type.
         /// </summary>
         DeployedApplication,
         /// <summary>
         /// Process. This is only for direct process restarts of a Service Fabric system service executable.
         /// </summary>
-        Process
+        Process,
+        /// <summary>
+        /// Machine (physical or virtual) type. This is for machine reboot repairs.
+        /// </summary>
+        Machine,
+        /// <summary>
+        /// Replica type.
+        /// </summary>
+        Replica,
+        /// <summary>
+        /// Disk type.
+        /// </summary>
+        Disk
     }
 }

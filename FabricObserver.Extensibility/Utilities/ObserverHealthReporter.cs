@@ -148,7 +148,6 @@ namespace FabricObserver.Observers.Utilities
             {
                 switch (healthReport.EntityType)
                 {
-                    // To SFX.
                     case EntityType.Application when healthReport.AppName != null:
 
                         var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
@@ -185,6 +184,7 @@ namespace FabricObserver.Observers.Utilities
                         break;
 
                     case EntityType.Node:
+                    case EntityType.Machine:
                         var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
                         fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                         break;

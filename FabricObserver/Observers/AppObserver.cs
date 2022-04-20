@@ -297,7 +297,7 @@ namespace FabricObserver.Observers
                             app.CpuErrorLimitPercent,
                             app.CpuWarningLimitPercent,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -317,7 +317,7 @@ namespace FabricObserver.Observers
                             app.MemoryErrorLimitMb,
                             app.MemoryWarningLimitMb,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -337,7 +337,7 @@ namespace FabricObserver.Observers
                             app.MemoryErrorLimitPercent,
                             app.MemoryWarningLimitPercent,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -357,7 +357,7 @@ namespace FabricObserver.Observers
                             app.NetworkErrorActivePorts,
                             app.NetworkWarningActivePorts,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -377,7 +377,7 @@ namespace FabricObserver.Observers
                             app.NetworkErrorEphemeralPorts,
                             app.NetworkWarningEphemeralPorts,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -397,7 +397,7 @@ namespace FabricObserver.Observers
                             app.NetworkErrorEphemeralPortsPercent,
                             app.NetworkWarningEphemeralPortsPercent,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -417,7 +417,7 @@ namespace FabricObserver.Observers
                             app.ErrorOpenFileHandles,
                             app.WarningOpenFileHandles,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -437,7 +437,7 @@ namespace FabricObserver.Observers
                             app.ErrorThreadCount,
                             app.WarningThreadCount,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }
@@ -458,7 +458,7 @@ namespace FabricObserver.Observers
                             0,
                             KvsLvidsWarningPercentage,
                             TTL,
-                            EntityType.Application,
+                            EntityType.Service,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps);
                 }           

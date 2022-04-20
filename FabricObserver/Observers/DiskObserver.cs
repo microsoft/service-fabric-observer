@@ -513,7 +513,8 @@ namespace FabricObserver.Observers
                                         data,
                                         DiskSpacePercentErrorThreshold,
                                         DiskSpacePercentWarningThreshold,
-                                        timeToLiveWarning);
+                                        timeToLiveWarning,
+                                        EntityType.Disk);
                 }
 
                 // Folder size.
@@ -539,7 +540,8 @@ namespace FabricObserver.Observers
                                         data,
                                         errorThreshold,
                                         warningThreshold,
-                                        timeToLiveWarning);
+                                        timeToLiveWarning,
+                                        EntityType.Disk);
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
@@ -554,7 +556,8 @@ namespace FabricObserver.Observers
                                             data,
                                             AverageQueueLengthErrorThreshold,
                                             AverageQueueLengthWarningThreshold,
-                                            timeToLiveWarning);
+                                            timeToLiveWarning,
+                                            EntityType.Disk);
                     }
                 }
 
@@ -567,7 +570,7 @@ namespace FabricObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
                         var data = DiskSpaceAvailableMbData[i];
-                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning);
+                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning, EntityType.Disk);
                     }
 
                     // Disk Space Total
@@ -575,7 +578,7 @@ namespace FabricObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
                         var data = DiskSpaceTotalMbData[i];
-                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning);
+                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning, EntityType.Disk);
                     }
                 }
 
