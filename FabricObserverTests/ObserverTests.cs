@@ -205,7 +205,7 @@ namespace FabricObserverTests
                             healthReport.SourceId = evt.HealthInformation.SourceId;
                             var healthReporter = new ObserverHealthReporter(logger, fabricClient);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
-                            await Task.Delay(150);
+                            await Task.Delay(250);
                             await HealthReportNotExistsThrowAsync(healthReport.EntityType, service, evt, fabricClient);
                         }
                     }
@@ -255,9 +255,9 @@ namespace FabricObserverTests
             }
         }
 
-        private static async Task HealthReportNotExistsThrowAsync(EntityType entityType, string name, HealthEvent evt, FabricClient fabricClient)
+        private static async Task HealthReportNotExistsThrowAsync(EntityType entityType, string entityName, HealthEvent evt, FabricClient fabricClient)
         {
-            if (entityType == EntityType.Application && name == ObserverConstants.SystemAppName)
+            if (entityType == EntityType.Application && entityName == ObserverConstants.SystemAppName)
             {
                 var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName)).ConfigureAwait(false);
                 var healthyEvents =
@@ -273,7 +273,7 @@ namespace FabricObserverTests
             }
             else if (entityType == EntityType.Service)
             {   
-                var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(new Uri(name)).ConfigureAwait(false);
+                var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(new Uri(entityName)).ConfigureAwait(false);
                 var healthyEvents =
                     serviceHealth.HealthEvents?.Where(
                         s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId 
@@ -282,13 +282,13 @@ namespace FabricObserverTests
 
                 if (healthyEvents?.Count() == 0)
                 {
-                    throw new HealthReportNotFoundException($"OK clear for {name} not found.");
+                    throw new HealthReportNotFoundException($"OK clear for {entityName} not found.");
                 }
             }
             else if (entityType == EntityType.Node || entityType == EntityType.Machine || entityType == EntityType.Disk)
             {
                 // Node reports
-                var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(name).ConfigureAwait(false);
+                var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(entityName).ConfigureAwait(false);
 
                 var healthyEvents =
                     nodeHealth.HealthEvents?.Where(
