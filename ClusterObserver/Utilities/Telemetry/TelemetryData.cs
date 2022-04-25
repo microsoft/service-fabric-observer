@@ -110,11 +110,6 @@ namespace ClusterObserver.Utilities.Telemetry
             get; set;
         }
 
-        public string RepairId
-        {
-            get; set;
-        }
-
         public string Property
         {
             get; set;

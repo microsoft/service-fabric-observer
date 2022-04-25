@@ -22,7 +22,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private const string TcpProtocol = "tcp";
         private (int, int) windowsDynamicPortRange = (-1, -1);
-        private ConcurrentQueue<string> netstatOutput = null;
+        private readonly ConcurrentDictionary<int, string> netstatOutput;
         private const int netstatOutputMaxCacheTimeSeconds = 15;
         private DateTime LastCacheUpdate = DateTime.MinValue;
         private readonly object _lock =  new object();
@@ -30,6 +30,7 @@ namespace FabricObserver.Observers.Utilities
         public WindowsInfoProvider()
         {
             windowsDynamicPortRange = TupleGetDynamicPortRange();
+            netstatOutput = new ConcurrentDictionary<int, string>();
         }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
@@ -254,12 +255,15 @@ namespace FabricObserver.Observers.Utilities
 
         private int GetTcpPortCount(int processId = -1, bool ephemeral = false)
         {
-            lock (_lock)
+            if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
             {
-                if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+                lock (_lock)
                 {
-                    RefreshNetstatData();
-                    windowsDynamicPortRange = TupleGetDynamicPortRange();
+                    if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+                    {
+                        RefreshNetstatData();
+                        windowsDynamicPortRange = TupleGetDynamicPortRange();
+                    }
                 }
             }
 
@@ -273,7 +277,7 @@ namespace FabricObserver.Observers.Utilities
                 (lowPortRange, highPortRange) = windowsDynamicPortRange;
             }
      
-            foreach (string portRow in netstatOutput)
+            foreach (string portRow in netstatOutput.Values)
             {
                 if (string.IsNullOrWhiteSpace(portRow))
                 {
@@ -330,7 +334,8 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                netstatOutput = new ConcurrentQueue<string>();
+                netstatOutput.Clear();
+
                 string error = null;
                 process = new Process();
                 var ps = new ProcessStartInfo
@@ -343,8 +348,13 @@ namespace FabricObserver.Observers.Utilities
                     RedirectStandardError = true
                 };
 
+                int i = 0;
+
                 // Capture any error information from netstat.
                 process.ErrorDataReceived += (sender, e) => { error += e.Data; };
+
+                // Fill the dictionary with netstat output lines.
+                process.OutputDataReceived += (sender, outputLine) => { ++i; if (!string.IsNullOrWhiteSpace(outputLine.Data)) { netstatOutput.TryAdd(i, outputLine.Data.Trim()); } };
                 process.StartInfo = ps;
 
                 if (!process.Start())
@@ -353,26 +363,12 @@ namespace FabricObserver.Observers.Utilities
                     return;
                 }
 
-                var stdOutput = process.StandardOutput;
-
-                // Start asynchronous read operation on error stream.  
+                // Start asynchronous read operations.
                 process.BeginErrorReadLine();
-
-                string portRow;
-                while ((portRow = stdOutput.ReadLine()) != null)
-                {
-                    if (string.IsNullOrWhiteSpace(portRow))
-                    {
-                        continue;
-                    }
-
-                    netstatOutput.Enqueue(portRow.Trim());
-                }
+                process.BeginOutputReadLine();
 
                 process.WaitForExit();
-
                 int exitStatus = process.ExitCode;
-                stdOutput.Close();
 
                 if (exitStatus == 0)
                 {
@@ -380,12 +376,16 @@ namespace FabricObserver.Observers.Utilities
                     return;
                 }
 
-                // there was an error associated with the non-zero exit code.
+                // There was an error associated with the non-zero exit code.
                 string msg = $"RefreshNetstatData: netstat -qno -p {TcpProtocol} exited with {exitStatus}: {error}";
                 Logger.LogWarning(msg);
 
                 // Handled by Retry.Do.
-                throw new Exception(msg);
+                throw new RetryableException(msg);
+            }
+            catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException || ex is NotSupportedException || ex is SystemException)
+            {
+                Logger.LogWarning($"Unable to get netstat information:{Environment.NewLine}{ex}");
             }
             finally
             {

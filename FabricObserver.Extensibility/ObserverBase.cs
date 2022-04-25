@@ -348,6 +348,11 @@ namespace FabricObserver.Observers
             NodeType = FabricServiceContext.NodeContext.NodeType;
             SetObserverConfiguration();
 
+            if (ObserverName == ObserverConstants.AppObserverName)
+            {
+                ServiceNames.Enqueue(FabricServiceContext.ServiceName.OriginalString);
+            }
+
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.ObserverLogPathParameter);
@@ -1132,7 +1137,7 @@ namespace FabricObserver.Observers
                     SourceId = $"{ObserverName}({errorWarningCode})"
                 };
 
-                if (serviceName != null && ServiceNames.All(a => a != serviceName.OriginalString))
+                if (serviceName != null && !ServiceNames.Any(a => a == serviceName.OriginalString))
                 {
                     ServiceNames.Enqueue(serviceName.OriginalString);
                 }

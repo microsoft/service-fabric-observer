@@ -4,9 +4,11 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.0</version>
 		<releaseNotes>
-			Bug fix: AppObserver targetAppType regression.
-			Bug fix: Concurrency setting missing for AppObserver's CPU FRUD type.
-			AppObserver: Added support for specifying serviceIncludeList in multiple config objects for one targetApp/targetAppType.
+- This is a relatively major release with significant changes. Many of these will be transparent to you execpt for the new service deployment model (removal of DefaultServices in ApplicationManifest.xml to support ARM deployment).
+- Update TelemetryData type (implements ITelemetryData).
+- New EntityType type.
+- AppObserver now generates ServiceHealthReport health reports, which will put service entities into Error or Warning depending upon your configuration thresholds.
+- Code improvements and bug fixes.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

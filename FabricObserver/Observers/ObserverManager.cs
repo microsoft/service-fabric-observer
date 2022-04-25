@@ -50,7 +50,7 @@ namespace FabricObserver.Observers
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.2.0";
 
-        private bool TaskCancelled =>
+        private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
 
         private int ObserverExecutionLoopSleepSeconds
@@ -418,14 +418,14 @@ namespace FabricObserver.Observers
                     {
                         try
                         {
-                            // NetworkObserver generates ApplicationHealthReports..
+                            // App reports. NetworkObserver only generates App health reports and stores app name in ServiceNames field (TODO: Change that).
                             if (obs.ObserverName == ObserverConstants.NetworkObserverName)
                             {
                                 Uri appName = new Uri(service);
                                 var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
                                 var fabricObserverAppHealthEvents = appHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
-                                if (fabricObserverAppHealthEvents != null)
+                                if (fabricObserverAppHealthEvents != null && fabricObserverAppHealthEvents.Any())
                                 {
                                     if (isConfigurationUpdateInProgress)
                                     {
@@ -456,7 +456,7 @@ namespace FabricObserver.Observers
                                     }
                                 }
                             }
-                            else
+                            else // Service reports.
                             {
                                 Uri serviceName = new Uri(service);
                                 ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName).ConfigureAwait(false);
@@ -575,7 +575,6 @@ namespace FabricObserver.Observers
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
                                     await Task.Delay(150).ConfigureAwait(false);
-
                                 }
                                 catch (FabricException)
                                 {
@@ -598,6 +597,9 @@ namespace FabricObserver.Observers
             if (!isConfigurationUpdateInProgress)
             {
                 SignalAbortToRunningObserver();
+
+                // Clear any ObserverManager warnings/errors.
+                await RemoveObserverManagerHealthReportsAsync();
             }
         }
 
@@ -623,6 +625,80 @@ namespace FabricObserver.Observers
             }
 
             disposed = true;
+        }
+
+        private async Task RemoveObserverManagerHealthReportsAsync()
+        {
+            var healthReport = new HealthReport
+            {
+                Code = FOErrorWarningCodes.Ok,
+                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or updating.",
+                State = HealthState.Ok,
+                NodeName = nodeName
+            };
+
+            try
+            {
+                // FO
+                ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(FabricServiceContext.ServiceName).ConfigureAwait(false);
+                var obsMgrServiceHealthEvents = serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(ObserverConstants.ObserverManagerName));
+                
+                if (obsMgrServiceHealthEvents != null && obsMgrServiceHealthEvents.Any())
+                {
+                    healthReport.EntityType = EntityType.Service;
+                    healthReport.ServiceName = FabricServiceContext.ServiceName;
+
+                    foreach (var obsMgrAppHealthEvent in obsMgrServiceHealthEvents)
+                    {
+                        try
+                        {
+                            healthReport.Property = obsMgrAppHealthEvent.HealthInformation.Property;
+                            healthReport.SourceId = obsMgrAppHealthEvent.HealthInformation.SourceId;
+
+                            var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                            await Task.Delay(150).ConfigureAwait(false);
+                        }
+                        catch (FabricException)
+                        {
+
+                        }
+                    }
+                }
+
+                // Node Level
+                var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(FabricServiceContext.NodeContext.NodeName).ConfigureAwait(false);
+                var obsMgrNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(ObserverConstants.ObserverManagerName));
+
+                if (obsMgrNodeHealthEvents != null && obsMgrNodeHealthEvents.Any())
+                {
+                    healthReport.AppName = null;
+                    healthReport.EntityType = EntityType.Node;
+
+                    foreach (var evt in obsMgrNodeHealthEvents)
+                    {
+                        try
+                        {
+                            healthReport.Property = evt.HealthInformation.Property;
+                            healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                            var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                            await Task.Delay(150).ConfigureAwait(false);
+                        }
+                        catch (FabricException)
+                        {
+
+                        }
+                    }
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+
+            }
         }
 
         private static bool IsObserverWebApiAppInstalled()
@@ -1092,7 +1168,7 @@ namespace FabricObserver.Observers
 
                 try
                 {
-                    if (TaskCancelled || shutdownSignaled)
+                    if (RuntimeTokenCancelled || shutdownSignaled)
                     {
                         return;
                     }
@@ -1110,7 +1186,7 @@ namespace FabricObserver.Observers
 
                     // The observer is taking too long (hung?), move on to next observer.
                     // Currently, this observer will not run again for the lifetime of this FO service instance.
-                    if (!isCompleted && !(TaskCancelled || shutdownSignaled))
+                    if (!isCompleted && !(RuntimeTokenCancelled || shutdownSignaled))
                     {
                         string observerHealthWarning = $"{observer.ObserverName} on node {nodeName} has exceeded its specified Maximum run time of {ObserverExecutionTimeout.TotalSeconds} seconds. " +
                                                        $"This means something is wrong with {observer.ObserverName}. It will not be run again. Please look into it.";
@@ -1155,12 +1231,12 @@ namespace FabricObserver.Observers
                         {
                             var healthReport = new HealthReport
                             {
-                                AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                                ServiceName = FabricServiceContext.ServiceName,
                                 EmitLogEvent = false,
                                 HealthMessage = observerHealthWarning,
-                                HealthReportTimeToLive = TimeSpan.MaxValue,
+                                HealthReportTimeToLive = TimeSpan.FromMinutes(15),
                                 Property = $"{observer.ObserverName}_HealthState",
-                                EntityType = EntityType.Application,
+                                EntityType = EntityType.Service,
                                 State = ObserverFailureHealthStateLevel,
                                 NodeName = nodeName,
                                 Observer = ObserverConstants.ObserverManagerName,

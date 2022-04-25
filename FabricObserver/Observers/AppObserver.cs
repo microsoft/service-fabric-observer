@@ -1438,15 +1438,15 @@ namespace FabricObserver.Observers
 
                             var healthReport = new Utilities.HealthReport
                             {
-                                AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                                ServiceName = FabricServiceContext.ServiceName,
                                 EmitLogEvent = EnableVerboseLogging,
                                 HealthMessage = message,
                                 HealthReportTimeToLive = GetHealthReportTimeToLive(),
                                 Property = $"UserAccount({parentProc?.ProcessName})",
-                                EntityType = EntityType.Application,
+                                EntityType = EntityType.Service,
                                 State = ObserverManager.ObserverFailureHealthStateLevel,
                                 NodeName = NodeName,
-                                Observer = ObserverName,
+                                Observer = ObserverName
                             };
 
                             // Generate a Service Fabric Health Report.
