@@ -33,6 +33,8 @@ namespace FabricObserver
             : base(context)
         {
             fabricClient = new FabricClient();
+            fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
+            fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
         }
 
         /// <summary>

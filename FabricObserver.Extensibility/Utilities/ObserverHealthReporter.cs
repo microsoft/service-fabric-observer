@@ -28,8 +28,6 @@ namespace FabricObserver.Observers.Utilities
         {
             this.fabricClient = fabricClient ?? throw new ArgumentException("fabricClient can't be null.");
             this.logger = logger ?? throw new ArgumentException("logger can't be null.");
-            this.fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
-            this.fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
         }
 
         /// <summary>
