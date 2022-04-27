@@ -1,7 +1,7 @@
 [
   {
     "targetApp": "HealthMetrics",
-    "serviceIncludeList": "DoctorActorServiceType",
+    "serviceIncludeList": "DoctorActorService",
     "cpuWarningLimitPercent": 50,
     "memoryWarningLimitPercent": 30
   }

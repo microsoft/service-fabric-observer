@@ -12,13 +12,13 @@
   },
   {
     "targetApp": "Health Metrics",
-    "serviceIncludeList": "BandActorServiceType",
+    "serviceIncludeList": "BandActorService",
     "cpuWarningLimitPercent": 90,
     "memoryWarningLimitPercent": 42
   },
   {
     "targetApp": "Health Metrics",
-    "serviceIncludeList": "DoctorActorServiceType",
+    "serviceIncludeList": "DoctorActorService",
     "cpuWarningLimitPercent": 50,
     "memoryWarningLimitPercent": 30
   },

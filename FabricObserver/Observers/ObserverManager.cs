@@ -615,10 +615,9 @@ namespace FabricObserver.Observers
                 return;
             }
 
+            // Note, the FabricClient singleton/instance will be disposed of by the creating code (in FabricObserver class). Do not dispose of it here.
             if (disposing)
             {
-                FabricClientInstance?.Dispose();
-                FabricClientInstance = null;
                 linkedSFRuntimeObserverTokenSource?.Dispose();
                 cts?.Dispose();
                 FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;

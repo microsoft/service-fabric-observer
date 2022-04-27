@@ -57,6 +57,9 @@
     <None Update="clusterManifest.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="HealthMetrics.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="PackageRoot\Config\AppObserver.config.app.exclude.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

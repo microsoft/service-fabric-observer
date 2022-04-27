@@ -38,7 +38,7 @@ namespace FabricObserverTests
         private static readonly Uri TestServiceName = new Uri("fabric:/app/service");
         private static readonly bool isSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
         private static readonly CancellationToken token = new CancellationToken();
-        private static readonly FabricClient fabricClient = new FabricClient();
+        private static FabricClient fabricClient;
         private static readonly ICodePackageActivationContext CodePackageContext = null;
         private static readonly StatelessServiceContext _context = null;
 
@@ -47,6 +47,7 @@ namespace FabricObserverTests
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
                https://github.com/loekd/ServiceFabric.Mocks */
 
+            fabricClient = new FabricClient();
             string configPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "Settings.xml");
             ConfigurationPackage configPackage = BuildConfigurationPackageFromSettingsFile(configPath);
 
@@ -74,7 +75,7 @@ namespace FabricObserverTests
                             TestServiceName,
                             null,
                             Guid.NewGuid(),
-                            long.MaxValue);
+                            long.MaxValue); 
         }
 
         /* Helpers */
@@ -110,7 +111,7 @@ namespace FabricObserverTests
                     {
                         ConfigurationSection configSection = CreateConfigurationSection(node?.Attributes?.Item(0).Value);
                         var sectionParams = xdoc.SelectNodes($"//sf:Section[@Name='{configSection.Name}']//sf:Parameter", nsmgr);
-                        
+
                         if (sectionParams != null)
                         {
                             foreach (XmlNode node2 in sectionParams)
@@ -135,6 +136,64 @@ namespace FabricObserverTests
             }
 
             return null;
+        }
+
+        private static async Task DeployHealthMetricsAppAsync()
+        {
+            string appName = "fabric:/HealthMetrics";
+            string appType = "HealthMetricsType";
+            string appVersion = "1.0.0.0";
+            string serviceName1 = "fabric:/HealthMetrics/BandActorService";
+            string serviceName2 = "fabric:/HealthMetrics/DoctorActorService";
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+            string packagePathInImageStore = "HealthMetrics";
+            string packagePathZip = Path.Combine(Environment.CurrentDirectory, "HealthMetrics.zip");
+            string serviceType1 = "BandActorServiceType";
+            string serviceType2 = "DoctorActorServiceType";
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "pkg", "Debug");
+
+            // Unzip the compressed HealthMetrics app package.
+            System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "HealthMetricsApp", true);
+
+            var fabricClient = new FabricClient();
+
+            // Copy the HealthMetrics app package to a location in the image store.
+            fabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+
+            // Provision the HealthMetrics application.          
+            await fabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+
+            // Create HealthMetrics app instance.
+            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion);
+            await fabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+
+            // Create the HealthMetrics service descriptions.
+            StatefulServiceDescription serviceDescription1 = new StatefulServiceDescription
+            {
+                ApplicationName = new Uri(appName),
+                MinReplicaSetSize = 1,
+                PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
+                ServiceName = new Uri(serviceName1),
+                ServiceTypeName = serviceType1
+            };
+
+            StatefulServiceDescription serviceDescription2 = new StatefulServiceDescription
+            {
+                ApplicationName = new Uri(appName),
+                MinReplicaSetSize = 1,
+                PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
+                ServiceName = new Uri(serviceName2),
+                ServiceTypeName = serviceType2
+            };
+
+            // Create the HealthMetrics app services. If any of the services are declared as a default service in the ApplicationManifest.xml,
+            // then the service instance is already running and this call will fail..
+            await fabricClient.ServiceManager.CreateServiceAsync(serviceDescription1);
+            await fabricClient.ServiceManager.CreateServiceAsync(serviceDescription2);
+
+            // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+            // You may need to increase this value depending upon your dev machine? You'll find out..
+            await Task.Delay(TimeSpan.FromSeconds(10));
         }
 
         private static bool IsLocalSFRuntimePresent()
@@ -169,7 +228,7 @@ namespace FabricObserverTests
         private static async Task CleanupTestHealthReportsAsyncInternal(ObserverBase obs = null)
         {
             Logger logger = new Logger("TestLogger");
-            using var fabricClient = new FabricClient();
+            var fabricClient = new FabricClient();
 
             if (obs != null)
             {
@@ -239,7 +298,7 @@ namespace FabricObserverTests
                         await HealthReportNotExistsThrowAsync(healthReport.EntityType, ObserverConstants.SystemAppName, evt, fabricClient);
                     }
                 }
-                
+
                 // Node reports.
                 var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName).ConfigureAwait(false);
 
@@ -291,11 +350,11 @@ namespace FabricObserverTests
                 }
             }
             else if (entityType == EntityType.Service)
-            {   
+            {
                 var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(new Uri(entityName)).ConfigureAwait(false);
                 var healthyEvents =
                     serviceHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId 
+                        s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId
                           && s.HealthInformation.Property == evt.HealthInformation.Property
                           && s.HealthInformation.HealthState == HealthState.Ok);
 
@@ -377,11 +436,72 @@ namespace FabricObserverTests
             }
 
             await CleanupTestHealthReportsAsync();
+            await RemoveTestApplicationAsync();
+        }
+
+        private static async Task RemoveTestApplicationAsync()
+        {
+            string appName = "fabric:/HealthMetrics";
+            string appType = "HealthMetricsType";
+            string appVersion = "1.0.0.0";
+            string serviceName1 = "fabric:/HealthMetrics/BandActorService";
+            string serviceName2 = "fabric:/HealthMetrics/DoctorActorService";
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+            string packagePathInImageStore = "HealthMetrics";
+
+            var fabricClient = new FabricClient();
+
+            // Clean up the unzipped directory.
+            fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+
+            // Delete services.
+            DeleteServiceDescription deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
+            DeleteServiceDescription deleteServiceDescription2 = new DeleteServiceDescription(new Uri(serviceName2));
+            await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+            await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
+           
+            // Delete an application instance from the application type.
+            DeleteApplicationDescription deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
+            await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+           
+            // Un-provision the application type.
+            await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+        }
+
+        private static async Task<bool> EnsureTestServicesExistAsync()
+        {
+            try
+            {
+                var services = await fabricClient.QueryManager.GetServiceListAsync(new Uri("fabric:/HealthMetrics"));
+                return services?.Count == 2;
+            }
+            catch (FabricElementNotFoundException)
+            {
+
+            }
+
+            return false;
         }
 
         /* End Helpers */
 
-        /* Simple Tests (no SF runtime required) */
+        /* Simple Tests */
+
+        // It is unclear to me why TestInitialize does not work. A bug in the VS Test tool?. So, this hack.
+        [TestMethod]
+        public void AAAInitializeTestInfra()
+        {
+            if (IsLocalSFRuntimePresent())
+            {
+                DeployHealthMetricsAppAsync().Wait();
+            }
+            else
+            {
+                throw new Exception("You need to run these these tests on a machine with a running SF cluster");
+            }
+
+            Assert.IsTrue(true);
+        }
 
         [TestMethod]
         public void AppObserver_Constructor_Test()
@@ -532,14 +652,6 @@ namespace FabricObserverTests
 
         /* End Simple Tests */
 
-
-        /****** 
-          NOTE: These real tests below do NOT work without a running local SF cluster. This is because they exercise the exact code that will run on 
-                a target machine. Health Reports will be generated (and cleaned up) - an important test in its own right. 
-                The idea here is to exercise code just as it will be used in a real environment. Observers are just classes, concrete types. FO instantiates and manages them. 
-                The mocking that is done (_context) is to make it possible to test various observers via a Stateless service host (so, FO) that doesn't actually exist when the tests run. 
-        ******/
-
         /* AppObserver Initialization */
 
         [TestMethod]
@@ -629,14 +741,7 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.OperationalHealthEvents == 1);
         }
 
-        /* Single serviceInclude/serviceExclude real tests. 
-         
-           Note: All of these include/exclude service configuration tests are utilizing a deployed application on Charles' test machine: 
-           https://github.com/azure-samples/service-fabric-dotnet-data-aggregation/tree/master/ In this case, only 3 of its services are deployed. 
-           You can change the code below (and the related config files) to suit your own needs. There was no other way to conduct these real tests without 
-           utilizing a real application and its services. So, if you have a deployed app on your dev machine's local cluster, then just use that 
-           if you don't want to deploy the above app to your local machine. You will need to change the related AppObserver.config.*.json files in this Test Project's
-           PackageRoot\Config folder. */
+        /* Single serviceInclude/serviceExclude real tests. */
 
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceExcludeList_EnsureExcluded()
@@ -646,15 +751,19 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient();
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(fabricClient, _context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.exclude.json"),
@@ -664,10 +773,7 @@ namespace FabricObserverTests
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
             Assert.IsTrue(deployedTargets.Any());
-
-            // Note: You must modify AppObserver.config.apptype.exclude.json to exclude a service for an app type that is actually
-            // deployed to your local dev machine. Here, HealthMetrics app has 3 services and we excluded only DoctorActorServiceType service.
-            Assert.IsFalse(deployedTargets.Any(t => t.ServiceName.OriginalString.Contains("DoctorActorServiceType")));
+            Assert.IsFalse(deployedTargets.Any(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
         [TestMethod]
@@ -678,15 +784,19 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient();
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(fabricClient, _context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.exclude.json"),
@@ -696,9 +806,6 @@ namespace FabricObserverTests
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
             Assert.IsTrue(deployedTargets.Any());
-
-            // Note: You must modify AppObserver.config.app.exclude.json to exclude a service for an app that is actually
-            // deployed to your local dev machine. Here, HealthMetrics app has 3 services and we excluded only DoctorActorServiceType service.
             Assert.IsFalse(deployedTargets.Any(t => t.ServiceName.OriginalString.Contains("DoctorActorServiceType")));
         }
 
@@ -710,15 +817,19 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient();
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(fabricClient, _context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.include.json"),
@@ -728,10 +839,7 @@ namespace FabricObserverTests
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
             Assert.IsTrue(deployedTargets.Any());
-
-            // Note: You must modify AppObserver.config.apptype.include.json to include a service for an app type that is actually
-            // deployed to your local dev machine. Here, HealthMetrics app has 3 services and we included only DoctorActorServiceType.
-            Assert.IsTrue(deployedTargets.All(t => t.ServiceName.OriginalString.Contains("DoctorActorServiceType")));
+            Assert.IsTrue(deployedTargets.All(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
         [TestMethod]
@@ -742,15 +850,19 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient();
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(fabricClient, _context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.include.json"),
@@ -760,10 +872,7 @@ namespace FabricObserverTests
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
             Assert.IsTrue(deployedTargets.Any());
-
-            // Note: You must modify AppObserver.config.app.include.json to include a service for an app that is actually
-            // deployed to your local dev machine. Here, HealthMetrics app has 3 services and we included only DoctorActorServiceType.
-            Assert.IsTrue(deployedTargets.All(t => t.ServiceName.OriginalString.Contains("DoctorActorServiceType")));
+            Assert.IsTrue(deployedTargets.All(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
         /* Multiple exclude/include service settings for single targetApp/Type tests */
@@ -776,15 +885,19 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient();
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(fabricClient, _context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-exclude.json"),
@@ -795,11 +908,11 @@ namespace FabricObserverTests
             var serviceReplicas = obs.ReplicaOrInstanceList;
             Assert.IsTrue(serviceReplicas.Any());
 
-            // Note: You must modify AppObserver.config.apptype.multi-exclude.json to exclude multiple services for a single app type that is actually
-            // deployed to your local dev machine. Here, HealthMetrics app has 3 services.
-
-            // You can't supply multiple EXclude lists for the same target app/type.
-            Assert.IsTrue(serviceReplicas.Count == 3);
+            // You can't supply multiple Exclude lists for the same target app/type. None of the target services will be excluded..
+            Assert.IsTrue(
+                serviceReplicas.Count(
+                    s => s.ServiceName.OriginalString == "fabric:/HealthMetrics/BandActorService"
+                      || s.ServiceName.OriginalString == "fabric:/HealthMetrics/DoctorActorService") == 2);
         }
 
         [TestMethod]
@@ -810,15 +923,19 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient();
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(fabricClient, _context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-exclude.json"),
@@ -829,11 +946,11 @@ namespace FabricObserverTests
             var serviceReplicas = obs.ReplicaOrInstanceList;
             Assert.IsTrue(serviceReplicas.Any());
 
-            // Note: You must modify AppObserver.config.app.multi-exclude.json to specify exclusion of multiple services for a single app that is actually
-            // deployed to your local dev machine. Here, HealthMetrics app has 3 services.
-
-            // You can't supply multiple EXclude lists for the same target app/type.
-            Assert.IsTrue(serviceReplicas.Count == 3);
+            // You can't supply multiple Exclude lists for the same target app/type. None of the target services will be excluded..
+            Assert.IsTrue(
+                serviceReplicas.Count(
+                    s => s.ServiceName.OriginalString == "fabric:/HealthMetrics/BandActorService"
+                      || s.ServiceName.OriginalString == "fabric:/HealthMetrics/DoctorActorService") == 2);
         }
 
         [TestMethod]
@@ -844,15 +961,22 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient();
-            var startDateTime = DateTime.Now;
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
+
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
 
             ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(fabricClient, _context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-include.json"),
@@ -862,9 +986,6 @@ namespace FabricObserverTests
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
             Assert.IsTrue(serviceReplicas.Any());
-
-            // Note: You must modify AppObserver.config.apptype.multi-include.json to include services for an app type that is actually
-            // deployed to your local dev machine. Here, HealthMetrics app has 3 services, but we included only two, by specifying each one in two separate config items.
             Assert.IsTrue(serviceReplicas.Count == 2);
         }
 
@@ -876,15 +997,14 @@ namespace FabricObserverTests
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(fabricClient, _context)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-include.json"),
@@ -898,9 +1018,6 @@ namespace FabricObserverTests
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
             Assert.IsTrue(serviceReplicas.Any());
-
-            // Note: You must modify AppObserver.config.app.multi-include.json to include services for an app that is actually
-            // deployed to your local dev machine. Here, HealthMetrics app has 3 services.
             Assert.IsTrue(serviceReplicas.Count == 2);
         }
 

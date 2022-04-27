@@ -1,13 +1,13 @@
 [
   {
-    "targetAppType": "HealthMetrics",
-    "serviceExcludeList": "DoctorActorServiceType",
+    "targetAppType": "HealthMetricsType",
+    "serviceExcludeList": "DoctorActorService",
     "cpuWarningLimitPercent": 50,
     "memoryWarningLimitPercent": 30
   },
   {
-    "targetAppType": "HealthMetrics",
-    "serviceExcludeList": "BandActorServiceType",
+    "targetAppType": "HealthMetricsType",
+    "serviceExcludeList": "BandActorService",
     "cpuWarningLimitPercent": 50,
     "memoryWarningLimitPercent": 30
   }

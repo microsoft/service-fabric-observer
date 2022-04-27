@@ -22,6 +22,7 @@ namespace FabricObserver
     /// </summary>
     internal sealed class FabricObserver : StatelessService
     {
+        // This is the FC that will be used for the lifetime of this FO instance.
         private readonly FabricClient fabricClient;
 
         /// <summary>
@@ -47,6 +48,12 @@ namespace FabricObserver
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
             using var observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
             await observerManager.StartObserversAsync();
+            
+            // At this point, no FO code will be using the FC instance. Safe to dispose of it here.
+            if (fabricClient != null)
+            {
+                fabricClient.Dispose();
+            }
         }
 
         /// <summary>
