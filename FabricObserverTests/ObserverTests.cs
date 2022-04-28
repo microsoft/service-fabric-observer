@@ -38,7 +38,7 @@ namespace FabricObserverTests
         private static readonly Uri TestServiceName = new Uri("fabric:/app/service");
         private static readonly bool isSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
         private static readonly CancellationToken token = new CancellationToken();
-        private static FabricClient fabricClient;
+        private static readonly FabricClient fabricClient;
         private static readonly ICodePackageActivationContext CodePackageContext = null;
         private static readonly StatelessServiceContext _context = null;
 
@@ -209,38 +209,19 @@ namespace FabricObserverTests
             }
         }
 
-        private static async Task CleanupTestHealthReportsAsync(ObserverBase obs = null)
-        {
-            // Polly retry policy with async execution.
-            await Policy.Handle<HealthReportNotFoundException>()
-                            .Or<FabricException>()
-                            .Or<TimeoutException>()
-                            .WaitAndRetryAsync(
-                                new[]
-                                {
-                                    TimeSpan.FromSeconds(1),
-                                    TimeSpan.FromSeconds(5),
-                                    TimeSpan.FromSeconds(10),
-                                    TimeSpan.FromSeconds(15)
-                                }).ExecuteAsync(() => CleanupTestHealthReportsAsyncInternal(obs)).ConfigureAwait(false);
-        }
-
-        private static async Task CleanupTestHealthReportsAsyncInternal(ObserverBase obs = null)
+        private static async Task CleanupTestHealthReportsAsync()
         {
             Logger logger = new Logger("TestLogger");
             var fabricClient = new FabricClient();
+            var apps = await fabricClient.QueryManager.GetApplicationListAsync();
 
-            if (obs != null)
+            foreach (var app in apps)
             {
-                foreach (var service in obs.ServiceNames)
-                {
-                    if (service == TestServiceName.OriginalString)
-                    {
-                        continue;
-                    }
+                var replicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
 
-                    Uri serviceName = new Uri(service);
-                    var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(serviceName);
+                foreach (var replica in replicas)
+                {
+                    var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(replica.ServiceName);
                     var fabricObserverServiceHealthEvents =
                         serviceHealth.HealthEvents?.Where(
                            s => s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
@@ -255,128 +236,74 @@ namespace FabricObserverTests
                             State = HealthState.Ok,
                             NodeName = NodeName,
                             EmitLogEvent = false,
-                            ServiceName = serviceName,
+                            ServiceName = replica.ServiceName,
                             Property = evt.HealthInformation.Property,
                             SourceId = evt.HealthInformation.SourceId
                         };
 
                         var healthReporter = new ObserverHealthReporter(logger, fabricClient);
                         healthReporter.ReportHealthToServiceFabric(healthReport);
-                        await Task.Delay(150);
-                        await HealthReportNotExistsThrowAsync(healthReport.EntityType, service, evt, fabricClient);
+                        await Task.Delay(250);
                     }
                 }
             }
-            else
-            {
-                // System app reports.
-                var sysAppHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName)).ConfigureAwait(false);
+            // System app reports.
+            var sysAppHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
 
-                if (sysAppHealth != null)
+            if (sysAppHealth != null)
+            {
+                foreach (var evt in sysAppHealth.HealthEvents.Where(
+                                s => s.HealthInformation.SourceId.Contains(ObserverConstants.FabricSystemObserverName)
+                                    && s.HealthInformation.HealthState == HealthState.Error
+                                    || s.HealthInformation.HealthState == HealthState.Warning))
                 {
-                    foreach (var evt in sysAppHealth.HealthEvents.Where(
-                                    s => s.HealthInformation.SourceId.Contains(ObserverConstants.FabricSystemObserverName)
-                                      && s.HealthInformation.HealthState == HealthState.Error
-                                      || s.HealthInformation.HealthState == HealthState.Warning))
+                    var healthReport = new HealthReport
                     {
-                        var healthReport = new HealthReport
-                        {
-                            Code = FOErrorWarningCodes.Ok,
-                            EntityType = EntityType.Application,
-                            HealthMessage = $"Clearing existing FSO Test health reports.",
-                            State = HealthState.Ok,
-                            NodeName = NodeName,
-                            EmitLogEvent = false,
-                            AppName = new Uri(ObserverConstants.SystemAppName),
-                            Property = evt.HealthInformation.Property,
-                            SourceId = evt.HealthInformation.SourceId
-                        };
+                        Code = FOErrorWarningCodes.Ok,
+                        EntityType = EntityType.Application,
+                        HealthMessage = $"Clearing existing FSO Test health reports.",
+                        State = HealthState.Ok,
+                        NodeName = NodeName,
+                        EmitLogEvent = false,
+                        AppName = new Uri(ObserverConstants.SystemAppName),
+                        Property = evt.HealthInformation.Property,
+                        SourceId = evt.HealthInformation.SourceId
+                    };
 
-                        var healthReporter = new ObserverHealthReporter(logger, fabricClient);
-                        healthReporter.ReportHealthToServiceFabric(healthReport);
-                        await Task.Delay(150);
-                        await HealthReportNotExistsThrowAsync(healthReport.EntityType, ObserverConstants.SystemAppName, evt, fabricClient);
-                    }
+                    var healthReporter = new ObserverHealthReporter(logger, fabricClient);
+                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                    await Task.Delay(500);
                 }
+            }
 
-                // Node reports.
-                var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName).ConfigureAwait(false);
+            // Node reports.
+            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
 
-                if (nodeHealth != null)
+            if (nodeHealth != null)
+            {
+                var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(
+                        s => (s.HealthInformation.SourceId.Contains(ObserverConstants.NodeObserverName)
+                                || s.HealthInformation.SourceId.Contains(ObserverConstants.DiskObserverName))
+                                && s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
+
+                foreach (var evt in fabricObserverNodeHealthEvents)
                 {
-                    var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(
-                            s => (s.HealthInformation.SourceId.Contains(ObserverConstants.NodeObserverName)
-                                  || s.HealthInformation.SourceId.Contains(ObserverConstants.DiskObserverName))
-                                  && s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
-
-                    foreach (var evt in fabricObserverNodeHealthEvents)
+                    var healthReport = new HealthReport
                     {
-                        var healthReport = new HealthReport
-                        {
-                            Code = FOErrorWarningCodes.Ok,
-                            EntityType = EntityType.Machine,
-                            HealthMessage = $"Clearing existing FSO Test health reports.",
-                            State = HealthState.Ok,
-                            NodeName = NodeName,
-                            EmitLogEvent = false,
+                        Code = FOErrorWarningCodes.Ok,
+                        EntityType = EntityType.Machine,
+                        HealthMessage = $"Clearing existing FSO Test health reports.",
+                        State = HealthState.Ok,
+                        NodeName = NodeName,
+                        EmitLogEvent = false,
 
-                            Property = evt.HealthInformation.Property,
-                            SourceId = evt.HealthInformation.SourceId
-                        };
+                        Property = evt.HealthInformation.Property,
+                        SourceId = evt.HealthInformation.SourceId
+                    };
 
-                        var healthReporter = new ObserverHealthReporter(logger, fabricClient);
-                        healthReporter.ReportHealthToServiceFabric(healthReport);
-                        await Task.Delay(150);
-                        await HealthReportNotExistsThrowAsync(healthReport.EntityType, NodeName, evt, fabricClient);
-                    }
-                }
-            }
-        }
-
-        private static async Task HealthReportNotExistsThrowAsync(EntityType entityType, string entityName, HealthEvent evt, FabricClient fabricClient)
-        {
-            if (entityType == EntityType.Application && entityName == ObserverConstants.SystemAppName)
-            {
-                var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName)).ConfigureAwait(false);
-                var healthyEvents =
-                    appHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId
-                          && s.HealthInformation.Property == evt.HealthInformation.Property
-                          && s.HealthInformation.HealthState == HealthState.Ok);
-
-                if (healthyEvents == null || !healthyEvents.Any())
-                {
-                    throw new HealthReportNotFoundException($"OK clear for {ObserverConstants.SystemAppName} not found.");
-                }
-            }
-            else if (entityType == EntityType.Service)
-            {
-                var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(new Uri(entityName)).ConfigureAwait(false);
-                var healthyEvents =
-                    serviceHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId
-                          && s.HealthInformation.Property == evt.HealthInformation.Property
-                          && s.HealthInformation.HealthState == HealthState.Ok);
-
-                if (healthyEvents == null || !healthyEvents.Any())
-                {
-                    throw new HealthReportNotFoundException($"OK clear for {entityName} not found.");
-                }
-            }
-            else if (entityType == EntityType.Node || entityType == EntityType.Machine || entityType == EntityType.Disk)
-            {
-                // Node reports
-                var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(entityName).ConfigureAwait(false);
-
-                var healthyEvents =
-                    nodeHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.SourceId == evt.HealthInformation.SourceId
-                          && s.HealthInformation.Property == evt.HealthInformation.Property
-                          && s.HealthInformation.HealthState == HealthState.Ok);
-
-                if (healthyEvents == null || !healthyEvents.Any())
-                {
-                    throw new HealthReportNotFoundException($"OK clear for {NodeName} not found.");
+                    var healthReporter = new ObserverHealthReporter(logger, fabricClient);
+                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                    await Task.Delay(500);
                 }
             }
         }
@@ -966,11 +893,6 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            if (!await EnsureTestServicesExistAsync())
-            {
-                AAAInitializeTestInfra();
-            }
-
             ObserverManager.FabricServiceContext = _context;
             ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;
@@ -996,8 +918,6 @@ namespace FabricObserverTests
             {
                 return;
             }
-
-            var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = _context;
             ObserverManager.FabricClientInstance = fabricClient;
@@ -1058,8 +978,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-            
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
         }
 
         [TestMethod]
@@ -1095,8 +1013,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
         }
 
         [TestMethod]
@@ -1132,8 +1048,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
         }
 
         [TestMethod]
@@ -1203,8 +1117,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            await CleanupTestHealthReportsAsync(obs).ConfigureAwait(false);
         }
 
         [TestMethod]
@@ -1355,7 +1267,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             // stop clears health warning
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            await obsMgr.StopObserversAsync();
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1516,7 +1428,7 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -1569,7 +1481,7 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -1638,10 +1550,10 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
 
             // Stop clears health warning
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            await obsMgr.StopObserversAsync();
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1719,7 +1631,7 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -1760,7 +1672,7 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
 
             // Stop clears health warning
-            await obsMgr.StopObserversAsync().ConfigureAwait(false);
+            await obsMgr.StopObserversAsync();
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
@@ -1808,7 +1720,7 @@ namespace FabricObserverTests
                           && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
 
             // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath).ConfigureAwait(false)).Length > 0);
+            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -1820,7 +1732,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1902,7 +1814,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1946,7 +1858,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1968,7 +1880,7 @@ namespace FabricObserverTests
                 ActiveEphemeralPortCountWarning = 1
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1990,7 +1902,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -2012,7 +1924,7 @@ namespace FabricObserverTests
                 AllocatedHandlesWarning = 100
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -2034,7 +1946,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync();
             
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -2056,7 +1968,7 @@ namespace FabricObserverTests
                 CpuWarnUsageThresholdPct = -42
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -2077,7 +1989,7 @@ namespace FabricObserverTests
             }
 
             using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await client.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -2099,7 +2011,7 @@ namespace FabricObserverTests
                 CpuWarnUsageThresholdPct = 420
             };
 
-            await obs.ObserveAsync(token).ConfigureAwait(false);
+            await obs.ObserveAsync(token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
