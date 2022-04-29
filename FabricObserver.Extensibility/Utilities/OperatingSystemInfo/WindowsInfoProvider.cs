@@ -134,6 +134,28 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
+        public override double GetActiveEphemeralPortCountPercentage(int processId = -1, ServiceContext context = null)
+        {
+            double usedPct = 0.0;
+            int count = GetActiveEphemeralPortCount(processId, context);
+
+            // Something went wrong.
+            if (count <= 0)
+            {
+                return usedPct;
+            }
+
+            (int LowPort, int HighPort) = TupleGetDynamicPortRange();
+            int totalEphemeralPorts = HighPort - LowPort;
+
+            if (totalEphemeralPorts > 0)
+            {
+                usedPct = (double) (count* 100) / totalEphemeralPorts;
+            }
+
+            return usedPct;
+        }
+
         /// <summary>
         /// Compute count of active TCP ports.
         /// </summary>

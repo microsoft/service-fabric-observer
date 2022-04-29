@@ -734,19 +734,15 @@ namespace FabricObserver.Observers
 
                 if (EphemeralPortsDataPercent != null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
                 {
-                    int activeEphemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
-                    (int LowPort, int HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                    int totalEphemeralPorts = HighPort - LowPort;
-
-                    if (totalEphemeralPorts > 0)
-                    {
-                        double usedPct = (double)(activeEphemeralPorts * 100) / totalEphemeralPorts;
-                        EphemeralPortsDataPercent.AddData(usedPct);
-                    }
+                    double usedPct = OSInfoProvider.Instance.GetActiveEphemeralPortCountPercentage();
+                    EphemeralPortsDataPercent.AddData(usedPct);
 
                     /* Raw ETW - Unrelated to Warnings */
                     if (IsEtwEnabled)
                     {
+                        (int LowPort, int HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                        int totalEphemeralPorts = HighPort - LowPort;
+
                         ObserverLogger.LogEtw(
                             ObserverConstants.FabricObserverETWEventName,
                             new

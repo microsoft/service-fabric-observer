@@ -31,7 +31,6 @@ namespace FabricObserver.Observers
         private const double KvsLvidsWarningPercentage = 75.0;
         private readonly bool _isWindows;
         private readonly object _lock = new object();
-        private (int LowPort, int HighPort) _dynamicPortRange = (-1, -1);
         private readonly string _settingsPath;
 
         // These are the concurrent data containers that hold all monitoring data for all application targets for specific metrics.
@@ -495,7 +494,6 @@ namespace FabricObserver.Observers
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             _userTargetList = new List<ApplicationInfo>();
             _deployedTargetList = new List<ApplicationInfo>();
-            _dynamicPortRange = OSInfoProvider.Instance.TupleGetDynamicPortRange();
             _client = new FabricClientUtilities(FabricClientInstance, FabricServiceContext);
             _deployedApps = await _client.GetAllLocalDeployedAppsAsync(Token).ConfigureAwait(false);
 
@@ -1781,14 +1779,7 @@ namespace FabricObserver.Observers
                 // Ephemeral TCP ports usage - Percentage.
                 if (checkPercentageEphemeralPorts)
                 {
-                    int activeEphemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext);
-                    int ActiveEphemeralPorts = _dynamicPortRange.HighPort - _dynamicPortRange.LowPort;
-                    double usedPct = 0.0;
-
-                    if (ActiveEphemeralPorts > 0)
-                    {
-                        usedPct = (double)(activeEphemeralPorts * 100) / ActiveEphemeralPorts;
-                    }
+                    double usedPct = OSInfoProvider.Instance.GetActiveEphemeralPortCountPercentage(procId, FabricServiceContext);
 
                     if (procId == parentPid)
                     {

@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Fabric;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -68,5 +69,13 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <returns>int value representing total number of allocated file handles/fds on host OS. For Windows, this always returns -1.</returns>
         public abstract int GetTotalAllocatedFileHandlesCount();
+
+        /// <summary>
+        /// Gets the percentage (of total in range) of ephemeral ports currently in use on the machine or by process of supplied pid.
+        /// </summary>
+        /// <param name="processId">Id of process.</param>
+        /// <param name="context">ServiceContext instance. This is required by the Linux impl. Ignored for Windows.</param>
+        /// <returns>Percentage of ephemeral ports in use as a double.</returns>
+        public abstract double GetActiveEphemeralPortCountPercentage(int processId = -1, ServiceContext context = null);
     }
 }
