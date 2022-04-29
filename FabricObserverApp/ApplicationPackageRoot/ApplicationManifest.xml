@@ -7,6 +7,10 @@
     <Parameter Name="ObserverManagerObserverExecutionTimeout" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
+    <!-- You only need to set this if you want to use a different EventSource provider name than the default, FabricObserverETWProvider.
+	     This is primarily useful for scenarios where you have multiple instances of FO running on a node and you want to ensure that each instance writes 
+		 ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
+    <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
@@ -38,7 +42,7 @@
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableEtw" DefaultValue="false" />
@@ -384,6 +388,7 @@
             <Parameter Name="ObserverExecutionTimeout" Value="[ObserverManagerObserverExecutionTimeout]" />
             <Parameter Name="EnableVerboseLogging" Value="[ObserverManagerEnableVerboseLogging]" />
             <Parameter Name="EnableETWProvider" Value="[ObserverManagerEnableETWProvider]" />
+            <Parameter Name="ETWProviderName" Value="[ObserverManagerETWProviderName]" />
             <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
             <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
             <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />

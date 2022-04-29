@@ -919,6 +919,11 @@ namespace FabricObserverTests
                 return;
             }
 
+            if (!await EnsureTestServicesExistAsync())
+            {
+                AAAInitializeTestInfra();
+            }
+
             ObserverManager.FabricServiceContext = _context;
             ObserverManager.FabricClientInstance = fabricClient;
             ObserverManager.TelemetryEnabled = false;

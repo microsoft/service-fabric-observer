@@ -14,6 +14,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
+        private static string GetProviderName()
+        {
+            try
+            {
+                var config = FabricRuntime.GetActivationContext().GetConfigurationPackageObject("Config");
+                string providerName =
+                    config.Settings?.Sections[ObserverConstants.ObserverManagerConfigurationSectionName]?.Parameters[ObserverConstants.ETWProviderName]?.Value;
+
+                return !string.IsNullOrWhiteSpace(providerName) ? providerName : ObserverConstants.DefaultEventSourceProviderName;
+            }
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+
+            }
+
+            return ObserverConstants.DefaultEventSourceProviderName;
+        }
+
         static ServiceEventSource()
         {
             // A workaround for the problem where ETW activities do not get tracked until Tasks infrastructure is initialized.
@@ -23,7 +41,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         // Instance constructor is private to enforce singleton semantics.
         // FabricObserver ETW provider name is passed to base.ctor here instead of decorating this class.
-        private ServiceEventSource() : base(ObserverConstants.EventSourceProviderName)
+        private ServiceEventSource() : base(GetProviderName())
         {
             
         }

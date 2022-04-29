@@ -46,7 +46,7 @@ namespace FabricObserver.Observers
             {
                 return;
             }
-
+            
             var stopwatch = Stopwatch.StartNew();
             int totalNumberOfDeployedServices = 0, totalNumberOfPartitions = 0, totalNumberOfReplicas = 0;
             int servicesInWarningError = 0, partitionsInWarningError = 0, replicasInWarningError = 0;
@@ -69,6 +69,8 @@ namespace FabricObserver.Observers
                                              Token);*/
 
             // Polly retry policy for when FabricException is thrown by its Execute predicate (GetDeployedApplicationPagedListAsync).
+            // The purpose of using Polly here is to show how you deal with dependencies (put them all in the same folder where your
+            // plugin dll lives, including the dependencies, if any, of the primary dependencies you employ).
             var policy = Policy.Handle<FabricException>()
                                    .Or<TimeoutException>()
                                    .WaitAndRetryAsync(
@@ -82,10 +84,10 @@ namespace FabricObserver.Observers
 
             var appList = 
                 await policy.ExecuteAsync(
-                () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                            deployedAppQueryDesc,
-                                                            ConfigurationSettings.AsyncTimeout,
-                                                            Token));
+                                () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                        deployedAppQueryDesc,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token));
 
             // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
             // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -100,17 +102,20 @@ namespace FabricObserver.Observers
 
                 deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
 
+                // This is how you can do retries without using an external library.
                 /*appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                    deployedAppQueryDesc,
-                                                                                    ConfigurationSettings.AsyncTimeout,
-                                                                                    Token),
+                                                deployedAppQueryDesc,
+                                                ConfigurationSettings.AsyncTimeout,
+                                                Token),
                                         Token);*/
 
-                appList = await policy.Execute(() => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                        deployedAppQueryDesc,
-                                                                                        ConfigurationSettings.AsyncTimeout,
-                                                                                        Token));
+                appList = await policy.ExecuteAsync(
+                                         () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                deployedAppQueryDesc,
+                                                ConfigurationSettings.AsyncTimeout,
+                                                Token));
+
                 apps.AddRange(appList.ToList());
 
                 // Wait a second before grabbing the next batch of apps..
@@ -123,10 +128,10 @@ namespace FabricObserver.Observers
             foreach (var app in apps)
             {
                 var services = await FabricClientInstance.QueryManager.GetServiceListAsync(
-                                                                        app.ApplicationName,
-                                                                        null,
-                                                                        AsyncClusterOperationTimeoutSeconds,
-                                                                        token).ConfigureAwait(false);
+                                        app.ApplicationName,
+                                        null,
+                                        AsyncClusterOperationTimeoutSeconds,
+                                        token).ConfigureAwait(false);
 
                 totalNumberOfDeployedServices += services.Count;
                 servicesInWarningError += services.Count(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error);
@@ -134,10 +139,10 @@ namespace FabricObserver.Observers
                 foreach (var service in services)
                 {
                     var partitions = await FabricClientInstance.QueryManager.GetPartitionListAsync(
-                                                                                service.ServiceName,
-                                                                                null,
-                                                                                AsyncClusterOperationTimeoutSeconds,
-                                                                                token).ConfigureAwait(false);
+                                            service.ServiceName,
+                                            null,
+                                            AsyncClusterOperationTimeoutSeconds,
+                                            token).ConfigureAwait(false);
 
                     totalNumberOfPartitions += partitions.Count;
                     partitionsInWarningError += partitions.Count(p => p.HealthState == HealthState.Warning || p.HealthState == HealthState.Error);
@@ -145,10 +150,10 @@ namespace FabricObserver.Observers
                     foreach (var partition in partitions)
                     {
                         var replicas = await FabricClientInstance.QueryManager.GetReplicaListAsync(
-                                                                                partition.PartitionInformation.Id,
-                                                                                null,
-                                                                                AsyncClusterOperationTimeoutSeconds,
-                                                                                token).ConfigureAwait(false);
+                                                partition.PartitionInformation.Id,
+                                                null,
+                                                AsyncClusterOperationTimeoutSeconds,
+                                                token).ConfigureAwait(false);
 
                         totalNumberOfReplicas += replicas.Count;
                         replicasInWarningError += replicas.Count(r => r.HealthState == HealthState.Warning || r.HealthState == HealthState.Error);
@@ -189,7 +194,8 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
-                EntityType = EntityType.Node,
+                // EntityType = EntityType.Node, // this is an FO 3.2.0 required change.
+                ReportType = HealthReportType.Node, // this is gone in FO 3.2.0..
                 State = HealthState.Ok
             };
 

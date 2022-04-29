@@ -14,12 +14,11 @@ namespace FabricObserver.Observers.Utilities
         public const string EnableCSVDataLogging = "EnableCSVDataLogging";
         public const string Fqdn = "FQDN";
         public const string EnableETWProvider = "EnableETWProvider";
-        public const string EventSourceProviderName = "FabricObserverETWProvider";
+        public const string ETWProviderName = "ETWProviderName";
+        public const string DefaultEventSourceProviderName = "FabricObserverETWProvider";
+        public const string FabricObserverETWEventName = "FabricObserverDataEvent";
         public const string EnableFabricObserverOperationalTelemetry = "EnableFabricObserverOperationalTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
-        public const string FabricObserverName = "FabricObserver";
-        public const string FabricObserverETWEventName = "FabricObserverDataEvent";
-        public const string EnableConcurrentExecution = "EnableConcurrentExecution";
         public const string ObserverFailureHealthStateLevelParameter = "ObserverFailureHealthStateLevel";
 
         // The name of the package that contains this Observer's configuration
@@ -38,6 +37,8 @@ namespace FabricObserver.Observers.Utilities
 
         // Setting name for Maximum time an observer should run before being considered hung or in some failure state.
         public const string ObserverExecutionTimeout = "ObserverExecutionTimeout";
+
+        public const string FabricObserverName = "FabricObserver";
 
         // Common Observer Settings Parameters.
         public const string ObserverLogPathParameter = "ObserverLogPath";
