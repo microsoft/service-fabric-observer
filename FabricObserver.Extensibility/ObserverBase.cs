@@ -10,7 +10,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
