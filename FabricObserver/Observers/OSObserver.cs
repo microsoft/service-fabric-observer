@@ -47,10 +47,10 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="OSObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public OSObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public OSObserver(StatelessServiceContext context) : base(null, context)
         {
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
@@ -463,7 +463,7 @@ namespace FabricObserver.Observers
                                                                                   AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
 
                 (int lowPortApp, int highPortApp) =
-                    NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                    NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);
 
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 

@@ -130,10 +130,10 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NodeObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public NodeObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public NodeObserver(StatelessServiceContext context) : base(null, context)
         {
             stopwatch = new Stopwatch();
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows); 

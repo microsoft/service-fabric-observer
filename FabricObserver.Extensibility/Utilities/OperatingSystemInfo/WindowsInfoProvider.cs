@@ -110,14 +110,7 @@ namespace FabricObserver.Observers.Utilities
             return (-1, -1);
         }
 
-        /// <summary>
-        /// Compute count of active TCP ports in dynamic range.
-        /// </summary>
-        /// <param name="processId">Optional: If supplied, then return the number of ephemeral ports in use by the process.</param>
-        /// <param name="context">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
-        /// If supplied, will use the ServiceContext to find the Linux Capabilities binary to run this command.</param>
-        /// <returns>number of active Epehemeral TCP ports as int value</returns>
-        public override int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null)
+        public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
         {
             int count;
 
@@ -134,10 +127,10 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public override double GetActiveEphemeralPortCountPercentage(int processId = -1, ServiceContext context = null)
+        public override double GetActiveEphemeralPortCountPercentage(int processId = -1, string configPath = null)
         {
             double usedPct = 0.0;
-            int count = GetActiveEphemeralPortCount(processId, context);
+            int count = GetActiveEphemeralPortCount(processId);
 
             // Something went wrong.
             if (count <= 0)
@@ -163,7 +156,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="context">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
         /// If supplied, will use the ServiceContext to find the Linux Capabilities binary to run this command.</param>
         /// <returns>number of active TCP ports as int value</returns>
-        public override int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null)
+        public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
         {
             int count;
 

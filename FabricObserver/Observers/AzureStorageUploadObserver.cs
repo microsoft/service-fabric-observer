@@ -62,8 +62,11 @@ namespace FabricObserver.Observers
             get; set;
         } = CompressionLevel.Optimal;
 
-        public AzureStorageUploadObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <summary>
+        /// Creates a new instance of the type.
+        /// </summary>
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public AzureStorageUploadObserver(StatelessServiceContext context) : base(null, context)
         {
             stopwatch = new Stopwatch();
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
@@ -294,18 +297,16 @@ namespace FabricObserver.Observers
 
             // Decrypt connection string.\\
 
-            ConfigurationPackage configPackage = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
-
             if (!string.IsNullOrWhiteSpace(connString))
             {
                 AuthenticationType = AuthenticationType.ConnectionString;
-                bool isEncrypted = configPackage.Settings.Sections[ConfigurationSectionName].Parameters[ObserverConstants.AzureStorageConnectionStringParameter].IsEncrypted;
+                bool isEncrypted = ConfigPackage.Settings.Sections[ConfigurationSectionName].Parameters[ObserverConstants.AzureStorageConnectionStringParameter].IsEncrypted;
 
                 if (isEncrypted)
                 {
                     try
                     {
-                        StorageConnectionString = configPackage.Settings.Sections[ConfigurationSectionName].Parameters[ObserverConstants.AzureStorageConnectionStringParameter].DecryptValue();
+                        StorageConnectionString = ConfigPackage.Settings.Sections[ConfigurationSectionName].Parameters[ObserverConstants.AzureStorageConnectionStringParameter].DecryptValue();
                     }
                     catch (Exception e)
                     {
@@ -339,13 +340,13 @@ namespace FabricObserver.Observers
 
                 AuthenticationType = AuthenticationType.SharedKey;
                 StorageAccountName = accountName;
-                bool isEncrypted = configPackage.Settings.Sections[ConfigurationSectionName].Parameters[ObserverConstants.AzureStorageAccountKeyParameter].IsEncrypted;
+                bool isEncrypted = ConfigPackage.Settings.Sections[ConfigurationSectionName].Parameters[ObserverConstants.AzureStorageAccountKeyParameter].IsEncrypted;
 
                 if (isEncrypted)
                 {
                     try
                     {
-                        StorageAccountKey = configPackage.Settings.Sections[ConfigurationSectionName].Parameters[ObserverConstants.AzureStorageAccountKeyParameter].DecryptValue();
+                        StorageAccountKey = ConfigPackage.Settings.Sections[ConfigurationSectionName].Parameters[ObserverConstants.AzureStorageAccountKeyParameter].DecryptValue();
                     }
                     catch (Exception e)
                     {

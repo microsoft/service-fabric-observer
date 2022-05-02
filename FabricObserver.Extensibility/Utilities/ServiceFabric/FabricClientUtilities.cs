@@ -18,25 +18,74 @@ namespace FabricObserver.Utilities.ServiceFabric
     /// </summary>
     public class FabricClientUtilities
     {
-        private readonly FabricClient _fabricClient;
-        private readonly ServiceContext _serviceContext;
-        private readonly ParallelOptions _parallelOptions;
+        private readonly ParallelOptions parallelOptions;
+        private readonly string nodeName;
+
+        // This is the FC singleton that will be used for the lifetime of this FO instance.
+        private static FabricClient fabricClient = null;
+        private static readonly object lockObj = new object();
 
         /// <summary>
-        /// FabricClient utilities class.
+        /// The singleton FabricClient instance that is used throughout FabricObserver.
         /// </summary>
-        /// <param name="fabricClient"></param>
-        /// <param name="serviceContext"></param>
-        public FabricClientUtilities(FabricClient fabricClient, ServiceContext serviceContext)
+        public static FabricClient FabricClientSingleton
         {
-            _fabricClient = fabricClient;
-            _serviceContext = serviceContext;
+            get
+            {
+                if (fabricClient == null)
+                {
+                    lock (lockObj)
+                    {
+                        if (fabricClient == null)
+                        {
+                            fabricClient = new FabricClient();
+                            fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
+                            fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
+                            return fabricClient;
+                        }
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        // This call with throw an ObjectDisposedException if fabricClient was disposed by, say, a plugin or if the runtime
+                        // disposed of it for some random (unlikely..) reason. This is just a test to ensure it is not in a disposed state.
+                        if (fabricClient.Settings.HealthReportSendInterval > TimeSpan.MinValue)
+                        {
+                            return fabricClient;
+                        }
+                    }
+                    catch (Exception e) when (e is ObjectDisposedException || e is System.Runtime.InteropServices.InvalidComObjectException)
+                    {
+                        lock (lockObj)
+                        {
+                            fabricClient = null;
+                            fabricClient = new FabricClient();
+                            fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
+                            fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
+                            return fabricClient;
+                        }
+                    }
+                }
+
+                return fabricClient;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public FabricClientUtilities(string NodeName)
+        {
             int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
-            _parallelOptions = new ParallelOptions
+            parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = Environment.ProcessorCount >= 4 ? maxDegreeOfParallelism : 1,
                 TaskScheduler = TaskScheduler.Default
             };
+
+            nodeName = NodeName;
         }
 
         /// <summary>
@@ -47,8 +96,6 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <returns>A List of DeployedApplication objects representing all deployed apps on the local node.</returns>
         public async Task<List<DeployedApplication>> GetAllLocalDeployedAppsAsync(CancellationToken token, Uri appNameFilter = null)
         {
-            string nodeName = _serviceContext.NodeContext.NodeName;
-
             // Get info for 50 apps at a time that are deployed to the same node this FO instance is running on.
             var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(nodeName)
             {
@@ -58,11 +105,11 @@ namespace FabricObserver.Utilities.ServiceFabric
             };
 
             var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => _fabricClient.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                    deployedAppQueryDesc,
-                                                    TimeSpan.FromSeconds(120),
-                                                    token),
-                                        token);
+                                    () => FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                deployedAppQueryDesc,
+                                                TimeSpan.FromSeconds(120),
+                                                token),
+                                    token);
 
             // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
             // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -77,7 +124,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                 deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
                 appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => _fabricClient.QueryManager.GetDeployedApplicationPagedListAsync(
+                                        () => FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(
                                                     deployedAppQueryDesc,
                                                     TimeSpan.FromSeconds(120),
                                                     token),
@@ -99,7 +146,6 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <returns>A List of ReplicaOrInstanceMonitoringInfo objects representing all replicas in any status (consumer should filter Status per need) on the local node.</returns>
         public async Task<List<ReplicaOrInstanceMonitoringInfo>> GetAllLocalReplicasOrInstances(CancellationToken token)
         {
-            string nodeName = _serviceContext.NodeContext.NodeName;
             List<ReplicaOrInstanceMonitoringInfo> repList = new List<ReplicaOrInstanceMonitoringInfo>();
             List<DeployedApplication> appList = await GetAllLocalDeployedAppsAsync(token);
 
@@ -108,7 +154,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 token.ThrowIfCancellationRequested();
 
                 var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                   () => _fabricClient.QueryManager.GetDeployedReplicaListAsync(nodeName, app.ApplicationName),
+                                                   () => FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(nodeName, app.ApplicationName),
                                                    token);
 
                 repList.AddRange(GetInstanceOrReplicaMonitoringList(app.ApplicationName, deployedReplicaList, token));
@@ -123,9 +169,9 @@ namespace FabricObserver.Utilities.ServiceFabric
                                                             CancellationToken token)
         {
             ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
-            _parallelOptions.CancellationToken = token;
+            parallelOptions.CancellationToken = token;
 
-            _ = Parallel.For(0, deployedReplicaList.Count, _parallelOptions, (i, state) =>
+            _ = Parallel.For(0, deployedReplicaList.Count, parallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
 

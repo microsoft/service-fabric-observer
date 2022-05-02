@@ -7,6 +7,7 @@ using System;
 using System.Fabric;
 using System.Fabric.Health;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.Utilities.ServiceFabric;
 using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities
@@ -17,16 +18,14 @@ namespace FabricObserver.Observers.Utilities
     public class ObserverHealthReporter
     {
         private readonly Logger logger;
-        private readonly FabricClient fabricClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
         /// </summary>
         /// <param name="logger">File logger instance. Will throw ArgumentException if null.</param>
         /// <param name="fabricClient">FabricClient instance. Will throw ArgumentException if null.</param>
-        public ObserverHealthReporter(Logger logger, FabricClient fabricClient)
+        public ObserverHealthReporter(Logger logger)
         {
-            this.fabricClient = fabricClient ?? throw new ArgumentException("fabricClient can't be null.");
             this.logger = logger ?? throw new ArgumentException("logger can't be null.");
         }
 
@@ -149,36 +148,36 @@ namespace FabricObserver.Observers.Utilities
                     case EntityType.Application when healthReport.AppName != null:
 
                         var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                        FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(appHealthReport, sendOptions);
                         break;
 
                     case EntityType.Service when healthReport.ServiceName != null:
 
                         var serviceHealthReport = new ServiceHealthReport(healthReport.ServiceName, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                        FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                         break;
 
                     case EntityType.StatefulService when healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0:
 
                         var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
+                        FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                         break;
 
                     case EntityType.StatelessService when healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0:
 
                         var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
+                        FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                         break;
 
                     case EntityType.Partition when healthReport.PartitionId != Guid.Empty:
                         var partitionHealthReport = new PartitionHealthReport(healthReport.PartitionId, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
+                        FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                         break;
 
                     case EntityType.DeployedApplication when healthReport.AppName != null:
 
                         var deployedApplicationHealthReport = new DeployedApplicationHealthReport(healthReport.AppName, healthReport.NodeName, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
+                        FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                         break;
 
                     case EntityType.Disk:
@@ -186,7 +185,7 @@ namespace FabricObserver.Observers.Utilities
                     case EntityType.Node:
  
                         var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                        FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                         break;
                 }
             }

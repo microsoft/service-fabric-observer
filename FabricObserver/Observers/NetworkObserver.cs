@@ -67,15 +67,13 @@ namespace FabricObserver.Observers
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;
         private int tcpConnTestRetried;
-        private readonly string _settingsPath;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NetworkObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public NetworkObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public NetworkObserver(StatelessServiceContext context) : base(null, context)
         {
-            _settingsPath = context.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
             stopwatch = new Stopwatch();
         }
 
@@ -347,7 +345,8 @@ namespace FabricObserver.Observers
                 }
             }
 
-            var networkObserverConfigFileName = Path.Combine(_settingsPath, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
+            var networkObserverConfigFileName =
+                Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {

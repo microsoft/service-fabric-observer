@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
+using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -21,6 +22,7 @@ using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.TelemetryLib;
+using FabricObserver.Utilities.ServiceFabric;
 using ConfigSettings = FabricObserver.Observers.Utilities.ConfigSettings;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
@@ -32,6 +34,11 @@ namespace FabricObserver.Observers
         private bool disposed;
         private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new object();
+
+        public static StatelessServiceContext FabricServiceContext
+        {
+            get; private set;
+        }
 
         // Process dump settings. Only AppObserver and Windows is supported. \\
         public string DumpsPath
@@ -61,6 +68,16 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        public Uri ApplicationName
+        {
+            get; set;
+        }
+
+        public Uri ServiceName
+        {
+            get; set;
+        }
+
         public bool IsObserverWebApiAppDeployed
         {
             get; set;
@@ -76,12 +93,17 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public ObserverHealthReporter HealthReporter
+        public ConfigurationPackage ConfigPackage
         {
-            get;
+            get; set;
         }
 
-        public StatelessServiceContext FabricServiceContext
+        public CodePackage CodePackage
+        {
+            get; set;
+        }
+
+        public ObserverHealthReporter HealthReporter
         {
             get;
         }
@@ -318,10 +340,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        protected FabricClient FabricClientInstance
-        {
-            get; set;
-        }
+        public static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
         protected string ConfigurationSectionName
         {
@@ -336,21 +355,26 @@ namespace FabricObserver.Observers
         /// <summary>
         /// Base type constructor for all observers (both built-in and plugin impls).
         /// </summary>
-        /// <param name="fabricClient">FO employs exactly one instance of a FabricClient object. This protects against memory abuse. FO will inject the instance when the application starts.</param>
-        /// <param name="statelessServiceContext">The ServiceContext instance for FO, which is a Stateless singleton (1 partition) service that runs on all nodes in an SF cluster. FO will inject this instance when the application starts.</param>
-        protected ObserverBase(FabricClient fabricClient, StatelessServiceContext statelessServiceContext)
+        /// <param name="fabricClient">Pass null for this parameter. It only exists here to preserve the existing interface definition of IFabricObserverStartup, which is used by FO plugins. 
+        /// There is actually no longer a need to pass in a FabricClient instance as this is now a singleton instance managed by 
+        /// FabricObserver.Extensibility.FabricClientUtilities and is protected against premature disposal.</param>
+        /// <param name="serviceContext">The ServiceContext instance for FO, which is a Stateless singleton (1 partition) service that runs on all nodes in an SF cluster. FO will inject this instance when the application starts.</param>
+        protected ObserverBase(FabricClient fabricClient, StatelessServiceContext serviceContext)
         {
             ObserverName = GetType().Name;
             ConfigurationSectionName = ObserverName + "Configuration";
-            FabricClientInstance = fabricClient;
-            FabricServiceContext = statelessServiceContext;
-            NodeName = FabricServiceContext.NodeContext.NodeName;
-            NodeType = FabricServiceContext.NodeContext.NodeType;
+            ApplicationName = new Uri(serviceContext.CodePackageActivationContext.ApplicationName);
+            NodeName = serviceContext.NodeContext.NodeName;
+            NodeType = serviceContext.NodeContext.NodeType;
+            ServiceName = serviceContext.ServiceName;
+            ConfigPackage = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
+            CodePackage = serviceContext.CodePackageActivationContext.GetCodePackageObject("Code");
+            FabricServiceContext = serviceContext;
             SetObserverConfiguration();
 
             if (ObserverName == ObserverConstants.AppObserverName)
             {
-                ServiceNames.Enqueue(FabricServiceContext.ServiceName.OriginalString);
+                ServiceNames.Enqueue(ServiceName.OriginalString);
             }
 
             // Observer Logger setup.
@@ -372,12 +396,9 @@ namespace FabricObserver.Observers
                 EnableETWLogging = IsEtwProviderEnabled
             };
 
-            ConfigurationSettings = new ConfigSettings(
-                    FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings,
-                    ConfigurationSectionName);
-
+            ConfigurationSettings = new ConfigSettings(ConfigPackage.Settings, ConfigurationSectionName);
             ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
-            HealthReporter = new ObserverHealthReporter(ObserverLogger, fabricClient);
+            HealthReporter = new ObserverHealthReporter(ObserverLogger);
 
             // This is so EnableVerboseLogging can (and should) be set to false and the ObserverWebApi service will still function.
             // If you renamed the application, then you must set the ObserverWebApiEnabled parameter to true in ObserverManagerConfiguration section 
@@ -421,24 +442,18 @@ namespace FabricObserver.Observers
 
             try
             {
-                ConfigurationPackage serviceConfiguration = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
-                if (serviceConfiguration == null)
+                if (ConfigPackage.Settings.Sections.All(sec => sec.Name != sectionName))
                 {
                     return null;
                 }
 
-                if (serviceConfiguration.Settings.Sections.All(sec => sec.Name != sectionName))
+                if (ConfigPackage.Settings.Sections[sectionName].Parameters.All(param => param.Name != parameterName))
                 {
                     return null;
                 }
 
-                if (serviceConfiguration.Settings.Sections[sectionName].Parameters.All(param => param.Name != parameterName))
-                {
-                    return null;
-                }
-
-                string setting = serviceConfiguration.Settings.Sections[sectionName].Parameters[parameterName]?.Value;
+                string setting = ConfigPackage.Settings.Sections[sectionName].Parameters[parameterName]?.Value;
 
                 if (string.IsNullOrWhiteSpace(setting) && defaultValue != null)
                 {
@@ -739,7 +754,7 @@ namespace FabricObserver.Observers
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     EntityType = entityType,
                     NodeName = NodeName,
-                    NodeType = FabricServiceContext.NodeContext.NodeType,
+                    NodeType = NodeType,
                     ObserverName = ObserverName,
                     Metric = data.Property,
                     Value = data.AverageDataValue,
@@ -785,7 +800,7 @@ namespace FabricObserver.Observers
                             ClusterInformation.ClusterInfoTuple.ClusterId,
                             EntityType = entityType.ToString(),
                             NodeName,
-                            FabricServiceContext.NodeContext.NodeType,
+                            NodeType,
                             ObserverName,
                             Metric = data.Property,
                             Value = data.AverageDataValue,
@@ -819,7 +834,7 @@ namespace FabricObserver.Observers
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     EntityType = entityType,
                     NodeName = NodeName,
-                    NodeType = FabricServiceContext.NodeContext.NodeType,
+                    NodeType = NodeType,
                     ObserverName = ObserverName,
                     Metric = $"{drive}{data.Property}",
                     Source = ObserverName,
@@ -840,7 +855,7 @@ namespace FabricObserver.Observers
                             ClusterInformation.ClusterInfoTuple.ClusterId,
                             NodeName,
                             EntityType = entityType.ToString(),
-                            FabricServiceContext.NodeContext.NodeType,
+                            NodeType,
                             ObserverName,
                             Metric = $"{drive}{data.Property}",
                             Source = ObserverName,
@@ -1107,7 +1122,7 @@ namespace FabricObserver.Observers
                             Description = healthMessage.ToString(),
                             Metric = $"{drive}{data.Property}",
                             NodeName,
-                            FabricServiceContext.NodeContext.NodeType,
+                            NodeType,
                             ObserverName,
                             PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : string.Empty,
                             ProcessId = procId,
@@ -1202,7 +1217,7 @@ namespace FabricObserver.Observers
                                 Description = $"{data.Property} is now within normal/expected range.",
                                 Metric = data.Property,
                                 NodeName,
-                                FabricServiceContext.NodeContext.NodeType,
+                                NodeType,
                                 ObserverName,
                                 PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : string.Empty,
                                 ProcessId = procId,
@@ -1290,19 +1305,22 @@ namespace FabricObserver.Observers
         private void SetObserverConfiguration()
         {
             // Archive file lifetime - ObserverLogger files.
-            if (int.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedLogFileLifetimeDays), out int maxFileArchiveLifetime))
+            if (int.TryParse(
+                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedLogFileLifetimeDays), out int maxFileArchiveLifetime))
             {
                 MaxLogArchiveFileLifetimeDays = maxFileArchiveLifetime;
             }
 
             // ETW
-            if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableETWProvider), out bool etwProviderEnabled))
+            if (bool.TryParse(
+                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableETWProvider), out bool etwProviderEnabled))
             {
                 IsEtwProviderEnabled = etwProviderEnabled;
             }
 
             // Telemetry.
-            if (bool.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
+            if (bool.TryParse(
+                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
             {
                 IsTelemetryProviderEnabled = telemEnabled;
             }
@@ -1312,7 +1330,9 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            string telemetryProviderType = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryProviderType);
+            string telemetryProviderType =
+                GetSettingParameterValue(
+                    ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryProviderType);
 
             if (string.IsNullOrWhiteSpace(telemetryProviderType))
             {
@@ -1333,13 +1353,16 @@ namespace FabricObserver.Observers
                 case TelemetryProviderType.AzureLogAnalytics:
                         
                     string logAnalyticsLogType =
-                        GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsLogTypeParameter);
+                        GetSettingParameterValue(
+                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsLogTypeParameter);
 
                     string logAnalyticsSharedKey =
-                        GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsSharedKeyParameter);
+                        GetSettingParameterValue(
+                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsSharedKeyParameter);
 
                     string logAnalyticsWorkspaceId =
-                        GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+                        GetSettingParameterValue(
+                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
 
                     if (string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId) || string.IsNullOrWhiteSpace(logAnalyticsSharedKey))
                     {
@@ -1358,7 +1381,8 @@ namespace FabricObserver.Observers
 
                 case TelemetryProviderType.AzureApplicationInsights:
                         
-                    string aiKey = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.AiKey);
+                    string aiKey = GetSettingParameterValue(
+                        ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.AiKey);
 
                     if (string.IsNullOrWhiteSpace(aiKey))
                     {
@@ -1384,13 +1408,15 @@ namespace FabricObserver.Observers
             }
 
             // Archive file lifetime - CsvLogger files.
-            if (int.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedCsvFileLifetimeDays), out int maxCsvFileArchiveLifetime))
+            if (int.TryParse(GetSettingParameterValue(
+                ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedCsvFileLifetimeDays), out int maxCsvFileArchiveLifetime))
             {
                 MaxCsvArchiveFileLifetimeDays = maxCsvFileArchiveLifetime;
             }
 
             // Csv file write format - CsvLogger only.
-            if (Enum.TryParse(GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.CsvFileWriteFormat), ignoreCase: true, out CsvFileWriteFormat csvWriteFormat))
+            if (Enum.TryParse(GetSettingParameterValue(
+                ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.CsvFileWriteFormat), ignoreCase: true, out CsvFileWriteFormat csvWriteFormat))
             {
                 CsvWriteFormat = csvWriteFormat;
             }
@@ -1401,7 +1427,8 @@ namespace FabricObserver.Observers
                 MaxArchiveCsvFileLifetimeDays = MaxCsvArchiveFileLifetimeDays
             };
 
-            string dataLogPath = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.DataLogPathParameter);
+            string dataLogPath = GetSettingParameterValue(
+                ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.DataLogPathParameter);
 
             CsvFileLogger.BaseDataLogFolderPath = !string.IsNullOrWhiteSpace(dataLogPath) ? Path.Combine(dataLogPath, ObserverName) : Path.Combine(Environment.CurrentDirectory, "fabric_observer_csvdata", ObserverName);
         }
@@ -1410,7 +1437,9 @@ namespace FabricObserver.Observers
         {
             try
             {
-                var deployedObsWebApps = FabricClientInstance.QueryManager.GetApplicationListAsync(new Uri("fabric:/FabricObserverWebApi")).GetAwaiter().GetResult();
+                var deployedObsWebApps =
+                    FabricClientInstance.QueryManager.GetApplicationListAsync(new Uri("fabric:/FabricObserverWebApi")).GetAwaiter().GetResult();
+
                 return deployedObsWebApps?.Count > 0;
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)

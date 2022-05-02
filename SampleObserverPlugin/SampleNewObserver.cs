@@ -27,13 +27,11 @@ namespace FabricObserver.Observers
         private readonly StringBuilder message;
 
         /// <summary>
-        /// All observer constructors must take a FabricClient instance and a ServiceContext instance of the same type as FabricObserver's (StatelessServiceContext).
-        /// These are then passed to the ObserverBase base class instance and used throughout FO.
+        /// 
         /// </summary>
-        /// <param name="fabricClient">FabricClient instance. This will be supplied by FabricObserver when it contructs your type.</param>
-        /// <param name="context">StatelessServiceContext. This will be supplied by FabricObserver when it contructs your type.</param>
-        public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="fabricClient">FabricClient instance. This is managed by FabricObserver.</param>
+        /// <param name="context">StatelessServiceContext instance. This is managed by FabricObserver.</param>
+        public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context) : base(fabricClient, context)
         {
             message = new StringBuilder();
         }
@@ -111,7 +109,7 @@ namespace FabricObserver.Observers
                                         Token);*/
 
                 appList = await policy.ExecuteAsync(
-                                         () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
                                                 deployedAppQueryDesc,
                                                 ConfigurationSettings.AsyncTimeout,
                                                 Token));
@@ -186,7 +184,7 @@ namespace FabricObserver.Observers
 
             /* Report to Fabric */
 
-            var healthReporter = new ObserverHealthReporter(ObserverLogger, FabricClientInstance);
+            var healthReporter = new ObserverHealthReporter(ObserverLogger);
             var healthReport = new HealthReport
             {
                 Code = FOErrorWarningCodes.Ok,
@@ -194,8 +192,8 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
-                // EntityType = EntityType.Node, // this is an FO 3.2.0 required change.
-                ReportType = HealthReportType.Node, // this is gone in FO 3.2.0..
+                EntityType = EntityType.Node, // this is an FO 3.2.0 required change.
+                //ReportType = HealthReportType.Node, // this is gone in FO 3.2.0..
                 State = HealthState.Ok
             };
 
@@ -206,7 +204,7 @@ namespace FabricObserver.Observers
             {
                 Code = FOErrorWarningCodes.Ok,
                 Description = message.ToString(),
-                HealthState = "Ok",
+                HealthState = HealthState.Ok,
                 NodeName = NodeName,
                 ObserverName = ObserverName,
                 Source = ObserverConstants.FabricObserverName

@@ -73,10 +73,10 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DiskObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public DiskObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public DiskObserver(StatelessServiceContext context) : base(null, context)
         {
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             stopWatch = new Stopwatch();
@@ -510,11 +510,11 @@ namespace FabricObserver.Observers
                     var data = DiskSpaceUsagePercentageData[i];
 
                     ProcessResourceDataReportHealth(
-                                        data,
-                                        DiskSpacePercentErrorThreshold,
-                                        DiskSpacePercentWarningThreshold,
-                                        timeToLiveWarning,
-                                        EntityType.Disk);
+                        data,
+                        DiskSpacePercentErrorThreshold,
+                        DiskSpacePercentWarningThreshold,
+                        timeToLiveWarning,
+                        EntityType.Disk);
                 }
 
                 // Folder size.
@@ -537,11 +537,11 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                                        data,
-                                        errorThreshold,
-                                        warningThreshold,
-                                        timeToLiveWarning,
-                                        EntityType.Disk);
+                        data,
+                        errorThreshold,
+                        warningThreshold,
+                        timeToLiveWarning,
+                        EntityType.Disk);
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
@@ -553,11 +553,11 @@ namespace FabricObserver.Observers
                         var data = DiskAverageQueueLengthData[i];
 
                         ProcessResourceDataReportHealth(
-                                            data,
-                                            AverageQueueLengthErrorThreshold,
-                                            AverageQueueLengthWarningThreshold,
-                                            timeToLiveWarning,
-                                            EntityType.Disk);
+                            data,
+                            AverageQueueLengthErrorThreshold,
+                            AverageQueueLengthWarningThreshold,
+                            timeToLiveWarning,
+                            EntityType.Disk);
                     }
                 }
 
@@ -612,8 +612,8 @@ namespace FabricObserver.Observers
             try
             {
                 if (int.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
                     DiskSpacePercentErrorThreshold = diskUsedError;
                 }
@@ -621,8 +621,8 @@ namespace FabricObserver.Observers
                 Token.ThrowIfCancellationRequested();
 
                 if (int.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
                     DiskSpacePercentWarningThreshold = diskUsedWarning;
                 }
@@ -630,8 +630,8 @@ namespace FabricObserver.Observers
                 Token.ThrowIfCancellationRequested();
 
                 if (int.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
                 {
                     AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
                 }
@@ -639,16 +639,16 @@ namespace FabricObserver.Observers
                 Token.ThrowIfCancellationRequested();
 
                 if (int.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
                     AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
                 }
 
                 // Folder size monitoring.
                 if (bool.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverEnableFolderSizeMonitoring), out bool enableFolderMonitoring))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverEnableFolderSizeMonitoring), out bool enableFolderMonitoring))
                 {
                     FolderSizeMonitoringEnabled = enableFolderMonitoring;
                     

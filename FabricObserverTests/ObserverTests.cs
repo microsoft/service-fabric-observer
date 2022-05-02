@@ -25,7 +25,7 @@ using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Xml;
 using FabricObserver.Observers.Utilities.Telemetry;
-using Polly;
+using FabricObserver.Utilities.ServiceFabric;
 
 /***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
 
@@ -36,18 +36,18 @@ namespace FabricObserverTests
     {
         private const string NodeName = "_Node_0";
         private static readonly Uri TestServiceName = new Uri("fabric:/app/service");
-        private static readonly bool isSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
-        private static readonly CancellationToken token = new CancellationToken();
-        private static readonly FabricClient fabricClient;
+        private static readonly bool IsSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
+        private static readonly CancellationToken Token = new CancellationToken();
         private static readonly ICodePackageActivationContext CodePackageContext = null;
-        private static readonly StatelessServiceContext _context = null;
+        private static readonly StatelessServiceContext TestServiceContext = null;
+        
+        private static FabricClient FabricClient => FabricClientUtilities.FabricClientSingleton;
 
         static ObserverTests()
         {
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
                https://github.com/loekd/ServiceFabric.Mocks */
 
-            fabricClient = new FabricClient();
             string configPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "Settings.xml");
             ConfigurationPackage configPackage = BuildConfigurationPackageFromSettingsFile(configPath);
 
@@ -67,15 +67,15 @@ namespace FabricObserverTests
                     ConfigurationPackage = configPackage
                 };
 
-            _context =
+            TestServiceContext =
                 new StatelessServiceContext(
-                            new NodeContext(NodeName, new NodeId(0, 1), 0, "NodeType0", "TEST.MACHINE"),
-                            CodePackageContext,
-                            "FabricObserver.FabricObserverType",
-                            TestServiceName,
-                            null,
-                            Guid.NewGuid(),
-                            long.MaxValue); 
+                        new NodeContext(NodeName, new NodeId(0, 1), 0, "NodeType0", "TEST.MACHINE"),
+                        CodePackageContext,
+                        "FabricObserver.FabricObserverType",
+                        TestServiceName,
+                        null,
+                        Guid.NewGuid(),
+                        long.MaxValue); 
         }
 
         /* Helpers */
@@ -241,21 +241,22 @@ namespace FabricObserverTests
                             SourceId = evt.HealthInformation.SourceId
                         };
 
-                        var healthReporter = new ObserverHealthReporter(logger, fabricClient);
+                        var healthReporter = new ObserverHealthReporter(logger);
                         healthReporter.ReportHealthToServiceFabric(healthReport);
                         await Task.Delay(250);
                     }
                 }
             }
+
             // System app reports.
             var sysAppHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
 
             if (sysAppHealth != null)
             {
                 foreach (var evt in sysAppHealth.HealthEvents.Where(
-                                s => s.HealthInformation.SourceId.Contains(ObserverConstants.FabricSystemObserverName)
-                                    && s.HealthInformation.HealthState == HealthState.Error
-                                    || s.HealthInformation.HealthState == HealthState.Warning))
+                              s => s.HealthInformation.SourceId.Contains(ObserverConstants.FabricSystemObserverName)
+                                && s.HealthInformation.HealthState == HealthState.Error
+                                || s.HealthInformation.HealthState == HealthState.Warning))
                 {
                     var healthReport = new HealthReport
                     {
@@ -270,9 +271,9 @@ namespace FabricObserverTests
                         SourceId = evt.HealthInformation.SourceId
                     };
 
-                    var healthReporter = new ObserverHealthReporter(logger, fabricClient);
+                    var healthReporter = new ObserverHealthReporter(logger);
                     healthReporter.ReportHealthToServiceFabric(healthReport);
-                    await Task.Delay(500);
+                    await Task.Delay(250);
                 }
             }
 
@@ -296,14 +297,13 @@ namespace FabricObserverTests
                         State = HealthState.Ok,
                         NodeName = NodeName,
                         EmitLogEvent = false,
-
                         Property = evt.HealthInformation.Property,
                         SourceId = evt.HealthInformation.SourceId
                     };
 
-                    var healthReporter = new ObserverHealthReporter(logger, fabricClient);
+                    var healthReporter = new ObserverHealthReporter(logger);
                     healthReporter.ReportHealthToServiceFabric(healthReport);
-                    await Task.Delay(500);
+                    await Task.Delay(250);
                 }
             }
         }
@@ -399,7 +399,7 @@ namespace FabricObserverTests
         {
             try
             {
-                var services = await fabricClient.QueryManager.GetServiceListAsync(new Uri("fabric:/HealthMetrics"));
+                var services = await FabricClient.QueryManager.GetServiceListAsync(new Uri("fabric:/HealthMetrics"));
                 return services?.Count == 2;
             }
             catch (FabricElementNotFoundException)
@@ -433,11 +433,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void AppObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context);
+            using var obs = new AppObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -447,11 +447,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void AzureStorageUploadObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AzureStorageUploadObserver(fabricClient, _context);
+            using var obs = new AzureStorageUploadObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -461,11 +461,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void CertificateObserver_Constructor_test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new CertificateObserver(fabricClient, _context);
+            using var obs = new CertificateObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -475,11 +475,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void ContainerObserver_Constructor_test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new ContainerObserver(fabricClient, _context);
+            using var obs = new ContainerObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -489,12 +489,12 @@ namespace FabricObserverTests
         [TestMethod]
         public void DiskObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            using var obs = new DiskObserver(fabricClient, _context);
+            using var obs = new DiskObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -504,11 +504,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void FabricSystemObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new FabricSystemObserver(fabricClient, _context);
+            using var obs = new FabricSystemObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -518,12 +518,12 @@ namespace FabricObserverTests
         [TestMethod]
         public void NetworkObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            using var obs = new NetworkObserver(fabricClient, _context);
+            using var obs = new NetworkObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null); 
             Assert.IsTrue(obs.HealthReporter != null);
@@ -533,11 +533,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void NodeObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new NodeObserver(fabricClient, _context);
+            using var obs = new NodeObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -547,11 +547,11 @@ namespace FabricObserverTests
         [TestMethod]
         public void OSObserver_Constructor_Test()
         {
-            ObserverManager.FabricServiceContext = _context;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new OSObserver(fabricClient, _context);
+            using var obs = new OSObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
@@ -563,13 +563,13 @@ namespace FabricObserverTests
         {
             using var client = new FabricClient();
             
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
-            using var obs = new SFConfigurationObserver(client, _context);
+            using var obs = new SFConfigurationObserver(TestServiceContext);
 
             // These are set in derived ObserverBase.
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -584,23 +584,21 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_MalformedTargetAppValue_GeneratesWarning()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.targetAppMalformed.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.targetAppMalformed.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -613,23 +611,19 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_InvalidJson_GeneratesWarning()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.invalid.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.invalid.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -642,23 +636,19 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_NoConfigFound_GeneratesWarning()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.empty.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.empty.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -673,7 +663,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceExcludeList_EnsureExcluded()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -683,17 +673,14 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.exclude.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.exclude.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -706,7 +693,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceExcludeList_EnsureExcluded()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -716,17 +703,14 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.exclude.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.exclude.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -739,7 +723,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceIncludeList_EnsureIncluded()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -749,17 +733,14 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.include.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.include.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -772,7 +753,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceIncludeList_EnsureIncluded()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -782,17 +763,14 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.include.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.include.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -807,7 +785,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceExcludeList_EnsureNotExcluded()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -817,17 +795,14 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-exclude.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-exclude.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -845,7 +820,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceExcludeList_EnsureNotExcluded()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -855,17 +830,14 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-exclude.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-exclude.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -883,7 +855,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceIncludeList_EnsureIncluded()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -893,15 +865,14 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-include.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-include.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -914,7 +885,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceIncludeList_EnsureIncluded()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -924,15 +895,14 @@ namespace FabricObserverTests
                 AAAInitializeTestInfra();
             }
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = fabricClient;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(fabricClient, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-include.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-include.json"),
                 EnableConcurrentMonitoring = true
             };
 
@@ -953,27 +923,25 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 EnableConcurrentMonitoring = true
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -988,27 +956,25 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
                 EnableConcurrentMonitoring = true
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1023,27 +989,25 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_WarningsGenerated()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_warnings.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_warnings.json"),
                 EnableConcurrentMonitoring = true
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1058,27 +1022,25 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_NoWarningsGenerated()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(client, _context)
+            using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ConfigPackagePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_nowarnings.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_nowarnings.json"),
                 EnableConcurrentMonitoring = true
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1093,26 +1055,23 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task ContainerObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
-
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new ContainerObserver(client, _context)
+            using var obs = new ContainerObserver(TestServiceContext)
             {
                 ConfigurationFilePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "ContainerObserver.config.json"),
                 EnableConcurrentMonitoring = true
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1127,7 +1086,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1135,7 +1094,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
             var client = new FabricClient();
 
-            ClusterObserverManager.FabricServiceContext = _context;
+            ClusterObserverManager.FabricServiceContext = TestServiceContext;
             ClusterObserverManager.FabricClientInstance = client;
             ClusterObserverManager.EtwEnabled = true;
             ClusterObserverManager.TelemetryEnabled = true;
@@ -1147,7 +1106,7 @@ namespace FabricObserverTests
                 ConfigSettings = new ClusterObserver.Utilities.ConfigSettings(null, null)
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1156,7 +1115,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task CertificateObserver_validCerts()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1169,14 +1128,12 @@ namespace FabricObserverTests
             try
             {
                 var startDateTime = DateTime.Now;
-                using var client = new FabricClient();
 
-                ObserverManager.FabricServiceContext = _context;
-                ObserverManager.FabricClientInstance = client;
+                ObserverManager.FabricServiceContext = TestServiceContext;
                 ObserverManager.TelemetryEnabled = false;
                 ObserverManager.EtwEnabled = false;
 
-                using var obs = new CertificateObserver(client, _context);
+                using var obs = new CertificateObserver(TestServiceContext);
 
                 var commonNamesToObserve = new List<string>
                 {
@@ -1199,7 +1156,7 @@ namespace FabricObserverTests
                     ClusterCertSecondaryThumbprint = string.Empty
                 };
 
-                await obs.ObserveAsync(token);
+                await obs.ObserveAsync(Token);
 
                 // observer ran to completion with no errors.
                 Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1219,22 +1176,20 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task CertificateObserver_expiredAndexpiringCerts()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new CertificateObserver(client, _context);
+            using var obs = new CertificateObserver(TestServiceContext);
 
-            using var obsMgr = new ObserverManager(obs, client)
+            using var obsMgr = new ObserverManager(obs)
             {
                 ApplicationName = "fabric:/TestApp0"
             };
@@ -1260,7 +1215,7 @@ namespace FabricObserverTests
                 ClusterCertSecondaryThumbprint = string.Empty
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1279,27 +1234,25 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new NodeObserver(client, _context)
+            using var obs = new NodeObserver(TestServiceContext)
             {
                 DataCapacity = 2,
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = 10000
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1314,20 +1267,18 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Negative_Integer_CPU_Mem_Ports_Firewalls_Values_No_Exceptions_In_Intialize()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new NodeObserver(client, _context)
+            using var obs = new NodeObserver(TestServiceContext)
             {
                 DataCapacity = 2,
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1338,7 +1289,7 @@ namespace FabricObserverTests
                 ActivePortsWarningThreshold = -100
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // Bad values don't crash Initialize.
             Assert.IsFalse(obs.IsUnhealthy);
@@ -1350,20 +1301,18 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Negative_Integer_Thresholds_CPU_Mem_Ports_Firewalls_All_Data_Containers_Are_Null()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new NodeObserver(client, _context)
+            using var obs = new NodeObserver(TestServiceContext)
             {
                 DataCapacity = 2,
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1374,7 +1323,7 @@ namespace FabricObserverTests
                 ActivePortsWarningThreshold = -100
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // Bad values don't crash Initialize.
             Assert.IsFalse(obs.IsUnhealthy);
@@ -1393,20 +1342,18 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new OSObserver(client, _context)
+            using var obs = new OSObserver(TestServiceContext)
             {
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
                 IsObserverWebApiAppDeployed = true
@@ -1414,7 +1361,7 @@ namespace FabricObserverTests
 
             // This is required since output files are only created if fo api app is also deployed to cluster..
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1439,16 +1386,14 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
@@ -1457,7 +1402,7 @@ namespace FabricObserverTests
                 { @"C:\SFDevCluster\Log\Traces", 50000 }
             };
 
-            using var obs = new DiskObserver(client, _context)
+            using var obs = new DiskObserver(TestServiceContext)
             {
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
@@ -1467,7 +1412,7 @@ namespace FabricObserverTests
             };
 
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1492,16 +1437,14 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             var warningDictionary = new Dictionary<string, double>
@@ -1514,7 +1457,7 @@ namespace FabricObserverTests
                 { "%USERPROFILE%", 50 }
             };
 
-            using var obs = new DiskObserver(client, _context)
+            using var obs = new DiskObserver(TestServiceContext)
             {
                 // This should cause a Warning on most dev machines.
                 DiskSpacePercentWarningThreshold = 10,
@@ -1528,12 +1471,12 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(5)
             };
 
-            using var obsMgr = new ObserverManager(obs, client)
+            using var obsMgr = new ObserverManager(obs)
             {
                 ApplicationName = "fabric:/TestApp0"
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1565,21 +1508,19 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NetworkObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new NetworkObserver(client, _context);
-            await obs.ObserveAsync(token);
+            using var obs = new NetworkObserver(TestServiceContext);
+            await obs.ObserveAsync(Token);
 
             // Observer ran to completion with no errors.
             // The supplied config does not include deployed app network configs, so
@@ -1596,26 +1537,24 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NetworkObserver_ObserveAsync_Successful_Observer_WritesLocalFile_ObsWebDeployed()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new NetworkObserver(client, _context)
+            using var obs = new NetworkObserver(TestServiceContext)
             {
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // Observer ran to completion with no errors.
             // The supplied config does not include deployed app network configs, so
@@ -1642,20 +1581,18 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new NodeObserver(client, _context)
+            using var obs = new NodeObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 DataCapacity = 5,
@@ -1666,8 +1603,8 @@ namespace FabricObserverTests
                 EphemeralPortsPercentWarningThreshold = 0.01 // This will generate Warning for sure.
             };
 
-            using var obsMgr = new ObserverManager(obs, client);
-            await obs.ObserveAsync(token);
+            using var obsMgr = new ObserverManager(obs);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1684,20 +1621,17 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task SFConfigurationObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
-
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new SFConfigurationObserver(client, _context)
+            using var obs = new SFConfigurationObserver(TestServiceContext)
             {
                 IsEnabled = true,
 
@@ -1706,7 +1640,7 @@ namespace FabricObserverTests
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml")
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1731,7 +1665,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1747,20 +1681,18 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = client;
-           
-            using var obs = new FabricSystemObserver(client, _context)
+                       
+            using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 IsEnabled = true,
                 DataCapacity = 5,
                 MonitorDuration = TimeSpan.FromSeconds(1)
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1777,28 +1709,24 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
-
-            using var client = new FabricClient();
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = client;
-            
-            using var obs = new FabricSystemObserver(client, _context)
+                        
+            using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 IsEnabled = true,
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 MemWarnUsageThresholdMb = 5
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1813,13 +1741,12 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1829,19 +1756,18 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = client;
+            
            
-            using var obs = new FabricSystemObserver(client, _context)
+            using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ActiveTcpPortCountWarning = 5
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1857,13 +1783,12 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1873,19 +1798,17 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = client;
            
-            using var obs = new FabricSystemObserver(client, _context)
+            using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 ActiveEphemeralPortCountWarning = 1
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1901,13 +1824,12 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_HandlesWarningsOrErrorsDetected()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -1917,19 +1839,17 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = client;
            
-            using var obs = new FabricSystemObserver(client, _context)
+            using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 AllocatedHandlesWarning = 100
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1945,7 +1865,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
@@ -1961,19 +1881,18 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = client;
             
-            using var obs = new FabricSystemObserver(client, _context)
+            
+            using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarnUsageThresholdPct = -42
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1988,13 +1907,12 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            if (!isSFRuntimePresentOnTestMachine)
+            if (!IsSFRuntimePresentOnTestMachine)
             {
                 return;
             }
 
-            using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
@@ -2004,19 +1922,18 @@ namespace FabricObserverTests
 
             var startDateTime = DateTime.Now;
 
-            ObserverManager.FabricServiceContext = _context;
-            ObserverManager.FabricClientInstance = client;
+            ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            ObserverManager.FabricClientInstance = client;
+            
            
-            using var obs = new FabricSystemObserver(client, _context)
+            using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarnUsageThresholdPct = 420
             };
 
-            await obs.ObserveAsync(token);
+            await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);

@@ -23,6 +23,7 @@ using Octokit;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime;
+using FabricObserver.Utilities.ServiceFabric;
 
 namespace FabricObserver.Observers
 {
@@ -104,10 +105,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public static FabricClient FabricClientInstance
-        {
-            get; set;
-        }
+        public static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
         public static bool TelemetryEnabled
         {
@@ -145,14 +143,14 @@ namespace FabricObserver.Observers
         /// </summary>
         /// <param name="observer">Observer instance.</param>
         /// <param name="fabricClient">FabricClient instance</param>
-        public ObserverManager(ObserverBase observer, FabricClient fabricClient)
+        public ObserverManager(ObserverBase observer)
         {
             cts = new CancellationTokenSource();
             token = cts.Token;
             Logger = new Logger("ObserverManagerSingleObserverRun");
-            FabricClientInstance ??= fabricClient;
-            HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+            HealthReporter = new ObserverHealthReporter(Logger);
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            nodeName = FabricServiceContext.NodeContext.NodeName;
 
             // The unit tests expect file output from some observers.
             ObserverWebAppDeployed = true;
@@ -168,12 +166,11 @@ namespace FabricObserver.Observers
         /// <param name="serviceProvider">IServiceProvider for retrieving service instance.</param>
         /// <param name="fabricClient">FabricClient instance.</param>
         /// <param name="token">Cancellation token.</param>
-        public ObserverManager(IServiceProvider serviceProvider, FabricClient fabricClient, CancellationToken token)
+        public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
         {
             this.token = token;
             cts = new CancellationTokenSource();
             linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
-            FabricClientInstance = fabricClient;
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
@@ -202,7 +199,7 @@ namespace FabricObserver.Observers
             Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays > 0 ? MaxArchivedLogFileLifetimeDays : 7);
             SetPropertiesFromConfigurationParameters();
             observers = serviceProvider.GetServices<ObserverBase>().ToList();
-            HealthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+            HealthReporter = new ObserverHealthReporter(Logger);
         }
 
         private string GetServiceFabricRuntimeVersion()
@@ -444,7 +441,7 @@ namespace FabricObserver.Observers
                                             healthReport.Property = evt.HealthInformation.Property;
                                             healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                            var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                            var healthReporter = new ObserverHealthReporter(Logger);
                                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
                                             await Task.Delay(150).ConfigureAwait(false);
@@ -482,7 +479,7 @@ namespace FabricObserver.Observers
                                             healthReport.Property = evt.HealthInformation.Property;
                                             healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                            var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                            var healthReporter = new ObserverHealthReporter(Logger);
                                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
                                             await Task.Delay(150).ConfigureAwait(false);
@@ -528,7 +525,7 @@ namespace FabricObserver.Observers
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
                                     healthReport.EntityType = EntityType.Application;
 
-                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                    var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
                                     await Task.Delay(150).ConfigureAwait(false);
@@ -571,7 +568,7 @@ namespace FabricObserver.Observers
                                     healthReport.Property = evt.HealthInformation.Property;
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                    var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                                    var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
                                     await Task.Delay(150).ConfigureAwait(false);
@@ -615,7 +612,6 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            // Note, the FabricClient singleton/instance will be disposed of by the creating code (in FabricObserver class). Do not dispose of it here.
             if (disposing)
             {
                 linkedSFRuntimeObserverTokenSource?.Dispose();
@@ -654,7 +650,7 @@ namespace FabricObserver.Observers
                             healthReport.Property = obsMgrAppHealthEvent.HealthInformation.Property;
                             healthReport.SourceId = obsMgrAppHealthEvent.HealthInformation.SourceId;
 
-                            var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                            var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
                             await Task.Delay(150).ConfigureAwait(false);
@@ -682,7 +678,7 @@ namespace FabricObserver.Observers
                             healthReport.Property = evt.HealthInformation.Property;
                             healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                            var healthReporter = new ObserverHealthReporter(Logger, FabricClientInstance);
+                            var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
                             await Task.Delay(150).ConfigureAwait(false);

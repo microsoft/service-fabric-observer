@@ -8,8 +8,8 @@
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <!-- You only need to set this if you want to use a different EventSource provider name than the default, FabricObserverETWProvider.
-	     This is primarily useful for scenarios where you have multiple instances of FO running on a node and you want to ensure that each instance writes 
-		 ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
+         This is primarily useful for scenarios where you have multiple instances of FO running on a node and you want to ensure that each instance writes 
+         ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />

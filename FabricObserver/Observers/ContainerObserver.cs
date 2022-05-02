@@ -36,7 +36,6 @@ namespace FabricObserver.Observers
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
         private ConcurrentQueue<ApplicationInfo> deployedTargetList;
         private ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
-        private readonly string ConfigPackagePath;
         private readonly object lockObj = new object();
         private Stopwatch runDurationTimer;
         public string ConfigurationFilePath = string.Empty;
@@ -51,10 +50,12 @@ namespace FabricObserver.Observers
             get; private set; 
         }
 
-        public ContainerObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <summary>
+        /// Creates a new instance of the type.
+        /// </summary>
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public ContainerObserver(StatelessServiceContext context) : base(null, context)
         {
-            ConfigPackagePath = context.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Path;
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
@@ -438,8 +439,8 @@ namespace FabricObserver.Observers
 
                     // We need the full path to the currently deployed FO CodePackage, which is where our 
                     // linux Capabilities-laced proxy binary lives, which is used for elevated_docker_stats call.
-                    string path = FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path;
-                    filename = $"{path}/elevated_docker_stats";
+
+                    filename = $"{CodePackage.Path}/elevated_docker_stats";
                 }
 
                 var ps = new ProcessStartInfo
@@ -669,7 +670,7 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            string path = Path.Combine(ConfigPackagePath, configFilename);
+            string path = Path.Combine(ConfigPackage.Path, configFilename);
             
             if (File.Exists(path))
             {

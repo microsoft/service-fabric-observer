@@ -373,16 +373,17 @@
   <!-- Plugin model sample. Just add the configuration info here that your observer needs.
        **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
        Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
-       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. If you want to
-       enable versionless application parameter updates, then add MustOverride to the Parameters you want to be able to change without
-       redeploying FO and add them to ApplicationManifest.xml like all the other observers.
+       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. 
+	   
+       If you want to enable versionless application parameter updates, then add MustOverride to the Parameters you want to be 
+       able to change without redeploying FO and add them to ApplicationManifest.xml like all the other observers.
   <Section Name="SampleNewObserverConfiguration">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="Enabled" Value="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
-    <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    <Parameter Name="EnableCSVDataLogging" Value="false" />
+    <Parameter Name="EnableEtw" Value="false" />
+    <Parameter Name="EnableTelemetry" Value="false" />
+    <Parameter Name="EnableVerboseLogging" Value="false" />
+    <Parameter Name="RunInterval" Value=""  />
   </Section> -->
 </Settings>

@@ -43,11 +43,12 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SFConfigurationObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public SFConfigurationObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public SFConfigurationObserver(StatelessServiceContext context) : base(null, context)
         {
+
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -232,10 +233,8 @@ namespace FabricObserver.Observers
                 // Node Information.
                 _ = sb.AppendLine($"{Environment.NewLine}Node Info:{Environment.NewLine}");
                 _ = sb.AppendLine($"Node Name: {NodeName}");
-                _ = sb.AppendLine($"Node Id: {FabricServiceContext.NodeContext.NodeId}");
-                _ = sb.AppendLine($"Node Instance Id: {FabricServiceContext.NodeContext.NodeInstanceId}");
-                _ = sb.AppendLine($"Node Type: {FabricServiceContext.NodeContext.NodeType}");
-                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                _ = sb.AppendLine($"Node Type: {NodeType}");
+                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);
 
                 if (lowPort > -1)
                 {
@@ -306,8 +305,8 @@ namespace FabricObserver.Observers
 
                                 if (procId > -1)
                                 {
-                                    ports = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
-                                    ephemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
+                                    ports = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ConfigPackage.Path : null);
+                                    ephemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ConfigPackage.Path : null);
                                 }
 
                                 _ = sb.AppendLine("\tService Name: " + serviceName.OriginalString);

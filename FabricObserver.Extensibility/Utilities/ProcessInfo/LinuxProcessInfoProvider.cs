@@ -26,18 +26,17 @@ namespace FabricObserver.Observers.Utilities
             return 0f;
         }
 
-        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null)
+        public override float GetProcessAllocatedHandles(int processId, string configPath)
         {
-            if (processId < 0 || context == null)
+            if (processId < 0 || string.IsNullOrWhiteSpace(configPath))
             {
                 return -1f;
             }
 
             // We need the full path to the currently deployed FO CodePackage, which is where our 
             // proxy binary lives.
-            string path = context.CodePackageActivationContext.GetCodePackageObject("Code").Path;
             string arg = processId.ToString();
-            string bin = $"{path}/elevated_proc_fd";
+            string bin = $"{configPath}/elevated_proc_fd";
             float result;
 
             ProcessStartInfo startInfo = new ProcessStartInfo

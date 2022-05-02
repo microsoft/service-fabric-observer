@@ -3,8 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System;
-using System.Fabric;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,15 +45,39 @@ namespace FabricObserver.Observers.Utilities
             get;
         } = new Logger("OSUtilities");
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo();
 
-        public abstract int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <param name="configPath"></param>
+        /// <returns></returns>
+        public abstract int GetActiveTcpPortCount(int processId = -1, string configPath = null);
 
-        public abstract int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <param name="configPath"></param>
+        /// <returns></returns>
+        public abstract int GetActiveEphemeralPortCount(int processId = -1, string configPath = null);
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public abstract (int LowPort, int HighPort) TupleGetDynamicPortRange();
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public abstract Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken);
 
         /// <summary>
@@ -74,8 +96,8 @@ namespace FabricObserver.Observers.Utilities
         /// Gets the percentage (of total in range) of ephemeral ports currently in use on the machine or by process of supplied pid.
         /// </summary>
         /// <param name="processId">Id of process.</param>
-        /// <param name="context">ServiceContext instance. This is required by the Linux impl. Ignored for Windows.</param>
+        /// <param name="configPath">Configuration Settings path. This is required by the Linux impl. Ignored for Windows.</param>
         /// <returns>Percentage of ephemeral ports in use as a double.</returns>
-        public abstract double GetActiveEphemeralPortCountPercentage(int processId = -1, ServiceContext context = null);
+        public abstract double GetActiveEphemeralPortCountPercentage(int processId = -1, string configPath = null);
     }
 }

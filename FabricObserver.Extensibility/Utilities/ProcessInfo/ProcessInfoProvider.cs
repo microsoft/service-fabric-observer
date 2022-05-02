@@ -51,7 +51,7 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
 
-        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null);
+        public abstract float GetProcessAllocatedHandles(int processId, string configPath = null);
 
         public abstract double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
 

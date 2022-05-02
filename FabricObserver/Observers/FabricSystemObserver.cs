@@ -47,10 +47,10 @@ namespace FabricObserver.Observers
         private bool monitorWinEventLog;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public FabricSystemObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public FabricSystemObserver(StatelessServiceContext context) : base(null, context)
         {
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
@@ -886,7 +886,7 @@ namespace FabricObserver.Observers
                 try
                 { 
                     // Ports - Active TCP All
-                    int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(process.Id, FabricServiceContext);
+                    int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(process.Id, CodePackage?.Path);
                     TotalActivePortCountAllSystemServices += activePortCount;
                     
                     if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
@@ -895,7 +895,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Ports - Active TCP Ephemeral
-                    int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id, FabricServiceContext);
+                    int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id, CodePackage?.Path);
                     TotalActiveEphemeralPortCountAllSystemServices += activeEphemeralPortCount;
                     
                     if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
@@ -912,7 +912,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, FabricServiceContext);
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, CodePackage?.Path);
                     }
 
                     TotalAllocatedHandlesAllSystemServices += handles;

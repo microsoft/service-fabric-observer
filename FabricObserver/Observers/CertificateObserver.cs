@@ -52,8 +52,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public CertificateObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base (fabricClient, context)
+        /// <summary>
+        /// Creates a new instance of the type.
+        /// </summary>
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public CertificateObserver(StatelessServiceContext context) : base (null, context)
         {
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }

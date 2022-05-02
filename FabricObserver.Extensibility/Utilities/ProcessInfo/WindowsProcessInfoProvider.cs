@@ -28,7 +28,7 @@ namespace FabricObserver.Observers.Utilities
             return NativeGetProcessFullWorkingSetMb(processId); 
         }
 
-        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null)
+        public override float GetProcessAllocatedHandles(int processId, string configPath = null)
         {
             return NativeGetProcessHandleCount(processId);
         }
