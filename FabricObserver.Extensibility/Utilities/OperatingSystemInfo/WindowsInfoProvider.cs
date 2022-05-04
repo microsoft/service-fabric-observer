@@ -4,11 +4,9 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -22,7 +20,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private const string TcpProtocol = "tcp";
         private (int, int) windowsDynamicPortRange = (-1, -1);
-        private readonly ConcurrentDictionary<int, string> netstatOutput;
+        private readonly List<NativeMethods.MIB_TCPROW_OWNER_PID> allTCPConnInfo;
         private const int netstatOutputMaxCacheTimeSeconds = 15;
         private DateTime LastCacheUpdate = DateTime.MinValue;
         private readonly object _lock =  new object();
@@ -30,7 +28,29 @@ namespace FabricObserver.Observers.Utilities
         public WindowsInfoProvider()
         {
             windowsDynamicPortRange = TupleGetDynamicPortRange();
-            netstatOutput = new ConcurrentDictionary<int, string>();
+            allTCPConnInfo = new List<NativeMethods.MIB_TCPROW_OWNER_PID>();
+        }
+
+        // TEST
+        private void GetTcpConnections()
+        {
+            if (DateTime.UtcNow.Subtract(LastCacheUpdate) < TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+            {
+                return;
+            }
+
+            lock (_lock)
+            {
+                if (DateTime.UtcNow.Subtract(LastCacheUpdate) < TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+                {
+                    return;
+                }
+
+                allTCPConnInfo.Clear();
+                allTCPConnInfo.AddRange(NativeMethods.GetAllTCPConnections());
+                windowsDynamicPortRange = TupleGetDynamicPortRange();
+                LastCacheUpdate = DateTime.UtcNow;
+            }
         }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
@@ -149,13 +169,6 @@ namespace FabricObserver.Observers.Utilities
             return usedPct;
         }
 
-        /// <summary>
-        /// Compute count of active TCP ports.
-        /// </summary>
-        /// <param name="processId">Optional: If supplied, then return the number of tcp ports in use by the process.</param>
-        /// <param name="context">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
-        /// If supplied, will use the ServiceContext to find the Linux Capabilities binary to run this command.</param>
-        /// <returns>number of active TCP ports as int value</returns>
         public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
         {
             int count;
@@ -270,17 +283,7 @@ namespace FabricObserver.Observers.Utilities
 
         private int GetTcpPortCount(int processId = -1, bool ephemeral = false)
         {
-            if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
-            {
-                lock (_lock)
-                {
-                    if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
-                    {
-                        RefreshNetstatData();
-                        windowsDynamicPortRange = TupleGetDynamicPortRange();
-                    }
-                }
-            }
+            GetTcpConnections();
 
             var tempLocalPortData = new List<(int Pid, int Port)>();
             string findStrProc = string.Empty;
@@ -291,15 +294,10 @@ namespace FabricObserver.Observers.Utilities
             {
                 (lowPortRange, highPortRange) = windowsDynamicPortRange;
             }
-     
-            foreach (string portRow in netstatOutput.Values)
-            {
-                if (string.IsNullOrWhiteSpace(portRow))
-                {
-                    continue;
-                }
 
-                (int localPort, int pid) = TupleGetLocalPortPidPairFromNetStatString(portRow);
+            foreach (var conn in allTCPConnInfo)
+            {
+                (int localPort, int pid) = TupleGetLocalPortPidPairFromNetStatString(conn);
 
                 if (localPort == -1 || pid == -1)
                 {
@@ -343,109 +341,19 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        private void RefreshNetstatData()
-        {
-            Process process = null;
-
-            try
-            {
-                netstatOutput.Clear();
-
-                string error = null;
-                process = new Process();
-                var ps = new ProcessStartInfo
-                {
-                    Arguments = $"/c netstat -qno -p {TcpProtocol}",
-                    FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
-
-                int i = 0;
-
-                // Capture any error information from netstat.
-                process.ErrorDataReceived += (sender, e) => { error += e.Data; };
-
-                // Fill the dictionary with netstat output lines.
-                process.OutputDataReceived += (sender, outputLine) => { ++i; if (!string.IsNullOrWhiteSpace(outputLine.Data)) { netstatOutput.TryAdd(i, outputLine.Data.Trim()); } };
-                process.StartInfo = ps;
-
-                if (!process.Start())
-                {
-                    Logger.LogWarning($"Unable to start process: {ps.Arguments}");
-                    return;
-                }
-
-                // Start asynchronous read operations.
-                process.BeginErrorReadLine();
-                process.BeginOutputReadLine();
-
-                process.WaitForExit();
-                int exitStatus = process.ExitCode;
-
-                if (exitStatus == 0)
-                {
-                    LastCacheUpdate = DateTime.UtcNow;
-                    return;
-                }
-
-                // There was an error associated with the non-zero exit code.
-                string msg = $"RefreshNetstatData: netstat -qno -p {TcpProtocol} exited with {exitStatus}: {error}";
-                Logger.LogWarning(msg);
-
-                // Handled by Retry.Do.
-                throw new RetryableException(msg);
-            }
-            catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException || ex is NotSupportedException || ex is SystemException)
-            {
-                Logger.LogWarning($"Unable to get netstat information:{Environment.NewLine}{ex}");
-            }
-            finally
-            {
-                process?.Dispose();
-                process = null;
-            }
-        }
-
         /// <summary>
         /// Gets local port number and associated process ID from netstat standard output line.
         /// </summary>
         /// <param name="netstatOutputLine">Single line (row) of text from netstat output.</param>
         /// <returns>Integer Tuple: (port, pid)</returns>
-        private static (int, int) TupleGetLocalPortPidPairFromNetStatString(string netstatOutputLine)
+        private static (int, int) TupleGetLocalPortPidPairFromNetStatString(NativeMethods.MIB_TCPROW_OWNER_PID tcpRow)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(netstatOutputLine))
-                {
-                    return (-1, -1);
-                }
+                int localPort = tcpRow.LocalPort;
+                int pid = (int)tcpRow.owningPid;
 
-                string[] stats = netstatOutputLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                if (stats.Length != 5 || !int.TryParse(stats[4], out int pid))
-                {
-                    return (-1, -1);
-                }
-
-                string localIpAndPort = stats[1];
-
-                if (string.IsNullOrWhiteSpace(localIpAndPort) || !localIpAndPort.Contains(":"))
-                {
-                    return (-1, -1);
-                }
-
-                // We *only* care about the local IP.
-                string localPort = localIpAndPort.Split(':')[1];
-
-                if (!int.TryParse(localPort, out int port))
-                {
-                    return (-1, -1);
-                }
-
-                return (port, pid);
+                return (localPort, pid);
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException)
             {

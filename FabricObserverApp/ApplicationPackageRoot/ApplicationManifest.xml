@@ -112,7 +112,7 @@
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support.
          Note: If you do not monitor several services, then enabling this is not super useful. This will only add value (substantial) on machines with capable hardware (>= 4 logical procs). -->
-    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="false" />
     <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
          eating CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.

@@ -52,19 +52,21 @@ namespace FabricObserver.Observers.Utilities
         public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo();
 
         /// <summary>
-        /// 
+        /// Compute count of active TCP ports.
         /// </summary>
-        /// <param name="processId"></param>
-        /// <param name="configPath"></param>
-        /// <returns></returns>
+        /// <param name="processId">Optional: If supplied, then return the number of tcp ports in use by the process.</param>
+        /// <param name="configPath">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
+        /// If supplied, will use the path to find the Linux Capabilities binary to run this command.</param>
+        /// <returns>Number of active TCP ports in use as integer value.</returns>
         public abstract int GetActiveTcpPortCount(int processId = -1, string configPath = null);
 
         /// <summary>
-        /// 
+        /// Compute count of active TCP ports in the dynamic range.
         /// </summary>
-        /// <param name="processId"></param>
-        /// <param name="configPath"></param>
-        /// <returns></returns>
+        /// <param name="processId">Optional: If supplied, then return the number of tcp ports in use by the process.</param>
+        /// <param name="configPath">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
+        /// If supplied, will use the path to find the Linux Capabilities binary to run this command.</param>
+        /// <returns>Number of active TCP ports in use as integer value.</returns>
         public abstract int GetActiveEphemeralPortCount(int processId = -1, string configPath = null);
 
         /// <summary>
