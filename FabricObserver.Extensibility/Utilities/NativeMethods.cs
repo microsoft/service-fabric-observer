@@ -155,6 +155,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         // Networking \\
+        // Credit: http://pinvoke.net/default.aspx/iphlpapi/GetExtendedTcpTable.html
 
         public enum TCP_TABLE_CLASS
         {
@@ -199,7 +200,6 @@ namespace FabricObserver.Observers.Utilities
         {
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
             public byte[] localAddr;
-
             public uint localScopeId;
 
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
@@ -207,14 +207,11 @@ namespace FabricObserver.Observers.Utilities
 
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
             public byte[] remoteAddr;
-
             public uint remoteScopeId;
 
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
             public byte[] remotePort;
-
             public uint state;
-
             public uint owningPid;
 
             public uint ProcessId
@@ -295,17 +292,14 @@ namespace FabricObserver.Observers.Utilities
         public struct MIB_TCPROW_OWNER_PID
         {
             public uint state;
-
             public uint localAddr;
 
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
             public byte[] localPort;
-
             public uint remoteAddr;
 
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
             public byte[] remotePort;
-
             public uint owningPid;
 
             public uint ProcessId
@@ -504,17 +498,18 @@ namespace FabricObserver.Observers.Utilities
         }
 
         // Networking \\
+        // Credit: http://pinvoke.net/default.aspx/iphlpapi/GetExtendedTcpTable.html
 
         /// <summary>
         /// Gets a list of TCP (v4) connection info objects for use in determining TCP ports in use per process or machine-wide.
         /// </summary>
         /// <returns>List of MIB_TCPROW_OWNER_PID objects.</returns>
-        public static List<MIB_TCPROW_OWNER_PID> GetAllTCPConnections()
+        public static List<MIB_TCPROW_OWNER_PID> GetAllTcpConnections()
         {
             return GetTCPConnections<MIB_TCPROW_OWNER_PID, MIB_TCPTABLE_OWNER_PID>(AF_INET);
         }
 
-        public static List<MIB_TCP6ROW_OWNER_PID> GetAllTCPv6Connections()
+        public static List<MIB_TCP6ROW_OWNER_PID> GetAllTcpIpv6Connections()
         {
             return GetTCPConnections<MIB_TCP6ROW_OWNER_PID, MIB_TCP6TABLE_OWNER_PID>(AF_INET6);
         }
@@ -525,16 +520,18 @@ namespace FabricObserver.Observers.Utilities
             int buffSize = 0;
 
             var dwNumEntriesField = typeof(IPT).GetField("dwNumEntries");
-            uint ret = GetExtendedTcpTable(IntPtr.Zero, ref buffSize, true, ipVersion, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL);
+
+            // Determine how much memory to allocate.
+            _ = GetExtendedTcpTable(IntPtr.Zero, ref buffSize, true, ipVersion, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL);
             IntPtr tcpTablePtr = Marshal.AllocHGlobal(buffSize);
 
             try
             {
-                ret = GetExtendedTcpTable(tcpTablePtr, ref buffSize, true, ipVersion, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL);
+                uint ret = GetExtendedTcpTable(tcpTablePtr, ref buffSize, true, ipVersion, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL);
 
                 if (ret != 0)
                 {
-                    return new List<IPR>();
+                    throw new Win32Exception($"NativeMethods.GetTCPConnections: Failed to get TCP connections with Win32 error {Marshal.GetLastWin32Error()}");
                 }
 
                 // get the number of entries in the table
@@ -544,7 +541,6 @@ namespace FabricObserver.Observers.Utilities
 
                 // buffer we will be returning
                 tableRows = new IPR[numEntries];
-
                 IntPtr rowPtr = (IntPtr)((long)tcpTablePtr + 4);
 
                 for (int i = 0; i < numEntries; ++i)
@@ -556,7 +552,7 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-                // Free the Memory
+                // Free memory
                 Marshal.FreeHGlobal(tcpTablePtr);
             }
 

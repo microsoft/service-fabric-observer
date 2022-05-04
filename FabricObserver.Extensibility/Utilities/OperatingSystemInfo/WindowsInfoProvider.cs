@@ -20,111 +20,123 @@ namespace FabricObserver.Observers.Utilities
     {
         private const string TcpProtocol = "tcp";
         private (int, int) windowsDynamicPortRange = (-1, -1);
-        private readonly List<NativeMethods.MIB_TCPROW_OWNER_PID> allTCPConnInfo;
-        private const int netstatOutputMaxCacheTimeSeconds = 15;
-        private DateTime LastCacheUpdate = DateTime.MinValue;
+        private readonly List<NativeMethods.MIB_TCPROW_OWNER_PID> allTcpConnInfo;
+        private const int tcpPortOutputMaxCacheTimeSeconds = 15;
+        private const int dynamicRangeMaxCacheTimeHours = 8;
+        private DateTime LastPortCacheUpdate = DateTime.MinValue;
+        private DateTime LastDynamicRangeCacheUpdate = DateTime.MinValue;
         private readonly object _lock =  new object();
 
         public WindowsInfoProvider()
         {
             windowsDynamicPortRange = TupleGetDynamicPortRange();
-            allTCPConnInfo = new List<NativeMethods.MIB_TCPROW_OWNER_PID>();
+            allTcpConnInfo = new List<NativeMethods.MIB_TCPROW_OWNER_PID>();
         }
 
-        // TEST
         private void GetTcpConnections()
         {
-            if (DateTime.UtcNow.Subtract(LastCacheUpdate) < TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+            if (DateTime.UtcNow.Subtract(LastPortCacheUpdate) < TimeSpan.FromSeconds(tcpPortOutputMaxCacheTimeSeconds))
             {
                 return;
             }
 
             lock (_lock)
             {
-                if (DateTime.UtcNow.Subtract(LastCacheUpdate) < TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+                if (DateTime.UtcNow.Subtract(LastPortCacheUpdate) < TimeSpan.FromSeconds(tcpPortOutputMaxCacheTimeSeconds))
                 {
                     return;
                 }
 
-                allTCPConnInfo.Clear();
-                allTCPConnInfo.AddRange(NativeMethods.GetAllTCPConnections());
-                windowsDynamicPortRange = TupleGetDynamicPortRange();
-                LastCacheUpdate = DateTime.UtcNow;
+                allTcpConnInfo.Clear();
+                allTcpConnInfo.AddRange(NativeMethods.GetAllTcpConnections());
+                LastPortCacheUpdate = DateTime.UtcNow;
             }
         }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
-            if (windowsDynamicPortRange != (-1, -1))
+            if (DateTime.UtcNow.Subtract(LastDynamicRangeCacheUpdate) < TimeSpan.FromHours(dynamicRangeMaxCacheTimeHours))
             {
                 return windowsDynamicPortRange;
             }
-            
-            using (var process = new Process())
+
+            lock (_lock)
             {
-                try
+                if (DateTime.UtcNow.Subtract(LastDynamicRangeCacheUpdate) < TimeSpan.FromHours(dynamicRangeMaxCacheTimeHours))
                 {
-                    string error = string.Empty, output = string.Empty;
-
-                    var ps = new ProcessStartInfo
-                    {
-                        Arguments = $"/c netsh int ipv4 show dynamicportrange {TcpProtocol} | find /i \"port\"",
-                        FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
-                        UseShellExecute = false,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardError = true,
-                        RedirectStandardOutput = true
-                    };
-
-                    process.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                    process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output += e.Data + Environment.NewLine; } };
-                    process.StartInfo = ps;
-
-                    if (!process.Start())
-                    {
-                        return (-1, -1);
-                    }
-
-                    // Start async reads.
-                    process.BeginErrorReadLine();
-                    process.BeginOutputReadLine();
-                    process.WaitForExit();
-
-                    Match match = Regex.Match(
-                                        output,
-                                        @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
-                                        RegexOptions.Singleline | RegexOptions.IgnoreCase);
-
-                    string startPort = match.Groups["startPort"].Value;
-                    string portCount = match.Groups["numberOfPorts"].Value;
-                    int exitStatus = process.ExitCode;
-
-                    if (exitStatus != 0)
-                    {
-                        Logger.LogWarning(
-                            "TupleGetDynamicPortRange: netsh failure. " +
-                            $"Unable to determine dynamic port range (will return (-1, -1)):{Environment.NewLine}{error}");
-
-                        return (-1, -1);
-                    }
-
-                    if (int.TryParse(startPort, out int lowPortRange) && int.TryParse(portCount, out int count))
-                    {
-                        int highPortRange = lowPortRange + count;
-
-                        return (lowPortRange, highPortRange);
-                    }
-                }
-                catch (Exception e) when (
-                                 e is ArgumentException ||
-                                 e is IOException ||
-                                 e is InvalidOperationException ||
-                                 e is RegexMatchTimeoutException ||
-                                 e is Win32Exception)
-                {
-                    Logger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1)):{Environment.NewLine}{e}");
+                    return windowsDynamicPortRange;
                 }
 
+                using (var process = new Process())
+                {
+                    try
+                    {
+                        string error = string.Empty, output = string.Empty;
+
+                        var ps = new ProcessStartInfo
+                        {
+                            Arguments = $"/c netsh int ipv4 show dynamicportrange {TcpProtocol} | find /i \"port\"",
+                            FileName = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe",
+                            UseShellExecute = false,
+                            WindowStyle = ProcessWindowStyle.Hidden,
+                            RedirectStandardError = true,
+                            RedirectStandardOutput = true
+                        };
+
+                        process.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                        process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output += e.Data + Environment.NewLine; } };
+                        process.StartInfo = ps;
+
+                        if (!process.Start())
+                        {
+                            return (-1, -1);
+                        }
+
+                        // Start async reads.
+                        process.BeginErrorReadLine();
+                        process.BeginOutputReadLine();
+
+                        if (process.WaitForExit(60000))
+                        {
+
+                            Match match = Regex.Match(
+                                                output,
+                                                @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
+                                                RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+                            string startPort = match.Groups["startPort"].Value;
+                            string portCount = match.Groups["numberOfPorts"].Value;
+                            int exitStatus = process.ExitCode;
+
+                            if (exitStatus != 0)
+                            {
+                                Logger.LogWarning(
+                                    "TupleGetDynamicPortRange: netsh failure. " +
+                                    $"Unable to determine dynamic port range (will return (-1, -1)):{Environment.NewLine}{error}");
+
+                                return (-1, -1);
+                            }
+
+                            if (int.TryParse(startPort, out int lowPortRange) && int.TryParse(portCount, out int count))
+                            {
+                                int highPortRange = lowPortRange + count;
+                                LastDynamicRangeCacheUpdate = DateTime.UtcNow;
+
+                                return (lowPortRange, highPortRange);
+                            }
+                        }
+                    }
+                    catch (Exception e) when (
+                                     e is ArgumentException ||
+                                     e is IOException ||
+                                     e is InvalidOperationException ||
+                                     e is RegexMatchTimeoutException ||
+                                     e is Win32Exception ||
+                                     e is SystemException)
+                    {
+                        Logger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1)):{Environment.NewLine}{e}");
+                    }
+                }
             }
 
             return (-1, -1);
@@ -285,7 +297,7 @@ namespace FabricObserver.Observers.Utilities
         {
             GetTcpConnections();
 
-            var tempLocalPortData = new List<(int Pid, int Port)>();
+            var tempLocalPortData = new List<(int Port, uint Pid)>();
             string findStrProc = string.Empty;
             string error = string.Empty;
             (int lowPortRange, int highPortRange) = (-1, -1);
@@ -295,14 +307,10 @@ namespace FabricObserver.Observers.Utilities
                 (lowPortRange, highPortRange) = windowsDynamicPortRange;
             }
 
-            foreach (var conn in allTCPConnInfo)
+            foreach (var conn in allTcpConnInfo)
             {
-                (int localPort, int pid) = TupleGetLocalPortPidPairFromNetStatString(conn);
-
-                if (localPort == -1 || pid == -1)
-                {
-                    continue;
-                }
+                int localPort = conn.LocalPort;
+                uint pid = conn.ProcessId;
 
                 if (processId > 0)
                 {
@@ -312,7 +320,7 @@ namespace FabricObserver.Observers.Utilities
                     }
 
                     // Only add unique pid (if supplied in call) and local port data to list.
-                    if (tempLocalPortData.Any(t => t.Pid == pid && t.Port == localPort))
+                    if (tempLocalPortData.Any(t => t.Port == localPort && t.Pid == pid))
                     {
                         continue;
                     }
@@ -331,7 +339,7 @@ namespace FabricObserver.Observers.Utilities
                     continue;
                 }
 
-                tempLocalPortData.Add((pid, localPort));
+                tempLocalPortData.Add((localPort, pid));
             }
 
             int count = tempLocalPortData.Count;
@@ -339,26 +347,6 @@ namespace FabricObserver.Observers.Utilities
             tempLocalPortData = null;
 
             return count;
-        }
-
-        /// <summary>
-        /// Gets local port number and associated process ID from netstat standard output line.
-        /// </summary>
-        /// <param name="netstatOutputLine">Single line (row) of text from netstat output.</param>
-        /// <returns>Integer Tuple: (port, pid)</returns>
-        private static (int, int) TupleGetLocalPortPidPairFromNetStatString(NativeMethods.MIB_TCPROW_OWNER_PID tcpRow)
-        {
-            try
-            {
-                int localPort = tcpRow.LocalPort;
-                int pid = (int)tcpRow.owningPid;
-
-                return (localPort, pid);
-            }
-            catch (Exception e) when (e is ArgumentException || e is FormatException)
-            {
-                return (-1, -1);
-            }
         }
 
         public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo()

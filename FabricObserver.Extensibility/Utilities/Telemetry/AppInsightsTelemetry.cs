@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Fabric;
 using System.Fabric.Health;
 using System.Globalization;
 using System.Runtime.InteropServices;

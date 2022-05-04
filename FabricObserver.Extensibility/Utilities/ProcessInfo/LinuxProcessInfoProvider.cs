@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Fabric;
 using System.Linq;
 
 namespace FabricObserver.Observers.Utilities
