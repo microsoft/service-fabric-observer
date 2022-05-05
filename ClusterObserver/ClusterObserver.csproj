@@ -28,6 +28,8 @@
     <None Remove="ApplicationInsights.config" />
   </ItemGroup>
   <ItemGroup>
+	<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
+	<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
 	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
@@ -35,8 +37,10 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="NLog" Version="4.7.10" />
     <PackageReference Include="Octokit" Version="0.50.0" />
+	<PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
   </ItemGroup>
 </Project>

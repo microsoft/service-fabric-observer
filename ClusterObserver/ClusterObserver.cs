@@ -13,17 +13,19 @@ using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using ClusterObserver.Interfaces;
 using ClusterObserver.Utilities;
-using ClusterObserver.Utilities.Telemetry;
 using Newtonsoft.Json;
+using FabricObserver.Observers;
+using FabricObserver.Observers.Interfaces;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace ClusterObserver
 {
-    public class ClusterObserver
+    public class ClusterObserver : ObserverBase
     {
-        private readonly Uri repairManagerServiceUri = new Uri($"{ObserverConstants.SystemAppName}/RepairManagerService");
-        private readonly Uri fabricSystemAppUri = new Uri(ObserverConstants.SystemAppName);
+        private readonly Uri repairManagerServiceUri = new Uri($"{ClusterObserverConstants.SystemAppName}/RepairManagerService");
+        private readonly Uri fabricSystemAppUri = new Uri(ClusterObserverConstants.SystemAppName);
         private readonly bool ignoreDefaultQueryTimeout;
 
         private HealthState LastKnownClusterHealthState
@@ -48,69 +50,54 @@ namespace ClusterObserver
 
         private ITelemetryProvider ObserverTelemetryClient => ClusterObserverManager.TelemetryClient;
 
-        private FabricClient FabricClientInstance => ClusterObserverManager.FabricClientInstance;
-
-        private TimeSpan RunInterval => ConfigSettings?.RunInterval ?? TimeSpan.MinValue;
-
         private static bool EtwEnabled => ClusterObserverManager.EtwEnabled;
 
-        public ConfigSettings ConfigSettings
+        public TimeSpan MaxTimeNodeStatusNotOk
+        {
+            get; set;
+        } = TimeSpan.FromHours(2.0);
+
+        public bool MonitorRepairJobStatus
         {
             get; set;
         }
 
-        public string ObserverName
+        public bool MonitorUpgradeStatus
         {
-            get;
+            get; set;
         }
 
-        private StatelessServiceContext FabricServiceContext
+        public bool HasClusterUpgradeCompleted 
         {
-            get;
+            get; private set; 
         }
 
-        private Logger ObserverLogger
-        {
-            get;
+        public bool EmitWarningDetails 
+        { 
+            get; private set; 
         }
-
-        public DateTime LastRunDateTime
-        {
-            get;
-            private set;
-        }
-
-        public bool IsEnabled => ConfigSettings == null || ConfigSettings.IsEnabled;
-
-        public bool HasClusterUpgradeCompleted { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
         /// This observer is a singleton (one partition) stateless service that runs on one node in an SF cluster.
         /// </summary>
-        public ClusterObserver(ConfigurationSettings settings = null, bool ignoreDefaultQueryTimeout = false)
+        public ClusterObserver(StatelessServiceContext serviceContext, ConfigurationSettings settings = null, bool ignoreDefaultQueryTimeout = false) : base (null, serviceContext)
         {
-            ObserverName = ObserverConstants.ClusterObserverName;
-            FabricServiceContext = ClusterObserverManager.FabricServiceContext;
             NodeStatusDictionary = new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
             ApplicationUpgradesCompletedStatus = new Dictionary<string, bool>();
-            settings ??= FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config")?.Settings;
-            ConfigSettings = new ConfigSettings(settings, ObserverConstants.ClusterObserverConfigurationSectionName);
-            ObserverLogger = new Logger(ObserverName, ClusterObserverManager.LogPath)
-            {
-                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging
-            };
 
             this.ignoreDefaultQueryTimeout = ignoreDefaultQueryTimeout;
         }
 
-        public async Task ObserveAsync(CancellationToken token)
+        public override async Task ObserveAsync(CancellationToken token)
         {
-            if (!IsEnabled || !ClusterObserverManager.TelemetryEnabled
+            if (!IsEnabled /*|| !ClusterObserverManager.TelemetryEnabled*/
                 || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
             }
+
+            SetPropertiesFromApplicationSettings();
 
             if (token.IsCancellationRequested)
             {
@@ -122,9 +109,39 @@ namespace ClusterObserver
             LastRunDateTime = DateTime.Now;
         }
 
-        private async Task ReportAsync(CancellationToken token)
+        public override async Task ReportAsync(CancellationToken token)
         {
             await ReportClusterHealthAsync(token).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Set properties with Application Parameter settings supplied by user.
+        /// </summary>
+        private void SetPropertiesFromApplicationSettings()
+        {
+            if (TimeSpan.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ClusterObserverConstants.MaxTimeNodeStatusNotOkSettingParameter), out TimeSpan maxTime))
+            {
+                MaxTimeNodeStatusNotOk = maxTime;
+            }
+
+            if (bool.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ClusterObserverConstants.EmitHealthWarningEvaluationConfigurationSetting), out bool emitWarnings))
+            {
+                EmitWarningDetails = emitWarnings;
+            }
+
+            if (bool.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ClusterObserverConstants.MonitorRepairJobsConfigurationSetting), out bool monitorRepairJobs))
+            {
+                MonitorRepairJobStatus = monitorRepairJobs;
+            }
+
+            if (bool.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ClusterObserverConstants.MonitorUpgradesConfigurationSetting), out bool monitorUpgrades))
+            {
+                MonitorUpgradeStatus = monitorUpgrades;
+            }
         }
 
         private async Task ReportClusterHealthAsync(CancellationToken token)
@@ -135,7 +152,7 @@ namespace ClusterObserver
                 await MonitorNodeStatusAsync(token, ignoreDefaultQueryTimeout).ConfigureAwait(false);
 
                 // Check for active repairs in the cluster.
-                if (ConfigSettings.MonitorRepairJobStatus)
+                if (MonitorRepairJobStatus)
                 {
                     var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
                     string repairState = string.Empty;
@@ -170,7 +187,7 @@ namespace ClusterObserver
                         if (EtwEnabled)
                         {
                             ObserverLogger.LogEtw(
-                                            ObserverConstants.ClusterObserverETWEventName,
+                                            ClusterObserverConstants.ClusterObserverETWEventName,
                                             new
                                             {
                                                 HealthState = "Ok",
@@ -183,7 +200,7 @@ namespace ClusterObserver
                 }
 
                 // Check cluster upgrade status.
-                if (ConfigSettings.MonitorUpgradeStatus)
+                if (MonitorUpgradeStatus)
                 {
                     await ReportClusterUpgradeStatusAsync(token);
                 }
@@ -193,12 +210,12 @@ namespace ClusterObserver
                 ClusterHealth clusterHealth =
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                             () => 
-                                FabricClientInstance.HealthManager.GetClusterHealthAsync(ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout, token), 
+                                FabricClientInstance.HealthManager.GetClusterHealthAsync(ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout, token), 
                             token);
 
                 // Previous run generated unhealthy evaluation report. It's now Ok.
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok && (LastKnownClusterHealthState == HealthState.Error
-                    || (ConfigSettings.EmitWarningDetails && LastKnownClusterHealthState == HealthState.Warning)))
+                    || (EmitWarningDetails && LastKnownClusterHealthState == HealthState.Warning)))
                 {
                     LastKnownClusterHealthState = HealthState.Ok;
 
@@ -220,7 +237,7 @@ namespace ClusterObserver
                     if (EtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.ClusterObserverETWEventName,
+                                        ClusterObserverConstants.ClusterObserverETWEventName,
                                         new
                                         {
                                             HealthState = "Ok",
@@ -239,7 +256,7 @@ namespace ClusterObserver
                     }
 
                     // If in Warning and you are not sending Warning state reports, then end here.
-                    if (!ConfigSettings.EmitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning)
+                    if (!EmitWarningDetails && clusterHealth.AggregatedHealthState == HealthState.Warning)
                     {
                         return;
                     }
@@ -283,7 +300,7 @@ namespace ClusterObserver
                                         try
                                         {
                                             var entityHealth =
-                                                await FabricClientInstance.HealthManager.GetApplicationHealthAsync(app.ApplicationName, ConfigSettings.AsyncTimeout, token);
+                                                await FabricClientInstance.HealthManager.GetApplicationHealthAsync(app.ApplicationName, ConfigurationSettings.AsyncTimeout, token);
 
                                             if (app.AggregatedHealthState == HealthState.Ok)
                                             {
@@ -364,7 +381,7 @@ namespace ClusterObserver
                 if (EtwEnabled)
                 {
                     ObserverLogger.LogEtw(
-                                    ObserverConstants.ClusterObserverETWEventName,
+                                    ClusterObserverConstants.ClusterObserverETWEventName,
                                     new
                                     {
                                         HealthState = "Warning",
@@ -427,14 +444,14 @@ namespace ClusterObserver
             // Telemetry.
             if (TelemetryEnabled)
             {
-                _ = await ObserverTelemetryClient?.ReportApplicationUpgradeStatusAsync(appUpgradeInfo, token);
+                await ObserverTelemetryClient?.ReportApplicationUpgradeStatusAsync(appUpgradeInfo, token);
             }
 
             // ETW.
             if (EtwEnabled)
             {
                 ObserverLogger.LogEtw(
-                    ObserverConstants.ClusterObserverETWEventName,
+                    ClusterObserverConstants.ClusterObserverETWEventName,
                     new
                     {
                         appUpgradeInfo.ClusterId,
@@ -485,14 +502,14 @@ namespace ClusterObserver
             // Telemetry.
             if (TelemetryEnabled)
             {
-                _ = await ObserverTelemetryClient?.ReportClusterUpgradeStatusAsync(eventData, token);
+                await ObserverTelemetryClient?.ReportClusterUpgradeStatusAsync(eventData, token);
             }
 
             // ETW.
             if (EtwEnabled)
             {
                 ObserverLogger.LogEtw(
-                    ObserverConstants.ClusterObserverETWEventName,
+                    ClusterObserverConstants.ClusterObserverETWEventName,
                     new
                     {
                         eventData.ClusterId,
@@ -514,7 +531,7 @@ namespace ClusterObserver
             var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => FabricClientInstance.HealthManager.GetApplicationHealthAsync(
                                                 appHealthState.ApplicationName,
-                                                ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
+                                                ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                 token),
                                     token);
             
@@ -526,7 +543,7 @@ namespace ClusterObserver
             Uri appName = appHealthState.ApplicationName;
 
             // Check upgrade status of unhealthy application. Note, this doesn't apply to System applications as they update as part of a platform update.
-            if (ConfigSettings.MonitorUpgradeStatus && !appName.Equals(fabricSystemAppUri))
+            if (MonitorUpgradeStatus && !appName.Equals(fabricSystemAppUri))
             {
                 await ReportApplicationUpgradeStatus(appName, token);
             }
@@ -562,7 +579,7 @@ namespace ClusterObserver
                     if (EtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.ClusterObserverETWEventName,
+                                        ClusterObserverConstants.ClusterObserverETWEventName,
                                         new
                                         {
                                             foTelemetryData.ApplicationName,
@@ -613,7 +630,7 @@ namespace ClusterObserver
                     if (EtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.ClusterObserverETWEventName,
+                                        ClusterObserverConstants.ClusterObserverETWEventName,
                                         new
                                         {
                                             ApplicationName = appName.OriginalString,
@@ -634,8 +651,8 @@ namespace ClusterObserver
             Uri appName;
             Uri serviceName = serviceHealthState.ServiceName;
             string telemetryDescription = string.Empty;
-            ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigSettings.AsyncTimeout, token);
-            ApplicationNameResult name = await FabricClientInstance.QueryManager.GetApplicationNameAsync(serviceName, ConfigSettings.AsyncTimeout, token);
+            ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigurationSettings.AsyncTimeout, token);
+            ApplicationNameResult name = await FabricClientInstance.QueryManager.GetApplicationNameAsync(serviceName, ConfigurationSettings.AsyncTimeout, token);
             appName = name.ApplicationName;
             var healthEvents = serviceHealth.HealthEvents;
 
@@ -645,7 +662,7 @@ namespace ClusterObserver
 
                 foreach (var partitionHealthState in partitionHealthStates)
                 {
-                    var partitionHealth = await FabricClientInstance.HealthManager.GetPartitionHealthAsync(partitionHealthState.PartitionId, ConfigSettings.AsyncTimeout, token);
+                    var partitionHealth = await FabricClientInstance.HealthManager.GetPartitionHealthAsync(partitionHealthState.PartitionId, ConfigurationSettings.AsyncTimeout, token);
                     var replicaHealthStates = partitionHealth.ReplicaHealthStates.Where(p => p.AggregatedHealthState == HealthState.Warning).ToList();
 
                     if (replicaHealthStates != null && replicaHealthStates.Count > 0)
@@ -653,7 +670,7 @@ namespace ClusterObserver
                         foreach (var replica in replicaHealthStates)
                         {
                             var replicaHealth =
-                                await FabricClientInstance.HealthManager.GetReplicaHealthAsync(partitionHealthState.PartitionId, replica.Id, ConfigSettings.AsyncTimeout, token);
+                                await FabricClientInstance.HealthManager.GetReplicaHealthAsync(partitionHealthState.PartitionId, replica.Id, ConfigurationSettings.AsyncTimeout, token);
 
                             if (replicaHealth != null)
                             {
@@ -688,7 +705,7 @@ namespace ClusterObserver
                     if (EtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.ClusterObserverETWEventName,
+                                        ClusterObserverConstants.ClusterObserverETWEventName,
                                         new
                                         {
                                             foTelemetryData.ApplicationName,
@@ -741,7 +758,7 @@ namespace ClusterObserver
                     if (EtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.ClusterObserverETWEventName,
+                                        ClusterObserverConstants.ClusterObserverETWEventName,
                                         new
                                         {
                                             ApplicationName = appName.OriginalString,
@@ -774,7 +791,7 @@ namespace ClusterObserver
             {
                 token.ThrowIfCancellationRequested();
 
-                if (node.AggregatedHealthState == HealthState.Ok || (!ConfigSettings.EmitWarningDetails && node.AggregatedHealthState == HealthState.Warning))
+                if (node.AggregatedHealthState == HealthState.Ok || (EmitWarningDetails && node.AggregatedHealthState == HealthState.Warning))
                 {
                     continue;
                 }
@@ -795,7 +812,7 @@ namespace ClusterObserver
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                             () => 
                                 FabricClientInstance.HealthManager.GetNodeHealthAsync(
-                                    node.NodeName, ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout, token),
+                                    node.NodeName, ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout, token),
                             token);
 
                 foreach (var nodeHealthEvent in nodeHealth.HealthEvents.Where(ev => ev.HealthInformation.HealthState != HealthState.Ok))
@@ -806,7 +823,7 @@ namespace ClusterObserver
                                                 () =>
                                                     FabricClientInstance.QueryManager.GetNodeListAsync(
                                                         node.NodeName,
-                                                        ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
+                                                        ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                         token),
                                                 token);
 
@@ -824,7 +841,7 @@ namespace ClusterObserver
                             if (EtwEnabled)
                             {
                                 ObserverLogger.LogEtw(
-                                    ObserverConstants.ClusterObserverETWEventName,
+                                    ClusterObserverConstants.ClusterObserverETWEventName,
                                     new
                                     {
                                         node.NodeName,
@@ -854,7 +871,7 @@ namespace ClusterObserver
                             if (EtwEnabled)
                             {
                                 ObserverLogger.LogEtw(
-                                    ObserverConstants.ClusterObserverETWEventName,
+                                    ClusterObserverConstants.ClusterObserverETWEventName,
                                     new
                                     {
                                         node.NodeName,
@@ -896,7 +913,7 @@ namespace ClusterObserver
             if (EtwEnabled)
             {
                 ObserverLogger.LogEtw(
-                                ObserverConstants.ClusterObserverETWEventName,
+                                ClusterObserverConstants.ClusterObserverETWEventName,
                                 new
                                 {
                                     Description = telemetryDescription,
@@ -915,7 +932,7 @@ namespace ClusterObserver
                                                () =>
                                                     FabricClientInstance.QueryManager.GetNodeListAsync(
                                                             null,
-                                                            isTest ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
+                                                            isTest ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                             token),
                                                token).ConfigureAwait(false);
 
@@ -949,7 +966,7 @@ namespace ClusterObserver
                     if (EtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.ClusterObserverETWEventName,
+                                        ClusterObserverConstants.ClusterObserverETWEventName,
                                         new
                                         {
                                             HealthState = "Ok",
@@ -991,12 +1008,12 @@ namespace ClusterObserver
                     if (NodeStatusDictionary.Any(
                              dict => dict.Key == node.NodeName
                                 && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
-                                >= ConfigSettings.MaxTimeNodeStatusNotOk))
+                                >= MaxTimeNodeStatusNotOk))
                     {
                         var kvp = NodeStatusDictionary.FirstOrDefault(
                                        dict => dict.Key == node.NodeName
                                         && dict.Value.LastDetectedTime.Subtract(dict.Value.FirstDetectedTime)
-                                        >= ConfigSettings.MaxTimeNodeStatusNotOk);
+                                        >= MaxTimeNodeStatusNotOk);
 
                         var message =
                             $"Node {kvp.Key} has been {kvp.Value.NodeStatus} " +
@@ -1022,7 +1039,7 @@ namespace ClusterObserver
                         if (EtwEnabled)
                         {
                             ObserverLogger.LogEtw(
-                                            ObserverConstants.ClusterObserverETWEventName,
+                                            ClusterObserverConstants.ClusterObserverETWEventName,
                                             new
                                             {
                                                 HealthState = "Warning",
@@ -1070,7 +1087,7 @@ namespace ClusterObserver
                                                () => FabricClientInstance.QueryManager.GetServiceListAsync(
                                                                               fabricSystemAppUri,
                                                                               repairManagerServiceUri,
-                                                                              ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
+                                                                              ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                                               cancellationToken),
                                                cancellationToken).ConfigureAwait(false);  
 
@@ -1107,7 +1124,7 @@ namespace ClusterObserver
                                                                 RepairTaskStateFilter.Approved |
                                                                 RepairTaskStateFilter.Executing,
                                                                 null,
-                                                                ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigSettings.AsyncTimeout,
+                                                                ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                                 cancellationToken),
                                                cancellationToken).ConfigureAwait(false);  
 

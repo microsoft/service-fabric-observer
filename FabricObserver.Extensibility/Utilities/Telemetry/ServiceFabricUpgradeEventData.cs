@@ -8,11 +8,16 @@ using System.Fabric;
 using System.Runtime.InteropServices;
 using FabricObserver.TelemetryLib;
 
-namespace ClusterObserver.Utilities.Telemetry
+namespace FabricObserver.Observers.Utilities.Telemetry
 {
     public class ServiceFabricUpgradeEventData
     {
         public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
+
+        public string TaskName
+        {
+            get; set;
+        }
 
         public ApplicationUpgradeProgress ApplicationUpgradeProgress
         {

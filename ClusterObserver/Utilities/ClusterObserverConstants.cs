@@ -5,7 +5,7 @@
 
 namespace ClusterObserver.Utilities
 {
-    public static class ObserverConstants
+    public static class ClusterObserverConstants
     {
         public const string ClusterObserverManagerName = "ClusterObserverManager";
         public const string ObserverManagerConfigurationSectionName = "ObserverManagerConfiguration";

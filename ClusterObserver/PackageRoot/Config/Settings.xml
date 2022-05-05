@@ -63,4 +63,14 @@
     <!-- CO diagnostic telemetry. -->
     <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
+	<!-- Add MustOverride="true" to each Parameter elemement to override these in ApplicationManifest.xml. -->
+    <Section Name="SampleNewObserverConfiguration">
+	    <Parameter Name="Enabled" Value="true" />
+	    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+	    <Parameter Name="EnableCSVDataLogging" Value="false" />
+	    <Parameter Name="EnableEtw" Value="false" />
+	    <Parameter Name="EnableTelemetry" Value="false" />
+	    <Parameter Name="EnableVerboseLogging" Value="false" />
+	    <Parameter Name="RunInterval" Value=""  />
+    </Section>
 </Settings>
