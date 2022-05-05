@@ -41,8 +41,6 @@ namespace ClusterObserver
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "2.1.15";
 
-       
-
         public bool EnableOperationalTelemetry
         {
             get; set;

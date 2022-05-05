@@ -16,7 +16,7 @@ namespace ClusterObserver.Utilities
         public const string AiKey = "AppInsightsInstrumentationKey";
         public const string AsyncOperationTimeoutSeconds = "AsyncOperationTimeoutSeconds";
         public const string ClusterObserverETWEventName = "ClusterObserverDataEvent";
-        public const string EventSourceProviderName = "ClusterObserverETWProvider";
+        public const string DefaultEventSourceProviderName = "ClusterObserverETWProvider";
         public const string FabricObserverName = "FabricObserver";
 
         // The name of the package that contains this Observer's configuration.
@@ -45,12 +45,13 @@ namespace ClusterObserver.Utilities
         public const string MaxTimeNodeStatusNotOkSettingParameter = "MaxTimeNodeStatusNotOk";
 
         // Telemetry Settings Parameters.
-        public const string EnableTelemetryParameter = "EnableTelemetry";
+        public const string EnableTelemetryParameter = "EnableTelemetryProvider";
         public const string TelemetryProviderTypeParameter = "TelemetryProvider";
         public const string LogAnalyticsLogTypeParameter = "LogAnalyticsLogType";
         public const string LogAnalyticsSharedKeyParameter = "LogAnalyticsSharedKey";
         public const string LogAnalyticsWorkspaceIdParameter = "LogAnalyticsWorkspaceId";
         public const string EnableETWProviderParameter = "EnableETWProvider";
+        public const string ETWProviderName = "ETWProviderName";
         public const string OperationalTelemetryEnabledParameter = "EnableOperationalTelemetry";
 
         // General consts.

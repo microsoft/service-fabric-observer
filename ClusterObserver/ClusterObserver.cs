@@ -16,7 +16,6 @@ using System.Threading.Tasks;
 using ClusterObserver.Utilities;
 using Newtonsoft.Json;
 using FabricObserver.Observers;
-using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 
@@ -47,8 +46,6 @@ namespace ClusterObserver
         }
 
         private bool TelemetryEnabled => ClusterObserverManager.TelemetryEnabled;
-
-        private ITelemetryProvider ObserverTelemetryClient => ClusterObserverManager.TelemetryClient;
 
         private static bool EtwEnabled => ClusterObserverManager.EtwEnabled;
 
@@ -180,7 +177,7 @@ namespace ClusterObserver
                                 Source = ObserverName
                             };
 
-                            await ObserverTelemetryClient?.ReportHealthAsync(telemetry, token);
+                            await TelemetryClient?.ReportHealthAsync(telemetry, token);
                         }
 
                         // ETW.
@@ -230,7 +227,7 @@ namespace ClusterObserver
                             Source = ObserverName
                         };
 
-                        await ObserverTelemetryClient?.ReportHealthAsync(telemetry, token);
+                        await TelemetryClient?.ReportHealthAsync(telemetry, token);
                     }
 
                     // ETW.
@@ -374,7 +371,7 @@ namespace ClusterObserver
                         Description = msg
                     };
 
-                    await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, token);
+                    await TelemetryClient?.ReportHealthAsync(telemetryData, token);
                 }
 
                 // Emit ETW.
@@ -444,7 +441,7 @@ namespace ClusterObserver
             // Telemetry.
             if (TelemetryEnabled)
             {
-                await ObserverTelemetryClient?.ReportApplicationUpgradeStatusAsync(appUpgradeInfo, token);
+                await TelemetryClient?.ReportApplicationUpgradeStatusAsync(appUpgradeInfo, token);
             }
 
             // ETW.
@@ -502,7 +499,7 @@ namespace ClusterObserver
             // Telemetry.
             if (TelemetryEnabled)
             {
-                await ObserverTelemetryClient?.ReportClusterUpgradeStatusAsync(eventData, token);
+                await TelemetryClient?.ReportClusterUpgradeStatusAsync(eventData, token);
             }
 
             // ETW.
@@ -572,7 +569,7 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await ObserverTelemetryClient?.ReportHealthAsync(foTelemetryData, token);
+                        await TelemetryClient?.ReportHealthAsync(foTelemetryData, token);
                     }
 
                     // ETW.
@@ -623,7 +620,7 @@ namespace ClusterObserver
                             Source = ObserverName
                         };
 
-                        await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, token);
+                        await TelemetryClient?.ReportHealthAsync(telemetryData, token);
                     }
 
                     // ETW.
@@ -698,7 +695,7 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await ObserverTelemetryClient?.ReportHealthAsync(foTelemetryData, token);
+                        await TelemetryClient?.ReportHealthAsync(foTelemetryData, token);
                     }
 
                     // ETW.
@@ -751,7 +748,7 @@ namespace ClusterObserver
                             Source = ObserverName
                         };
 
-                        await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, token);
+                        await TelemetryClient?.ReportHealthAsync(telemetryData, token);
                     }
 
                     // ETW.
@@ -835,7 +832,7 @@ namespace ClusterObserver
                         {
                             telemetryData.Description += $"{Environment.NewLine}Node Status: { (targetNode != null ? Enum.GetName(typeof(NodeStatus), targetNode.NodeStatus) : string.Empty)}";
                             telemetryDescription += telemetryData.Description;
-                            await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, token);
+                            await TelemetryClient?.ReportHealthAsync(telemetryData, token);
 
                             // ETW.
                             if (EtwEnabled)
@@ -865,7 +862,7 @@ namespace ClusterObserver
                             };
 
                             // Telemetry.
-                            await ObserverTelemetryClient?.ReportHealthAsync(telemData, token);
+                            await TelemetryClient?.ReportHealthAsync(telemData, token);
 
                             // ETW.
                             if (EtwEnabled)
@@ -906,7 +903,7 @@ namespace ClusterObserver
             // Telemetry.
             if (TelemetryEnabled)
             {
-                await ObserverTelemetryClient?.ReportHealthAsync(telemetryData, token);
+                await TelemetryClient?.ReportHealthAsync(telemetryData, token);
             }
 
             // ETW.
@@ -959,7 +956,7 @@ namespace ClusterObserver
                             Value = 0
                         };
 
-                        await ObserverTelemetryClient?.ReportHealthAsync(telemetry, token);
+                        await TelemetryClient?.ReportHealthAsync(telemetry, token);
                     }
 
                     // ETW.
@@ -1032,7 +1029,7 @@ namespace ClusterObserver
                                 Value = 1,
                             };
 
-                            await ObserverTelemetryClient?.ReportHealthAsync(telemetry, token);
+                            await TelemetryClient?.ReportHealthAsync(telemetry, token);
                         }
 
                         // ETW.

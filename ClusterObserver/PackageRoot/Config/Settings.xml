@@ -3,23 +3,28 @@
   <Section Name="ObserverManagerConfiguration">
     <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. Internally, the run loop will sleep for 15 seconds if this
          setting is not greater than 0. -->
-    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="30" />
+    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="" MustOverride="true" />
     <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
          then the offending observer will be marked as broken and will not run again. 
          Below setting represents 60 minutes. -->
-    <Parameter Name="ObserverExecutionTimeout" Value="3600" />
-    <!-- Optional: This observer makes async SF Api calls that are cluster-wide operations and can take time in large clusters. -->
-    <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
+    <Parameter Name="ObserverExecutionTimeout" Value="" MustOverride="true" />
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          ClusterObserver will write to its own directory on this path.
          **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
-    <Parameter Name="ObserverLogPath" Value="cluster_observer_logs" />
+    <Parameter Name="ObserverLogPath" Value="" MustOverride="true" />
     <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
-    <Parameter Name="EnableVerboseLogging" Value="false" />
-    <Parameter Name="EnableETWProvider" Value="true" />
-    <Parameter Name="EnableTelemetry" Value="true" />
+    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+	<Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
+    <Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
+	<Parameter Name="ETWProviderName" Value="" MustOverride="true" />
+    <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
+	<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+	  
+	<!-- Non-overridable. -->
+	  
+	<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
@@ -47,6 +52,7 @@
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
          will be locally logged. This is the recommended setting. Note that file logging is generally
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+	<Parameter Name="EnableEtw" Value="" MustOverride="true"/>
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
@@ -60,8 +66,6 @@
     <Parameter Name="MonitorRepairJobs" Value="" MustOverride="true" />
     <!-- Monitor Cluster and Application Upgrades. -->
     <Parameter Name="MonitorUpgrades" Value="" MustOverride="true" />
-    <!-- CO diagnostic telemetry. -->
-    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
 	<!-- Add MustOverride="true" to each Parameter elemement to override these in ApplicationManifest.xml. -->
     <Section Name="SampleNewObserverConfiguration">
