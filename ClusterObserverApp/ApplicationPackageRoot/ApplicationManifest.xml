@@ -17,7 +17,7 @@
     <Parameter Name="ClusterObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
-    <Parameter Name="ClusterObserverRunInterval" DefaultValue="00:05:00" />
+    <Parameter Name="ClusterObserverRunInterval" DefaultValue="" />
     <Parameter Name="ClusterObserverAsyncOperationTimeoutSeconds" DefaultValue="120" />
     <Parameter Name="MonitorRepairJobs" DefaultValue="true" />
     <Parameter Name="MonitorUpgrades" DefaultValue="true" />
