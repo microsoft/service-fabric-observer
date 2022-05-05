@@ -1092,18 +1092,16 @@ namespace FabricObserverTests
             }
 
             var startDateTime = DateTime.Now;
-            var client = new FabricClient();
 
             ClusterObserverManager.FabricServiceContext = TestServiceContext;
-            ClusterObserverManager.FabricClientInstance = client;
             ClusterObserverManager.EtwEnabled = true;
             ClusterObserverManager.TelemetryEnabled = true;
 
             // On a one-node cluster like your dev machine, pass true for ignoreDefaultQueryTimeout otherwise each FabricClient query will take 2 minutes 
             // to timeout in ClusterObserver.
-            var obs = new ClusterObserver.ClusterObserver(null, ignoreDefaultQueryTimeout: true)
+            var obs = new ClusterObserver.ClusterObserver(TestServiceContext, ignoreDefaultQueryTimeout: true)
             {
-                ConfigSettings = new ClusterObserver.Utilities.ConfigSettings(null, null)
+         
             };
 
             await obs.ObserveAsync(Token);

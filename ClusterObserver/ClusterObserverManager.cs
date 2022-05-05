@@ -214,6 +214,12 @@ namespace ClusterObserver
                 AsyncOperationTimeoutSeconds = asyncTimeout;
             }
 
+            // Internal diagnostic telemetry.
+            if (bool.TryParse(GetConfigSettingValue(ClusterObserverConstants.OperationalTelemetryEnabledParameter, settings), out bool opsTelemEnabled))
+            {
+                EnableOperationalTelemetry = opsTelemEnabled;
+            }
+            
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
             if (bool.TryParse(GetConfigSettingValue(ClusterObserverConstants.EnableTelemetryParameter, settings), out bool telemEnabled))
             {
