@@ -819,12 +819,7 @@ namespace FabricObserver.Observers
 
                 if (entityType == EntityType.Disk)
                 {
-                    drive = $"{id}: ";
-
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && data.Property != ErrorWarningProperty.FolderSizeMB)
-                    {
-                        drive = $"{id.Remove(1, 2)}: ";
-                    }
+                    drive = $"{id} ";
                 }
 
                 // Report raw data.

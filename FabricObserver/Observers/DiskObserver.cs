@@ -141,6 +141,18 @@ namespace FabricObserver.Observers
 
                     string id = d.Name;
 
+                    if (isWindows)
+                    {
+                        try
+                        {
+                            id = d.Name.Remove(2, 1);
+                        }
+                        catch (ArgumentException)
+                        {
+
+                        }
+                    }
+
                     // Since these live across iterations, do not duplicate them in the containing list.
                     // Disk space %.
                     if (DiskSpaceUsagePercentageData.All(data => data.Id != id) && (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0))
