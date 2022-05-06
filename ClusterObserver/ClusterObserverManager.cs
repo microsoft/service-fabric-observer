@@ -466,7 +466,7 @@ namespace ClusterObserver
             {
                 if (!observer.IsEnabled)
                 {
-                    return;
+                    continue;
                 }
 
                 try

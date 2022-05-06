@@ -6,19 +6,16 @@
     <RootNamespace>FabricObserver.Observers</RootNamespace>
     <AssemblyName>SampleNewObserver</AssemblyName>
     <Platforms>AnyCPU;x64</Platforms>
+    <UserSecretsId>eb82b47d-80c3-4f06-8177-861fe0ea33c3</UserSecretsId>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
-    <PackageReference Include="Polly" Version="7.2.2" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
-  </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy &quot;$(OutDir)SampleNewObserver.dll&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)SampleNewObserver.pdb&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(SolutionDir)packages\polly\7.2.2\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;" />
+    <Exec Command="copy &quot;$(SolutionDir)packages\polly\7.2.3\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;" />
   </Target>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.0" />
+    <PackageReference Include="Polly" Version="7.2.3" />
+  </ItemGroup>
 </Project>
