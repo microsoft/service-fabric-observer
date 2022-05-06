@@ -67,8 +67,8 @@ Open a PowerShell console, navigate to the top level directory of the FO repo (i
 
 ```PowerShell
 cd C:\Users\me\source\repos\service-fabric-observer
-./Build-FOExtensibility
-./Build-FOExtensibilityNupkg
+./Build-FabricObserver
+./Build-NugetPackages
 ```
-The output from the above commands, a file named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg, would be located in 
-C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver.Extensibility\Nugets
+The output from the above commands, FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg, would be located in 
+C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.
