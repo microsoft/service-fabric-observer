@@ -1,4 +1,8 @@
-## How to implement an observer plugin using FO's extensibility model
+## FabricObserver Extensibility Library 3.2.0
+
+This .NET Standard 2.0 library is for building FabricObserver plugins, which are custom observers that extend FabricObserver's capabilities to match your needs. Each plugin is managed like a first class observer.
+
+### How to implement an observer plugin using FO's extensibility model
 
 1. Create a new .NET Standard (2.0) library project.
 
