@@ -962,6 +962,13 @@ namespace FabricObserver.Observers
                         duration = MonitorDuration;
                     }
 
+                    // Memory MB
+                    if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
+                    {
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, checkPrivateWorkingSet ? dotnetArg : null, checkPrivateWorkingSet);
+                        allMemData[dotnetArg].AddData(processMem);
+                    }
+
                     timer.Start();
 
                     while (!process.HasExited && timer.Elapsed <= duration)
@@ -975,13 +982,6 @@ namespace FabricObserver.Observers
                             {
                                 int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process.Id);
                                 allCpuData[dotnetArg].AddData(cpu);
-                            }
-
-                            // Memory MB
-                            if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
-                            {
-                                float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, checkPrivateWorkingSet ? dotnetArg : null, checkPrivateWorkingSet);
-                                allMemData[dotnetArg].AddData(processMem);
                             }
 
                             await Task.Delay(150, Token);

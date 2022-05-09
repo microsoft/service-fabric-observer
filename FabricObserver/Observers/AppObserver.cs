@@ -1827,6 +1827,50 @@ namespace FabricObserver.Observers
                     state.Stop();
                 }
 
+                // Memory \\
+
+                // Process working set (total or private, based on user configuration)
+                // ***NOTE***: If you have several service processes of the same name, Private Working set measurement will add significant processing time to AppObserver.
+                // Consider not enabling Private Set memory. In that case, the Full Working set will measured (Private + Shared), computed using a native API call (fast) via COM interop (PInvoke).
+                if (checkMemMb)
+                {
+                    float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, _checkPrivateWorkingSet ? procName : null, _checkPrivateWorkingSet);
+
+                    if (procId == parentPid)
+                    {
+                        AllAppMemDataMb[id].AddData(processMemMb);
+                    }
+                    else
+                    {
+                        _ = AllAppMemDataMb.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(processMemMb);
+                    }
+                }
+
+                // Process memory, percent in use (of machine total).
+                if (checkMemPct)
+                {
+                    float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, _checkPrivateWorkingSet ? procName : null, _checkPrivateWorkingSet);
+                    var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
+
+                    if (TotalMemoryGb > 0)
+                    {
+                        double usedPct = (double)(processMemMb * 100) / (TotalMemoryGb * 1024);
+
+                        if (procId == parentPid)
+                        {
+                            AllAppMemDataPercent[id].AddData(Math.Round(usedPct, 2));
+                        }
+                        else
+                        {
+                            _ = AllAppMemDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            AllAppMemDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
+                        }
+                    }
+                }
+
+                // CPU \\
+
                 CpuUsage cpuUsage = checkCpu ? new CpuUsage() : null;
                 Stopwatch timer = Stopwatch.StartNew();
 
@@ -1862,47 +1906,6 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    // Memory \\
-
-                    // Process working set (total or private, based on user configuration)
-                    // ***NOTE***: If you have several service processes of the same name, Private Working set measurement will add significant processing time to AppObserver.
-                    // Consider not enabling Private Set memory. In that case, the Full Working set will measured (Private + Shared), computed using a native API call (fast) via COM interop (PInvoke).
-                    if (checkMemMb)
-                    {
-                        float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, _checkPrivateWorkingSet ? procName : null, _checkPrivateWorkingSet);
-
-                        if (procId == parentPid)
-                        {
-                            AllAppMemDataMb[id].AddData(processMemMb);
-                        }
-                        else
-                        {
-                            _ = AllAppMemDataMb.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                            AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(processMemMb);
-                        }
-                    }
-
-                    // Process memory, percent in use (of machine total).
-                    if (checkMemPct)
-                    {
-                        float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, _checkPrivateWorkingSet ? procName : null, _checkPrivateWorkingSet);
-                        var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
-
-                        if (TotalMemoryGb > 0)
-                        {
-                            double usedPct = (double)(processMemMb * 100) / (TotalMemoryGb * 1024);
-
-                            if (procId == parentPid)
-                            {
-                                AllAppMemDataPercent[id].AddData(Math.Round(usedPct, 2));
-                            }
-                            else
-                            {
-                                _ = AllAppMemDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                                AllAppMemDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
-                            }
-                        }
-                    }
                     Thread.Sleep(50);
                 }
 
