@@ -861,24 +861,24 @@ namespace FabricObserver.Observers
                         if (IsTelemetryEnabled)
                         {
                             _ = TelemetryClient?.ReportHealthAsync(
-                                                       "UnsupportedTargetAppValue",
-                                                       HealthState.Warning,
-                                                       msg,
-                                                       ObserverName,
-                                                       Token);
+                                    "UnsupportedTargetAppValue",
+                                    HealthState.Warning,
+                                    msg,
+                                    ObserverName,
+                                    Token);
                         }
 
                         if (IsEtwEnabled)
                         {
                             ObserverLogger.LogEtw(
-                                            ObserverConstants.FabricObserverETWEventName,
-                                            new
-                                            {
-                                                Property = "UnsupportedTargetAppValue",
-                                                Level = "Warning",
-                                                Message = msg,
-                                                ObserverName
-                                            });
+                                ObserverConstants.FabricObserverETWEventName,
+                                new
+                                {
+                                    Property = "UnsupportedTargetAppValue",
+                                    Level = "Warning",
+                                    Message = msg,
+                                    ObserverName
+                                });
                         }
 
                         OperationalHealthEvents++;
@@ -915,24 +915,24 @@ namespace FabricObserver.Observers
                 if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                                               "MissingAppConfiguration",
-                                               HealthState.Warning,
-                                               message,
-                                               ObserverName,
-                                               Token);
+                            "MissingAppConfiguration",
+                            HealthState.Warning,
+                            message,
+                            ObserverName,
+                            Token);
                 }
 
                 if (IsEtwEnabled)
                 {
                     ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = "MissingAppConfiguration",
-                                        Level = "Warning",
-                                        Message = message,
-                                        ObserverName
-                                    });
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = "MissingAppConfiguration",
+                            Level = "Warning",
+                            Message = message,
+                            ObserverName
+                        });
                 }
 
                 OperationalHealthEvents++;
@@ -965,25 +965,25 @@ namespace FabricObserver.Observers
                 if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                                               "JsonValidation",
-                                               HealthState.Warning,
-                                               message,
-                                               ObserverName,
-                                               Token);
+                            "JsonValidation",
+                            HealthState.Warning,
+                            message,
+                            ObserverName,
+                            Token);
                 }
 
                 // ETW.
                 if (IsEtwEnabled)
                 {
                     ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = "JsonValidation",
-                                        Level = "Warning",
-                                        Message = message,
-                                        ObserverName
-                                    });
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = "JsonValidation",
+                            Level = "Warning",
+                            Message = message,
+                            ObserverName
+                        });
                 }
 
                 OperationalHealthEvents++;
@@ -1021,25 +1021,25 @@ namespace FabricObserver.Observers
                 if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                                               "Misconfiguration",
-                                               HealthState.Warning,
-                                               message,
-                                               ObserverName,
-                                               Token);
+                            "Misconfiguration",
+                            HealthState.Warning,
+                            message,
+                            ObserverName,
+                            Token);
                 }
 
                 // ETW.
                 if (IsEtwEnabled)
                 {
                     ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = "Misconfiguration",
-                                        Level = "Warning",
-                                        Message = message,
-                                        ObserverName
-                                    });
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = "Misconfiguration",
+                            Level = "Warning",
+                            Message = message,
+                            ObserverName
+                        });
                 }
 
                 OperationalHealthEvents++;
@@ -1119,20 +1119,26 @@ namespace FabricObserver.Observers
                 EnableConcurrentMonitoring = enableConcurrency;
             }
 
-            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
-            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
-            // FabricObserver has on the resources it monitors and alerts on...
-            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+            // Effectively, sequential.
+            int maxDegreeOfParallelism = 1;
 
-            if (int.TryParse(
-                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+            if (EnableConcurrentMonitoring)
             {
-                maxDegreeOfParallelism = maxTasks;
+                // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+                // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+                // FabricObserver has on the resources it monitors and alerts on...
+                maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+                
+                // If user configures MaxConcurrentTasks setting, then use that value instead.
+                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+                {
+                    maxDegreeOfParallelism = maxTasks;
+                }
             }
 
             _parallelOptions = new ParallelOptions
             {
-                MaxDegreeOfParallelism = EnableConcurrentMonitoring ? maxDegreeOfParallelism : 1,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
@@ -1463,27 +1469,27 @@ namespace FabricObserver.Observers
                             if (IsTelemetryEnabled)
                             {
                                 _ = TelemetryClient?.ReportHealthAsync(
-                                                            $"UserAccountPrivilege({parentProc?.ProcessName})",
-                                                            ObserverManager.ObserverFailureHealthStateLevel,
-                                                            message,
-                                                            ObserverName,
-                                                            token,
-                                                            repOrInst?.ServiceName?.OriginalString);
+                                        $"UserAccountPrivilege({parentProc?.ProcessName})",
+                                        ObserverManager.ObserverFailureHealthStateLevel,
+                                        message,
+                                        ObserverName,
+                                        token,
+                                        repOrInst?.ServiceName?.OriginalString);
                             }
 
                             // ETW.
                             if (IsEtwEnabled)
                             {
                                 ObserverLogger.LogEtw(
-                                                ObserverConstants.FabricObserverETWEventName,
-                                                new
-                                                {
-                                                    Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
-                                                    Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
-                                                    Message = message,
-                                                    ObserverName,
-                                                    ServiceName = repOrInst?.ServiceName?.OriginalString
-                                                });
+                                    ObserverConstants.FabricObserverETWEventName,
+                                    new
+                                    {
+                                        Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
+                                        Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
+                                        Message = message,
+                                        ObserverName,
+                                        ServiceName = repOrInst?.ServiceName?.OriginalString
+                                    });
                             }
                         }
 
@@ -2339,8 +2345,6 @@ namespace FabricObserver.Observers
                 AllAppKvsLvidsData?.Clear();
                 AllAppKvsLvidsData = null;
             }
-
-            GC.Collect();
         }
     }
 }

@@ -136,42 +136,42 @@ namespace FabricObserver.Observers
                     lock (lockObj)
                     {
                         CsvFileLogger.LogData(
-                                        csvFileName,
-                                        id,
-                                        ErrorWarningProperty.CpuTime,
-                                        "Total",
-                                        Math.Round(cpuFrudInst.AverageDataValue));
+                            csvFileName,
+                            id,
+                            ErrorWarningProperty.CpuTime,
+                            "Total",
+                            Math.Round(cpuFrudInst.AverageDataValue));
                     }
 
                     // Memory - MB
                     lock (lockObj)
                     {
                         CsvFileLogger.LogData(
-                                        csvFileName,
-                                        id,
-                                        ErrorWarningProperty.MemoryConsumptionMb,
-                                        "Total",
-                                        Math.Round(memFrudInst.AverageDataValue));
+                            csvFileName,
+                            id,
+                            ErrorWarningProperty.MemoryConsumptionMb,
+                            "Total",
+                            Math.Round(memFrudInst.AverageDataValue));
                     }
                 }
 
                 // Report -> Send Telemetry/Write ETW/Create SF Health Warnings (if threshold breach)
                 
                 ProcessResourceDataReportHealth(
-                                    cpuFrudInst,
-                                    app.CpuErrorLimitPercent,
-                                    app.CpuWarningLimitPercent,
-                                    timeToLive,
-                                    EntityType.Service,
-                                    repOrInst);
+                    cpuFrudInst,
+                    app.CpuErrorLimitPercent,
+                    app.CpuWarningLimitPercent,
+                    timeToLive,
+                    EntityType.Service,
+                    repOrInst);
                 
                 ProcessResourceDataReportHealth(
-                                    memFrudInst,
-                                    app.MemoryErrorLimitMb,
-                                    app.MemoryWarningLimitMb,
-                                    timeToLive,
-                                    EntityType.Service,
-                                    repOrInst);
+                    memFrudInst,
+                    app.MemoryErrorLimitMb,
+                    app.MemoryWarningLimitMb,
+                    timeToLive,
+                    EntityType.Service,
+                    repOrInst);
                
             });
 
@@ -244,11 +244,11 @@ namespace FabricObserver.Observers
                 };
 
                 var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                             () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                            deployedAppQueryDesc,
-                                                                                            ConfigurationSettings.AsyncTimeout,
-                                                                                            Token),
-                                                             Token);
+                                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                deployedAppQueryDesc,
+                                                ConfigurationSettings.AsyncTimeout,
+                                                Token),
+                                        Token);
 
                 // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
                 // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -263,11 +263,11 @@ namespace FabricObserver.Observers
 
                     deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
                     appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                             () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                            deployedAppQueryDesc,
-                                                                                            ConfigurationSettings.AsyncTimeout,
-                                                                                            Token),
-                                                             Token);
+                                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                deployedAppQueryDesc,
+                                                ConfigurationSettings.AsyncTimeout,
+                                                Token),
+                                        Token);
                     apps.AddRange(appList.ToList());
                     await Task.Delay(250, Token);
                 }
@@ -367,12 +367,12 @@ namespace FabricObserver.Observers
                 {
                     var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                                                                NodeName,
-                                                                                new Uri(application.TargetApp),
-                                                                                null,
-                                                                                null,
-                                                                                ConfigurationSettings.AsyncTimeout,
-                                                                                token),
+                                                        NodeName,
+                                                        new Uri(application.TargetApp),
+                                                        null,
+                                                        null,
+                                                        ConfigurationSettings.AsyncTimeout,
+                                                        token),
                                                Token);
 
                     if (codepackages.Count == 0)

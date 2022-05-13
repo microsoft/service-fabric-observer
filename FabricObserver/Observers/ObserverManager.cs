@@ -279,9 +279,6 @@ namespace FabricObserver.Observers
                         LastVersionCheckDateTime = DateTime.UtcNow;
                     }
 
-                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(2, GCCollectionMode.Forced, true, true);
-
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
@@ -291,6 +288,10 @@ namespace FabricObserver.Observers
                         // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
                         await Task.Delay(TimeSpan.FromSeconds(15), token);
                     }
+
+                    // All observers have run at this point. Empty their trash now.
+                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
