@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
+using System.Fabric.Description;
 using System.Fabric.Query;
 
 namespace FabricObserver.Observers.MachineInfoModel
@@ -74,11 +75,10 @@ namespace FabricObserver.Observers.MachineInfoModel
         { 
             get; set; 
         }
-    }
 
-    public enum ReplicaKind
-    {
-        Stateful,
-        Stateless
+        public ServicePackageActivationMode ServicePackageActivationMode
+        {
+            get; set;
+        }
     }
 }

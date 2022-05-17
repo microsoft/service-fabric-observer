@@ -1147,8 +1147,6 @@ namespace FabricObserver.Observers
                 allAppKvsLvidsData?.Clear();
                 allAppKvsLvidsData = null;
             }
-
-            GC.Collect();
         }
     }
 }

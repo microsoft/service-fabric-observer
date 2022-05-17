@@ -68,16 +68,64 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [Flags]
-        private enum SnapshotFlags : uint
+        public enum CreateToolhelp32SnapshotFlags : uint
         {
-            HeapList = 0x00000001,
-            Process = 0x00000002,
-            Thread = 0x00000004,
-            Module = 0x00000008,
-            Module32 = 0x00000010,
-            Inherit = 0x80000000,
-            All = 0x0000001F,
-            NoHeaps = 0x40000000
+            /// <summary>
+            /// Indicates that the snapshot handle is to be inheritable.
+            /// </summary>
+            TH32CS_INHERIT = 0x80000000,
+
+            /// <summary>
+            /// Includes all heaps of the process specified in th32ProcessID in the snapshot.
+            /// To enumerate the heaps, see Heap32ListFirst.
+            /// </summary>
+            TH32CS_SNAPHEAPLIST = 0x00000001,
+
+            /// <summary>
+            /// Includes all modules of the process specified in th32ProcessID in the snapshot.
+            /// To enumerate the modules, see <see cref="Module32First(SafeObjectHandle,MODULEENTRY32*)"/>.
+            /// If the function fails with <see cref="Win32ErrorCode.ERROR_BAD_LENGTH"/>, retry the function until
+            /// it succeeds.
+            /// <para>
+            /// 64-bit Windows:  Using this flag in a 32-bit process includes the 32-bit modules of the process
+            /// specified in th32ProcessID, while using it in a 64-bit process includes the 64-bit modules.
+            /// To include the 32-bit modules of the process specified in th32ProcessID from a 64-bit process, use
+            /// the <see cref="TH32CS_SNAPMODULE32"/> flag.
+            /// </para>
+            /// </summary>
+            TH32CS_SNAPMODULE = 0x00000008,
+
+            /// <summary>
+            /// Includes all 32-bit modules of the process specified in th32ProcessID in the snapshot when called from
+            /// a 64-bit process.
+            /// This flag can be combined with <see cref="TH32CS_SNAPMODULE"/> or <see cref="TH32CS_SNAPALL"/>.
+            /// If the function fails with <see cref="Win32ErrorCode.ERROR_BAD_LENGTH"/>, retry the function until it
+            /// succeeds.
+            /// </summary>
+            TH32CS_SNAPMODULE32 = 0x00000010,
+
+            /// <summary>
+            /// Includes all processes in the system in the snapshot. To enumerate the processes, see
+            /// <see cref="Process32First(SafeObjectHandle,PROCESSENTRY32*)"/>.
+            /// </summary>
+            TH32CS_SNAPPROCESS = 0x00000002,
+
+            /// <summary>
+            /// Includes all threads in the system in the snapshot. To enumerate the threads, see
+            /// Thread32First.
+            /// <para>
+            /// To identify the threads that belong to a specific process, compare its process identifier to the
+            /// th32OwnerProcessID member of the THREADENTRY32 structure when
+            /// enumerating the threads.
+            /// </para>
+            /// </summary>
+            TH32CS_SNAPTHREAD = 0x00000004,
+
+            /// <summary>
+            /// Includes all processes and threads in the system, plus the heaps and modules of the process specified in
+            /// th32ProcessID.
+            /// </summary>
+            TH32CS_SNAPALL = TH32CS_SNAPHEAPLIST | TH32CS_SNAPMODULE | TH32CS_SNAPPROCESS | TH32CS_SNAPTHREAD,
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -93,6 +141,7 @@ namespace FabricObserver.Observers.Utilities
             internal uint th32ParentProcessID;
             internal int pcPriClassBase;
             internal uint dwFlags;
+
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
             internal string szExeFile;
         }
@@ -412,12 +461,12 @@ namespace FabricObserver.Observers.Utilities
             {
                 dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
             };
-            string[] ignoreProcessList = new string[] { "conhost.exe", "csrss.exe", "lsass.exe", "svchost.exe", "wininit.exe", "winlogon.exe" };
+            string[] ignoreProcessList = new string[] { "cmd.exe", "conhost.exe", "csrss.exe", "lsass.exe", "svchost.exe", "wininit.exe", "winlogon.exe" };
             IntPtr handleToSnapshot = IntPtr.Zero;
 
             try
             {
-                handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+                handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
                 
                 if (!Process32First(handleToSnapshot, ref procEntry))
                 {
@@ -428,17 +477,10 @@ namespace FabricObserver.Observers.Utilities
                 {
                     try
                     {
-                        if (parentpid != procEntry.th32ParentProcessID)
+                        if (parentpid == (int)procEntry.th32ParentProcessID && !ignoreProcessList.Contains(procEntry.szExeFile))
                         {
-                            continue;
+                            childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
                         }
-
-                        if (ignoreProcessList.Contains(procEntry.szExeFile))
-                        {
-                            continue;
-                        }
-
-                        childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
                     }
                     catch (ArgumentException)
                     {
@@ -472,7 +514,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process | (uint)SnapshotFlags.NoHeaps, 0);
+                handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
                 
                 if (!Process32First(handleToSnapshot, ref procEntry))
                 {

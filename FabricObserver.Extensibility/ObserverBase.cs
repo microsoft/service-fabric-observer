@@ -749,7 +749,7 @@ namespace FabricObserver.Observers
                 // of user telemetry settings.
                 telemetryData = new TelemetryData()
                 {
-                    ApplicationName = appName?.OriginalString ?? string.Empty,
+                    ApplicationName = appName?.OriginalString ?? null,
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     EntityType = entityType,
                     NodeName = NodeName,
@@ -760,8 +760,11 @@ namespace FabricObserver.Observers
                     PartitionId = replicaOrInstance != null ? replicaOrInstance.PartitionId : default,
                     ProcessId = procId,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                    ServiceName = serviceName?.OriginalString ?? string.Empty,
-                    SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
+                    ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.Unknown,
+                    ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind : System.Fabric.Query.ServiceKind.Invalid,
+                    ServiceName = serviceName?.OriginalString ?? null,
+                    ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode,
+                    SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : null,
                     Source = ObserverName
                 };
 
@@ -797,18 +800,21 @@ namespace FabricObserver.Observers
                         {
                             ApplicationName = appName?.OriginalString ?? string.Empty,
                             ClusterInformation.ClusterInfoTuple.ClusterId,
-                            EntityType = entityType.ToString(),
+                            EntityType = entityType,
                             NodeName,
                             NodeType,
                             ObserverName,
                             Metric = data.Property,
                             Value = data.AverageDataValue,
-                            PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance?.PartitionId.ToString() : string.Empty,
+                            PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : null,
                             ProcessId = procId,
-                            ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                            ServiceName = serviceName?.OriginalString ?? string.Empty,
-                            Source = ObserverName,
-                            SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty
+                            ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
+                            ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole.ToString() : ReplicaRole.Unknown.ToString(),
+                            ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind.ToString() : System.Fabric.Query.ServiceKind.Invalid.ToString(),
+                            ServiceName = serviceName?.OriginalString ?? null,
+                            ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
+                            SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
+                            Source = ObserverName
                         });
                 }
             }
@@ -1079,11 +1085,11 @@ namespace FabricObserver.Observers
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
                 // of user telemetry settings.
-                telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
-                telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
+                telemetryData.ApplicationName = appName?.OriginalString ?? null;
+                telemetryData.ServiceName = serviceName?.OriginalString ?? null;
                 telemetryData.Code = errorWarningCode;
 
-                if (replicaOrInstance != null && !string.IsNullOrWhiteSpace(replicaOrInstance.ContainerId))
+                if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
                 {
                     telemetryData.ContainerId = replicaOrInstance.ContainerId;
                 }
@@ -1118,10 +1124,13 @@ namespace FabricObserver.Observers
                             NodeName,
                             NodeType,
                             ObserverName,
-                            PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : string.Empty,
+                            PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : null,
                             ProcessId = procId,
-                            ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                            ServiceName = serviceName?.OriginalString ?? string.Empty,
+                            ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
+                            ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole.ToString() : ReplicaRole.Unknown.ToString(),
+                            ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind.ToString() : System.Fabric.Query.ServiceKind.Invalid.ToString(),
+                            ServiceName = serviceName?.OriginalString ?? null,
+                            ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
                             Source = $"{ObserverName}({errorWarningCode})",
                             SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
                             Value = data.AverageDataValue
@@ -1172,11 +1181,11 @@ namespace FabricObserver.Observers
                     // The health event description will be a serialized instance of telemetryData,
                     // so it should be completely constructed (filled with data) regardless
                     // of user telemetry settings.
-                    telemetryData.ApplicationName = appName?.OriginalString ?? string.Empty;
-                    telemetryData.ServiceName = serviceName?.OriginalString ?? string.Empty;
+                    telemetryData.ApplicationName = appName?.OriginalString ?? null;
+                    telemetryData.ServiceName = serviceName?.OriginalString ?? null;
                     telemetryData.Code = FOErrorWarningCodes.Ok;
 
-                    if (replicaOrInstance != null && !string.IsNullOrWhiteSpace(replicaOrInstance.ContainerId))
+                    if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
                     {
                         telemetryData.ContainerId = replicaOrInstance.ContainerId;
                     }
@@ -1213,10 +1222,13 @@ namespace FabricObserver.Observers
                                 NodeName,
                                 NodeType,
                                 ObserverName,
-                                PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : string.Empty,
+                                PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : null,
                                 ProcessId = procId,
-                                ReplicaId = replicaOrInstance?.ReplicaOrInstanceId != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                                ServiceName = serviceName != null ? serviceName.OriginalString : string.Empty,
+                                ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
+                                ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole.ToString() : ReplicaRole.Unknown.ToString(),
+                                ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind.ToString() : System.Fabric.Query.ServiceKind.Invalid.ToString(),
+                                ServiceName = serviceName?.OriginalString ?? null,
+                                ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
                                 Source = $"{ObserverName}({data.ActiveErrorOrWarningCode})",
                                 SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
                                 Value = data.AverageDataValue

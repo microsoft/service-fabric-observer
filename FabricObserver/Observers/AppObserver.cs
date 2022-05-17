@@ -1745,7 +1745,7 @@ namespace FabricObserver.Observers
                 // Threads
                 if (checkThreads)
                 {
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
+                    int threads = _isWindows ? NativeMethods.GetProcessThreadCount(procId) : ProcessInfoProvider.GetProcessThreadCount(procId);
 
                     if (threads > 0)
                     {
@@ -2100,6 +2100,8 @@ namespace FabricObserver.Observers
                             ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ? 
+                                System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
                             ReplicaStatus = statefulReplica.ReplicaStatus
                         };
 
@@ -2148,6 +2150,8 @@ namespace FabricObserver.Observers
                             ServiceKind = statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
                             ReplicaStatus = statelessInstance.ReplicaStatus
                         };
 

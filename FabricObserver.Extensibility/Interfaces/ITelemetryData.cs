@@ -12,7 +12,7 @@ namespace FabricObserver.Observers.Interfaces
     public interface ITelemetryData
     {
         /// <summary>
-        /// RService Fabric ApplicationName as a string value. This would be the same value as the OriginalString property of the ApplicationName Uri instance.
+        /// Service Fabric ApplicationName as a string value. This would be the same value as the OriginalString property of the ApplicationName Uri instance.
         /// </summary>
         string ApplicationName { get; set; }
         /// <summary>

@@ -8,6 +8,9 @@ using Newtonsoft.Json;
 using FabricObserver.Observers.Interfaces;
 using System.Fabric.Health;
 using System;
+using System.Fabric;
+using System.Fabric.Query;
+using System.Fabric.Description;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -60,6 +63,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string NodeType
+        {
+            get; set;
+        }
+
         public string ObserverName
         {
             get; set;
@@ -80,12 +88,32 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        public string Property
+        {
+            get; set;
+        }
+
         public long ReplicaId
         {
             get; set;
         }
 
+        public ReplicaRole ReplicaRole
+        {
+            get; set;
+        }
+
+        public ServiceKind ServiceKind
+        {
+            get; set;
+        }
+
         public string ServiceName
+        {
+            get; set;
+        }
+
+        public ServicePackageActivationMode? ServicePackageActivationMode
         {
             get; set;
         }
@@ -101,16 +129,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         public double Value
-        {
-            get; set;
-        }
-
-        public string NodeType
-        {
-            get; set;
-        }
-
-        public string Property
         {
             get; set;
         }
