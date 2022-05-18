@@ -183,6 +183,9 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
+                    { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
+                    { "ServiceKind", telemetryData.ServiceKind.ToString() },
+                    { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId.ToString() },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
@@ -250,13 +253,21 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", ClusterInformation.ClusterInfoTuple.ClusterId ?? string.Empty },
+                    { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId.ToString() },
+                    { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
+                    { "ServiceKind", telemetryData.ServiceKind.ToString() },
+                    { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
                     { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId.ToString() },
+                    { "ErrorCode", telemetryData.Code ?? string.Empty },
+                    { "Description", telemetryData.Description ?? string.Empty },
+                    { "Metric", telemetryData.Metric ?? string.Empty },
+                    { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
-                    { "Source", telemetryData.ObserverName },
+                    { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }
                 };

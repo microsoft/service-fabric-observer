@@ -673,7 +673,7 @@ namespace FabricObserver.Observers
 
                 // Make sure deployed app is not a containerized app.
                 var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
+                                            () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
                                                     NodeName,
                                                     app.ApplicationName,
                                                     null,

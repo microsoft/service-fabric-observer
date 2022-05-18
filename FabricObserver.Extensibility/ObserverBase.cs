@@ -794,28 +794,7 @@ namespace FabricObserver.Observers
                 // for each resource usage observation it makes per specified metric.
                 if (IsEtwEnabled && replicaOrInstance?.ChildProcesses == null)
                 {
-                    ObserverLogger.LogEtw(
-                        ObserverConstants.FabricObserverETWEventName,
-                        new
-                        {
-                            ApplicationName = appName?.OriginalString ?? string.Empty,
-                            ClusterInformation.ClusterInfoTuple.ClusterId,
-                            EntityType = entityType,
-                            NodeName,
-                            NodeType,
-                            ObserverName,
-                            Metric = data.Property,
-                            Value = data.AverageDataValue,
-                            PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : null,
-                            ProcessId = procId,
-                            ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                            ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole.ToString() : ReplicaRole.Unknown.ToString(),
-                            ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind.ToString() : System.Fabric.Query.ServiceKind.Invalid.ToString(),
-                            ServiceName = serviceName?.OriginalString ?? null,
-                            ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
-                            SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
-                            Source = ObserverName
-                        });
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                 }
             }
             else
@@ -848,19 +827,7 @@ namespace FabricObserver.Observers
 
                 if (IsEtwEnabled)
                 {
-                    ObserverLogger.LogEtw(
-                        ObserverConstants.FabricObserverETWEventName,
-                        new
-                        {
-                            ClusterInformation.ClusterInfoTuple.ClusterId,
-                            NodeName,
-                            EntityType = entityType.ToString(),
-                            NodeType,
-                            ObserverName,
-                            Metric = $"{drive}{data.Property}",
-                            Source = ObserverName,
-                            Value = data.AverageDataValue
-                        });
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                 }
             }
 
@@ -1108,33 +1075,7 @@ namespace FabricObserver.Observers
                 // ETW.
                 if (IsEtwEnabled)
                 {
-                    ObserverLogger.LogEtw(
-                        ObserverConstants.FabricObserverETWEventName,
-                        new
-                        {
-                            ApplicationName = appName?.OriginalString ?? string.Empty,
-                            ClusterInformation.ClusterInfoTuple.ClusterId,
-                            Code = errorWarningCode,
-                            ContainerId = replicaOrInstance?.ContainerId != null ? replicaOrInstance.ContainerId : string.Empty,
-                            EntityType = entityType.ToString(),
-                            HealthEventProperty = id,
-                            HealthState = healthState.ToString(),
-                            Description = healthMessage.ToString(),
-                            Metric = $"{drive}{data.Property}",
-                            NodeName,
-                            NodeType,
-                            ObserverName,
-                            PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : null,
-                            ProcessId = procId,
-                            ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                            ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole.ToString() : ReplicaRole.Unknown.ToString(),
-                            ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind.ToString() : System.Fabric.Query.ServiceKind.Invalid.ToString(),
-                            ServiceName = serviceName?.OriginalString ?? null,
-                            ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
-                            Source = $"{ObserverName}({errorWarningCode})",
-                            SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
-                            Value = data.AverageDataValue
-                        });
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                 }
 
                 var healthReport = new HealthReport
@@ -1206,33 +1147,7 @@ namespace FabricObserver.Observers
                     // ETW.
                     if (IsEtwEnabled)
                     {
-                        ObserverLogger.LogEtw(
-                            ObserverConstants.FabricObserverETWEventName,
-                            new
-                            {
-                                ApplicationName = appName != null ? appName.OriginalString : string.Empty,
-                                ClusterInformation.ClusterInfoTuple.ClusterId,
-                                Code = data.ActiveErrorOrWarningCode,
-                                ContainerId = replicaOrInstance?.ContainerId != null ? replicaOrInstance.ContainerId : string.Empty,
-                                EntityType = entityType,
-                                HealthState = "Ok",
-                                HealthEventProperty = id,
-                                Description = $"{data.Property} is now within normal/expected range.",
-                                Metric = data.Property,
-                                NodeName,
-                                NodeType,
-                                ObserverName,
-                                PartitionId = replicaOrInstance?.PartitionId != null ? replicaOrInstance.PartitionId.ToString() : null,
-                                ProcessId = procId,
-                                ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                                ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole.ToString() : ReplicaRole.Unknown.ToString(),
-                                ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind.ToString() : System.Fabric.Query.ServiceKind.Invalid.ToString(),
-                                ServiceName = serviceName?.OriginalString ?? null,
-                                ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
-                                Source = $"{ObserverName}({data.ActiveErrorOrWarningCode})",
-                                SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : string.Empty,
-                                Value = data.AverageDataValue
-                            });
+                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                     }
 
                     var healthReport = new HealthReport

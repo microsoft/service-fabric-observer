@@ -331,25 +331,25 @@ namespace FabricObserver.Observers
                                 if (IsEtwEnabled)
                                 {
                                     ObserverLogger.LogEtw(
-                                                    ObserverConstants.FabricObserverETWEventName,
-                                                    new
-                                                    {
-                                                        Level = 0, // Info
-                                                        Node = NodeName,
-                                                        Observer = ObserverName,
-                                                        AppName = appName,
-                                                        AppType = appType,
-                                                        AppVersion = appVersion,
-                                                        AppHealthState = healthState,
-                                                        AppStatus = status,
-                                                        ServiceName = serviceName.OriginalString,
-                                                        ServiceTypeName = type,
-                                                        Kind = kind,
-                                                        ProcessModel = processModel,
-                                                        ServiceManifestVersion = serviceManifestVersion,
-                                                        ActivePorts = ports,
-                                                        EphemeralPorts = ephemeralPorts
-                                                    });
+                                        ObserverConstants.FabricObserverETWEventName,
+                                        new
+                                        {
+                                            Level = 0, // Info
+                                            Node = NodeName,
+                                            Observer = ObserverName,
+                                            AppName = appName,
+                                            AppType = appType,
+                                            AppVersion = appVersion,
+                                            AppHealthState = healthState,
+                                            AppStatus = status,
+                                            ServiceName = serviceName.OriginalString,
+                                            ServiceTypeName = type,
+                                            Kind = kind,
+                                            ProcessModel = processModel,
+                                            ServiceManifestVersion = serviceManifestVersion,
+                                            ActivePorts = ports,
+                                            EphemeralPorts = ephemeralPorts
+                                        });
                                 }
 
                                 break;

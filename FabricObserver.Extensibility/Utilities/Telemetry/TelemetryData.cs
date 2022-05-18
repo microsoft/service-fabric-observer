@@ -11,9 +11,12 @@ using System;
 using System.Fabric;
 using System.Fabric.Query;
 using System.Fabric.Description;
+using System.Diagnostics.Tracing;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
+    [EventData]
+    [Serializable]
     public class TelemetryData : ITelemetryData
     {
         private readonly string _os;

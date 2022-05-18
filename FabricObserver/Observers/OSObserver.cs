@@ -112,34 +112,26 @@ namespace FabricObserver.Observers
                     // This means this observer created a Warning or Error SF Health Report
                     HasActiveFabricErrorOrWarning = true;
 
+                    var telemetryData = new TelemetryData()
+                    {
+                        Description = healthMessage,
+                        HealthState = HealthState.Error,
+                        Metric = "OS Health",
+                        NodeName = NodeName,
+                        ObserverName = ObserverName,
+                        Source = ObserverConstants.FabricObserverName
+                    };
+
+                    // Telemetry
                     if (IsTelemetryEnabled)
                     {
-                        var telemetryData = new TelemetryData()
-                        {
-                            Description = healthMessage,
-                            HealthState = HealthState.Error,
-                            Metric = "OS Health",
-                            NodeName = NodeName,
-                            ObserverName = ObserverName,
-                            Source = ObserverConstants.FabricObserverName
-                        };
-
                         await TelemetryClient.ReportHealthAsync(telemetryData, Token);
                     }
 
+                    // ETW
                     if (IsEtwEnabled)
                     {
-                        ObserverLogger.LogEtw(
-                                          ObserverConstants.FabricObserverETWEventName,
-                                          new
-                                          {
-                                              Description = healthMessage,
-                                              HealthState = "Error",
-                                              Metric = "OS Health",
-                                              NodeName,
-                                              ObserverName,
-                                              Source = ObserverConstants.FabricObserverName
-                                          });
+                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                     }
                 }
                 else if (HasActiveFabricErrorOrWarning && string.Equals(osStatus, "OK", StringComparison.OrdinalIgnoreCase))
@@ -150,6 +142,28 @@ namespace FabricObserver.Observers
                     if (CurrentErrorCount > 0)
                     {
                         CurrentErrorCount--;
+                    }
+
+                    var telemetryData = new TelemetryData()
+                    {
+                        Description = healthMessage,
+                        HealthState = HealthState.Ok,
+                        Metric = "OS Health",
+                        NodeName = NodeName,
+                        ObserverName = ObserverName,
+                        Source = ObserverConstants.FabricObserverName
+                    };
+
+                    // Telemetry
+                    if (IsTelemetryEnabled)
+                    {
+                        await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                    }
+
+                    // ETW
+                    if (IsEtwEnabled)
+                    {
+                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                     }
 
                     var healthReport = new HealthReport
@@ -164,37 +178,6 @@ namespace FabricObserver.Observers
                     };
 
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-                    // Telemetry
-                    if (IsTelemetryEnabled)
-                    {
-                        var telemetryData = new TelemetryData()
-                        {
-                            Description = healthMessage,
-                            HealthState = HealthState.Ok,
-                            Metric = "OS Health",
-                            NodeName = NodeName,
-                            ObserverName = ObserverName,
-                            Source = ObserverConstants.FabricObserverName
-                        };
-
-                        await TelemetryClient.ReportHealthAsync(telemetryData, Token);
-                    }
-
-                    if (IsEtwEnabled)
-                    {
-                        ObserverLogger.LogEtw(
-                                         ObserverConstants.FabricObserverETWEventName,
-                                         new
-                                         {
-                                             Description = healthMessage,
-                                             HealthState = "Ok",
-                                             Metric = "OS Health",
-                                             NodeName,
-                                             ObserverName,
-                                             Source = ObserverConstants.FabricObserverName
-                                         });
-                    }
 
                     // Reset internal health state.
                     HasActiveFabricErrorOrWarning = false;
@@ -250,37 +233,26 @@ namespace FabricObserver.Observers
 
                     HealthReporter.ReportHealthToServiceFabric(report);
 
+                    var telemetryData = new TelemetryData()
+                    {
+                        Description = auServiceEnabledMessage,
+                        HealthState = HealthState.Warning,
+                        Metric = "WUAutoDownloadEnabled",
+                        NodeName = NodeName,
+                        ObserverName = ObserverName,
+                        Source = ObserverConstants.FabricObserverName
+                    };
+
                     // Telemetry
                     if (IsTelemetryEnabled)
                     {
-                        // Send Health Report as Telemetry (perhaps it signals an Alert from App Insights, for example.).
-                        var telemetryData = new TelemetryData()
-                        {
-                            Description = auServiceEnabledMessage,
-                            HealthState = HealthState.Warning,
-                            Metric = "WUAutoDownloadEnabled",
-                            NodeName = NodeName,
-                            ObserverName = ObserverName,
-                            Source = ObserverConstants.FabricObserverName
-                        };
-
                         await TelemetryClient.ReportHealthAsync(telemetryData, Token);
                     }
 
                     // ETW.
                     if (IsEtwEnabled)
                     {
-                        ObserverLogger.LogEtw(
-                                          ObserverConstants.FabricObserverETWEventName,
-                                          new
-                                          {
-                                              HealthState = "Warning",
-                                              HealthEventDescription = auServiceEnabledMessage,
-                                              ObserverName,
-                                              Metric = "WUAutoDownloadEnabled",
-                                              Value = isAUAutomaticDownloadEnabled,
-                                              NodeName
-                                          });
+                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                     }
                 }
             }
@@ -319,7 +291,8 @@ namespace FabricObserver.Observers
                                                 new Uri(ObserverConstants.SystemAppName),
                                                 null,
                                                 AsyncClusterOperationTimeoutSeconds,
-                                                Token), Token).ConfigureAwait(false);
+                                                Token), 
+                                    Token).ConfigureAwait(false);
 
                 return allSystemServices.Count > 0 && allSystemServices.Count(
                                 service => service.ServiceTypeName.Equals(
@@ -601,75 +574,46 @@ namespace FabricObserver.Observers
                 osReport = sb.ToString();
                 string kbOnlyHotFixes = null;
 
+                if (isWindows)
+                {
+                    kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
+                }
+
+                var machineTelemetry = new MachineTelemetryData
+                {
+                    HealthState = "Ok",
+                    NodeName = NodeName,
+                    ObserverName = ObserverName,
+                    OSName = osInfo.Name,
+                    OSVersion = osInfo.Version,
+                    OSInstallDate = osInfo.InstallDate,
+                    LastBootUpTime = osInfo.LastBootUpTime,
+                    WindowsUpdateAutoDownloadEnabled = isAUAutomaticDownloadEnabled,
+                    TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
+                    AvailablePhysicalMemoryGB = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
+                    FreeVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
+                    LogicalProcessorCount = logicalProcessorCount,
+                    LogicalDriveCount = logicalDriveCount,
+                    DriveInfo = driveInfo?.Replace(Environment.NewLine, ""),
+                    NumberOfRunningProcesses = osInfo.NumberOfProcesses,
+                    ActiveFirewallRules = firewalls,
+                    ActiveTcpPorts = activePorts,
+                    ActiveEphemeralTcpPorts = activeEphemeralPorts,
+                    EphemeralTcpPortRange = osEphemeralPortRange,
+                    FabricApplicationTcpPortRange = fabricAppPortRange,
+                    HotFixes = kbOnlyHotFixes ?? string.Empty
+                };
+
                 // Telemetry
                 if (IsTelemetryEnabled)
                 {
-                    if (isWindows)
-                    {
-                        kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
-                    }
-
-                    await TelemetryClient.ReportMetricAsync(
-                                                new MachineTelemetryData
-                                                {
-                                                    HealthState = "Ok",
-                                                    NodeName = NodeName,
-                                                    ObserverName = ObserverName,
-                                                    OSName = osInfo.Name,
-                                                    OSVersion = osInfo.Version,
-                                                    OSInstallDate = osInfo.InstallDate,
-                                                    LastBootUpTime = osInfo.LastBootUpTime,
-                                                    WindowsUpdateAutoDownloadEnabled = isAUAutomaticDownloadEnabled,
-                                                    TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
-                                                    AvailablePhysicalMemoryGB = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
-                                                    FreeVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
-                                                    LogicalProcessorCount = logicalProcessorCount,
-                                                    LogicalDriveCount = logicalDriveCount,
-                                                    DriveInfo = driveInfo?.Replace(Environment.NewLine, ""),
-                                                    NumberOfRunningProcesses = osInfo.NumberOfProcesses,
-                                                    ActiveFirewallRules = firewalls,
-                                                    ActiveTcpPorts = activePorts,
-                                                    ActiveEphemeralTcpPorts = activeEphemeralPorts,
-                                                    EphemeralTcpPortRange = osEphemeralPortRange,
-                                                    FabricApplicationTcpPortRange = fabricAppPortRange,
-                                                    HotFixes = kbOnlyHotFixes ?? string.Empty
-                                                }, Token);
+                    await TelemetryClient.ReportMetricAsync(machineTelemetry, Token);
                 }
 
                 // ETW.
                 if (IsEtwEnabled)
                 {
-                    if (isWindows && kbOnlyHotFixes == null)
-                    {
-                        kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
-                    }
-
-                    ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        HealthState = "Ok",
-                                        NodeName,
-                                        ObserverName,
-                                        OSName = osInfo.Name,
-                                        OSVersion = osInfo.Version,
-                                        OSInstallDate = osInfo.InstallDate,
-                                        osInfo.LastBootUpTime,
-                                        WindowsUpdateAutoDownloadEnabled = isAUAutomaticDownloadEnabled,
-                                        TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
-                                        AvailablePhysicalMemoryGB = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
-                                        FreeVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
-                                        LogicalProcessorCount = logicalProcessorCount,
-                                        LogicalDriveCount = logicalDriveCount,
-                                        DriveInfo = driveInfo?.Replace(Environment.NewLine, ""),
-                                        NumberOfRunningProcesses = osInfo.NumberOfProcesses,
-                                        ActiveFirewallRules = firewalls,
-                                        ActiveTcpPorts = activePorts,
-                                        ActiveEphemeralTcpPorts = activeEphemeralPorts,
-                                        EphemeralTcpPortRange = osEphemeralPortRange,
-                                        FabricAppPortRange = fabricAppPortRange,
-                                        HotFixes = kbOnlyHotFixes ?? string.Empty
-                                    });
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, machineTelemetry);
                 }
 
                 _ = sb.Clear();

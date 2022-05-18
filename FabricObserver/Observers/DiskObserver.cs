@@ -400,25 +400,25 @@ namespace FabricObserver.Observers
                 if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                                                $"InvalidConfigFormat",
-                                                ObserverManager.ObserverFailureHealthStateLevel,
-                                                message,
-                                                ObserverName,
-                                                Token);
+                            $"InvalidConfigFormat",
+                            ObserverManager.ObserverFailureHealthStateLevel,
+                            message,
+                            ObserverName,
+                            Token);
                 }
 
                 // ETW.
                 if (IsEtwEnabled)
                 {
                     ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = $"InvalidConfigFormat",
-                                        Level = ObserverManager.ObserverFailureHealthStateLevel,
-                                        Message = message,
-                                        ObserverName
-                                    });
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = $"InvalidConfigFormat",
+                            Level = ObserverManager.ObserverFailureHealthStateLevel,
+                            Message = message,
+                            ObserverName
+                        });
                 }
             }
             catch (ArgumentException)

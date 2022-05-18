@@ -4,13 +4,14 @@
 // ------------------------------------------------------------
 
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     [EventData]
-    [JsonObject]
+    [Serializable]
     public class ChildProcessTelemetryData
     {
         public string ApplicationName;
