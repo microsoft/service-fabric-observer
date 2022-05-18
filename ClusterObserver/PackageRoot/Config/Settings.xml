@@ -67,14 +67,18 @@
     <!-- Monitor Cluster and Application Upgrades. -->
     <Parameter Name="MonitorUpgrades" Value="" MustOverride="true" />
   </Section>
-	<!-- Add MustOverride="true" to each Parameter elemement to override these in ApplicationManifest.xml. -->
-    <Section Name="SampleNewObserverConfiguration">
-	    <Parameter Name="Enabled" Value="true" />
-	    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-	    <Parameter Name="EnableCSVDataLogging" Value="false" />
-	    <Parameter Name="EnableEtw" Value="true" />
-	    <Parameter Name="EnableTelemetry" Value="false" />
-	    <Parameter Name="EnableVerboseLogging" Value="false" />
-	    <Parameter Name="RunInterval" Value=""  />
-    </Section>
+  <!-- Plugin model sample. Just add the configuration info here that your observer needs.
+       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
+       Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
+       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. 
+	   
+       If you want to enable versionless parameter-only application upgrades, then add MustOverride to the Parameters you want to be 
+       able to change without redeploying CO and add them to ApplicationManifest.xml just like for ClusterObserver.
+  <Section Name="MyClusterObserverPluginConfiguration">
+    <Parameter Name="Enabled" Value="true" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <Parameter Name="EnableEtw" Value="false" />
+    <Parameter Name="EnableVerboseLogging" Value="false" />
+    <Parameter Name="RunInterval" Value=""  />
+  </Section> -->
 </Settings>
