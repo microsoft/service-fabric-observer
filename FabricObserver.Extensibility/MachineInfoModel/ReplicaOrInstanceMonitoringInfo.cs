@@ -36,7 +36,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public Guid PartitionId
+        public Guid? PartitionId
         {
             get; set;
         }

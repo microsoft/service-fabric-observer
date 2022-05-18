@@ -461,7 +461,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
             };
-            string[] ignoreProcessList = new string[] { "cmd.exe", "conhost.exe", "csrss.exe", "lsass.exe", "svchost.exe", "wininit.exe", "winlogon.exe" };
+            string[] ignoreProcessList = new string[] { "cmd.exe", "conhost.exe", "csrss.exe", "find.exe", "lsass.exe", "svchost.exe", "systeminfo.exe", "wininit.exe", "winlogon.exe" };
             IntPtr handleToSnapshot = IntPtr.Zero;
 
             try
@@ -477,7 +477,12 @@ namespace FabricObserver.Observers.Utilities
                 {
                     try
                     {
-                        if (parentpid == (int)procEntry.th32ParentProcessID && !ignoreProcessList.Contains(procEntry.szExeFile))
+                        if (ignoreProcessList.Contains(procEntry.szExeFile))
+                        {
+                            continue;
+                        }
+
+                        if (parentpid == (int)procEntry.th32ParentProcessID)
                         {
                             childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
                         }

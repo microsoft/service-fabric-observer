@@ -306,6 +306,7 @@ namespace FabricObserver.Observers
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "isWindows check exits the function immediately if not Windows...")]
         private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
             if (!isWindows)
@@ -329,12 +330,8 @@ namespace FabricObserver.Observers
                 }
 
                 resultsOrdered = results.Cast<ManagementObject>()
-#pragma warning disable CA1416 // Validate platform compatibility - This is Windows-only (!isWindows means this function doesn't run..).
-                                            .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
-                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
-#pragma warning restore CA1416 // Validate platform compatibility
+                                    .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
+                                    .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";

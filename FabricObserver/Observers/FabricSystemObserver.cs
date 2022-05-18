@@ -241,6 +241,7 @@ namespace FabricObserver.Observers
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
         public override Task ReportAsync(CancellationToken token)
         {
             try
@@ -363,7 +364,7 @@ namespace FabricObserver.Observers
                     // SF Eventlog Errors?
                     // Write this out to a new file, for use by the web front end log viewer.
                     // Format = HTML.
-                    int count = evtRecordList.Count();
+                    int count = evtRecordList.Count;
                     var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
 
                     // Remove existing file.
@@ -443,9 +444,11 @@ namespace FabricObserver.Observers
             return Task.CompletedTask;
         }
 
+
         /// <summary>
         /// ReadServiceFabricWindowsEventLog().
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "isWindows check exits the function immediately if not Windows...")]
         private void ReadServiceFabricWindowsEventLog()
         {
             if (!isWindows)
@@ -572,6 +575,7 @@ namespace FabricObserver.Observers
             return result.ToArray();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "isWindows check exits the function immediately if not Windows...")]
         private void Initialize()
         {
             Token.ThrowIfCancellationRequested();

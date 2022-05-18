@@ -1716,6 +1716,12 @@ namespace FabricObserver.Observers
                 var index = processDictionary.ElementAt(i);
                 string procName = index.Key;
                 int procId = index.Value;
+                
+                if (!EnsureProcess(procName, procId))
+                {
+                    return;
+                }
+
                 TimeSpan maxDuration = TimeSpan.FromSeconds(1);
 
                 if (MonitorDuration > TimeSpan.MinValue)
@@ -1918,6 +1924,12 @@ namespace FabricObserver.Observers
                 timer.Stop();
                 timer = null;
             });
+        }
+
+        private bool EnsureProcess(string procName, int procId)
+        {
+            using var proc = Process.GetProcessById(procId);
+            return proc.ProcessName == procName;
         }
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)

@@ -219,27 +219,6 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        private float ProcessGetProcessAllocatedHandles(int processId)
-        {
-            if (processId < 0)
-            {
-                return -1F;
-            }
-
-            try
-            {
-                using (Process process = Process.GetProcessById(processId))
-                {
-                    process.Refresh();
-                    return process.HandleCount;
-                }
-            }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is SystemException)
-            {
-                return -1F;
-            }
-        }
-
         private float NativeGetProcessFullWorkingSetMb(int processId)
         {
             try
@@ -275,9 +254,6 @@ namespace FabricObserver.Observers.Utilities
                     if (!NativeMethods.GetProcessHandleCount(p.Handle, out uint handles))
                     {
                         Logger.LogWarning($"GetProcessHandleCount: Failed with Win32 error code {Marshal.GetLastWin32Error()}. Trying a different approach (Process obj).");
-
-                        // Try a different approach employing Process object.
-                        handles = (uint)GetProcessAllocatedHandles(p);
                     }
        
                     return (int)handles;
@@ -350,7 +326,7 @@ namespace FabricObserver.Observers.Utilities
                 instanceNames = category.GetInstanceNames().Where(x => x.Contains($"{procName}#")).ToArray();
                 int count = instanceNames.Length;
 
-                if (count == 0 || instanceNames.All(inst => inst == string.Empty))
+                if (count == 0 || instanceNames.All(inst => string.IsNullOrWhiteSpace(inst)))
                 {
                     return procName;
                 }

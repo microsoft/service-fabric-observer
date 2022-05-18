@@ -410,7 +410,7 @@ namespace FabricObserver.Observers
                 };
 
                 // Service reports.
-                if (obs.ServiceNames.Count(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")) > 0)
+                if (obs.ServiceNames.Any(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
                 {
                     foreach (var service in obs.ServiceNames)
                     {
@@ -425,14 +425,6 @@ namespace FabricObserver.Observers
 
                                 if (fabricObserverAppHealthEvents != null && fabricObserverAppHealthEvents.Any())
                                 {
-                                    if (isConfigurationUpdateInProgress)
-                                    {
-                                        fabricObserverAppHealthEvents =
-                                            appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                            && s.HealthInformation.HealthState == HealthState.Warning
-                                                                            || s.HealthInformation.HealthState == HealthState.Error);
-                                    }
-
                                     foreach (var evt in fabricObserverAppHealthEvents)
                                     {
                                         try
@@ -509,14 +501,6 @@ namespace FabricObserver.Observers
 
                         if (sysAppHealthEvents != null && sysAppHealthEvents.Any())
                         {
-                            if (isConfigurationUpdateInProgress)
-                            {
-                                sysAppHealthEvents =
-                                    sysAppHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                       && s.HealthInformation.HealthState == HealthState.Warning
-                                                                       || s.HealthInformation.HealthState == HealthState.Error);
-                            }
-
                             foreach (var evt in sysAppHealthEvents)
                             {
                                 try
@@ -553,13 +537,6 @@ namespace FabricObserver.Observers
 
                         if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
                         {
-                            if (isConfigurationUpdateInProgress)
-                            {
-                                fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                                                  && s.HealthInformation.HealthState == HealthState.Warning
-                                                                                                  || s.HealthInformation.HealthState == HealthState.Error);
-                            }
-
                             healthReport.EntityType = EntityType.Machine;
 
                             foreach (var evt in fabricObserverNodeHealthEvents)

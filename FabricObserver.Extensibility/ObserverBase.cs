@@ -757,7 +757,7 @@ namespace FabricObserver.Observers
                     ObserverName = ObserverName,
                     Metric = data.Property,
                     Value = data.AverageDataValue,
-                    PartitionId = replicaOrInstance != null ? replicaOrInstance.PartitionId : default,
+                    PartitionId = replicaOrInstance?.PartitionId,
                     ProcessId = procId,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.Unknown,
