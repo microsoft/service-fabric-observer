@@ -54,7 +54,7 @@ namespace FabricObserver.Observers.Interfaces
         /// <summary>
         /// The Partition Id where the replica or instance resides that is in Error or Warning state.
         /// </summary>
-        Guid PartitionId { get; set; }
+        Guid? PartitionId { get; set; }
         /// <summary>
         /// The host process id of the Service replica or instance.
         /// </summary>

@@ -81,7 +81,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get { return _os; }
         }
 
-        public Guid PartitionId
+        public Guid? PartitionId
         {
             get; set;
         }

@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace FabricObserver.Observers.Utilities
@@ -32,7 +33,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="parentPid">The parent process id.</param>
         /// <returns>List of tuple (string ProcName, int Pid) for descendants of the parent process or null if the parent has no children.</returns>
-        List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
+        List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, IntPtr handleToSnapshot);
 
         /// <summary>
         /// Windows only. Determines the percentage of Windows KVS LVIDs currently in use.

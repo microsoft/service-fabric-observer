@@ -8,6 +8,7 @@ using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,6 +25,8 @@ namespace FabricObserver.Utilities.ServiceFabric
         // This is the FC singleton that will be used for the lifetime of this FO instance.
         private static FabricClient fabricClient = null;
         private static readonly object lockObj = new object();
+        private IntPtr HandleToSnapshot = IntPtr.Zero;
+        private readonly bool isWindows;
 
         /// <summary>
         /// The singleton FabricClient instance that is used throughout FabricObserver.
@@ -86,6 +89,21 @@ namespace FabricObserver.Utilities.ServiceFabric
             };
 
             nodeName = NodeName;
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        }
+
+        public FabricClientUtilities(string NodeName, IntPtr handleToSnapshot)
+        {
+            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+            parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount >= 4 ? maxDegreeOfParallelism : 1,
+                TaskScheduler = TaskScheduler.Default
+            };
+
+            nodeName = NodeName;
+            HandleToSnapshot = handleToSnapshot;
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         /// <summary>
@@ -170,6 +188,15 @@ namespace FabricObserver.Utilities.ServiceFabric
         {
             ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
             parallelOptions.CancellationToken = token;
+            bool createdSnapshotHandle = false;
+
+            // This means the ctor that doesn't take an IntPtr arg was used to construct this instance or a caller supplied IntPtr.Zero
+            // for the arg in the ctor that does takes an IntPtr..
+            if (isWindows && HandleToSnapshot == IntPtr.Zero)
+            {
+                HandleToSnapshot = NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                createdSnapshotHandle = true;
+            }
 
             _ = Parallel.For(0, deployedReplicaList.Count, parallelOptions, (i, state) =>
             {
@@ -198,7 +225,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         /* In order to provide accurate resource usage of an SF service process we need to also account for
                         any processes (children) that the service process (parent) created/spawned. */
 
-                        List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+                        List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, HandleToSnapshot);
 
                         if (childPids != null && childPids.Count > 0)
                         {
@@ -222,7 +249,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                             ReplicaStatus = statelessInstance.ReplicaStatus
                         };
 
-                        List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
+                        List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, HandleToSnapshot);
 
                         if (childPids != null && childPids.Count > 0)
                         {
@@ -238,6 +265,11 @@ namespace FabricObserver.Utilities.ServiceFabric
                     replicaMonitoringList.Enqueue(replicaInfo);
                 }
             });
+
+            if (createdSnapshotHandle)
+            {
+                NativeMethods.ReleaseHandle(HandleToSnapshot);
+            }
 
             return replicaMonitoringList.ToList();
         }

@@ -32,15 +32,15 @@ namespace FabricObserver.Observers.Utilities
             return NativeGetProcessHandleCount(processId);
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, IntPtr handleToSnapshot)
         {
-            if (parentPid < 1)
+            if (parentPid < 1 || handleToSnapshot == IntPtr.Zero)
             {
                 return null;
             }
 
             // Get descendant procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid);
+            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -55,7 +55,7 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<(string ProcName, int Pid)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid);
+                List<(string ProcName, int Pid)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
 
                 if (c1 == null || c1.Count <= 0)
                 {
@@ -71,7 +71,7 @@ namespace FabricObserver.Observers.Utilities
 
                 for (int j = 0; j < c1.Count; ++j)
                 {
-                    List<(string ProcName, int Pid)> c2 = TupleGetChildProcessesWin32(c1[j].Pid);
+                    List<(string ProcName, int Pid)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
 
                     if (c2 == null || c2.Count <= 0)
                     {
@@ -87,7 +87,7 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int k = 0; k < c2.Count; ++k)
                     {
-                        List<(string ProcName, int Pid)> c3 = TupleGetChildProcessesWin32(c2[k].Pid);
+                        List<(string ProcName, int Pid)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
 
                         if (c3 == null || c3.Count <= 0)
                         {
@@ -103,7 +103,7 @@ namespace FabricObserver.Observers.Utilities
 
                         for (int l = 0; l < c3.Count; ++l)
                         {
-                            List<(string ProcName, int Pid)> c4 = TupleGetChildProcessesWin32(c3[l].Pid);
+                            List<(string ProcName, int Pid)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
 
                             if (c4 == null || c4.Count <= 0)
                             {
@@ -124,17 +124,17 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        private List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId)
+        private List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, IntPtr handleToSnapshot)
         {
-            if (processId <= 0)
+            if (processId <= 0 || handleToSnapshot == IntPtr.Zero)
             {
                 return null;
             }
 
             try
             {
-                List<(string procName, int procId)> childProcs = NativeMethods.GetChildProcesses(processId);
-
+                List<(string procName, int procId)> childProcs = NativeMethods.GetChildProcesses(processId, handleToSnapshot);
+                
                 if (childProcs?.Count == 0)
                 {
                     return null;

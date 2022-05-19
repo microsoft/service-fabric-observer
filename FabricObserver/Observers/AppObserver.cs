@@ -62,12 +62,37 @@ namespace FabricObserver.Observers
         private List<DeployedApplication> _deployedApps;
 
         private readonly Stopwatch _stopwatch;
+        private readonly object lockObj = new object();
         private FabricClientUtilities _client;
         private ParallelOptions _parallelOptions;
         private string _fileName;
         private int _appCount;
         private int _serviceCount;
         private bool _checkPrivateWorkingSet;
+        private IntPtr _handleToSnapshot = IntPtr.Zero;
+        
+        private IntPtr HandleToSnapshot
+        {
+            get
+            {
+                if (!_isWindows)
+                {
+                    return IntPtr.Zero;
+                }
+
+                if (_handleToSnapshot == IntPtr.Zero)
+                {
+                    lock (lockObj)
+                    {
+                        if (_handleToSnapshot == IntPtr.Zero)
+                        {
+                            _handleToSnapshot = NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                        }
+                    }
+                }
+                return _handleToSnapshot;
+            }
+        }
 
         // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
@@ -492,7 +517,7 @@ namespace FabricObserver.Observers
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             _userTargetList = new List<ApplicationInfo>();
             _deployedTargetList = new List<ApplicationInfo>();
-            _client = new FabricClientUtilities(NodeName);
+            _client = new FabricClientUtilities(NodeName, HandleToSnapshot);
             _deployedApps = await _client.GetAllLocalDeployedAppsAsync(Token).ConfigureAwait(false);
 
             // DEBUG
@@ -1425,10 +1450,17 @@ namespace FabricObserver.Observers
                 try
                 {
                     Process parentProc = null;
+                    string parentProcName = null;
+                    int parentProcId;
 
                     try
                     {
                         parentProc = Process.GetProcessById(parentPid);
+                        
+                        if (parentProc == null)
+                        {
+                            return;
+                        }
 
                         // This will throw Win32Exception if process is running at a higher user privilege than FO.
                         // If it is not, then this would mean the process has exited so move on to next process.
@@ -1436,6 +1468,9 @@ namespace FabricObserver.Observers
                         {
                             return;
                         }
+
+                        parentProcName = parentProc.ProcessName;
+                        parentProcId = parentProc.Id;
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
@@ -1455,7 +1490,7 @@ namespace FabricObserver.Observers
                                 EmitLogEvent = EnableVerboseLogging,
                                 HealthMessage = message,
                                 HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                                Property = $"UserAccount({parentProc?.ProcessName})",
+                                Property = $"UserAccount({parentProcName})",
                                 EntityType = EntityType.Service,
                                 State = ObserverManager.ObserverFailureHealthStateLevel,
                                 NodeName = NodeName,
@@ -1469,7 +1504,7 @@ namespace FabricObserver.Observers
                             if (IsTelemetryEnabled)
                             {
                                 _ = TelemetryClient?.ReportHealthAsync(
-                                        $"UserAccountPrivilege({parentProc?.ProcessName})",
+                                        $"UserAccountPrivilege({parentProcName})",
                                         ObserverManager.ObserverFailureHealthStateLevel,
                                         message,
                                         ObserverName,
@@ -1484,7 +1519,7 @@ namespace FabricObserver.Observers
                                     ObserverConstants.FabricObserverETWEventName,
                                     new
                                     {
-                                        Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
+                                        Property = $"UserAccountPrivilege({parentProcName})",
                                         Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
                                         Message = message,
                                         ObserverName,
@@ -1495,14 +1530,6 @@ namespace FabricObserver.Observers
 
                         return;
                     }
-
-                    if (parentProc == null)
-                    {
-                        return;
-                    }
-
-                    string parentProcName = parentProc.ProcessName;
-                    int parentProcId = parentProc.Id;
 
                     // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
                     // Please use ContainerObserver for SF container app service monitoring.
@@ -1745,7 +1772,7 @@ namespace FabricObserver.Observers
                 // Threads
                 if (checkThreads)
                 {
-                    int threads = _isWindows ? NativeMethods.GetProcessThreadCount(procId) : ProcessInfoProvider.GetProcessThreadCount(procId);
+                    int threads = _isWindows ? NativeMethods.GetProcessThreadCount(procId, HandleToSnapshot) : ProcessInfoProvider.GetProcessThreadCount(procId);
 
                     if (threads > 0)
                     {
@@ -2112,7 +2139,7 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, HandleToSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -2159,7 +2186,7 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, HandleToSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -2348,6 +2375,12 @@ namespace FabricObserver.Observers
             {
                 AllAppKvsLvidsData?.Clear();
                 AllAppKvsLvidsData = null;
+            }
+
+            if (_isWindows)
+            {
+                NativeMethods.ReleaseHandle(_handleToSnapshot);
+                _handleToSnapshot = IntPtr.Zero;
             }
         }
     }

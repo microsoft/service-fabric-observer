@@ -180,15 +180,9 @@ namespace FabricObserver.Observers
 
                     // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
                     // Also, this feature is not supported for Linux yet.
-                    if (isWindows)
+                    if (isWindows && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                     {
-                        if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
-                        {
-                            // Warm up counter.
-                            _ = DiskUsage.GetAverageDiskQueueLength(d.Name[..2]);
-                            await Task.Delay(250);
-                            DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
-                        }
+                        DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
                     }
 
                     if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
