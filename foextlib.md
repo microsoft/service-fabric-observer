@@ -70,9 +70,10 @@ If you want to build your own nupkg from FO source, then:
 Open a PowerShell console, navigate to the top level directory of the FO repo (in this example, C:\Users\me\source\repos\service-fabric-observer):
 
 ```PowerShell
-cd C:\Users\me\source\repos\service-fabric-observer
-./Build-FOExtensibility
-./Build-FOExtensibilityNupkg
+cd [Path to local FO repo]
+./Build-FabricObserver
+./Build-NugetPackages
 ```
-The output from the above commands, a file named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg, would be located in 
-C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver.Extensibility\Nugets
+Extensibility nupkg will be located in the build output directory:
+
+[Path to local FO repo]\bin\release\FabricObserver\Nugets\Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg
