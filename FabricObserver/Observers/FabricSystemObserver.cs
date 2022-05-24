@@ -884,9 +884,11 @@ namespace FabricObserver.Observers
                 Process process = processes[i];
 
                 try
-                { 
+                {
+                    int procId = process.Id;
+
                     // Ports - Active TCP All
-                    int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(process.Id, CodePackage?.Path);
+                    int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path);
                     TotalActivePortCountAllSystemServices += activePortCount;
                     
                     if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
@@ -895,7 +897,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Ports - Active TCP Ephemeral
-                    int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id, CodePackage?.Path);
+                    int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, CodePackage?.Path);
                     TotalActiveEphemeralPortCountAllSystemServices += activeEphemeralPortCount;
                     
                     if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
@@ -908,17 +910,17 @@ namespace FabricObserver.Observers
 
                     if (isWindows)
                     {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id);
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId);
                     }
                     else
                     {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, CodePackage?.Path);
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, CodePackage?.Path);
                     }
 
                     TotalAllocatedHandlesAllSystemServices += handles;
 
                     // Threads
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(process.Id);
+                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId, process.ProcessName);
 
                     TotalThreadsAllSystemServices += threads;
                     
@@ -965,7 +967,7 @@ namespace FabricObserver.Observers
                     // Memory MB
                     if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                     {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, checkPrivateWorkingSet ? dotnetArg : null, checkPrivateWorkingSet);
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? dotnetArg : null, checkPrivateWorkingSet);
                         allMemData[dotnetArg].AddData(processMem);
                     }
 
@@ -980,7 +982,7 @@ namespace FabricObserver.Observers
                             // CPU Time for service process.
                             if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                             {
-                                int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process.Id);
+                                int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(procId);
                                 allCpuData[dotnetArg].AddData(cpu);
                             }
 

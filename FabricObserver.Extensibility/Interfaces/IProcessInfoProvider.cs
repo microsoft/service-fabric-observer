@@ -32,6 +32,7 @@ namespace FabricObserver.Observers.Utilities
         /// Gets process information (name, pid) for descendants of the parent process represented by the supplied process id.
         /// </summary>
         /// <param name="parentPid">The parent process id.</param>
+        /// <param name="handleToSnapshot">Windows only. Handle to a Windows process snapshot(created using NativeMethods.CreateToolhelp32Snapshot). This has no meaning for Linux, just supply IntPtr.Zero.</param>
         /// <returns>List of tuple (string ProcName, int Pid) for descendants of the parent process or null if the parent has no children.</returns>
         List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, IntPtr handleToSnapshot);
 

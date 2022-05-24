@@ -58,13 +58,19 @@ namespace FabricObserver.Observers.Utilities
         /// Gets the number of execution threads owned by the process of supplied process id.
         /// </summary>
         /// <param name="processId">Id of the process.</param>
+        /// <param name="processName">Name of the process. This is used to ensure the id supplied is still applied to the process of the supplied named.</param>
         /// <returns>Number of threads owned by specified process.</returns>
-        public static int GetProcessThreadCount(int processId)
+        public static int GetProcessThreadCount(int processId, string processName)
         {
             try
             {
                 using (Process p = Process.GetProcessById(processId))
                 {
+                    if (p.ProcessName != processName)
+                    {
+                        return 0;
+                    }
+
                     p.Refresh();
                     return p.Threads.Count;
                 }

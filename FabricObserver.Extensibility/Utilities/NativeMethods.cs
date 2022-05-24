@@ -52,19 +52,19 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [StructLayout(LayoutKind.Sequential)] 
-        internal struct PROCESS_MEMORY_COUNTERS_EX
+        public struct PROCESS_MEMORY_COUNTERS_EX
         {
-            internal uint cb;
-            internal uint PageFaultCount;
-            internal IntPtr PeakWorkingSetSize;
-            internal IntPtr WorkingSetSize;
-            internal IntPtr QuotaPeakPagedPoolUsage;
-            internal IntPtr QuotaPagedPoolUsage;
-            internal IntPtr QuotaPeakNonPagedPoolUsage;
-            internal IntPtr QuotaNonPagedPoolUsage;
-            internal IntPtr PagefileUsage;
-            internal IntPtr PeakPagefileUsage;
-            internal IntPtr PrivateUsage;
+            public uint cb;
+            public uint PageFaultCount;
+            public IntPtr PeakWorkingSetSize;
+            public IntPtr WorkingSetSize;
+            public IntPtr QuotaPeakPagedPoolUsage;
+            public IntPtr QuotaPagedPoolUsage;
+            public IntPtr QuotaPeakNonPagedPoolUsage;
+            public IntPtr QuotaNonPagedPoolUsage;
+            public IntPtr PagefileUsage;
+            public IntPtr PeakPagefileUsage;
+            public IntPtr PrivateUsage;
         }
 
         [Flags]
@@ -440,7 +440,7 @@ namespace FabricObserver.Observers.Utilities
 
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
+        public static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -455,7 +455,7 @@ namespace FabricObserver.Observers.Utilities
         static extern uint GetExtendedTcpTable(IntPtr pTcpTable, ref int dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, uint reserved = 0);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr OpenProcess( uint processAccess, bool bInheritHandle,uint processId);
+        public static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool IsProcessInJob(IntPtr Process, IntPtr Job, out bool Result);
@@ -471,7 +471,7 @@ namespace FabricObserver.Observers.Utilities
             "System", "Secure System", "Registry"
         };
 
-        private static IntPtr GetProcessHandle(uint id)
+        private static IntPtr DupProcessHandle(uint id)
         {
             return OpenProcess((uint)ProcessAccessFlags.DuplicateHandle | (uint)ProcessAccessFlags.QueryInformation, false, id);
         }
@@ -492,99 +492,216 @@ namespace FabricObserver.Observers.Utilities
         /// Gets the child processes, if any, belonging to the process with supplied pid.
         /// </summary>
         /// <param name="parentpid">The process ID of parent process.</param>
+        /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
         /// <returns>A List of tuple (string procName,  int procId) representing each child process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
         public static List<(string procName, int procId)> GetChildProcesses(int parentpid, IntPtr handleToSnapshot)
         {
-            if (parentpid < 1 || handleToSnapshot == IntPtr.Zero)
+            if (parentpid < 1)
             {
                 return null;
             }
 
-            List<(string procName, int procId)> childProcs = new List<(string procName, int procId)>();
-            PROCESSENTRY32 procEntry = new PROCESSENTRY32
-            {
-                dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
-            };
+            bool isLocalSnapshot = false;
 
-            if (!Process32First(handleToSnapshot, ref procEntry))
+            try
             {
-                throw new Win32Exception(
-                    $"NativeMethods.GetChildProcesses({parentpid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
+                if (handleToSnapshot == IntPtr.Zero)
+                {
+                    isLocalSnapshot = true;
+                    handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                    if (handleToSnapshot == IntPtr.Zero)
+                    {
+                        throw new Win32Exception(
+                            $"NativeMethods.CreateToolhelp32Snapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
+                    }
+                }
+
+                List<(string procName, int procId)> childProcs = new List<(string procName, int procId)>();
+                PROCESSENTRY32 procEntry = new PROCESSENTRY32
+                {
+                    dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
+                };
+
+                if (!Process32First(handleToSnapshot, ref procEntry))
+                {
+                    throw new Win32Exception(
+                        $"NativeMethods.GetChildProcesses({parentpid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
+                }
+
+                do
+                {
+                    try
+                    {
+                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(i => i == procEntry.szExeFile))
+                        {
+                            continue;
+                        }
+
+                        if (parentpid == (int)procEntry.th32ParentProcessID)
+                        {
+                            childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+
+                } while (Process32Next(handleToSnapshot, ref procEntry));
+
+                return childProcs;
             }
-
-            do
+            finally
             {
-                try
+                if (isLocalSnapshot)
                 {
-                    if (procEntry.th32ProcessID == 0 || ignoreProcessList.Contains(procEntry.szExeFile))
-                    {
-                        continue;
-                    }
-
-                    if (parentpid == (int)procEntry.th32ParentProcessID)
-                    {
-                        childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
-                    }
+                    ReleaseHandle(handleToSnapshot);
                 }
-                catch (ArgumentException)
-                {
-
-                }
-
-            } while (Process32Next(handleToSnapshot, ref procEntry));
-
-            return childProcs;
+            }
         }
 
         /// <summary>
         /// Gets the number of execution threads started by the process with supplied pid.
         /// </summary>
         /// <param name="pid">The id of the process (pid).</param>
+        /// <param name="processName">The name of the process. This is used to ensure the supplied process id is still assigned to the process.</param>
+        /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
         /// <returns>The number of execution threads started by the process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        public static int GetProcessThreadCount(int pid, IntPtr handleToSnapshot)
+        public static int GetProcessThreadCount(int pid, string processName, IntPtr handleToSnapshot)
         {
             int threadCount = 0;
 
-            if (pid < 1 || handleToSnapshot == IntPtr.Zero)
+            if (pid < 1)
             {
                 return threadCount;
             }
 
-            PROCESSENTRY32 procEntry = new PROCESSENTRY32
+            bool isLocalSnapshot = false;
+
+            try
             {
-                dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
-            };
-           
-            if (!Process32First(handleToSnapshot, ref procEntry))
+                if (handleToSnapshot == IntPtr.Zero)
+                {
+                    isLocalSnapshot = true;
+                    handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                    if (handleToSnapshot == IntPtr.Zero)
+                    {
+                        throw new Win32Exception(
+                            $"NativeMethods.CreateToolhelp32Snapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
+                    }
+                }
+
+                PROCESSENTRY32 procEntry = new PROCESSENTRY32
+                {
+                    dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
+                };
+
+                if (!Process32First(handleToSnapshot, ref procEntry))
+                {
+                    throw new Win32Exception(
+                        $"NativeMethods.GetProcessThreadCount({pid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
+                }
+
+                do
+                {
+                    try
+                    {
+                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(i => i == procEntry.szExeFile))
+                        {
+                            continue;
+                        }
+
+                        if (pid == procEntry.th32ProcessID && procEntry.szExeFile.Contains(processName))
+                        {
+                            return (int)procEntry.cntThreads;
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+
+                } while (Process32Next(handleToSnapshot, ref procEntry));
+
+                return threadCount;
+            }
+            finally
             {
-                throw new Win32Exception(
-                    $"NativeMethods.GetProcessThreadCount({pid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
+                if (isLocalSnapshot)
+                {
+                    ReleaseHandle(handleToSnapshot);
+                }
+            }
+        }
+
+        public static string GetProcessNameFromId(int pid, IntPtr handleToSnapshot)
+        {
+            string procName = null;
+
+            if (pid < 1)
+            {
+                return procName;
             }
 
-            do
+            bool isLocalSnapshot = false;
+
+            try
             {
-                try
+                if (handleToSnapshot == IntPtr.Zero)
                 {
-                    if (procEntry.th32ProcessID == 0 || ignoreProcessList.Contains(procEntry.szExeFile))
+                    isLocalSnapshot = true;
+                    handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                    if (handleToSnapshot == IntPtr.Zero)
                     {
-                        continue;
-                    }
-
-                    if (pid == procEntry.th32ProcessID)
-                    {
-                        return (int)procEntry.cntThreads;
+                        throw new Win32Exception(
+                            $"NativeMethods.CreateToolhelp32Snapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
                     }
                 }
-                catch (ArgumentException)
-                {
 
+
+                PROCESSENTRY32 procEntry = new PROCESSENTRY32
+                {
+                    dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
+                };
+
+                if (!Process32First(handleToSnapshot, ref procEntry))
+                {
+                    throw new Win32Exception(
+                        $"NativeMethods.GetProcessThreadCount({pid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
                 }
 
-            } while (Process32Next(handleToSnapshot, ref procEntry));
+                do
+                {
+                    try
+                    {
+                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(i => i == procEntry.szExeFile))
+                        {
+                            continue;
+                        }
 
-            return threadCount;
+                        if (pid == procEntry.th32ProcessID)
+                        {
+                            return procEntry.szExeFile.Replace(".exe", "");
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+
+                } while (Process32Next(handleToSnapshot, ref procEntry));
+
+                return procName;
+            }
+            finally
+            {
+                if (isLocalSnapshot)
+                {
+                    ReleaseHandle(handleToSnapshot);
+                }
+            }
         }
 
         // Networking \\

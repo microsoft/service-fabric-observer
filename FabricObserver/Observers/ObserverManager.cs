@@ -1185,7 +1185,7 @@ namespace FabricObserver.Observers
                     if (!isCompleted && !(RuntimeTokenCancelled || shutdownSignaled))
                     {
                         string observerHealthWarning = $"{observer.ObserverName} on node {nodeName} has exceeded its specified Maximum run time of {ObserverExecutionTimeout.TotalSeconds} seconds. " +
-                                                       $"This means something is wrong with {observer.ObserverName}. It will not be run again. Please look into it.";
+                                                       $"This means something went wrong with {observer.ObserverName} during its last run.";
 
                         Logger.LogError(observerHealthWarning);
                         observer.IsUnhealthy = true;
@@ -1304,7 +1304,7 @@ namespace FabricObserver.Observers
                         }
                         else if (e is FabricException || e is TimeoutException || e is Win32Exception)
                         {
-                            // These are transient and will have been logged by observer when they happened. Ignore. If critical (Win32Exception), FO will die soon enough.
+                            // These are transient and will have been logged by related observer when they happened. Ignore. If critical (Win32Exception), FO will die soon enough.
                         }
                     }
                 }

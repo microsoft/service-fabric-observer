@@ -34,7 +34,7 @@ namespace FabricObserver.Observers.Utilities
 
         public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, IntPtr handleToSnapshot)
         {
-            if (parentPid < 1 || handleToSnapshot == IntPtr.Zero)
+            if (parentPid < 1)
             {
                 return null;
             }
@@ -126,7 +126,7 @@ namespace FabricObserver.Observers.Utilities
 
         private List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, IntPtr handleToSnapshot)
         {
-            if (processId <= 0 || handleToSnapshot == IntPtr.Zero)
+            if (processId <= 0)
             {
                 return null;
             }
@@ -242,27 +242,31 @@ namespace FabricObserver.Observers.Utilities
 
         private float NativeGetProcessFullWorkingSetMb(int processId)
         {
+            IntPtr handle = IntPtr.Zero;
+
             try
             {
                 NativeMethods.PROCESS_MEMORY_COUNTERS_EX memoryCounters;
                 memoryCounters.cb = (uint)Marshal.SizeOf(typeof(NativeMethods.PROCESS_MEMORY_COUNTERS_EX));
+                handle = NativeMethods.OpenProcess((uint)NativeMethods.ProcessAccessFlags.All, false, (uint)processId);
 
-                using (Process p = Process.GetProcessById(processId))
+                if (handle == IntPtr.Zero || !NativeMethods.GetProcessMemoryInfo(handle, out memoryCounters, memoryCounters.cb))
                 {
-                    if (!NativeMethods.GetProcessMemoryInfo(p.Handle, out memoryCounters, memoryCounters.cb))
-                    {
-                        throw new Win32Exception($"GetProcessMemoryInfo returned false. Error Code is {Marshal.GetLastWin32Error()}");
-                    }
-
-                    long workingSetSizeMb = memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
-
-                    return workingSetSizeMb; 
+                    throw new Win32Exception($"GetProcessMemoryInfo returned false. Error Code is {Marshal.GetLastWin32Error()}");
                 }
+
+                long workingSetSizeMb = memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
+
+                return workingSetSizeMb; 
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
                 Logger.LogWarning($"NativeGetProcessWorkingSet: Exception getting working set for process {processId}:{Environment.NewLine}{e}");
                 return 0F;
+            }
+            finally
+            {
+                NativeMethods.ReleaseHandle(handle);
             }
         }
 

@@ -32,6 +32,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Documentation\OperationalTelemetry.md = Documentation\OperationalTelemetry.md
 		Documentation\Plugins.md = Documentation\Plugins.md
 		README.md = README.md
+		SECURITY.md = SECURITY.md
 		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection
 EndProject
