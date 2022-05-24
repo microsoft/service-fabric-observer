@@ -410,7 +410,7 @@ namespace FabricObserver.Observers
                 };
 
                 // Service reports.
-                if (obs.ServiceNames.Count(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")) > 0)
+                if (obs.ServiceNames.Any(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
                 {
                     foreach (var service in obs.ServiceNames)
                     {
@@ -457,7 +457,7 @@ namespace FabricObserver.Observers
                             else // Service reports.
                             {
                                 Uri serviceName = new Uri(service);
-                                ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName).ConfigureAwait(false);
+                                ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName);
                                 IEnumerable<HealthEvent> fabricObserverServiceHealthEvents =
                                     serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
@@ -483,7 +483,7 @@ namespace FabricObserver.Observers
                                             var healthReporter = new ObserverHealthReporter(Logger);
                                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                            await Task.Delay(150).ConfigureAwait(false);
+                                            await Task.Delay(150);
                                         }
                                         catch (FabricException)
                                         {
@@ -504,7 +504,7 @@ namespace FabricObserver.Observers
                     try
                     {
                         // System app reports.
-                        var sysAppHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName)).ConfigureAwait(false);
+                        var sysAppHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
                         var sysAppHealthEvents = sysAppHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                         if (sysAppHealthEvents != null && sysAppHealthEvents.Any())
@@ -529,7 +529,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(150).ConfigureAwait(false);
+                                    await Task.Delay(150);
                                 }
                                 catch (FabricException)
                                 {
@@ -548,7 +548,7 @@ namespace FabricObserver.Observers
                     try
                     {
                         // Node reports.
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
+                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName);
                         var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                         if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
@@ -572,7 +572,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                    await Task.Delay(150).ConfigureAwait(false);
+                                    await Task.Delay(150);
                                 }
                                 catch (FabricException)
                                 {
