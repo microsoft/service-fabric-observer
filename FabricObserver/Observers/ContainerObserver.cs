@@ -43,11 +43,11 @@ namespace FabricObserver.Observers
         public bool EnableConcurrentMonitoring
         {
             get; set;
-        } = false;
+        }
 
-        public ParallelOptions ParallelOptions 
-        { 
-            get; private set; 
+        public ParallelOptions ParallelOptions
+        {
+            get; private set;
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace FabricObserver.Observers
             }
 
             Token = token;
-            
+
             if (MonitorContainers())
             {
                 await ReportAsync(token);
@@ -85,7 +85,7 @@ namespace FabricObserver.Observers
 
             runDurationTimer.Stop();
             RunDuration = runDurationTimer.Elapsed;
-            
+
             if (EnableVerboseLogging)
             {
                 ObserverLogger.LogInfo($"Run Duration {(ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
@@ -156,7 +156,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Report -> Send Telemetry/Write ETW/Create SF Health Warnings (if threshold breach)
-                
+
                 ProcessResourceDataReportHealth(
                     cpuFrudInst,
                     app.CpuErrorLimitPercent,
@@ -164,7 +164,7 @@ namespace FabricObserver.Observers
                     timeToLive,
                     EntityType.Service,
                     repOrInst);
-                
+
                 ProcessResourceDataReportHealth(
                     memFrudInst,
                     app.MemoryErrorLimitMb,
@@ -172,14 +172,12 @@ namespace FabricObserver.Observers
                     timeToLive,
                     EntityType.Service,
                     repOrInst);
-               
+
             });
 
             return Task.CompletedTask;
         }
 
-        // Runs each time ObserveAsync is run to ensure that any new app targets and config changes will
-        // be up to date across observer loop iterations.
         // Runs each time ObserveAsync is run to ensure that any new app targets and config changes will
         // be up to date across observer loop iterations.
         private async Task<bool> InitializeAsync(CancellationToken token)
@@ -191,24 +189,36 @@ namespace FabricObserver.Observers
             }
 
             // Concurrency/Parallelism support.
-            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+            // FabricObserver has on the resources it monitors and alerts on...
+            // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
+            if (Environment.ProcessorCount >= 4 && bool.TryParse(
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
                 EnableConcurrentMonitoring = enableConcurrency;
             }
 
-            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
-            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
-            // FabricObserver has on the resources it monitors and alerts on...
-            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
-            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+            // Effectively, sequential.
+            int maxDegreeOfParallelism = 1;
+
+            if (EnableConcurrentMonitoring)
             {
-                maxDegreeOfParallelism = maxTasks;
+                // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+                // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+                // FabricObserver has on the resources it monitors and alerts on...
+                maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+
+                // If user configures MaxConcurrentTasks setting, then use that value instead.
+                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+                {
+                    maxDegreeOfParallelism = maxTasks;
+                }
             }
 
             ParallelOptions = new ParallelOptions
             {
-                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
-                MaxDegreeOfParallelism = EnableConcurrentMonitoring ? maxDegreeOfParallelism : 1,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
@@ -350,16 +360,16 @@ namespace FabricObserver.Observers
                 }
 
                 ServiceFilterType filterType = ServiceFilterType.None;
-                List<string> filteredServiceList = null;
+                string[] filteredServiceList = null;
 
                 if (!string.IsNullOrWhiteSpace(application.ServiceExcludeList))
                 {
-                    filteredServiceList = application.ServiceExcludeList.Replace(" ", string.Empty).Split(',').ToList();
+                    filteredServiceList = application.ServiceExcludeList.Replace(" ", string.Empty).Split(',').ToArray();
                     filterType = ServiceFilterType.Exclude;
                 }
                 else if (!string.IsNullOrWhiteSpace(application.ServiceIncludeList))
                 {
-                    filteredServiceList = application.ServiceIncludeList.Replace(" ", string.Empty).Split(',').ToList();
+                    filteredServiceList = application.ServiceIncludeList.Replace(" ", string.Empty).Split(',').ToArray();
                     filterType = ServiceFilterType.Include;
                 }
 
@@ -388,7 +398,7 @@ namespace FabricObserver.Observers
                     }
 
                     deployedTargetList.Enqueue(application);
-                    await SetInstanceOrReplicaMonitoringList(new Uri(application.TargetApp), filteredServiceList, filterType, null).ConfigureAwait(false);
+                    await SetInstanceOrReplicaMonitoringList(new Uri(application.TargetApp), filteredServiceList, filterType, null);
                 }
                 catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
@@ -459,7 +469,7 @@ namespace FabricObserver.Observers
                 process.ErrorDataReceived += (sender, e) => { error += e.Data; };
                 process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Add(e.Data); } };
                 process.StartInfo = ps;
-                
+
                 if (!process.Start())
                 {
                     return false;
@@ -629,7 +639,7 @@ namespace FabricObserver.Observers
                             continue;
                         }
                     }
-               });
+                });
 
                 output.Clear();
                 output = null;
@@ -653,7 +663,7 @@ namespace FabricObserver.Observers
             catch (Exception e)
             {
                 ObserverLogger.LogWarning($"Unhandled Exception in MonitorContainers:{Environment.NewLine}{e}");
-                
+
                 // no-op. Bye.
                 throw;
             }
@@ -670,14 +680,14 @@ namespace FabricObserver.Observers
             }
 
             string configFilename = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName);
-            
+
             if (string.IsNullOrWhiteSpace(configFilename))
             {
                 return false;
             }
 
             string path = Path.Combine(ConfigPackage.Path, configFilename);
-            
+
             if (File.Exists(path))
             {
                 ConfigurationFilePath = path;
@@ -688,87 +698,95 @@ namespace FabricObserver.Observers
         }
 
         private async Task SetInstanceOrReplicaMonitoringList(
-                              Uri appName,
-                              IReadOnlyCollection<string> serviceFilterList,
-                              ServiceFilterType filterType,
-                              string appTypeName)
+                            Uri appName,
+                            string[] filterList,
+                            ServiceFilterType filterType,
+                            string appTypeName)
         {
+
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName),
                                                Token);
-
-            foreach (var deployedReplica in deployedReplicaList)
+            // DEBUG
+            //var stopwatch = Stopwatch.StartNew();
+            _ = Parallel.For(0, deployedReplicaList.Count, ParallelOptions, (i, state) =>
             {
+                Token.ThrowIfCancellationRequested();
+
+                var deployedReplica = deployedReplicaList[i];
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
-
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                         {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
-                            HostProcessId = statefulReplica.HostProcessId,
-                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                            PartitionId = statefulReplica.Partitionid,
-                            ServiceKind = statefulReplica.ServiceKind,
-                            ServiceName = statefulReplica.ServiceName,
-                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                            ReplicaRole = statefulReplica.ReplicaRole,
-                            ReplicaStatus = statefulReplica.ReplicaStatus
-                        };
-
-                        if (serviceFilterList != null && filterType != ServiceFilterType.None)
-                        {
-                            bool isInFilterList = serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
-                                    continue;
+                                bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
                             }
+
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                            {
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statefulReplica.HostProcessId,
+                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                                PartitionId = statefulReplica.Partitionid,
+                                ReplicaRole = statefulReplica.ReplicaRole,
+                                ServiceKind = statefulReplica.ServiceKind,
+                                ServiceName = statefulReplica.ServiceName,
+                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statefulReplica.ReplicaStatus
+                            };
+                            break;
                         }
-                        break;
-                        
                     case DeployedStatelessServiceInstance statelessInstance:
-                        
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                         {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
-                            HostProcessId = statelessInstance.HostProcessId,
-                            ReplicaOrInstanceId = statelessInstance.InstanceId,
-                            PartitionId = statelessInstance.Partitionid,
-                            ServiceKind = statelessInstance.ServiceKind,
-                            ServiceName = statelessInstance.ServiceName,
-                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                            ReplicaRole = ReplicaRole.None,
-                            ReplicaStatus = statelessInstance.ReplicaStatus
-                        };
-
-                        if (serviceFilterList != null && filterType != ServiceFilterType.None)
-                        {
-                            bool isInFilterList = serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
-                                    continue;
+                                bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
                             }
+
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                            {
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statelessInstance.HostProcessId,
+                                ReplicaOrInstanceId = statelessInstance.InstanceId,
+                                PartitionId = statelessInstance.Partitionid,
+                                ReplicaRole = ReplicaRole.None,
+                                ServiceKind = statelessInstance.ServiceKind,
+                                ServiceName = statelessInstance.ServiceName,
+                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statelessInstance.ReplicaStatus
+                            };
+                            break;
                         }
-                        break;   
                 }
 
-                if (replicaInfo == null)
+                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
                 {
-                    continue;
+                    ReplicaOrInstanceList.Enqueue(replicaInfo);
                 }
-
-                ReplicaOrInstanceList.Enqueue(replicaInfo);
-            }
+            });
         }
     }
 }

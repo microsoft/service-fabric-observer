@@ -449,7 +449,7 @@ namespace FabricObserver.Observers
                             else // Service reports.
                             {
                                 Uri serviceName = new Uri(service);
-                                ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName).ConfigureAwait(false);
+                                ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName);
                                 IEnumerable<HealthEvent> fabricObserverServiceHealthEvents =
                                     serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
@@ -496,7 +496,7 @@ namespace FabricObserver.Observers
                     try
                     {
                         // System app reports.
-                        var sysAppHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName)).ConfigureAwait(false);
+                        var sysAppHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
                         var sysAppHealthEvents = sysAppHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                         if (sysAppHealthEvents != null && sysAppHealthEvents.Any())
@@ -532,7 +532,7 @@ namespace FabricObserver.Observers
                     try
                     {
                         // Node reports.
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName).ConfigureAwait(false);
+                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName);
                         var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                         if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
