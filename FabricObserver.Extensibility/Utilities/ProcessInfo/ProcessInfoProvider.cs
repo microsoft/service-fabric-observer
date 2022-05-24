@@ -48,19 +48,29 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
 
-        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
+        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, IntPtr handleToSnapshot);
 
         public abstract float GetProcessAllocatedHandles(int processId, string configPath = null);
 
         public abstract double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
 
-        // This is supported on both Linux and Windows.
-        public static int GetProcessThreadCount(int processId)
+        /// <summary>
+        /// Gets the number of execution threads owned by the process of supplied process id.
+        /// </summary>
+        /// <param name="processId">Id of the process.</param>
+        /// <param name="processName">Name of the process. This is used to ensure the id supplied is still applied to the process of the supplied named.</param>
+        /// <returns>Number of threads owned by specified process.</returns>
+        public static int GetProcessThreadCount(int processId, string processName)
         {
             try
             {
                 using (Process p = Process.GetProcessById(processId))
                 {
+                    if (p.ProcessName != processName)
+                    {
+                        return 0;
+                    }
+
                     p.Refresh();
                     return p.Threads.Count;
                 }

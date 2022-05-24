@@ -93,7 +93,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get { return _os; }
         }
 
-        [EventField]
         public Guid? PartitionId
         {
             get; set;

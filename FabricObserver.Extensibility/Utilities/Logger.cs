@@ -141,24 +141,27 @@ namespace FabricObserver.Observers.Utilities
             }
 
             // TelemetryData?
-            if (data is TelemetryData)
+            if (data is TelemetryData telemData)
             {
-                if ((data as TelemetryData).HealthState == System.Fabric.Health.HealthState.Warning)
+                if (telemData.HealthState == System.Fabric.Health.HealthState.Warning)
                 {
                     ServiceEventSource.Current.DataTypeWriteWarning(eventName, data);
                     return;
                 }
 
-                if ((data as TelemetryData).HealthState == System.Fabric.Health.HealthState.Error)
+                if (telemData.HealthState == System.Fabric.Health.HealthState.Error)
                 {
                     ServiceEventSource.Current.DataTypeWriteError(eventName, data);
                     return;
                 }
+
+                // Info event.
+                ServiceEventSource.Current.DataTypeWriteInfo(eventName, data);
+                return;
             }
 
-            // Some FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties)
-            // housed in FabricObserverDataEvent events of FabricObserverETWProvider EventSource provider. This means they 
-            // are JSON serializable for use in content inspection.
+            // Some FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties).
+            // This means they are JSON-serializable for use in content inspection.
             string s = JsonConvert.SerializeObject(data);
 
             if (!string.IsNullOrWhiteSpace(s) && s.Contains("Warning"))
@@ -173,7 +176,6 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
-            // Info event.
             ServiceEventSource.Current.DataTypeWriteInfo(eventName, data);
         }
 

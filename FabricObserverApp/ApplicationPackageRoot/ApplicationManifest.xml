@@ -126,7 +126,7 @@
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
          NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* processing time (and CPU usage) to AppObserver. 
          In that case, set this to false and the Full Working set will be measured (Private + Shared), computed using a native API call (fast). -->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />

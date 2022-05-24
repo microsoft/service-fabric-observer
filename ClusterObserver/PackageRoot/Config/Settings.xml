@@ -74,6 +74,8 @@
 	   
        If you want to enable versionless parameter-only application upgrades, then add MustOverride to the Parameters you want to be 
        able to change without redeploying CO and add them to ApplicationManifest.xml just like for ClusterObserver.
+	   
+	   All observers are enabled by default, so even you do not supply any parameters here (like, leave this commented out) your observer plugin will run.
   <Section Name="MyClusterObserverPluginConfiguration">
     <Parameter Name="Enabled" Value="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />

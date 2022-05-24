@@ -62,12 +62,42 @@ namespace FabricObserver.Observers
         private List<DeployedApplication> _deployedApps;
 
         private readonly Stopwatch _stopwatch;
+        private readonly object lockObj = new object();
         private FabricClientUtilities _client;
         private ParallelOptions _parallelOptions;
         private string _fileName;
         private int _appCount;
         private int _serviceCount;
         private bool _checkPrivateWorkingSet;
+        private IntPtr _handleToSnapshot = IntPtr.Zero;
+        
+        private IntPtr HandleToSnapshot
+        {
+            get
+            {
+                if (!_isWindows || !EnableChildProcessMonitoring)
+                {
+                    return IntPtr.Zero;
+                }
+
+                if (_handleToSnapshot == IntPtr.Zero)
+                {
+                    lock (lockObj)
+                    {
+                        if (_handleToSnapshot == IntPtr.Zero)
+                        {
+                            _handleToSnapshot = NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                            if (_handleToSnapshot == IntPtr.Zero)
+                            {
+                                throw new Win32Exception(
+                                    $"HandleToSnapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
+                            }
+                        }
+                    }
+                }
+                return _handleToSnapshot;
+            }
+        }
 
         // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
@@ -492,8 +522,10 @@ namespace FabricObserver.Observers
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             _userTargetList = new List<ApplicationInfo>();
             _deployedTargetList = new List<ApplicationInfo>();
+
+            // NodeName is passed here to not break unit tests, which include a mock service fabric context..
             _client = new FabricClientUtilities(NodeName);
-            _deployedApps = await _client.GetAllLocalDeployedAppsAsync(Token).ConfigureAwait(false);
+            _deployedApps = await _client.GetAllDeployedAppsAsync(Token).ConfigureAwait(false);
 
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
@@ -1424,15 +1456,25 @@ namespace FabricObserver.Observers
 
                 try
                 {
+                    string parentProcName = null;
                     Process parentProc = null;
 
                     try
                     {
                         parentProc = Process.GetProcessById(parentPid);
 
-                        // This will throw Win32Exception if process is running at a higher user privilege than FO.
+                        // On Windows, this will throw a Win32Exception (NativeErrorCode = 5) if target process is running at a higher user privilege than FO.
                         // If it is not, then this would mean the process has exited so move on to next process.
                         if (parentProc.HasExited)
+                        {
+                            return;
+                        }
+
+                        parentProcName = parentProc.ProcessName;
+
+                        // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
+                        // Please use ContainerObserver for SF container app service monitoring.
+                        if (parentProcName == null || parentProcName == "Fabric")
                         {
                             return;
                         }
@@ -1444,7 +1486,7 @@ namespace FabricObserver.Observers
                             return;
                         }
 
-                        if (e is Win32Exception exception && exception.NativeErrorCode == 5 || e.Message.ToLower().Contains("access is denied"))
+                        if (e is Win32Exception exception && (exception.NativeErrorCode == 5 || exception.NativeErrorCode == 6 ))
                         {
                             string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
                                              $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {repOrInst?.ServiceName?.OriginalString} really needs to run as Admin or System user on Windows.";
@@ -1455,7 +1497,7 @@ namespace FabricObserver.Observers
                                 EmitLogEvent = EnableVerboseLogging,
                                 HealthMessage = message,
                                 HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                                Property = $"UserAccount({parentProc?.ProcessName})",
+                                Property = $"UserAccount({parentProc.ProcessName})",
                                 EntityType = EntityType.Service,
                                 State = ObserverManager.ObserverFailureHealthStateLevel,
                                 NodeName = NodeName,
@@ -1469,7 +1511,7 @@ namespace FabricObserver.Observers
                             if (IsTelemetryEnabled)
                             {
                                 _ = TelemetryClient?.ReportHealthAsync(
-                                        $"UserAccountPrivilege({parentProc?.ProcessName})",
+                                        $"UserAccountPrivilege({parentProc.ProcessName})",
                                         ObserverManager.ObserverFailureHealthStateLevel,
                                         message,
                                         ObserverName,
@@ -1484,7 +1526,7 @@ namespace FabricObserver.Observers
                                     ObserverConstants.FabricObserverETWEventName,
                                     new
                                     {
-                                        Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
+                                        Property = $"UserAccountPrivilege({parentProc.ProcessName})",
                                         Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
                                         Message = message,
                                         ObserverName,
@@ -1496,23 +1538,52 @@ namespace FabricObserver.Observers
                         return;
                     }
 
-                    if (parentProc == null)
+                    // Make sure the parent process still exists.
+                    if (!EnsureProcess(parentProcName, parentPid))
                     {
                         return;
                     }
 
-                    string parentProcName = parentProc.ProcessName;
-                    int parentProcId = parentProc.Id;
+                    /* In order to provide accurate resource usage of an SF service process we need to also account for
+                       any processes that the service process (parent) created/spawned (children). */
 
-                    // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
-                    // Please use ContainerObserver for SF container app service monitoring.
-                    if (parentProcName == null || parentProcName == "Fabric")
+                    procs = new ConcurrentDictionary<string, int>();
+
+                    // Add parent to the process tree list since we want to monitor all processes in the family. If there are no child processes,
+                    // then only the parent process will be in this dictionary..
+                    _ = procs.TryAdd(parentProcName, parentPid);
+
+                    if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
                     {
-                        return;
+                        for (int k = 0; k < repOrInst.ChildProcesses.Count; ++k)
+                        {
+                            if (token.IsCancellationRequested)
+                            {
+                                state.Stop();
+                            }
+
+                            // Make sure the child process still exists.
+                            if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid))
+                            {
+                                continue;
+                            }
+
+                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid);
+                        }
+                    }
+
+                    foreach (var proc in procs)
+                    {
+                        if (token.IsCancellationRequested)
+                        {
+                            state.Stop();
+                        }
+
+                        _ = _processInfoDictionary.TryAdd(proc.Value, proc.Key);
                     }
 
                     string appNameOrType = GetAppNameOrType(repOrInst);
-                    string id = $"{appNameOrType}:{parentProcName}{parentProcId}";
+                    string id = $"{appNameOrType}:{parentProcName}{parentPid}";
 
                     if (UseCircularBuffer)
                     {
@@ -1623,36 +1694,6 @@ namespace FabricObserver.Observers
                         checkLvids = true;
                     }
 
-                    /* In order to provide accurate resource usage of an SF service process we need to also account for
-                       any processes that the service process (parent) created/spawned (children). */
-
-                    procs = new ConcurrentDictionary<string, int>();
-
-                    // Add parent to the process tree list since we want to monitor all processes in the family. If there are no child processes,
-                    // then only the parent process will be in this dictionary..
-                    _ = procs.TryAdd(parentProc.ProcessName, parentProc.Id);
-
-                    if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
-                    {
-                        for (int k = 0; k < repOrInst.ChildProcesses.Count; ++k)
-                        {
-                            if (token.IsCancellationRequested)
-                            {
-                                state.Stop();
-                            }
-                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid);
-                        }
-                    }
-
-                    foreach (var proc in procs)
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            state.Stop();
-                        }
-                        _ = _processInfoDictionary.TryAdd(proc.Value, proc.Key);
-                    }
-
                     // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
                     // a service process has mulitple descendants.
                     ComputeResourceUsage(
@@ -1687,6 +1728,12 @@ namespace FabricObserver.Observers
             //int threadcount = threadData.Distinct().Count();
             ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}"); //Threads: {threadcount}");
             return Task.FromResult(result);
+        }
+
+        private bool EnsureProcess(string procName, int pid)
+        {
+            using Process p = Process.GetProcessById(pid);
+            return p.ProcessName == procName;
         }
 
         private void ComputeResourceUsage(
@@ -1751,7 +1798,7 @@ namespace FabricObserver.Observers
                 // Threads
                 if (checkThreads)
                 {
-                    int threads = _isWindows ? NativeMethods.GetProcessThreadCount(procId) : ProcessInfoProvider.GetProcessThreadCount(procId);
+                    int threads = _isWindows ? NativeMethods.GetProcessThreadCount(procId, procName, HandleToSnapshot) : ProcessInfoProvider.GetProcessThreadCount(procId, procName);
 
                     if (threads > 0)
                     {
@@ -1760,7 +1807,7 @@ namespace FabricObserver.Observers
                         {
                             AllAppThreadsData[id].AddData(threads);
                         }
-                        else // Child procs spawned by the parent service process.
+                        else // Child proc spawned by the parent service process.
                         {
                             _ = AllAppThreadsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.AllocatedFileHandles, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                             AllAppThreadsData[$"{id}:{procName}{procId}"].AddData(threads);
@@ -1776,7 +1823,7 @@ namespace FabricObserver.Observers
                     {
                         AllAppTotalActivePortsData[id].AddData(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path));
                     }
-                    else // Child procs spawned by the parent service process.
+                    else // Child proc spawned by the parent service process.
                     {
                         _ = AllAppTotalActivePortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                         AllAppTotalActivePortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path));
@@ -1964,7 +2011,6 @@ namespace FabricObserver.Observers
 
                     try
                     {
-
                         Token.ThrowIfCancellationRequested();
 
                         // TargetAppType supplied in user config, so set TargetApp on deployedApp instance by searching for it in the currently deployed application list.
@@ -2025,7 +2071,7 @@ namespace FabricObserver.Observers
                         replicasOrInstances.Clear();
                         replicasOrInstances = null;
                     }
-                    catch (Exception e) when (e is ArgumentException || e is FabricException)
+                    catch (Exception e) when (e is ArgumentException || e is FabricException || e is Win32Exception)
                     {
                         ObserverLogger.LogWarning(
                             $"SetDeployedApplicationReplicaOrInstanceListAsync: Unable to process replica information for {userTarget}{Environment.NewLine}{e}");
@@ -2124,7 +2170,7 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, HandleToSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -2134,7 +2180,6 @@ namespace FabricObserver.Observers
                            //sw.Stop();
                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
                         }
-
                         break;
                     }
                     case DeployedStatelessServiceInstance statelessInstance:
@@ -2171,7 +2216,7 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, HandleToSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -2181,7 +2226,6 @@ namespace FabricObserver.Observers
                             //sw.Stop();
                             //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
                         }
-
                         break;
                     }
                 }
@@ -2360,6 +2404,12 @@ namespace FabricObserver.Observers
             {
                 AllAppKvsLvidsData?.Clear();
                 AllAppKvsLvidsData = null;
+            }
+
+            if (_isWindows)
+            {
+                NativeMethods.ReleaseHandle(_handleToSnapshot);
+                _handleToSnapshot = IntPtr.Zero;
             }
         }
     }
