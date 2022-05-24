@@ -589,8 +589,6 @@ namespace FabricObserverTests
                 return;
             }
 
-            var startDateTime = DateTime.Now;
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;

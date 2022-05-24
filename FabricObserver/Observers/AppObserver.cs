@@ -1730,12 +1730,6 @@ namespace FabricObserver.Observers
             return Task.FromResult(result);
         }
 
-        private bool EnsureProcess(string procName, int pid)
-        {
-            using Process p = Process.GetProcessById(pid);
-            return p.ProcessName == procName;
-        }
-
         private void ComputeResourceUsage(
                             int capacity,
                             int parentPid,

@@ -9,7 +9,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyVersion>2.0.0.0</AssemblyVersion>
     <FileVersion>2.0.0.0</FileVersion>
-    <Copyright>Copyright ©  2020</Copyright>
+    <Copyright>Copyright ©  2022</Copyright>
     <Product>TelemetryLib</Product>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
