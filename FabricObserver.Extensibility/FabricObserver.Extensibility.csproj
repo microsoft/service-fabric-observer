@@ -5,8 +5,8 @@
     <RootNamespace>FabricObserver</RootNamespace>
 	<Copyright>Copyright © 2022</Copyright>
 	<Product>FabricObserver</Product>
-	<Version>3.2.0</Version>
-	<FileVersion>3.2.0</FileVersion>
+	<Version>3.2.1</Version>
+	<FileVersion>3.2.1</FileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <PlatformTarget>x64</PlatformTarget>
