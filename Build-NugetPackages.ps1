@@ -40,11 +40,11 @@ try {
 
     Install-Nuget
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained" "$scriptPath\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType" "FabricObserver.nuspec.template"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricObserver\linux-x64\framework-dependent\FabricObserverType" "FabricObserver.nuspec.template"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained_SF9x" "$scriptPath\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType" "FabricObserver.nuspec.template"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Linux.FrameworkDependent_SF9x" "$scriptPath\bin\release\FabricObserver\linux-x64\framework-dependent\FabricObserverType" "FabricObserver.nuspec.template"
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType" "FabricObserver.nuspec.template"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType" "FabricObserver.nuspec.template"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained_SF9x" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType" "FabricObserver.nuspec.template"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent_SF9x" "$scriptPath\bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType" "FabricObserver.nuspec.template"
     
     # FabricObserver.Extensibility Library - it is cross-platform (netstandard2.0). Doesn't matter which FO target platform directory you grab it from..
     Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Extensibility" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType" "FabricObserver.Extensibility.nuspec.template"
