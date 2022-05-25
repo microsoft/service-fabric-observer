@@ -34,8 +34,9 @@ namespace FabricObserver.Observers
 
         // These are the concurrent data containers that hold all monitoring data for all application targets for specific metrics.
         // In the case where machine has capable CPU configuration and AppObserverEnableConcurrentMonitoring is enabled, these ConcurrentDictionaries
-        // will be read by and written to by multiple threads. In the case where concurrency is not possible (or not enabled), they will act as normal
-        // Dictionaries since the monitoring loop will be sequential and there will not be any concurrent reads/writes.
+        // will be read by and written to by multiple threads. In the case where concurrency is not possible (or not enabled), they will sort of act as "normal"
+        // Dictionaries (not precisely) since the monitoring loop will always be sequential (exactly one thread, so no internal locking) and there will not be *any* concurrent reads/writes.
+        // The modest cost in memory allocation in the sequential processing case is not an issue here.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppMemDataMb;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppMemDataPercent;
