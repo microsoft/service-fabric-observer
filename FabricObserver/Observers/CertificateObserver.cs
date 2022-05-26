@@ -22,7 +22,7 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    public class CertificateObserver : ObserverBase
+    public sealed class CertificateObserver : ObserverBase
     {
         private const string HowToUpdateCnCertsSfLinkHtml =
             "<a href=\"https://aka.ms/AA69ai7\" target=\"_blank\">Click here to learn how to update expiring/expired certificates.</a>";

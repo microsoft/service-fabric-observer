@@ -31,7 +31,7 @@ namespace FabricObserver.Observers
     /// The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
     /// Health Report processor will also emit diagnostic telemetry if configured in Settings.xml.
     /// </summary>
-    public class NetworkObserver : ObserverBase
+    public sealed class NetworkObserver : ObserverBase
     {
         private const int MaxTcpConnTestRetries = 5;
         private readonly List<NetworkObserverConfig> defaultConfig = new List<NetworkObserverConfig>

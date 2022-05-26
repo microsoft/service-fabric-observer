@@ -17,7 +17,7 @@ namespace FabricObserver.Observers
     // This observer monitors VM level resource usage across CPU and Memory, and reports port and firewall rule counts.
     // Thresholds for Error and Warning signals are user-supplied in NodeObserver.config.json.
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
-    public class NodeObserver : ObserverBase
+    public sealed class NodeObserver : ObserverBase
     {
         private readonly Stopwatch stopwatch;
         private readonly bool isWindows;

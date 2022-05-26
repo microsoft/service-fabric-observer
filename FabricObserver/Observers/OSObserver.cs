@@ -27,7 +27,7 @@ namespace FabricObserver.Observers
     // It will signal Ok Health Reports that will show up under node details in SFX as well as emit ETW events.
     // If FabricObserverWebApi is installed, the output includes a local file that is used
     // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
-    public class OSObserver : ObserverBase
+    public sealed class OSObserver : ObserverBase
     {
         private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
         private readonly bool isWindows;
@@ -306,6 +306,7 @@ namespace FabricObserver.Observers
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "isWindows check exits the function immediately if not Windows...")]
         private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
             if (!isWindows)
@@ -329,12 +330,8 @@ namespace FabricObserver.Observers
                 }
 
                 resultsOrdered = results.Cast<ManagementObject>()
-#pragma warning disable CA1416 // Validate platform compatibility - This is Windows-only (!isWindows means this function doesn't run..).
-                                            .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
-                                            .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
-#pragma warning restore CA1416 // Validate platform compatibility
+                                    .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
+                                    .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";

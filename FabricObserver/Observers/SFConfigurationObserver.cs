@@ -19,7 +19,7 @@ namespace FabricObserver.Observers
     // This observer doesn't monitor or report health status. It is only useful if you employ the FabricObserverWebApi App.
     // It provides information about the currently installed Service Fabric runtime environment, apps, and services.
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
-    public class SFConfigurationObserver : ObserverBase
+    public sealed class SFConfigurationObserver : ObserverBase
     {
         private string SFVersion;
         private string SFBinRoot;
