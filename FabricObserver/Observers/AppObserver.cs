@@ -76,7 +76,8 @@ namespace FabricObserver.Observers
         {
             get
             {
-                if (!_isWindows || !EnableChildProcessMonitoring)
+                // This is only useful for Windows.
+                if (!_isWindows)
                 {
                     return IntPtr.Zero;
                 }
@@ -1471,7 +1472,15 @@ namespace FabricObserver.Observers
                             return;
                         }
 
-                        parentProcName = parentProc.ProcessName;
+                        // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
+                        if (!_isWindows)
+                        {
+                            parentProcName = parentProc.ProcessName;
+                        }
+                        else
+                        {
+                            parentProcName = NativeMethods.GetProcessNameFromId(parentPid);
+                        }
 
                         // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
                         // Please use ContainerObserver for SF container app service monitoring.
@@ -1731,12 +1740,6 @@ namespace FabricObserver.Observers
             return Task.FromResult(result);
         }
 
-        private bool EnsureProcess(string procName, int pid)
-        {
-            using Process p = Process.GetProcessById(pid);
-            return p.ProcessName == procName;
-        }
-
         private void ComputeResourceUsage(
                             int capacity,
                             int parentPid,
@@ -1764,6 +1767,12 @@ namespace FabricObserver.Observers
                 var index = processDictionary.ElementAt(i);
                 string procName = index.Key;
                 int procId = index.Value;
+                
+                if (!EnsureProcess(procName, procId))
+                {
+                    return;
+                }
+
                 TimeSpan maxDuration = TimeSpan.FromSeconds(1);
 
                 if (MonitorDuration > TimeSpan.MinValue)
@@ -1966,6 +1975,18 @@ namespace FabricObserver.Observers
                 timer.Stop();
                 timer = null;
             });
+        }
+
+        private bool EnsureProcess(string procName, int procId)
+        {
+            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
+            if (!_isWindows)
+            {
+                using var proc = Process.GetProcessById(procId);
+                return proc.ProcessName == procName;
+            }
+
+            return NativeMethods.GetProcessNameFromId(procId) == procName;
         }
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)

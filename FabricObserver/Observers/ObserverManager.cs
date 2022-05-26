@@ -409,14 +409,14 @@ namespace FabricObserver.Observers
                     NodeName = obs.NodeName
                 };
 
-                // Service reports.
+                // Service Health reports.
                 if (obs.ServiceNames.Any(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
                 {
                     foreach (var service in obs.ServiceNames)
                     {
                         try
                         {
-                            // App reports. NetworkObserver only generates App health reports and stores app name in ServiceNames field (TODO: Change that).
+                            // App Health reports. NetworkObserver only generates App health reports and stores app name in ServiceNames field (TODO: Change that).
                             if (obs.ObserverName == ObserverConstants.NetworkObserverName)
                             {
                                 Uri appName = new Uri(service);
@@ -454,7 +454,7 @@ namespace FabricObserver.Observers
                                     }
                                 }
                             }
-                            else // Service reports.
+                            else // Service Health reports.
                             {
                                 Uri serviceName = new Uri(service);
                                 ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName);
@@ -499,7 +499,9 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                else if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
+                
+                // FSO Health Reports.
+                if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
                 {
                     try
                     {
@@ -543,48 +545,47 @@ namespace FabricObserver.Observers
 
                     }
                 }
-                else
+                
+                // Node health reports. This will remove FSO's and OSO's informational reports.
+                try
                 {
-                    try
+                    // Node reports.
+                    var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName);
+                    var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+
+                    if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
                     {
-                        // Node reports.
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName);
-                        var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
-
-                        if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
+                        if (isConfigurationUpdateInProgress)
                         {
-                            if (isConfigurationUpdateInProgress)
+                            fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
+                                                                                                && s.HealthInformation.HealthState == HealthState.Warning
+                                                                                                || s.HealthInformation.HealthState == HealthState.Error);
+                        }
+
+                        healthReport.EntityType = EntityType.Machine;
+
+                        foreach (var evt in fabricObserverNodeHealthEvents)
+                        {
+                            try
                             {
-                                fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                                                  && s.HealthInformation.HealthState == HealthState.Warning
-                                                                                                  || s.HealthInformation.HealthState == HealthState.Error);
+                                healthReport.Property = evt.HealthInformation.Property;
+                                healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                                var healthReporter = new ObserverHealthReporter(Logger);
+                                healthReporter.ReportHealthToServiceFabric(healthReport);
+
+                                await Task.Delay(150);
                             }
-
-                            healthReport.EntityType = EntityType.Machine;
-
-                            foreach (var evt in fabricObserverNodeHealthEvents)
+                            catch (FabricException)
                             {
-                                try
-                                {
-                                    healthReport.Property = evt.HealthInformation.Property;
-                                    healthReport.SourceId = evt.HealthInformation.SourceId;
 
-                                    var healthReporter = new ObserverHealthReporter(Logger);
-                                    healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                    await Task.Delay(150);
-                                }
-                                catch (FabricException)
-                                {
-
-                                }
                             }
                         }
                     }
-                    catch (Exception e) when (e is FabricException || e is TimeoutException)
-                    {
+                }
+                catch (Exception e) when (e is FabricException || e is TimeoutException)
+                {
 
-                    }
                 }
 
                 obs.HasActiveFabricErrorOrWarning = false;
