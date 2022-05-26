@@ -76,10 +76,9 @@ namespace FabricObserver.Observers
         {
             get
             {
-                // This is only useful for Windows and only when concurrent monitoring is enabled.
-                if (!_isWindows || !EnableConcurrentMonitoring)
+                // This is only useful for Windows.
+                if (!_isWindows)
                 {
-                    // This means the related Windows functions (located in FabricObserver.Extensibility's NativeMethods class) will generate a snapshot each time they are called.
                     return IntPtr.Zero;
                 }
 
