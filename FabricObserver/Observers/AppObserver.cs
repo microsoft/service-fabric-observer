@@ -76,8 +76,10 @@ namespace FabricObserver.Observers
         {
             get
             {
-                if (!_isWindows || !EnableChildProcessMonitoring)
+                // This is only useful for Windows and only when concurrent monitoring is enabled.
+                if (!_isWindows || !EnableConcurrentMonitoring)
                 {
+                    // This means the related Windows functions (located in FabricObserver.Extensibility's NativeMethods class) will generate a snapshot each time they are called.
                     return IntPtr.Zero;
                 }
 
@@ -1471,7 +1473,15 @@ namespace FabricObserver.Observers
                             return;
                         }
 
-                        parentProcName = parentProc.ProcessName;
+                        // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
+                        if (!_isWindows)
+                        {
+                            parentProcName = parentProc.ProcessName;
+                        }
+                        else
+                        {
+                            parentProcName = NativeMethods.GetProcessNameFromId(parentPid);
+                        }
 
                         // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
                         // Please use ContainerObserver for SF container app service monitoring.
@@ -1970,8 +1980,14 @@ namespace FabricObserver.Observers
 
         private bool EnsureProcess(string procName, int procId)
         {
-            using var proc = Process.GetProcessById(procId);
-            return proc.ProcessName == procName;
+            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
+            if (!_isWindows)
+            {
+                using var proc = Process.GetProcessById(procId);
+                return proc.ProcessName == procName;
+            }
+
+            return NativeMethods.GetProcessNameFromId(procId) == procName;
         }
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)

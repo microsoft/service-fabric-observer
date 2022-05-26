@@ -34,11 +34,6 @@ namespace FabricObserver.Observers.Utilities
 
         public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, IntPtr handleToSnapshot)
         {
-            if (parentPid < 1)
-            {
-                return null;
-            }
-
             // Get descendant procs.
             List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
 
@@ -126,15 +121,10 @@ namespace FabricObserver.Observers.Utilities
 
         private List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, IntPtr handleToSnapshot)
         {
-            if (processId <= 0)
-            {
-                return null;
-            }
-
             try
             {
                 List<(string procName, int procId)> childProcs = NativeMethods.GetChildProcesses(processId, handleToSnapshot);
-                
+
                 if (childProcs?.Count == 0)
                 {
                     return null;
@@ -142,6 +132,7 @@ namespace FabricObserver.Observers.Utilities
 
                 return childProcs;
             }
+            
             catch (Exception e) when (e is Win32Exception) // e.g., process is no longer running.
             {
                 Logger.LogWarning($"Handled Exception in TupleGetChildProcesses:{Environment.NewLine}{e}");
