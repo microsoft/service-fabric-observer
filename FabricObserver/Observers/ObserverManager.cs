@@ -28,7 +28,7 @@ using FabricObserver.Utilities.ServiceFabric;
 namespace FabricObserver.Observers
 {
     // This class manages the lifetime of all observers.
-    public class ObserverManager : IDisposable
+    public sealed class ObserverManager : IDisposable
     { 
         private static ITelemetryProvider TelemetryClient
         {

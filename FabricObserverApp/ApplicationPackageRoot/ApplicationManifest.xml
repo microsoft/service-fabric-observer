@@ -25,7 +25,7 @@
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
     <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />

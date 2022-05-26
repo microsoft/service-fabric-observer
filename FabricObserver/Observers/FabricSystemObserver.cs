@@ -25,7 +25,7 @@ namespace FabricObserver.Observers
 {
     // FabricSystemObserver monitors all Fabric system service processes across various resource usage metrics: 
     // CPU Time, Private Workingset, Ephemeral and Total Active TCP ports, File Handles, Threads.
-    public class FabricSystemObserver : ObserverBase
+    public sealed class FabricSystemObserver : ObserverBase
     {
         private const double KvsLvidsWarningPercentage = 75.0;
         private readonly string[] processWatchList;

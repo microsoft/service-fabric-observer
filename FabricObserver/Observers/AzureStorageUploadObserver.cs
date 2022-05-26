@@ -23,7 +23,7 @@ namespace FabricObserver.Observers
     // configured to do so - assuming correctly encrypted and specified ConnectionString for an Azure Storage Account, a container name, and other basic settings.
     // Since only Windows is supported for dumping service processes today by FO, this observer is not useful for Liunx in this version. 
     // So, if you are deploying FO to Linux servers, then don't enable this observer (it won't do anything if it is enabled, so no need have it resident in memory).
-    public class AzureStorageUploadObserver : ObserverBase
+    public sealed class AzureStorageUploadObserver : ObserverBase
     {
         private readonly Stopwatch stopwatch;
         private readonly bool isWindows;

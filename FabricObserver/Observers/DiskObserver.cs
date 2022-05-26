@@ -23,7 +23,7 @@ namespace FabricObserver.Observers
 {
     // DiskObserver monitors logical disk states (space consumption, queue length and folder sizes) and creates Service Fabric
     // Warning or Error Node-level health reports based on settings in ApplicationManifest.xml.
-    public class DiskObserver : ObserverBase
+    public sealed class DiskObserver : ObserverBase
     {
         // Data storage containers for post run analysis.
         private List<FabricResourceUsageData<float>> DiskAverageQueueLengthData;

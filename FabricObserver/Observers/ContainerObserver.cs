@@ -23,7 +23,7 @@ using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
-    public class ContainerObserver : ObserverBase
+    public sealed class ContainerObserver : ObserverBase
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
         private readonly bool isWindows;

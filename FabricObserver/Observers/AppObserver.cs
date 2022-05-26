@@ -26,7 +26,7 @@ namespace FabricObserver.Observers
 {
     // This observer monitors the behavior of user SF service processes (and their children) and signals Warning and Error based on user-supplied resource thresholds
     // in AppObserver.config.json. This observer will also emit telemetry (ETW, LogAnalytics/AppInsights) if enabled in Settings.xml (ObserverManagerConfiguration) and ApplicationManifest.xml (AppObserverEnableEtw).
-    public class AppObserver : ObserverBase
+    public sealed class AppObserver : ObserverBase
     {
         private const double KvsLvidsWarningPercentage = 75.0;
         private readonly bool _isWindows;
@@ -204,7 +204,7 @@ namespace FabricObserver.Observers
             //var stopwatch = Stopwatch.StartNew();
             TimeSpan TTL = GetHealthReportTimeToLive();
 
-            // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
+            // This will run sequentially (with 1 thread) if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
             _ = Parallel.For (0, ReplicaOrInstanceList.Count, _parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
@@ -271,6 +271,12 @@ namespace FabricObserver.Observers
                     }
 
                     processName = _processInfoDictionary[processId];
+
+                    // Make sure the target process still exists, otherwise why report on it (it was ephemeral as far as this run of AO is concerned).
+                    if (!EnsureProcess(processName, processId))
+                    {
+                        return;
+                    }
                 }
                 catch (Exception e) when (e is ArgumentException)
                 {
@@ -1548,12 +1554,6 @@ namespace FabricObserver.Observers
                         return;
                     }
 
-                    // Make sure the parent process still exists.
-                    if (!EnsureProcess(parentProcName, parentPid))
-                    {
-                        return;
-                    }
-
                     /* In order to provide accurate resource usage of an SF service process we need to also account for
                        any processes that the service process (parent) created/spawned (children). */
 
@@ -1572,7 +1572,7 @@ namespace FabricObserver.Observers
                                 state.Stop();
                             }
 
-                            // Make sure the child process still exists.
+                            // Make sure the child process still exists. Descendant processes are often ephemeral.
                             if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid))
                             {
                                 continue;

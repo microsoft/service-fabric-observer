@@ -21,7 +21,7 @@ namespace FabricObserver.Observers.Utilities
     [SuppressUnmanagedCodeSecurity]
     public static class NativeMethods
     {
-        public const int AF_INET = 2;    
+        public const int AF_INET = 2;
         public const int AF_INET6 = 23;
 
         [Flags]
@@ -458,9 +458,6 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool IsProcessInJob(IntPtr Process, IntPtr Job, out bool Result);
-
         [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern uint GetModuleBaseName(IntPtr hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpBaseName, uint nSize);
 
@@ -468,15 +465,16 @@ namespace FabricObserver.Observers.Utilities
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool EnumProcessModules(IntPtr hProcess, [In, Out, MarshalAs(UnmanagedType.LPArray)] IntPtr[] lphModule, uint cb, out uint lpcbNeeded);
 
-        private static readonly List<string> ignoreProcessList = new List<string>
+        private static readonly string[] ignoreProcessList = new string[]
         {
             "cmd.exe", "conhost.exe", "csrss.exe","fontdrvhost.exe", "lsass.exe",
-            "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe",
-            "wininit.exe", "winlogon.exe", "WUDFHost.exe", "WmiPrvSE.exe", "vmms.exe",
+            "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe", "taskhostw.exe",
+            "wininit.exe", "winlogon.exe", "WUDFHost.exe", "WmiPrvSE.exe",
+            "TextInputHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem",
             "Fabric.exe", "FabricHost.exe", "FabricApplicationGateway.exe", "FabricCAS.exe", 
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe", 
             "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe",
-            "System", "Secure System", "Registry"
+            "System", "System interrupts", "Secure System", "Registry"
         };
 
         private static IntPtr GetProcessHandle(uint id)
@@ -486,39 +484,41 @@ namespace FabricObserver.Observers.Utilities
 
         private static string GetProcessNameFromId(uint pid)
         {
-            IntPtr hProcess = IntPtr.Zero;
+            IntPtr hProc = IntPtr.Zero;
             IntPtr[] hMods;
+            StringBuilder sbProcName = new StringBuilder(1024);
 
             try
             {
-                StringBuilder szProcessName = new StringBuilder(1024);
-                hProcess = GetProcessHandle(pid);
+                hProc = GetProcessHandle(pid);
 
-                if (hProcess != IntPtr.Zero)
+                if (hProc != IntPtr.Zero)
                 {
-                    // Get how much memory we will need.
-                    if (!EnumProcessModules(hProcess, null, 0, out var sz) && sz == 0)
+                    // Get how much memory we will need (size).
+                    if (!EnumProcessModules(hProc, null, 0, out uint size) && size == 0)
                     {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
+                        throw new Win32Exception($"Failure in GetProcessNameFromId(uint): {Marshal.GetLastWin32Error()}");
                     }
 
                     // Get array of module handles for specified process.
-                    hMods = new IntPtr[sz / IntPtr.Size];
-                    if (!EnumProcessModules(hProcess, hMods, sz, out _))
+                    hMods = new IntPtr[size / IntPtr.Size];
+                    if (!EnumProcessModules(hProc, hMods, size, out _))
                     {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
+                        throw new Win32Exception($"Failure in GetProcessNameFromId(uint): {Marshal.GetLastWin32Error()}");
                     }
 
-                    // Get the same of the containing process.
-                    GetModuleBaseName(hProcess, hMods[0], szProcessName, (uint)szProcessName.Capacity);
+                    // Get the name of the containing process.
+                    GetModuleBaseName(hProc, hMods[0], sbProcName, (uint)sbProcName.Capacity);
                 }
 
-                return szProcessName.ToString();
+                return sbProcName.ToString();
             }
             finally
             {
                 hMods = null;
-                ReleaseHandle(hProcess);
+                sbProcName.Clear();
+                sbProcName = null;
+                ReleaseHandle(hProc);
             }
         }
 
