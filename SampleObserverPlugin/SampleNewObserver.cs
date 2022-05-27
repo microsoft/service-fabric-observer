@@ -195,7 +195,7 @@ namespace FabricObserver.Observers
             }
 
             // Make sure to set the plugin's ClusterOperationTimeoutSeconds setting in FO's Settings.xml. That maps to ConfigurationSettings.AsyncTimeout:
-            // Set the RunInterval for you plugins to mirror the errata scripts. TimeSpan format: x.xx:xx:xx (days.hours.minutes.seconds).
+            // Set the RunInterval for you plugins to mirror the errata scripts. TimeSpan format: x.xx:xx:xx (days.hours:minutes:seconds).
             /*  <Section Name="SampleNewObserverConfiguration">
                     <Parameter Name="Enabled" Value="true" />
                     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
