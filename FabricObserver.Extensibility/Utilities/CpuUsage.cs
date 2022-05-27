@@ -29,11 +29,6 @@ namespace FabricObserver.Observers.Utilities
             {
                 using (Process p = Process.GetProcessById(procId))
                 {
-                    if (p.HasExited)
-                    {
-                        return 0.0;
-                    }
-
                     // First run.
                     if (prevTime == DateTime.MinValue)
                     {

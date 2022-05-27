@@ -1768,6 +1768,7 @@ namespace FabricObserver.Observers
                 string procName = index.Key;
                 int procId = index.Value;
                 
+                // Make sure the process ID still maps to the process name.
                 if (!EnsureProcess(procName, procId))
                 {
                     return;
