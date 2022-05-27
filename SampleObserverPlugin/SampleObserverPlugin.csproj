@@ -15,7 +15,9 @@
     <Exec Command="copy &quot;$(SolutionDir)packages\polly\7.2.3\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;" />
   </Target>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.0" />
     <PackageReference Include="Polly" Version="7.2.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
   </ItemGroup>
 </Project>

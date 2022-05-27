@@ -8,7 +8,9 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Health;
+using System.Fabric.Query;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,6 +50,8 @@ namespace FabricObserver.Observers
             var stopwatch = Stopwatch.StartNew();
             int totalNumberOfDeployedServices = 0, totalNumberOfPartitions = 0, totalNumberOfReplicas = 0;
             int servicesInWarningError = 0, partitionsInWarningError = 0, replicasInWarningError = 0;
+
+            await EmitNodeSnapshotEtwAsync(NodeName);
             
             // Let's make sure that we page through app lists that are huge (like 4MB result set (that's a lot of apps)).
             var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
@@ -175,6 +179,50 @@ namespace FabricObserver.Observers
 
             await ReportAsync(token);
             LastRunDateTime = DateTime.Now;
+        }
+
+        private async Task EmitNodeSnapshotEtwAsync(string nodeName)
+        {
+            var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName, ConfigurationSettings.AsyncTimeout, Token);
+            
+            if (nodes?.Count == 0)
+            {
+                return;
+            }
+
+            Node node = nodes[0];
+            string SnapshotId = Guid.NewGuid().ToString();
+            string NodeName = node.NodeName, IpAddressOrFQDN = node.IpAddressOrFQDN, NodeType = node.NodeType, CodeVersion = node.CodeVersion, ConfigVersion = node.ConfigVersion;
+            string NodeUpAt = node.NodeUpAt.ToString("o"), NodeDownAt = node.NodeDownAt.ToString("o");
+            
+            // These are obsolete.
+            //string NodeUpTime = node.NodeUpTime.ToString(), NodeDownTime = node.NodeDownTime.ToString();
+            
+            string HealthState = node.HealthState.ToString(), UpgradeDomain = node.UpgradeDomain;
+            string FaultDomain = node.FaultDomain.OriginalString, NodeId = node.NodeId.ToString(), NodeInstanceId = node.NodeInstanceId.ToString(), NodeStatus = node.NodeStatus.ToString();
+            bool IsSeedNode = node.IsSeedNode;
+
+            ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName,
+                new
+                {
+                    SnapshotId,
+                    SnapshotTimestamp = DateTime.UtcNow.ToString("o"),
+                    NodeName,
+                    NodeType,
+                    NodeId,
+                    NodeInstanceId,
+                    NodeStatus,
+                    NodeUpAt,
+                    NodeDownAt,
+                    CodeVersion,
+                    ConfigVersion,
+                    HealthState,
+                    IpAddressOrFQDN,
+                    UpgradeDomain,
+                    FaultDomain,
+                    IsSeedNode
+                });
+
         }
 
         public override Task ReportAsync(CancellationToken token)
