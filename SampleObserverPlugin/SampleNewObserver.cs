@@ -207,48 +207,54 @@ namespace FabricObserver.Observers
                   </Section> -->
             */
 
-
-            var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName, ConfigurationSettings.AsyncTimeout, Token);
-            
-            if (nodes?.Count == 0)
+            try
             {
-                return;
-            }
+                var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName, ConfigurationSettings.AsyncTimeout, Token);
 
-            Node node = nodes[0];
-            string SnapshotId = Guid.NewGuid().ToString();
-            string NodeName = node.NodeName, IpAddressOrFQDN = node.IpAddressOrFQDN, NodeType = node.NodeType, CodeVersion = node.CodeVersion, ConfigVersion = node.ConfigVersion;
-            string NodeUpAt = node.NodeUpAt.ToString("o"), NodeDownAt = node.NodeDownAt.ToString("o");
-            
-            // These are obsolete.
-            //string NodeUpTime = node.NodeUpTime.ToString(), NodeDownTime = node.NodeDownTime.ToString();
-            
-            string HealthState = node.HealthState.ToString(), UpgradeDomain = node.UpgradeDomain;
-            string FaultDomain = node.FaultDomain.OriginalString, NodeId = node.NodeId.ToString(), NodeInstanceId = node.NodeInstanceId.ToString(), NodeStatus = node.NodeStatus.ToString();
-            bool IsSeedNode = node.IsSeedNode;
-
-            ObserverLogger.LogEtw(
-                ObserverConstants.FabricObserverETWEventName,
-                new
+                if (nodes?.Count == 0)
                 {
-                    SnapshotId,
-                    SnapshotTimestamp = DateTime.UtcNow.ToString("o"),
-                    NodeName,
-                    NodeType,
-                    NodeId,
-                    NodeInstanceId,
-                    NodeStatus,
-                    NodeUpAt,
-                    NodeDownAt,
-                    CodeVersion,
-                    ConfigVersion,
-                    HealthState,
-                    IpAddressOrFQDN,
-                    UpgradeDomain,
-                    FaultDomain,
-                    IsSeedNode
-                });
+                    return;
+                }
 
+                Node node = nodes[0];
+                string SnapshotId = Guid.NewGuid().ToString();
+                string NodeName = node.NodeName, IpAddressOrFQDN = node.IpAddressOrFQDN, NodeType = node.NodeType, CodeVersion = node.CodeVersion, ConfigVersion = node.ConfigVersion;
+                string NodeUpAt = node.NodeUpAt.ToString("o"), NodeDownAt = node.NodeDownAt.ToString("o");
+
+                // These are obsolete.
+                //string NodeUpTime = node.NodeUpTime.ToString(), NodeDownTime = node.NodeDownTime.ToString();
+
+                string HealthState = node.HealthState.ToString(), UpgradeDomain = node.UpgradeDomain;
+                string FaultDomain = node.FaultDomain.OriginalString, NodeId = node.NodeId.ToString(), NodeInstanceId = node.NodeInstanceId.ToString(), NodeStatus = node.NodeStatus.ToString();
+                bool IsSeedNode = node.IsSeedNode;
+
+                ObserverLogger.LogEtw(
+                    ObserverConstants.FabricObserverETWEventName,
+                    new
+                    {
+                        SnapshotId,
+                        SnapshotTimestamp = DateTime.UtcNow.ToString("o"),
+                        NodeName,
+                        NodeType,
+                        NodeId,
+                        NodeInstanceId,
+                        NodeStatus,
+                        NodeUpAt,
+                        NodeDownAt,
+                        CodeVersion,
+                        ConfigVersion,
+                        HealthState,
+                        IpAddressOrFQDN,
+                        UpgradeDomain,
+                        FaultDomain,
+                        IsSeedNode
+                    });
+            }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            {
+                ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e}");
+                // Retry or try again later..
+            }
         }
 
         public override Task ReportAsync(CancellationToken token)
