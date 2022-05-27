@@ -181,8 +181,33 @@ namespace FabricObserver.Observers
             LastRunDateTime = DateTime.Now;
         }
 
+        /// <summary>
+        /// Emit an ETW event containing Node data.
+        /// </summary>
+        /// <param name="nodeName">Name of the target node.</param>
+        /// <returns>Task</returns>
         private async Task EmitNodeSnapshotEtwAsync(string nodeName)
         {
+            // This function isn't useful if you don't enable ETW for the plugin.
+            if (!IsEtwEnabled)
+            {
+                return;
+            }
+
+            // Make sure to set the plugin's ClusterOperationTimeoutSeconds setting in FO's Settings.xml. That maps to ConfigurationSettings.AsyncTimeout:
+            // Set the RunInterval for you plugins to mirror the errata scripts. TimeSpan format: x.xx:xx:xx (days.hours.minutes.seconds).
+            /*  <Section Name="SampleNewObserverConfiguration">
+                    <Parameter Name="Enabled" Value="true" />
+                    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+                    <Parameter Name="EnableCSVDataLogging" Value="false" />
+                    <Parameter Name="EnableEtw" Value="true" />
+                    <Parameter Name="EnableTelemetry" Value="false" />
+                    <Parameter Name="EnableVerboseLogging" Value="false" />
+                    <Parameter Name="RunInterval" Value="00:05:00"  />
+                  </Section> -->
+            */
+
+
             var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName, ConfigurationSettings.AsyncTimeout, Token);
             
             if (nodes?.Count == 0)
@@ -202,7 +227,8 @@ namespace FabricObserver.Observers
             string FaultDomain = node.FaultDomain.OriginalString, NodeId = node.NodeId.ToString(), NodeInstanceId = node.NodeInstanceId.ToString(), NodeStatus = node.NodeStatus.ToString();
             bool IsSeedNode = node.IsSeedNode;
 
-            ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName,
+            ObserverLogger.LogEtw(
+                ObserverConstants.FabricObserverETWEventName,
                 new
                 {
                     SnapshotId,
