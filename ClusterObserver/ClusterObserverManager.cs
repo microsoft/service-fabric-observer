@@ -315,11 +315,11 @@ namespace ClusterObserver
                     if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                     {
                         Logger.LogInfo("Shutdown signaled. Stopping.");
-                        await StopAsync().ConfigureAwait(false);
+                        await StopAsync();
                         break;
                     }
 
-                    await RunAsync().ConfigureAwait(false);
+                    await RunAsync();
                     await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 15), token);
                 }
             }
@@ -327,7 +327,7 @@ namespace ClusterObserver
             {
                 if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                 {
-                    await StopAsync().ConfigureAwait(false);
+                    await StopAsync();
                 }
             }
             catch (Exception e)
@@ -481,7 +481,7 @@ namespace ClusterObserver
                     if (!isCompleted)
                     {
                         string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. Aborting.";
-                        await SignalAbortToRunningObserverAsync().ConfigureAwait(false);
+                        await SignalAbortToRunningObserverAsync();
 
                         Logger.LogWarning(observerHealthWarning);
 
@@ -578,7 +578,7 @@ namespace ClusterObserver
             try
             {
                 
-                await StopAsync().ConfigureAwait(false);
+                await StopAsync();
 
                 // Observer settings.
                 foreach (var observer in Observers)
