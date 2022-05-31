@@ -299,7 +299,6 @@ namespace FabricObserver.Observers.Utilities
                 var target = new FileTarget
                 {
                     Name = targetName,
-                    OptimizeBufferReuse = true,
                     ConcurrentWrites = true,
                     EnableFileDelete = true,
                     FileName = file,
