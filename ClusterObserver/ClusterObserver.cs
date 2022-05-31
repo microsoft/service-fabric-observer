@@ -437,7 +437,8 @@ namespace ClusterObserver
                         UpgradeState = Enum.GetName(typeof(FabricUpgradeState), appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState),
                         UpgradeDomain = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
                         UpgradeDuration = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
-                        FailureReason = appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.Value) : null,
+                        FailureReason =
+                            appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.Value) : null,
                     });
             }
         }
@@ -495,7 +496,8 @@ namespace ClusterObserver
                         UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
                         UpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
                         UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration.ToString(),
-                        FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
+                        FailureReason =
+                            eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
                     });
             }
         }
@@ -833,7 +835,7 @@ namespace ClusterObserver
                                                 null,
                                                 isTest ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                 token),
-                                     token).ConfigureAwait(false);
+                                     token);
 
             // Are any of the nodes that were previously in non-Up status, now Up?
             if (NodeStatusDictionary.Count > 0)
@@ -968,7 +970,7 @@ namespace ClusterObserver
                                                     repairManagerServiceUri,
                                                     ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                     cancellationToken),
-                                            cancellationToken).ConfigureAwait(false);  
+                                            cancellationToken);  
 
                 return serviceList?.Count > 0;
             }
@@ -1005,7 +1007,7 @@ namespace ClusterObserver
                                                         null,
                                                         ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                         cancellationToken),
-                                               cancellationToken).ConfigureAwait(false);  
+                                               cancellationToken);  
 
                 return repairTasks;
             }

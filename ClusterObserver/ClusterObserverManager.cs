@@ -416,7 +416,7 @@ namespace ClusterObserver
                 shutdownSignaled = true;
             }
 
-            await SignalAbortToRunningObserverAsync().ConfigureAwait(true);
+            await SignalAbortToRunningObserverAsync();
         }
 
         private Task SignalAbortToRunningObserverAsync()
