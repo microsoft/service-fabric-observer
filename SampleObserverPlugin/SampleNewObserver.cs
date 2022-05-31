@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Health;
+using System.Fabric.Query;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -48,6 +49,8 @@ namespace FabricObserver.Observers
             var stopwatch = Stopwatch.StartNew();
             int totalNumberOfDeployedServices = 0, totalNumberOfPartitions = 0, totalNumberOfReplicas = 0;
             int servicesInWarningError = 0, partitionsInWarningError = 0, replicasInWarningError = 0;
+
+            await EmitNodeSnapshotEtwAsync(NodeName);
             
             // Let's make sure that we page through app lists that are huge (like 4MB result set (that's a lot of apps)).
             var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(NodeName)
@@ -177,6 +180,82 @@ namespace FabricObserver.Observers
             LastRunDateTime = DateTime.Now;
         }
 
+        /// <summary>
+        /// Emit an ETW event containing Node data.
+        /// </summary>
+        /// <param name="nodeName">Name of the target node.</param>
+        /// <returns>Task</returns>
+        private async Task EmitNodeSnapshotEtwAsync(string nodeName)
+        {
+            // This function isn't useful if you don't enable ETW for the plugin.
+            if (!IsEtwEnabled)
+            {
+                return;
+            }
+
+            // Make sure to set the plugin's ClusterOperationTimeoutSeconds setting in FO's Settings.xml. That maps to ConfigurationSettings.AsyncTimeout:
+            // Set the RunInterval for you plugins to mirror the errata scripts. TimeSpan format: x.xx:xx:xx (days.hours:minutes:seconds).
+            /*  <Section Name="SampleNewObserverConfiguration">
+                    <Parameter Name="Enabled" Value="true" />
+                    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+                    <Parameter Name="EnableCSVDataLogging" Value="false" />
+                    <Parameter Name="EnableEtw" Value="true" />
+                    <Parameter Name="EnableTelemetry" Value="false" />
+                    <Parameter Name="EnableVerboseLogging" Value="false" />
+                    <Parameter Name="RunInterval" Value="00:05:00"  />
+                  </Section> -->
+            */
+
+            try
+            {
+                var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName, ConfigurationSettings.AsyncTimeout, Token);
+
+                if (nodes?.Count == 0)
+                {
+                    return;
+                }
+
+                Node node = nodes[0];
+                string SnapshotId = Guid.NewGuid().ToString();
+                string NodeName = node.NodeName, IpAddressOrFQDN = node.IpAddressOrFQDN, NodeType = node.NodeType, CodeVersion = node.CodeVersion, ConfigVersion = node.ConfigVersion;
+                string NodeUpAt = node.NodeUpAt.ToString("o"), NodeDownAt = node.NodeDownAt.ToString("o");
+
+                // These are obsolete.
+                //string NodeUpTime = node.NodeUpTime.ToString(), NodeDownTime = node.NodeDownTime.ToString();
+
+                string HealthState = node.HealthState.ToString(), UpgradeDomain = node.UpgradeDomain;
+                string FaultDomain = node.FaultDomain.OriginalString, NodeId = node.NodeId.ToString(), NodeInstanceId = node.NodeInstanceId.ToString(), NodeStatus = node.NodeStatus.ToString();
+                bool IsSeedNode = node.IsSeedNode;
+
+                ObserverLogger.LogEtw(
+                    ObserverConstants.FabricObserverETWEventName,
+                    new
+                    {
+                        SnapshotId,
+                        SnapshotTimestamp = DateTime.UtcNow.ToString("o"),
+                        NodeName,
+                        NodeType,
+                        NodeId,
+                        NodeInstanceId,
+                        NodeStatus,
+                        NodeUpAt,
+                        NodeDownAt,
+                        CodeVersion,
+                        ConfigVersion,
+                        HealthState,
+                        IpAddressOrFQDN,
+                        UpgradeDomain,
+                        FaultDomain,
+                        IsSeedNode
+                    });
+            }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            {
+                ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e}");
+                // Retry or try again later..
+            }
+        }
+
         public override Task ReportAsync(CancellationToken token)
         {
             // Local log.
@@ -192,8 +271,8 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
-                EntityType = EntityType.Node, // this is an FO 3.2.1 required change.
-                //ReportType = HealthReportType.Node, // this is gone in FO 3.2.1..
+                EntityType = EntityType.Node, // this is an FO 3.2.0 required change.
+                //ReportType = HealthReportType.Node, // this is gone in FO 3.2.0.
                 State = HealthState.Ok
             };
 
