@@ -1,7 +1,7 @@
-# FabricObserver 3.2.0 
-### Important: Requires .net6.0+ and SF Runtime 9.0+
+# FabricObserver 3.2.1
+### Important: Requires .NET 6 and SF Runtime 9.x
 
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .net6 application that 
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET 6 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
 2. Runs on multiple versions of Windows Server and Ubuntu 16.04 and 18.04
 3. Provides [an easy-to-use extensibility model](/Documentation/Plugins.md) for creating [custom Observers](/SampleObserverPlugin) out of band (so, you don't need to clone the repo to build an Observer). See [ContainerObserver](https://github.com/GitTorre/ContainerObserver) for a complete plugin impl that extends FO with SF container app resource monitoring and alerting (note that this observer is built into FO as of version 3.1.17).
@@ -69,7 +69,7 @@ For more information about **the design of FabricObserver**, please see the [Des
 ## Build and run  
 
 1. Clone the repo.
-2. Install [.net6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
+2. Install [.NET 6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
 3. Build. 
 
 ***Note: By default, FO runs as NetworkUser on Windows and sfappsuser on Linux. If you want to monitor SF service processes that run as elevated (System) on Windows, then you must also run FO as System on Windows. There is no reason to run as root on Linux under any circumstances (see the Capabilities binaries implementations, which allow for FO to run as sfappsuser and successfully execute specific commands that require elevated privilege).*** 
