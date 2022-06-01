@@ -1,8 +1,7 @@
-# FabricObserver 3.2.1
+# FabricObserver 3.2.0 
+### Important: Requires .net6.0+ and SF Runtime 9.0+
 
-### Important: Requires net6.0+ and SF Runtime 9.0+
-
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .net 6.0 application that 
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .net6 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
 2. Runs on multiple versions of Windows Server and Ubuntu 16.04 and 18.04
 3. Provides [an easy-to-use extensibility model](/Documentation/Plugins.md) for creating [custom Observers](/SampleObserverPlugin) out of band (so, you don't need to clone the repo to build an Observer). See [ContainerObserver](https://github.com/GitTorre/ContainerObserver) for a complete plugin impl that extends FO with SF container app resource monitoring and alerting (note that this observer is built into FO as of version 3.1.17).
@@ -34,7 +33,7 @@ You can clone the repo, build, and deploy or simply grab latest tested [SFPKG wi
 
 ## How it works 
 
-Application Level Warnings: 
+Application and Service Level Warnings: 
 
 ![alt text](/Documentation/Images/AppWarnClusterView.png "Cluster View App Warning UI")  
 ![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning UI")  
@@ -70,7 +69,7 @@ For more information about **the design of FabricObserver**, please see the [Des
 ## Build and run  
 
 1. Clone the repo.
-2. Install [.net 6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
+2. Install [.net6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
 3. Build. 
 
 ***Note: By default, FO runs as NetworkUser on Windows and sfappsuser on Linux. If you want to monitor SF service processes that run as elevated (System) on Windows, then you must also run FO as System on Windows. There is no reason to run as root on Linux under any circumstances (see the Capabilities binaries implementations, which allow for FO to run as sfappsuser and successfully execute specific commands that require elevated privilege).*** 
@@ -78,31 +77,13 @@ For more information about **the design of FabricObserver**, please see the [Des
 For Linux deployments, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on three proxy binaries which can only run specific commands as root. 
 If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section).  
 
-You will also need to modify ApplicationManifest.xml to run Setup as LocalSystem, which maps to root on Linux:
+If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output.
 
-```XML
-    </ConfigOverrides>
-    <Policies>
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
-    </Policies>  
-
-...
-
-  </DefaultServices>
-  <Principals>
-    <Users>
-      <User Name="SystemUser" AccountType="LocalSystem" />
-    </Users>
-  </Principals>
-```
-
-If you use our build scripts, they will take care of these modifications automatically for linux build output.
-
-You can also run the build scripts from a Powershell console. These include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
+The build scripts include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks. <strong>Please keep in mind that if your target servers do not already have
-.NET Core 3.1 installed (if you deploy VM images from Azure gallery, then they will not have .NET Core 3.1 installed), then you must deploy the SelfContained package.</strong>
+.net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
 
 If you deploy via ARM, then simply add a path to the FO SFPKG you generate (create pkg folder (in VS, right-click FabricObserverApp project, select Package), zip it, rename the file to whatever you want, replace .zip with .sfpkg file extension...) from your build after updating
 the configs to make sense for your applications/services/nodes (store the sfpkg in some blob store you trust): 
@@ -145,11 +126,11 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO320 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO321 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO320
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO321
 
 #Create FO application (if not already deployed at lesser version):
 
