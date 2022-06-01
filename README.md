@@ -33,7 +33,7 @@ You can clone the repo, build, and deploy or simply grab latest tested [SFPKG wi
 
 ## How it works 
 
-Application Level Warnings: 
+Application and Service Level Warnings: 
 
 ![alt text](/Documentation/Images/AppWarnClusterView.png "Cluster View App Warning UI")  
 ![alt text](/Documentation/Images/AppObsWarn.png "AppObserver Warning UI")  
@@ -77,27 +77,9 @@ For more information about **the design of FabricObserver**, please see the [Des
 For Linux deployments, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on three proxy binaries which can only run specific commands as root. 
 If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section).  
 
-You will also need to modify ApplicationManifest.xml to run Setup as LocalSystem, which maps to root on Linux:
+If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output.
 
-```XML
-    </ConfigOverrides>
-    <Policies>
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
-    </Policies>  
-
-...
-
-  </DefaultServices>
-  <Principals>
-    <Users>
-      <User Name="SystemUser" AccountType="LocalSystem" />
-    </Users>
-  </Principals>
-```
-
-If you use our build scripts, they will take care of these modifications automatically for linux build output.
-
-You can also run the build scripts from a Powershell console. These include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
+The build scripts include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks. <strong>Please keep in mind that if your target servers do not already have
