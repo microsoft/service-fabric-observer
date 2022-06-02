@@ -478,7 +478,7 @@ namespace FabricObserver.Observers
                 }
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
-                if (EnableKvsLvidMonitoring && AllAppKvsLvidsData.ContainsKey(id))
+                if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppKvsLvidsData[id];
 
@@ -1768,7 +1768,7 @@ namespace FabricObserver.Observers
                 string procName = index.Key;
                 int procId = index.Value;
                 
-                // Make sure the process ID is still mapped to the process name.
+                // Make sure the process ID still maps to the process name.
                 if (!EnsureProcess(procName, procId))
                 {
                     return;
@@ -1803,7 +1803,7 @@ namespace FabricObserver.Observers
                 // Threads
                 if (checkThreads)
                 {
-                    int threads = _isWindows ? NativeMethods.GetProcessThreadCount(procId, procName, HandleToSnapshot) : ProcessInfoProvider.GetProcessThreadCount(procId, procName);
+                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId, procName);
 
                     if (threads > 0)
                     {
@@ -1814,7 +1814,7 @@ namespace FabricObserver.Observers
                         }
                         else // Child proc spawned by the parent service process.
                         {
-                            _ = AllAppThreadsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.AllocatedFileHandles, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                            _ = AllAppThreadsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                             AllAppThreadsData[$"{id}:{procName}{procId}"].AddData(threads);
                         }
                     }

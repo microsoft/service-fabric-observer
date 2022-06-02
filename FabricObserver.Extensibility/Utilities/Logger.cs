@@ -4,7 +4,9 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
@@ -160,6 +162,34 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
+            if (data is ServiceFabricUpgradeEventData upgradeEventData)
+            {
+                if (upgradeEventData.FabricUpgradeProgress.UpgradeState == System.Fabric.FabricUpgradeState.Failed 
+                    || upgradeEventData.FabricUpgradeProgress.UpgradeState == System.Fabric.FabricUpgradeState.RollingBackInProgress)
+                {
+                    ServiceEventSource.Current.DataTypeWriteWarning(eventName, data);
+                    return;
+                }
+
+                if (upgradeEventData.ApplicationUpgradeProgress.UpgradeState == System.Fabric.ApplicationUpgradeState.Failed
+                    || upgradeEventData.ApplicationUpgradeProgress.UpgradeState == System.Fabric.ApplicationUpgradeState.RollingBackInProgress)
+                {
+                    ServiceEventSource.Current.DataTypeWriteWarning(eventName, data);
+                    return;
+                }
+
+                // Info event.
+                ServiceEventSource.Current.DataTypeWriteInfo(eventName, data);
+                return;
+            }
+
+            if (data is MachineTelemetryData)
+            {
+                // Info event.
+                ServiceEventSource.Current.DataTypeWriteInfo(eventName, data);
+                return;
+            }
+
             // Some FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties).
             // This means they are JSON-serializable for use in content inspection.
             string s = JsonConvert.SerializeObject(data);
@@ -176,7 +206,6 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
-            // Info event.
             ServiceEventSource.Current.DataTypeWriteInfo(eventName, data);
         }
 

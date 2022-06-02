@@ -26,20 +26,20 @@ namespace ClusterObserver
 {
     public sealed class ClusterObserverManager : IDisposable
     {
-        private static bool _etwEnabled;
-        private readonly string _nodeName;
-        private CancellationTokenSource _linkedSFRuntimeObserverTokenSource;
-        private readonly CancellationToken _token;
-        private int _shutdownGracePeriodInSeconds = 2;
-        private TimeSpan _observerExecTimeout = TimeSpan.FromMinutes(30);
-        private CancellationTokenSource _cts;
-        private volatile bool _shutdownSignaled;
-        private bool _hasDisposed;
-        private bool _internalTelemetrySent;
-        private bool _appParamsUpdating;
+        private static bool etwEnabled;
+        private readonly string nodeName;
+        private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
+        private readonly CancellationToken token;
+        private int shutdownGracePeriodInSeconds = 2;
+        private TimeSpan observerExecTimeout = TimeSpan.FromMinutes(30);
+        private CancellationTokenSource cts;
+        private volatile bool shutdownSignaled;
+        private bool hasDisposed;
+        private bool internalTelemetrySent;
+        private bool appParamsUpdating;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.1.15";
+        private const string InternalVersionNumber = "2.1.16";
 
         public bool EnableOperationalTelemetry
         {
@@ -81,8 +81,8 @@ namespace ClusterObserver
 
         public static bool EtwEnabled
         {
-            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, null), out _etwEnabled) && _etwEnabled;
-            set => _etwEnabled = value;
+            get => bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, null), out etwEnabled) && etwEnabled;
+            set => etwEnabled = value;
         }
 
         public static string LogPath
@@ -105,12 +105,12 @@ namespace ClusterObserver
         /// </summary>
         public ClusterObserverManager(ServiceProvider serviceProvider, CancellationToken token)
         {
-            _token = token;
-            _cts = new CancellationTokenSource();
-            _linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, _token);
-            _ = _token.Register(() => { ShutdownHandler(this, null); });
+            this.token = token;
+            cts = new CancellationTokenSource();
+            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
+            _ = this.token.Register(() => { ShutdownHandler(this, null); });
             FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
-            _nodeName = FabricServiceContext?.NodeContext.NodeName;
+            nodeName = FabricServiceContext?.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
             Observers = serviceProvider.GetServices<ObserverBase>().ToList();
             
@@ -171,14 +171,14 @@ namespace ClusterObserver
 
         private async void ShutdownHandler(object sender, ConsoleCancelEventArgs consoleEvent)
         {
-            if (_hasDisposed)
+            if (hasDisposed)
             {
                 return;
             }
 
-            await Task.Delay(_shutdownGracePeriodInSeconds).ConfigureAwait(true);
+            await Task.Delay(shutdownGracePeriodInSeconds).ConfigureAwait(true);
 
-            _shutdownSignaled = true;
+            shutdownSignaled = true;
             await StopAsync();
         }
 
@@ -187,7 +187,7 @@ namespace ClusterObserver
             // Observer
             if (int.TryParse(GetConfigSettingValue(ClusterObserverConstants.ObserverExecutionTimeoutParameter, settings), out int result))
             {
-                _observerExecTimeout = TimeSpan.FromSeconds(result);
+                observerExecTimeout = TimeSpan.FromSeconds(result);
             }
 
             // Logger
@@ -204,7 +204,7 @@ namespace ClusterObserver
             // Shutdown
             if (int.TryParse(GetConfigSettingValue(ClusterObserverConstants.ObserverShutdownGracePeriodInSecondsParameter, settings), out int gracePeriodInSeconds))
             {
-                _shutdownGracePeriodInSeconds = gracePeriodInSeconds;
+                shutdownGracePeriodInSeconds = gracePeriodInSeconds;
             }
 
             if (int.TryParse(GetConfigSettingValue(ClusterObserverConstants.AsyncOperationTimeoutSeconds, settings), out int asyncTimeout))
@@ -259,7 +259,7 @@ namespace ClusterObserver
                                                 logAnalyticsSharedKey,
                                                 logAnalyticsLogType,
                                                 FabricClientInstance,
-                                                _token);
+                                                token);
 
                         break;
                     
@@ -286,7 +286,7 @@ namespace ClusterObserver
             {
                 // This data is sent once over the lifetime of the deployed service instance and will be retained for no more
                 // than 90 days.
-                if (EnableOperationalTelemetry && !_internalTelemetrySent)
+                if (EnableOperationalTelemetry && !internalTelemetrySent)
                 {
                     try
                     {
@@ -299,7 +299,7 @@ namespace ClusterObserver
 
                             if (telemetryEvents.EmitClusterObserverOperationalEvent(coData, filepath))
                             {
-                                _internalTelemetrySent = true;
+                                internalTelemetrySent = true;
                             }
                         }
                     }
@@ -312,27 +312,27 @@ namespace ClusterObserver
 
                 while (true)
                 {
-                    if (!_appParamsUpdating && (_shutdownSignaled || _token.IsCancellationRequested))
+                    if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                     {
                         Logger.LogInfo("Shutdown signaled. Stopping.");
-                        await StopAsync().ConfigureAwait(false);
+                        await StopAsync();
                         break;
                     }
 
-                    await RunAsync().ConfigureAwait(false);
-                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 15), _token);
+                    await RunAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 15), token);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
-                if (!_appParamsUpdating && (_shutdownSignaled || _token.IsCancellationRequested))
+                if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                 {
-                    await StopAsync().ConfigureAwait(false);
+                    await StopAsync();
                 }
             }
             catch (Exception e)
             {
-                string message = $"Unhandled Exception in ClusterObserver on node {_nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
+                string message = $"Unhandled Exception in ClusterObserver on node {nodeName}. Taking down CO process. Error info:{Environment.NewLine}{e}";
                 Logger.LogError(message);
 
                 // Telemetry.
@@ -343,7 +343,7 @@ namespace ClusterObserver
                             HealthState.Warning,
                             message,
                             ClusterObserverConstants.ClusterObserverManagerName,
-                            _token);
+                            token);
                 }
 
                 // ETW.
@@ -411,12 +411,12 @@ namespace ClusterObserver
 
         public async Task StopAsync()
         { 
-            if (!_shutdownSignaled)
+            if (!shutdownSignaled)
             {
-                _shutdownSignaled = true;
+                shutdownSignaled = true;
             }
 
-            await SignalAbortToRunningObserverAsync();
+            await SignalAbortToRunningObserverAsync().ConfigureAwait(true);
         }
 
         private Task SignalAbortToRunningObserverAsync()
@@ -425,7 +425,7 @@ namespace ClusterObserver
 
             try
             {
-                _cts?.Cancel();
+                cts?.Cancel();
                 IsObserverRunning = false;
             }
             catch (Exception e) when (e is AggregateException || e is ObjectDisposedException)
@@ -439,7 +439,7 @@ namespace ClusterObserver
                             HealthState.Warning,
                             $"{e}",
                             ClusterObserverConstants.ClusterObserverManagerName,
-                            _token);
+                            token);
                 }
 
                 // ETW.
@@ -475,13 +475,13 @@ namespace ClusterObserver
                     IsObserverRunning = true;
 
                     // Synchronous call.
-                    bool isCompleted = observer.ObserveAsync(_linkedSFRuntimeObserverTokenSource != null ? _linkedSFRuntimeObserverTokenSource.Token : _token).Wait(_observerExecTimeout);
+                    bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource != null ? linkedSFRuntimeObserverTokenSource.Token : token).Wait(observerExecTimeout);
 
                     // The observer is taking too long (hung?)
                     if (!isCompleted)
                     {
-                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {_observerExecTimeout.TotalSeconds} seconds. Aborting.";
-                        await SignalAbortToRunningObserverAsync().ConfigureAwait(false);
+                        string observerHealthWarning = $"{observer.ObserverName} has exceeded its specified run time of {observerExecTimeout.TotalSeconds} seconds. Aborting.";
+                        await SignalAbortToRunningObserverAsync();
 
                         Logger.LogWarning(observerHealthWarning);
 
@@ -492,7 +492,7 @@ namespace ClusterObserver
                                     HealthState.Warning,
                                     observerHealthWarning,
                                     ClusterObserverConstants.ClusterObserverManagerName,
-                                    _token);
+                                    token);
                         }
 
                         if (EtwEnabled)
@@ -516,7 +516,7 @@ namespace ClusterObserver
                     {
                         if (e is OperationCanceledException || e is TaskCanceledException)
                         {
-                            if (_appParamsUpdating)
+                            if (appParamsUpdating)
                             {
                                 // Exit. CO is processing a versionless parameter-only application upgrade.
                                 return;
@@ -542,7 +542,7 @@ namespace ClusterObserver
                                 HealthState.Warning,
                                 msg,
                                 ClusterObserverConstants.ClusterObserverManagerName,
-                                _token);
+                                token);
                     }
 
                     if (EtwEnabled)
@@ -572,18 +572,18 @@ namespace ClusterObserver
         /// <param name="e"></param>
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            _appParamsUpdating = true;
+            appParamsUpdating = true;
             Logger.LogWarning("Application Parameter upgrade started...");
 
             try
             {
                 
-                await StopAsync().ConfigureAwait(false);
+                await StopAsync();
 
                 // Observer settings.
                 foreach (var observer in Observers)
                 {
-                    if (_token.IsCancellationRequested)
+                    if (token.IsCancellationRequested)
                     {
                         return;
                     }
@@ -608,8 +608,8 @@ namespace ClusterObserver
                 // ClusterObserverManager settings.
                 SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
 
-                _cts ??= new CancellationTokenSource();
-                _linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, _token);
+                cts ??= new CancellationTokenSource();
+                linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
             }
             catch (Exception err)
             {
@@ -630,12 +630,12 @@ namespace ClusterObserver
             }
 
             Logger.LogWarning("Application Parameter upgrade completed...");
-            _appParamsUpdating = false;
+            appParamsUpdating = false;
         }
 
         private void Dispose(bool disposing)
         {
-            if (_hasDisposed)
+            if (hasDisposed)
             {
                 return;
             }
@@ -650,17 +650,17 @@ namespace ClusterObserver
                 StopAsync().GetAwaiter().GetResult();
             }
 
-            if (_cts != null)
+            if (cts != null)
             {
-                _cts.Dispose();
-                _cts = null;
+                cts.Dispose();
+                cts = null;
             }
 
             // Flush and Dispose all NLog targets. No more logging.
             Logger.Flush();
             Logger.ShutDown();
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-            _hasDisposed = true;
+            hasDisposed = true;
         }
 
         public void Dispose()

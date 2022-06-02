@@ -244,15 +244,21 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                using (Process p = Process.GetProcessById(processId))
+                uint handles = 0;
+
+                IntPtr handle =
+                    NativeMethods.OpenProcess(
+                        (uint)NativeMethods.ProcessAccessFlags.QueryLimitedInformation | (uint)NativeMethods.ProcessAccessFlags.DuplicateHandle,
+                        false,
+                        (uint)processId);
+                
+                if (handle == IntPtr.Zero || !NativeMethods.GetProcessHandleCount(handle, out handles))
                 {
-                    if (!NativeMethods.GetProcessHandleCount(p.Handle, out uint handles))
-                    {
-                        Logger.LogWarning($"GetProcessHandleCount: Failed with Win32 error code {Marshal.GetLastWin32Error()}. Trying a different approach (Process obj).");
-                    }
-       
-                    return (int)handles;
+                    Logger.LogWarning($"GetProcessHandleCount: Failed with Win32 error code {Marshal.GetLastWin32Error()}. Trying a different approach (Process obj).");
                 }
+       
+                return (int)handles;
+                
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {

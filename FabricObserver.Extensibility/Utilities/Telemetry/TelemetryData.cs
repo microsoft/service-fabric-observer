@@ -21,116 +21,139 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     {
         private readonly string _os;
 
+        [EventField]
         public string ApplicationName
         {
             get; set;
         }
 
+        [EventField]
         public string Code
         {
             get; set;
         }
 
+        [EventField]
         public string ContainerId
         {
             get; set;
         }
 
+        [EventField]
         public string ClusterId
         {
             get; set;
         }
 
+        [EventField]
         public string Description
         {
             get; set;
         }
 
+        [EventField]
         public EntityType EntityType
         {
             get; set;
         }
 
+        [EventField]
         public HealthState HealthState
         {
             get; set;
         }
 
+        [EventField]
         public string Metric
         {
             get; set;
         }
 
+        [EventField]
         public string NodeName
         {
             get; set;
         }
 
+        [EventField]
         public string NodeType
         {
             get; set;
         }
 
+        [EventField]
         public string ObserverName
         {
             get; set;
         }
 
+        [EventField]
         public string OS
         {
             get { return _os; }
         }
 
+        [EventField]
         public Guid? PartitionId
         {
             get; set;
         }
 
+        [EventField]
         public long ProcessId
         {
             get; set;
         }
 
+        [EventField]
         public string Property
         {
             get; set;
         }
 
+        [EventField]
         public long ReplicaId
         {
             get; set;
         }
 
+        [EventField]
         public ReplicaRole ReplicaRole
         {
             get; set;
         }
 
+        [EventField]
         public ServiceKind ServiceKind
         {
             get; set;
         }
 
+        [EventField]
         public string ServiceName
         {
             get; set;
         }
 
+        [EventField]
         public ServicePackageActivationMode? ServicePackageActivationMode
         {
             get; set;
         }
 
+        [EventField]
         public string Source
         {
             get; set;
         }
 
+        [EventField]
         public string SystemServiceProcessName
         {
             get; set;
         }
 
+        [EventField]
         public double Value
         {
             get; set;

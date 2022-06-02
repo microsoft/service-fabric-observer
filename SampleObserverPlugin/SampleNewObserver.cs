@@ -272,7 +272,7 @@ namespace FabricObserver.Observers
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
                 EntityType = EntityType.Node, // this is an FO 3.2.0 required change.
-                //ReportType = HealthReportType.Node, // this is gone in FO 3.2.0..
+                //ReportType = HealthReportType.Node, // this is gone in FO 3.2.0.
                 State = HealthState.Ok
             };
 

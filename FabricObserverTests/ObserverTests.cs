@@ -145,6 +145,8 @@ namespace FabricObserverTests
             string appVersion = "1.0.0.0";
             string serviceName1 = "fabric:/HealthMetrics/BandActorService";
             string serviceName2 = "fabric:/HealthMetrics/DoctorActorService";
+
+            // Change this to suit your configuration (so, if you are on Windows and you installed SF on a different drive, for example).
             string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
             string packagePathInImageStore = "HealthMetrics";
             string packagePathZip = Path.Combine(Environment.CurrentDirectory, "HealthMetrics.zip");
@@ -152,20 +154,31 @@ namespace FabricObserverTests
             string serviceType2 = "DoctorActorServiceType";
             string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "pkg", "Debug");
 
+            // If fabric:/HealthMetrics is already installed, exit.
+            var deployedTestApp =
+                    await FabricClient.QueryManager.GetDeployedApplicationListAsync(
+                            NodeName,
+                            new Uri(appName),
+                            TimeSpan.FromSeconds(30),
+                            Token);
+
+            if (deployedTestApp?.Count > 0)
+            {
+                return;
+            }
+
             // Unzip the compressed HealthMetrics app package.
             System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "HealthMetricsApp", true);
 
-            var fabricClient = new FabricClient();
-
             // Copy the HealthMetrics app package to a location in the image store.
-            fabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+            FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
 
             // Provision the HealthMetrics application.          
-            await fabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+            await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
             // Create HealthMetrics app instance.
             ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion);
-            await fabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+            await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
 
             // Create the HealthMetrics service descriptions.
             StatefulServiceDescription serviceDescription1 = new StatefulServiceDescription
@@ -188,8 +201,8 @@ namespace FabricObserverTests
 
             // Create the HealthMetrics app services. If any of the services are declared as a default service in the ApplicationManifest.xml,
             // then the service instance is already running and this call will fail..
-            await fabricClient.ServiceManager.CreateServiceAsync(serviceDescription1);
-            await fabricClient.ServiceManager.CreateServiceAsync(serviceDescription2);
+            await FabricClient.ServiceManager.CreateServiceAsync(serviceDescription1);
+            await FabricClient.ServiceManager.CreateServiceAsync(serviceDescription2);
 
             // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
             // You may need to increase this value depending upon your dev machine? You'll find out..
@@ -418,16 +431,8 @@ namespace FabricObserverTests
         [TestMethod]
         public void AAAInitializeTestInfra()
         {
-            if (IsLocalSFRuntimePresent())
-            {
-                DeployHealthMetricsAppAsync().Wait();
-            }
-            else
-            {
-                throw new Exception("You need to run these these tests on a machine with a running SF cluster");
-            }
-
-            Assert.IsTrue(true);
+            Assert.IsTrue(IsLocalSFRuntimePresent());
+            DeployHealthMetricsAppAsync().Wait(); 
         }
 
         [TestMethod]
@@ -588,8 +593,6 @@ namespace FabricObserverTests
             {
                 return;
             }
-
-            var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;

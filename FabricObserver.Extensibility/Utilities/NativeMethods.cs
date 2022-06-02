@@ -708,9 +708,9 @@ namespace FabricObserver.Observers.Utilities
             {
 
             }
-            catch (Win32Exception)
+            catch (Win32Exception e)
             {
-
+                string s = e.ToString();
             }
 
             return null;
