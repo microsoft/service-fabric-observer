@@ -698,14 +698,20 @@ namespace FabricObserver.Observers
             }
         }
 
-        private static bool IsObserverWebApiAppInstalled()
+        private bool IsObserverWebApiAppInstalled()
         {
             try
             {
-                var deployedObsWebApps = FabricClientInstance.QueryManager.GetApplicationListAsync(new Uri("fabric:/FabricObserverWebApi")).GetAwaiter().GetResult();
+                var deployedObsWebApps =
+                        FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
+                            nodeName,
+                            new Uri("fabric:/FabricObserverWebApi"),
+                            TimeSpan.FromSeconds(30),
+                            token).GetAwaiter().GetResult();
+
                 return deployedObsWebApps?.Count > 0;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
             {
 
             }
